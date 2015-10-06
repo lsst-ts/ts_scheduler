@@ -20,24 +20,18 @@ measInterval = 1
 measCount  = 0
 visitCount = 0
 syncCount  = 0
+targetId   = 0
 
 stime = time.time()
 try:
     while True:
-        ntime = time.time()
-        dtime = ntime - stime
-        if dtime >= measInterval:
-            rate = float(measCount)/dtime
-            print("rx %.0f vitis/sec total=%i visits sync=%i" % (rate, visitCount, syncCount))
-            stime = ntime
-            measCount = 0
-
         scode = sal.getNextSample_timeHandler(topicTime)
         if scode == 0 and topicTime.timestamp != 0:
 
             time.sleep(0.030)
+            targetId += 1
 
-            topicTarget.targetId = visitCount
+            topicTarget.targetId = targetId
             topicTarget.fieldId  = 1234
             topicTarget.filter   = "z"
             topicTarget.ra       = 10.0
@@ -53,6 +47,17 @@ try:
                     visitCount += 1
                     if topicTarget.targetId == topicObservation.targetId:
                         syncCount += 1
+                        break
+                    else:
+                        print("UNSYNC targetId=%i observationId=%i" % (topicTarget.targetId, topicObservation.targetId))
+
+        ntime = time.time()
+        dtime = ntime - stime
+        if dtime >= measInterval:
+            rate = float(measCount)/dtime
+            print("rx %.0f vitis/sec total=%i visits sync=%i" % (rate, visitCount, syncCount))
+            stime = ntime
+            measCount = 0
 
 except KeyboardInterrupt:
     sal.salShutdown()
