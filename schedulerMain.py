@@ -13,18 +13,20 @@ sal.salTelemetrySub("scheduler_timeHandler")
 measInterval = 1
 stime = time.time()
 count = 0
+totalcount = 0
 try:
 	while True:
 		ntime = time.time()
 		dtime = ntime - stime
 		if dtime >= measInterval:
 			rate = float(count)/dtime
-			print("rx %.0f msg/sec" % rate)
+			print("rx %.0f msg/sec total=%i messages" % (rate, totalcount))
 			stime = ntime
 			count = 0
 		scode = sal.getNextSample_timeHandler(topicTime)
 		if scode == 0 and topicTime.timestamp != 0:
 			count += 1
+			totalcount += 1
 			#print("{}".format(datetime.datetime.fromtimestamp(topicTime.timestamp).isoformat()))
 
 except KeyboardInterrupt:
