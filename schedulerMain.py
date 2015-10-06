@@ -39,19 +39,20 @@ try:
 
             topicTarget.targetId = visitCount
             topicTarget.fieldId  = 1234
-            topicTarget.filter   = z
+            topicTarget.filter   = "z"
             topicTarget.ra       = 10.0
             topicTarget.dec      = 30.0
             topicTarget.angle    = 45.0
             topicTarget.num_exposures = 2
             sal.putSample_targetTest(topicTarget)
 
-            scode = sal.getNextSample_observationTest(topicObservation)
-            if scode == 0 and topicObservation.targetId != 0:
-                measCount += 1
-                visitCount += 1
-                if topicTarget.targetId == topicObservation.targetId:
-                    syncCount += 1
+            while True:
+                scode = sal.getNextSample_observationTest(topicObservation)
+                if scode == 0 and topicObservation.targetId != 0:
+                    measCount += 1
+                    visitCount += 1
+                    if topicTarget.targetId == topicObservation.targetId:
+                        syncCount += 1
 
 except KeyboardInterrupt:
     sal.salShutdown()
