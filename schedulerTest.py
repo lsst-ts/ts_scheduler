@@ -19,18 +19,21 @@ topicTime.timestamp = int(start_seconds)
 measInterval = 1
 stime = time.time()
 count = 0
+totalcount = 0
 try:
     while True:
         ntime = time.time()
         dtime = ntime - stime
         if dtime >= measInterval:
             rate = float(count)/dtime
-            print("tx %.0f msg/sec" % rate)
+            print("tx %.0f msg/sec total=%i messages" % (rate, totalcount))
             stime = ntime
             count = 0
         sal.putSample_timeHandler(topicTime)
         topicTime.timestamp += delta_seconds
         count += 1
+        totalcount += 1
+        time.sleep(0.030)
         #print("{}".format(datetime.datetime.fromtimestamp(topicTime.timestamp).isoformat()))
 except KeyboardInterrupt:
     sal.salShutdown()
