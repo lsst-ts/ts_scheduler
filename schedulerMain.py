@@ -3,63 +3,108 @@ import time
 import datetime
 
 from SALPY_scheduler import *
+from schedulerDriver import *
+from schedulerTarget import *
 
-sal = SAL_scheduler()
-sal.setDebugLevel(0)
+class schedulerMain(object):
 
-topicTime           = scheduler_timeHandlerC()
-topicObservation    = scheduler_observationTestC()
-topicTarget         = scheduler_targetTestC()
+    def __init__(self):
 
-sal.salTelemetrySub("scheduler_timeHandler")
-sal.salTelemetrySub("scheduler_observationTest")
-sal.salTelemetryPub("scheduler_targetTest")
+        self.schedulerDriver = schedulerDriver()
 
-measInterval = 1
+        self.sal = SAL_scheduler()
+        self.sal.setDebugLevel(0)
 
-measCount  = 0
-visitCount = 0
-syncCount  = 0
-targetId   = 0
+        self.topicTime           = scheduler_timeHandlerC()
+        self.topicObservation    = scheduler_observationTestC()
+        self.topicTarget         = scheduler_targetTestC()
 
-stime = time.time()
-try:
-    while True:
-        scode = sal.getNextSample_timeHandler(topicTime)
-        if scode == 0 and topicTime.timestamp != 0:
+        return
 
-            time.sleep(0.030)
-            targetId += 1
+    def run(self):
 
-            topicTarget.targetId = targetId
-            topicTarget.fieldId  = 1234
-            topicTarget.filter   = "z"
-            topicTarget.ra       = 10.0
-            topicTarget.dec      = 30.0
-            topicTarget.angle    = 45.0
-            topicTarget.num_exposures = 2
-            sal.putSample_targetTest(topicTarget)
+        self.sal.salTelemetrySub("scheduler_timeHandler")
+        self.sal.salTelemetrySub("scheduler_observationTest")
+        self.sal.salTelemetryPub("scheduler_targetTest")
 
-            while True:
-                scode = sal.getNextSample_observationTest(topicObservation)
-                if scode == 0 and topicObservation.targetId != 0:
-                    measCount += 1
-                    visitCount += 1
-                    if topicTarget.targetId == topicObservation.targetId:
-                        syncCount += 1
-                        break
+        measInterval = 1.0
+
+        measCount  = 0
+        visitCount = 0
+        syncCount  = 0
+
+        measTime = time.time()
+        loopTime = time.time()
+
+        timestamp = 0.0
+
+        try:
+            waitConditions  = True
+            while waitConditions:
+                scode = self.sal.getNextSample_timeHandler(self.topicTime)
+                t = time.time()
+                if (scode == 0 and self.topicTime.timestamp != 0):
+                    loopTime = t
+                    if (self.topicTime.timestamp > timestamp):
+                        timestamp = self.topicTime.timestamp
+
+                        self.schedulerDriver.updateInternalConditions(self.topicTime)
+                        self.schedulerDriver.updateExternalConditions(self.topicTime)
+
+                        target = self.schedulerDriver.selectNextTarget()
+                        self.topicTarget.targetId      = target.targetId
+                        self.topicTarget.fieldId       = target.fieldId
+                        self.topicTarget.filter        = target.filter
+                        self.topicTarget.ra            = target.ra
+                        self.topicTarget.dec           = target.dec
+                        self.topicTarget.angle         = target.angle
+                        self.topicTarget.num_exposures = target.num_exposures
+
+                        self.sal.putSample_targetTest(self.topicTarget)
+
+                        waitObservation = True
+                        while waitObservation:
+                            scode = self.sal.getNextSample_observationTest(self.topicObservation)
+                            t = time.time()
+                            if (scode == 0 and self.topicObservation.targetId != 0):
+                                loopTime = t
+                                measCount += 1
+                                visitCount += 1
+                                if (self.topicTarget.targetId == self.topicObservation.targetId):
+                                    syncCount += 1
+
+                                    self.schedulerDriver.registerObservation(self.topicObservation)
+
+                                    break
+                                else:
+                                    print("UNSYNC targetId=%i observationId=%i" % (self.topicTarget.targetId, self.topicObservation.targetId))
+                            else:
+                                if (t - loopTime > 10.0):
+                                    waitObservation = False
+
+                            newTime = time.time()
+                            deltaTime = newTime - measTime
+                            if (deltaTime >= measInterval):
+                                rate = float(measCount)/deltaTime
+                                print("rix %.0f visits/sec total=%i visits sync=%i" % (rate, visitCount, syncCount))
+                                measTime = newTime
+                                measCount = 0
                     else:
-                        print("UNSYNC targetId=%i observationId=%i" % (topicTarget.targetId, topicObservation.targetId))
+                        print("BACKWARD previous=%f new=%f" % (timestamp, self.topicTime.timestamp))
 
-        ntime = time.time()
-        dtime = ntime - stime
-        if dtime >= measInterval:
-            rate = float(measCount)/dtime
-            print("rx %.0f vitis/sec total=%i visits sync=%i" % (rate, visitCount, syncCount))
-            stime = ntime
-            measCount = 0
+                else:
+                    if (t - loopTime > 30.0):
+                        waitConditions = False
 
-except KeyboardInterrupt:
-    sal.salShutdown()
-    sys.exit(0)
+                newTime = time.time()
+                deltaTime = newTime - measTime
+                if (deltaTime >= measInterval):
+                    rate = float(measCount)/deltaTime
+                    print("rx %.0f visits/sec total=%i visits sync=%i" % (rate, visitCount, syncCount))
+                    measTime = newTime
+                    measCount = 0
+
+        except KeyboardInterrupt:
+            self.sal.salShutdown()
+            sys.exit(0)
 
