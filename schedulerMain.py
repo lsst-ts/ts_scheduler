@@ -1,6 +1,7 @@
 import sys
 import time
 import datetime
+import logging
 
 from SALPY_scheduler import *
 from schedulerDriver import *
@@ -19,13 +20,25 @@ class schedulerMain(object):
         self.topicObservation    = scheduler_observationTestC()
         self.topicTarget         = scheduler_targetTestC()
 
+        self.log = logging.getLogger("scheduler")
+        timestr = time.strftime("%Y-%m-%d_%H:%M:%S")
+        hdlr = logging.FileHandler("scheduler.%s.log" % (timestr))
+        formatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
+        hdlr.setFormatter(formatter)
+        self.log.addHandler(hdlr)
+        self.log.setLevel(logging.DEBUG)
+
         return
 
     def run(self):
 
+        self.log.info("Main: scheduler started")
+
         self.sal.salTelemetrySub("scheduler_timeHandler")
         self.sal.salTelemetrySub("scheduler_observationTest")
         self.sal.salTelemetryPub("scheduler_targetTest")
+
+        self.schedulerDriver.startSurvey()
 
         measInterval = 1.0
 
@@ -33,20 +46,21 @@ class schedulerMain(object):
         visitCount = 0
         syncCount  = 0
 
-        measTime = time.time()
-        loopTime = time.time()
+        measTime     = time.time()
 
         timestamp = 0.0
 
         try:
             waitConditions  = True
+            lastCondTime = time.time()
             while waitConditions:
                 scode = self.sal.getNextSample_timeHandler(self.topicTime)
-                t = time.time()
                 if (scode == 0 and self.topicTime.timestamp != 0):
-                    loopTime = t
                     if (self.topicTime.timestamp > timestamp):
+                        lastCondTime = time.time()
                         timestamp = self.topicTime.timestamp
+
+                        self.log.info("Main: rx time=%f" % (timestamp))
 
                         self.schedulerDriver.updateInternalConditions(self.topicTime)
                         self.schedulerDriver.updateExternalConditions(self.topicTime)
@@ -61,26 +75,31 @@ class schedulerMain(object):
                         self.topicTarget.num_exposures = target.num_exposures
 
                         self.sal.putSample_targetTest(self.topicTarget)
+                        self.log.info("Main: tx target Id=%i, field=%i, filter=%s" % (target.targetId, target.fieldId, target.filter))
 
                         waitObservation = True
+                        lastObsTime = time.time()
                         while waitObservation:
                             scode = self.sal.getNextSample_observationTest(self.topicObservation)
-                            t = time.time()
                             if (scode == 0 and self.topicObservation.targetId != 0):
-                                loopTime = t
                                 measCount += 1
                                 visitCount += 1
                                 if (self.topicTarget.targetId == self.topicObservation.targetId):
+                                    lastObsTime = time.time()
                                     syncCount += 1
 
+                                    self.log.info("Main: rx observation target Id=%i" % (self.topicObservation.targetId))
                                     self.schedulerDriver.registerObservation(self.topicObservation)
 
                                     break
                                 else:
+                                    self.log.warning("Main: rx unsync observation Id=%i for target Id=%i" % (self.topicObservation.targetId, self.topicTarget.targetId))
                                     print("UNSYNC targetId=%i observationId=%i" % (self.topicTarget.targetId, self.topicObservation.targetId))
                             else:
-                                if (t - loopTime > 10.0):
+                                t = time.time()
+                                if (t - lastObsTime > 10.0):
                                     waitObservation = False
+                                self.log.debug("Main: t=%f lastObsTime=%f" % (t, lastObsTime))
 
                             newTime = time.time()
                             deltaTime = newTime - measTime
@@ -90,10 +109,12 @@ class schedulerMain(object):
                                 measTime = newTime
                                 measCount = 0
                     else:
+                        self.log.warning("Main: rx backward time previous=%f new=%f" % (timestamp, self.topicTime.timestamp))
                         print("BACKWARD previous=%f new=%f" % (timestamp, self.topicTime.timestamp))
 
                 else:
-                    if (t - loopTime > 30.0):
+                    t = time.time()
+                    if (t - lastCondTime > 30.0):
                         waitConditions = False
 
                 newTime = time.time()
@@ -105,6 +126,11 @@ class schedulerMain(object):
                     measCount = 0
 
         except KeyboardInterrupt:
-            self.sal.salShutdown()
-            sys.exit(0)
+            self.log.info("Main: scheduler interrupted")
+
+        self.schedulerDriver.endSurvey()
+
+        self.log.info("Main: scheduler stopped")
+        self.sal.salShutdown()
+        sys.exit(0)
 
