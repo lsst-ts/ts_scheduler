@@ -66,5 +66,9 @@ dist: clean
 	python setup.py bdist_wheel
 	ls -l dist
 
+all:
+	bash build_scheduler
+
+
 install: clean
 	python setup.py install
