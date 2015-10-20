@@ -12,7 +12,6 @@ import unittest
 
 from ts_scheduler import scheduler
 
-
 class TestTs_scheduler(unittest.TestCase):
 
     def setUp(self):
