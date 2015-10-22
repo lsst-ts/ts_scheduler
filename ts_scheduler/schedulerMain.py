@@ -3,6 +3,8 @@ import time
 import datetime
 import logging
 
+from schedulerDefinitions import *
+
 from SALPY_scheduler import *
 from schedulerDriver import *
 from schedulerTarget import *
@@ -20,13 +22,22 @@ class schedulerMain(object):
         self.topicObservation    = scheduler_observationTestC()
         self.topicTarget         = scheduler_targetTestC()
 
-        self.log = logging.getLogger("scheduler")
-        timestr = time.strftime("%Y-%m-%d_%H:%M:%S")
-        hdlr = logging.FileHandler("scheduler.%s.log" % (timestr))
+        logging.INFOX = INFOX
+        logging.addLevelName(logging.INFOX, "INFOX")
         formatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
-        hdlr.setFormatter(formatter)
-        self.log.addHandler(hdlr)
+        self.log = logging.getLogger("scheduler")
         self.log.setLevel(logging.DEBUG)
+
+        timestr = time.strftime("%Y-%m-%d_%H:%M:%S")
+        logfile = logging.FileHandler("../log/scheduler.%s.log" % (timestr))
+        logfile.setFormatter(formatter)
+        logfile.setLevel(logging.DEBUG)
+        self.log.addHandler(logfile)
+
+        console = logging.StreamHandler(sys.stdout)
+        console.setFormatter(formatter)
+        console.setLevel(INFOX)
+        self.log.addHandler(console)
 
         return
 
@@ -94,7 +105,7 @@ class schedulerMain(object):
                                     break
                                 else:
                                     self.log.warning("Main: rx unsync observation Id=%i for target Id=%i" % (self.topicObservation.targetId, self.topicTarget.targetId))
-                                    print("UNSYNC targetId=%i observationId=%i" % (self.topicTarget.targetId, self.topicObservation.targetId))
+#                                    print("UNSYNC targetId=%i observationId=%i" % (self.topicTarget.targetId, self.topicObservation.targetId))
                             else:
                                 t = time.time()
                                 if (t - lastObsTime > 10.0):
@@ -105,12 +116,12 @@ class schedulerMain(object):
                             deltaTime = newTime - measTime
                             if (deltaTime >= measInterval):
                                 rate = float(measCount)/deltaTime
-                                print("rix %.0f visits/sec total=%i visits sync=%i" % (rate, visitCount, syncCount))
+                                self.log.log(INFOX, "Main: rix %.0f visits/sec total=%i visits sync=%i" % (rate, visitCount, syncCount))
                                 measTime = newTime
                                 measCount = 0
                     else:
                         self.log.warning("Main: rx backward time previous=%f new=%f" % (timestamp, self.topicTime.timestamp))
-                        print("BACKWARD previous=%f new=%f" % (timestamp, self.topicTime.timestamp))
+#                        print("BACKWARD previous=%f new=%f" % (timestamp, self.topicTime.timestamp))
 
                 else:
                     t = time.time()
@@ -121,7 +132,7 @@ class schedulerMain(object):
                 deltaTime = newTime - measTime
                 if (deltaTime >= measInterval):
                     rate = float(measCount)/deltaTime
-                    print("rx %.0f visits/sec total=%i visits sync=%i" % (rate, visitCount, syncCount))
+                    self.log.log(INFOX, "Main: rx %.0f visits/sec total=%i visits sync=%i" % (rate, visitCount, syncCount))
                     measTime = newTime
                     measCount = 0
 
