@@ -1,14 +1,17 @@
 import time
 
 from schedulerTarget import *
+from schedulerObservatoryModel import *
 
 class schedulerDriver (object):
-    def __init__ (self):
+    def __init__ (self, log):
+
+	self.log = log
+
+	self.observatoryModel = ObservatoryModel(self.log)
 
         self.time = 0.0
-
         self.targetId = 0
-
         self.newTarget = schedulerTarget()
 
         return
@@ -43,8 +46,6 @@ class schedulerDriver (object):
     def selectNextTarget(self):
 
         self.targetId += 1
-
-        time.sleep(0.030)
 
         self.newTarget.targetId = self.targetId
         self.newTarget.fieldId  = 1234
