@@ -12,8 +12,43 @@ from schedulerTarget import *
 class schedulerMain(object):
 
     def __init__(self):
+        logging.INFOX = INFOX
+        logging.addLevelName(logging.INFOX, 'INFOX')
 
-        self.schedulerDriver = schedulerDriver()
+        schedulerConfig, pairs = readConfFile("../conf/scheduler/main.conf")
+        if (schedulerConfig.has_key('logLevel')):
+            logLevelStr = schedulerConfig['logLevel']
+            if (logLevelStr == 'INFOX'):
+                logLevel = logging.INFOX
+            elif (logLevelStr == 'INFO'):
+                logLevel = logging.INFO
+            elif (logLevelStr == 'DEBUG'):
+                logLevel = logging.DEBUG
+            else:
+                logLevel = logging.INFO
+        else:
+            logLevel = logging.INFO
+        if (schedulerConfig.has_key('rateMeasurementInterval')):
+            self.measInterval = schedulerConfig['rateMeasurementInterval']
+        else:
+            self.measInterval = 1.0
+
+        formatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
+        self.log = logging.getLogger("scheduler")
+        self.log.setLevel(logging.INFO)
+
+        timestr = time.strftime("%Y-%m-%d_%H:%M:%S")
+        logfile = logging.FileHandler("../log/scheduler.%s.log" % (timestr))
+        logfile.setFormatter(formatter)
+        logfile.setLevel(logLevel)
+        self.log.addHandler(logfile)
+
+        console = logging.StreamHandler(sys.stdout)
+        console.setFormatter(formatter)
+        console.setLevel(logging.INFOX)
+        self.log.addHandler(console)
+
+        self.schedulerDriver = schedulerDriver(self.log)
 
         self.sal = SAL_scheduler()
         self.sal.setDebugLevel(0)
@@ -22,22 +57,6 @@ class schedulerMain(object):
         self.topicObservation    = scheduler_observationTestC()
         self.topicTarget         = scheduler_targetTestC()
 
-        logging.INFOX = INFOX
-        logging.addLevelName(logging.INFOX, "INFOX")
-        formatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
-        self.log = logging.getLogger("scheduler")
-        self.log.setLevel(logging.DEBUG)
-
-        timestr = time.strftime("%Y-%m-%d_%H:%M:%S")
-        logfile = logging.FileHandler("../log/scheduler.%s.log" % (timestr))
-        logfile.setFormatter(formatter)
-        logfile.setLevel(logging.DEBUG)
-        self.log.addHandler(logfile)
-
-        console = logging.StreamHandler(sys.stdout)
-        console.setFormatter(formatter)
-        console.setLevel(INFOX)
-        self.log.addHandler(console)
 
         return
 
@@ -50,8 +69,6 @@ class schedulerMain(object):
         self.sal.salTelemetryPub("scheduler_targetTest")
 
         self.schedulerDriver.startSurvey()
-
-        measInterval = 1.0
 
         measCount  = 0
         visitCount = 0
@@ -105,32 +122,30 @@ class schedulerMain(object):
                                     break
                                 else:
                                     self.log.warning("Main: rx unsync observation Id=%i for target Id=%i" % (self.topicObservation.targetId, self.topicTarget.targetId))
-#                                    print("UNSYNC targetId=%i observationId=%i" % (self.topicTarget.targetId, self.topicObservation.targetId))
                             else:
-                                t = time.time()
-                                if (t - lastObsTime > 10.0):
+                                to = time.time()
+                                if (to - lastObsTime > 10.0):
                                     waitObservation = False
-                                self.log.debug("Main: t=%f lastObsTime=%f" % (t, lastObsTime))
+                                self.log.debug("Main: t=%f lastObsTime=%f" % (to, lastObsTime))
 
                             newTime = time.time()
                             deltaTime = newTime - measTime
-                            if (deltaTime >= measInterval):
+                            if (deltaTime >= self.measInterval):
                                 rate = float(measCount)/deltaTime
                                 self.log.log(INFOX, "Main: rix %.0f visits/sec total=%i visits sync=%i" % (rate, visitCount, syncCount))
                                 measTime = newTime
                                 measCount = 0
                     else:
                         self.log.warning("Main: rx backward time previous=%f new=%f" % (timestamp, self.topicTime.timestamp))
-#                        print("BACKWARD previous=%f new=%f" % (timestamp, self.topicTime.timestamp))
 
                 else:
-                    t = time.time()
-                    if (t - lastCondTime > 30.0):
+                    tc = time.time()
+                    if (tc - lastCondTime > 30.0):
                         waitConditions = False
 
                 newTime = time.time()
                 deltaTime = newTime - measTime
-                if (deltaTime >= measInterval):
+                if (deltaTime >= self.measInterval):
                     rate = float(measCount)/deltaTime
                     self.log.log(INFOX, "Main: rx %.0f visits/sec total=%i visits sync=%i" % (rate, visitCount, syncCount))
                     measTime = newTime
