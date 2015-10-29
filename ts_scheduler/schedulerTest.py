@@ -54,7 +54,7 @@ try:
             count = 0
         count += 1
         totalcount += 1
-        if (totalcount >= 3000):
+        if (totalcount >= 300000):
             break
 
 except KeyboardInterrupt:
