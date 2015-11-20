@@ -1,7 +1,7 @@
 import time
 
 from schedulerTarget import *
-from schedulerObservatoryModel import *
+from observatoryModel import *
 
 class schedulerDriver (object):
     def __init__ (self, log):
@@ -34,9 +34,10 @@ class schedulerDriver (object):
     def swapFilterOut(self):
         return
 
-    def updateInternalConditions(self, topicTime):
+    def updateInternalConditions(self, topicObservatoryState):
 
-        self.time = topicTime.timestamp
+        self.time = topicObservatoryState.timestamp
+        self.ObservatoryModel.updateState(topicObservatoryState)
 
         return
 
@@ -58,5 +59,8 @@ class schedulerDriver (object):
         return self.newTarget
 
     def registerObservation(self, topicObservation):
+
+        self.ObservatoryModel.observe(topicObservation)
+
         return
 
