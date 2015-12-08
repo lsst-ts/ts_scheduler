@@ -34,10 +34,10 @@ class schedulerDriver (object):
     def swapFilterOut(self):
         return
 
-    def updateInternalConditions(self, topicObservatoryState):
+    def updateInternalConditions(self, topicTime):
 
-        self.time = topicObservatoryState.timestamp
-        self.ObservatoryModel.updateState(topicObservatoryState)
+        self.time = topicTime.timestamp
+        self.observatoryModel.updateState(self.time)
 
         return
 
@@ -60,7 +60,7 @@ class schedulerDriver (object):
 
     def registerObservation(self, topicObservation):
 
-        self.ObservatoryModel.observe(topicObservation)
+        self.observatoryModel.observe(topicObservation)
 
         return
 
