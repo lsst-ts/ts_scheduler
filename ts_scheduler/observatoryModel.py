@@ -294,7 +294,18 @@ class ObservatoryModel(object):
 
         return
 
+    def observe(self, topicObservation):
+        return
+
     def slewAltAzRot(self, time, alt, az, rot):
+
+        targetPosition = ObservatoryPosition()
+        targetPosition.time     = time
+        targetPosition.tracking = False
+        targetPosition.alt_RAD  = alt*DEG2RAD
+        targetPosition.az_RAD   = az*DEG2RAD
+        targetPosition.rot_RAD  = rot*DEG2RAD
+
         return
 
     def estimateSlewTime(self):
