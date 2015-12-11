@@ -19,44 +19,54 @@ class schedulerMain(object):
         if (schedulerConfig.has_key('logLevel')):
             logLevelStr = schedulerConfig['logLevel']
             if (logLevelStr == 'INFOX'):
-                logLevel = logging.INFOX
+                self.logLevel = logging.INFOX
             elif (logLevelStr == 'INFO'):
-                logLevel = logging.INFO
+                self.logLevel = logging.INFO
             elif (logLevelStr == 'DEBUG'):
-                logLevel = logging.DEBUG
+                self.logLevel = logging.DEBUG
             else:
-                logLevel = logging.INFO
+                self.logLevel = logging.INFO
         else:
-            logLevel = logging.INFO
+            self.logLevel = logging.INFO
         if (schedulerConfig.has_key('rateMeasurementInterval')):
             self.measInterval = schedulerConfig['rateMeasurementInterval']
         else:
             self.measInterval = 1.0
 
-        formatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
+        self.logFormatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
         self.log = logging.getLogger("scheduler")
         self.log.setLevel(logging.INFO)
 
-        timestr = time.strftime("%Y-%m-%d_%H:%M:%S")
-        logfile = logging.FileHandler("../log/scheduler.%s.log" % (timestr))
-        logfile.setFormatter(formatter)
-        logfile.setLevel(logLevel)
-        self.log.addHandler(logfile)
-
         console = logging.StreamHandler(sys.stdout)
-        console.setFormatter(formatter)
+        console.setFormatter(self.logFormatter)
         console.setLevel(logging.INFOX)
         self.log.addHandler(console)
+
+        timestr = time.strftime("%Y-%m-%d_%H:%M:%S")
+        logFileName = "../log/scheduler.%s.log" % (timestr)
+        self.logFile = None
+        self.configLogFile(logFileName)
 
         self.schedulerDriver = schedulerDriver(self.log)
 
         self.sal = SAL_scheduler()
         self.sal.setDebugLevel(0)
 
+        self.topicConfig         = scheduler_schedulerConfigC()
         self.topicTime           = scheduler_timeHandlerC()
         self.topicObservation    = scheduler_observationTestC()
         self.topicTarget         = scheduler_targetTestC()
 
+        return
+
+    def configLogFile(self, logFileName):
+        if (self.logFile != None):
+            self.log.removeHandler(self.logFile)
+        self.logFile = logging.FileHandler(logFileName)
+        self.logFile.setFormatter(self.logFormatter)
+        self.logFile.setLevel(self.logLevel)
+        self.log.addHandler(self.logFile)
+        self.log.log(INFOX, "Main: configure logFile=%s" % logFileName)
 
         return
 
@@ -64,6 +74,7 @@ class schedulerMain(object):
 
         self.log.info("Main: scheduler started")
 
+        self.sal.salTelemetrySub("scheduler_schedulerConfig")
         self.sal.salTelemetrySub("scheduler_timeHandler")
         self.sal.salTelemetrySub("scheduler_observationTest")
         self.sal.salTelemetryPub("scheduler_targetTest")
@@ -79,6 +90,21 @@ class schedulerMain(object):
         timestamp = 0.0
 
         try:
+            waitConfig = True
+            lastConfigTime = time.time()
+            while waitConfig:
+                scode = self.sal.getNextSample_schedulerConfig(self.topicConfig)
+                if (scode == 0 and self.topicConfig.log_file != ""):
+                    lastConfigTime = time.time()
+                    logFileName = self.topicConfig.log_file
+                    waitConfig = False
+                    self.configLogFile(logFileName)
+                else:
+                    tf = time.time()
+                    if (tf - lastConfigTime > 10.0):
+                        waitConfig = False
+                        self.log.log(INFOX, "Main: config timeout")
+
             waitConditions  = True
             lastCondTime = time.time()
             while waitConditions:
