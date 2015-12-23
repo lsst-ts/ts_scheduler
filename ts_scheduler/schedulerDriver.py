@@ -80,6 +80,8 @@ class schedulerDriver (object):
         for prop in self.scienceProposals:
             prop.startSurvey()
 
+        self.log.log(INFOX, "schedulerDriver.startSurvey")
+
     	return
 
     def endSurvey(self):
