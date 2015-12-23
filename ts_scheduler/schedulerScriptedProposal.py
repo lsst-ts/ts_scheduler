@@ -47,10 +47,12 @@ class schedulerScriptedProposal(schedulerProposal):
         if self.targetId < len(self.targetsList):
             nextTarget = self.targetsList[self.targetId]
             nextTarget.value = 1.0
-
             self.targetId += 1
             return list([nextTarget])
         else:
-            return []
+            nextTarget = self.targetsList[-1]
+            nextTarget.value = 1.0
+            self.targetId += 1
+            return list([nextTarget])
 
 
