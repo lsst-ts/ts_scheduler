@@ -63,6 +63,10 @@ class schedulerDriver (object):
 
             self.fieldsDict[fieldId] = field
             self.log.info("schedulerDriver.buildFieldsTable: %s" % (self.fieldsDict[fieldId]))
+
+            if fieldId > 10:
+                break
+
         self.log.log(INFOX, "schedulerDriver.buildFieldsTable: %d fields" % (len(self.fieldsDict)))
 
         return
