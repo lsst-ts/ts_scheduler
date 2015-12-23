@@ -7,6 +7,7 @@ from schedulerDefinitions import *
 
 from SALPY_scheduler import *
 from schedulerDriver import *
+from schedulerField  import *
 from schedulerTarget import *
 
 class schedulerMain(object):
@@ -15,9 +16,9 @@ class schedulerMain(object):
         logging.INFOX = INFOX
         logging.addLevelName(logging.INFOX, 'INFOX')
 
-        schedulerConfig, pairs = readConfFile("../conf/scheduler/main.conf")
-        if (schedulerConfig.has_key('logLevel')):
-            logLevelStr = schedulerConfig['logLevel']
+        schedulerMainConfig, pairs = readConfFile("../conf/scheduler/main.conf")
+        if (schedulerMainConfig.has_key('logLevel')):
+            logLevelStr = schedulerMainConfig['logLevel']
             if (logLevelStr == 'INFOX'):
                 self.logLevel = logging.INFOX
             elif (logLevelStr == 'INFO'):
@@ -28,8 +29,8 @@ class schedulerMain(object):
                 self.logLevel = logging.INFO
         else:
             self.logLevel = logging.INFO
-        if (schedulerConfig.has_key('rateMeasurementInterval')):
-            self.measInterval = schedulerConfig['rateMeasurementInterval']
+        if (schedulerMainConfig.has_key('rateMeasurementInterval')):
+            self.measInterval = schedulerMainConfig['rateMeasurementInterval']
         else:
             self.measInterval = 1.0
 
@@ -55,6 +56,7 @@ class schedulerMain(object):
         self.topicConfig         = scheduler_schedulerConfigC()
         self.topicTime           = scheduler_timeHandlerC()
         self.topicObservation    = scheduler_observationTestC()
+        self.topicField          = scheduler_fieldC()
         self.topicTarget         = scheduler_targetTestC()
 
         return
@@ -77,6 +79,7 @@ class schedulerMain(object):
         self.sal.salTelemetrySub("scheduler_schedulerConfig")
         self.sal.salTelemetrySub("scheduler_timeHandler")
         self.sal.salTelemetrySub("scheduler_observationTest")
+        self.sal.salTelemetryPub("scheduler_field")
         self.sal.salTelemetryPub("scheduler_targetTest")
 
         self.schedulerDriver.startSurvey()
@@ -105,6 +108,23 @@ class schedulerMain(object):
                         waitConfig = False
                         self.log.log(INFOX, "Main: config timeout")
 
+            fieldsDict = self.schedulerDriver.getFieldsDict()
+            if len(fieldsDict) > 0:
+                self.topicField.fieldId = -1
+                self.sal.putSample_field(self.topicField)
+                for fieldId in fieldsDict:
+                    self.topicField.fieldId = fieldsDict[fieldId].fieldId
+                    self.topicField.ra      = fieldsDict[fieldId].ra_RAD*RAD2DEG
+                    self.topicField.dec     = fieldsDict[fieldId].dec_RAD*RAD2DEG
+                    self.topicField.gl      = fieldsDict[fieldId].gl_RAD*RAD2DEG
+                    self.topicField.gb      = fieldsDict[fieldId].gb_RAD*RAD2DEG
+                    self.topicField.el      = fieldsDict[fieldId].el_RAD*RAD2DEG
+                    self.topicField.eb      = fieldsDict[fieldId].eb_RAD*RAD2DEG
+                    self.topicField.fov     = fieldsDict[fieldId].fov_RAD*RAD2DEG
+                    self.sal.putSample_field(self.topicField)
+                self.topicField.fieldId = -1
+                self.sal.putSample_field(self.topicField)
+
             waitConditions  = True
             lastCondTime = time.time()
             while waitConditions:
@@ -123,10 +143,10 @@ class schedulerMain(object):
                         self.topicTarget.targetId      = target.targetId
                         self.topicTarget.fieldId       = target.fieldId
                         self.topicTarget.filter        = target.filter
-                        self.topicTarget.ra            = target.ra
-                        self.topicTarget.dec           = target.dec
-                        self.topicTarget.angle         = target.angle
-                        self.topicTarget.num_exposures = target.num_exposures
+                        self.topicTarget.ra            = target.ra_RAD*RAD2DEG
+                        self.topicTarget.dec           = target.dec_RAD*RAD2DEG
+                        self.topicTarget.angle         = target.ang_RAD*RAD2DEG
+                        self.topicTarget.num_exposures = target.numexp
 
                         self.sal.putSample_targetTest(self.topicTarget)
                         self.log.info("Main: tx target Id=%i, field=%i, filter=%s" % (target.targetId, target.fieldId, target.filter))
