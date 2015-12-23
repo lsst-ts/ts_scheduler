@@ -11,10 +11,9 @@ LSST Scheduler
 
 LSST Scheduler
 
-* Free software: BSD license
 * Documentation: https://ts_scheduler.readthedocs.org.
 
 Features
 --------
 
-* TODO
+
