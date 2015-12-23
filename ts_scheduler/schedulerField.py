@@ -24,5 +24,5 @@ class schedulerField(object):
         return
 
     def __str__(self):
-        return "ID=%d ra=%.3f dec=%.3f gl=%.3f gb=%.3f el=%.3f eb=%.3f" % (self.fieldId, self.ra_RAD*RAD2DEG, self.dec_RAD*RAD2DEG, self.gl_RAD*RAD2DEG, self.gb_RAD*RAD2DEG, self.el_RAD*RAD2DEG, self.eb_RAD*RAD2DEG)
+        return "ID=%d ra=%.3f dec=%.3f gl=%.3f gb=%.3f el=%.3f eb=%.3f fov=%.3f" % (self.fieldId, self.ra_RAD*RAD2DEG, self.dec_RAD*RAD2DEG, self.gl_RAD*RAD2DEG, self.gb_RAD*RAD2DEG, self.el_RAD*RAD2DEG, self.eb_RAD*RAD2DEG, self.fov_RAD*RAD2DEG)
 
