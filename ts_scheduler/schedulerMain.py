@@ -112,10 +112,10 @@ class schedulerMain(object):
 
             fieldsDict = self.schedulerDriver.getFieldsDict()
             if len(fieldsDict) > 0:
-                self.topicField.fieldId = -1
+                self.topicField.ID = -1
                 self.sal.putSample_field(self.topicField)
                 for fieldId in fieldsDict:
-                    self.topicField.fieldId = fieldsDict[fieldId].fieldId
+                    self.topicField.ID = fieldsDict[fieldId].fieldId
                     self.topicField.ra      = fieldsDict[fieldId].ra_RAD*RAD2DEG
                     self.topicField.dec     = fieldsDict[fieldId].dec_RAD*RAD2DEG
                     self.topicField.gl      = fieldsDict[fieldId].gl_RAD*RAD2DEG
@@ -125,7 +125,7 @@ class schedulerMain(object):
                     self.topicField.fov     = fieldsDict[fieldId].fov_RAD*RAD2DEG
                     self.sal.putSample_field(self.topicField)
                     self.log.log(INFOX, "schedulerMain.run: tx field %s" % (fieldsDict[fieldId]))
-                self.topicField.fieldId = -1
+                self.topicField.ID = -1
                 self.sal.putSample_field(self.topicField)
 
             waitConditions  = True
