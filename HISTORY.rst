@@ -4,6 +4,18 @@ History
 -------
 
 ====================
+0.2   (2015-12-23)
+--------------------
+
+Observatory Model states and tracking implemented.
+Generic basic Proposal implemented.
+First version of scripted proposal implemented.
+Fields table read from configuration file.
+Configuration from external SOCS.
+Transmission of fields.
+
+
+====================
 0.1.4 (2015-10-22)
 --------------------
 
