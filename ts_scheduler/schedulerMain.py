@@ -44,9 +44,9 @@ class schedulerMain(object):
         self.log.addHandler(console)
 
         timestr = time.strftime("%Y-%m-%d_%H:%M:%S")
-        logFileName = "../log/scheduler.%s.log" % (timestr)
+        self.defaultLogFileName = "../log/scheduler.%s.log" % (timestr)
         self.logFile = None
-        self.configLogFile(logFileName)
+        self.configLogFile(self.defaultLogFileName)
 
         self.schedulerDriver = schedulerDriver(self.log)
 
@@ -100,8 +100,10 @@ class schedulerMain(object):
                 if (scode == 0 and self.topicConfig.log_file != ""):
                     lastConfigTime = time.time()
                     logFileName = self.topicConfig.log_file
+                    self.log.log(INFOX, "schedulerMain.run: config logfile=%s" % (logFileName))
                     waitConfig = False
                     self.configLogFile(logFileName)
+
                 else:
                     tf = time.time()
                     if (tf - lastConfigTime > 10.0):
@@ -122,6 +124,7 @@ class schedulerMain(object):
                     self.topicField.eb      = fieldsDict[fieldId].eb_RAD*RAD2DEG
                     self.topicField.fov     = fieldsDict[fieldId].fov_RAD*RAD2DEG
                     self.sal.putSample_field(self.topicField)
+                    self.log.log(INFOX, "schedulerMain.run: tx field %s" % (fieldsDict[fieldId]))
                 self.topicField.fieldId = -1
                 self.sal.putSample_field(self.topicField)
 
