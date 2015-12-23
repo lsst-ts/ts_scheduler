@@ -145,6 +145,8 @@ class schedulerDriver (object):
             self.newTarget.filter   = winnerTarget.filter
             self.newTarget.ra_RAD   = winnerTarget.ra_RAD
             self.newTarget.dec_RAD  = winnerTarget.dec_RAD
+            self.newTarget.ang_RAD  = winnerTarget.ang_RAD
+            self.newTarget.numexp   = winnerTarget.numexp
 
         return self.newTarget
 
