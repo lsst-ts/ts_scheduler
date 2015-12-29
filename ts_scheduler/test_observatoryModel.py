@@ -22,6 +22,11 @@ if (__name__ == '__main__'):
     log.addHandler(console)
 
     model = ObservatoryModel(log)
+    siteConf, pairs  = readConfFile("../conf/system/site.conf")
+    observatoryConf, pairs = readConfFile("../conf/system/observatoryModel.conf")
+    observatoryConf.update(siteConf)
+
+    model.configure(observatoryConf)
 
     vTime = [ 0, 100, 200, 300, 400]
     vAlt  = [80,  70,  60,  50,  40]
