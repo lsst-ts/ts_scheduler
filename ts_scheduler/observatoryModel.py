@@ -5,9 +5,9 @@ import palpy as pal
 class ObservatoryLocation(object):
 
     def __init__ (self, 
-                  latitude_RAD,
-                  longitude_RAD,
-                  height):
+                  latitude_RAD  = 0.0,
+                  longitude_RAD = 0.0,
+                  height        = 0.0):
         # meters
         self.Height    = height
 
@@ -114,6 +114,27 @@ class ObservatoryState(ObservatoryPosition):
 
         return
 
+    def setPosition(self, newPosition):
+
+        self.time = newPosition.time
+        self.ra_RAD     = newPosition.ra_RAD
+        self.dec_RAD    = newPosition.dec_RAD
+        self.ang_RAD    = newPosition.ang_RAD
+        self.filter     = newPosition.filter
+        self.tracking   = newPosition.tracking
+        self.alt_RAD    = newPosition.alt_RAD
+        self.az_RAD     = newPosition.az_RAD
+        self.pa_RAD     = newPosition.pa_RAD
+        self.rot_RAD    = newPosition.rot_RAD
+
+        self.telAlt_RAD = newPosition.alt_RAD
+        self.telAz_RAD  = newPosition.az_RAD
+        self.telRot_RAD = newPosition.rot_RAD
+        self.domAlt_RAD = newPosition.alt_RAD
+        self.domAz_RAD  = newPosition.az_RAD
+
+        return
+
 #####################################################################
 class ObservatoryModel(object):
 
@@ -121,31 +142,9 @@ class ObservatoryModel(object):
 
         self.log = log
 
-        siteConf, pairs  = readConfFile("../conf/system/site.conf")
-        latitude_RAD   = eval(str(siteConf["latitude"]))*DEG2RAD
-        longitude_RAD  = eval(str(siteConf["longitude"]))*DEG2RAD
-        height         = eval(str(siteConf["height"]))*DEG2RAD
-        self.location  = ObservatoryLocation(latitude_RAD, longitude_RAD, height)
-
-        observatoryConf, pairs = readConfFile("../conf/system/observatoryModel.conf")
-    	self.configure(observatoryConf)
-
+        self.location  = ObservatoryLocation()
         self.parkState = ObservatoryState()
-        self.parkState.filter     = self.park_Filter
-        self.parkState.tracking   = False
-        self.parkState.alt_RAD    = self.park_TelAlt_RAD
-        self.parkState.az_RAD     = self.park_TelAz_RAD
-        self.parkState.rot_RAD    = self.park_TelRot_RAD
-        self.parkState.telAlt_RAD = self.park_TelAlt_RAD
-        self.parkState.telAz_RAD  = self.park_TelAz_RAD
-        self.parkState.telRot_RAD = self.park_TelRot_RAD
-        self.parkState.domAlt_RAD = self.park_DomAlt_RAD
-        self.parkState.domAz_RAD  = self.park_DomAz_RAD
-        self.parkState.mountedFilters   = list(self.Filter_MountedList)
-        self.parkState.unmountedFilters = list(self.Filter_UnmountedList)
-
         self.currentState = ObservatoryState()
-        self.reset()
 
         return
 
@@ -153,6 +152,10 @@ class ObservatoryModel(object):
         return self.currentState.__str__()
 
     def configure(self, observatoryConf):
+
+        self.location.latitude_RAD   = eval(str(observatoryConf["latitude"]))*DEG2RAD
+        self.location.longitude_RAD  = eval(str(observatoryConf["longitude"]))*DEG2RAD
+        self.location.height         = eval(str(observatoryConf["height"]))*DEG2RAD
 
         self.TelAlt_MinPos_RAD    = eval(str(observatoryConf["TelAlt_MinPos"]))*DEG2RAD
         self.TelAlt_MaxPos_RAD    = eval(str(observatoryConf["TelAlt_MaxPos"]))*DEG2RAD
@@ -266,19 +269,28 @@ class ObservatoryModel(object):
             self.prerequisites[activity] = eval(observatoryConf[key])
             self.log.log(INFOX, "ObservatoryModel: configure prerequisites[%s]=%s"  % (activity, self.prerequisites[activity]))
 
-        self.park_TelAlt_RAD = eval(str(observatoryConf["park_TelAlt"]))*DEG2RAD
-        self.park_TelAz_RAD  = eval(str(observatoryConf["park_TelAz"]))*DEG2RAD
-        self.park_TelRot_RAD = eval(str(observatoryConf["park_TelRot"]))*DEG2RAD
-        self.park_DomAlt_RAD = eval(str(observatoryConf["park_DomAlt"]))*DEG2RAD
-        self.park_DomAz_RAD  = eval(str(observatoryConf["park_DomAz"]))*DEG2RAD
-        self.park_Filter     = str(observatoryConf["park_Filter"])
+        self.parkState.alt_RAD    = eval(str(observatoryConf["park_TelAlt"]))*DEG2RAD
+        self.parkState.az_RAD     = eval(str(observatoryConf["park_TelAz"]))*DEG2RAD
+        self.parkState.rot_RAD    = eval(str(observatoryConf["park_TelRot"]))*DEG2RAD
+        self.parkState.telAlt_RAD = eval(str(observatoryConf["park_TelAlt"]))*DEG2RAD
+        self.parkState.telAz_RAD  = eval(str(observatoryConf["park_TelAz"]))*DEG2RAD
+        self.parkState.telRot_RAD = eval(str(observatoryConf["park_TelRot"]))*DEG2RAD
+        self.parkState.domAlt_RAD = eval(str(observatoryConf["park_DomAlt"]))*DEG2RAD
+        self.parkState.domAz_RAD  = eval(str(observatoryConf["park_DomAz"]))*DEG2RAD
+        self.parkState.filter     = str(observatoryConf["park_Filter"])
+        self.parkState.mountedFilters   = list(self.Filter_MountedList)
+        self.parkState.unmountedFilters = list(self.Filter_UnmountedList)
+        self.parkState.tracking   = False
 
-        self.log.log(INFOX, "ObservatoryModel: configure park_TelAlt_RAD=%.3f" % (self.park_TelAlt_RAD))
-        self.log.log(INFOX, "ObservatoryModel: configure park_TelAz_RAD=%.3f"  % (self.park_TelAz_RAD))
-        self.log.log(INFOX, "ObservatoryModel: configure park_TelRot_RAD=%.3f" % (self.park_TelRot_RAD))
-        self.log.log(INFOX, "ObservatoryModel: configure park_DomAlt_RAD=%.3f" % (self.park_DomAlt_RAD))
-        self.log.log(INFOX, "ObservatoryModel: configure park_DomAz_RAD=%.3f"  % (self.park_DomAz_RAD))
-        self.log.log(INFOX, "ObservatoryModel: configure park_Filter=%s"       % (self.park_Filter))
+        self.log.log(INFOX, "ObservatoryModel: configure park_TelAlt_RAD=%.3f" % (self.parkState.telAlt_RAD))
+        self.log.log(INFOX, "ObservatoryModel: configure park_TelAz_RAD=%.3f"  % (self.parkState.telAz_RAD))
+        self.log.log(INFOX, "ObservatoryModel: configure park_TelRot_RAD=%.3f" % (self.parkState.telRot_RAD))
+        self.log.log(INFOX, "ObservatoryModel: configure park_DomAlt_RAD=%.3f" % (self.parkState.domAlt_RAD))
+        self.log.log(INFOX, "ObservatoryModel: configure park_DomAz_RAD=%.3f"  % (self.parkState.domAz_RAD))
+        self.log.log(INFOX, "ObservatoryModel: configure park_Filter=%s"       % (self.parkState.filter))
+
+        self.reset()
+
 
         return
 
@@ -305,6 +317,8 @@ class ObservatoryModel(object):
         targetPosition.alt_RAD  = alt*DEG2RAD
         targetPosition.az_RAD   = az*DEG2RAD
         targetPosition.rot_RAD  = rot*DEG2RAD
+
+        self.currentState.setPosition(targetPosition)
 
         return
 
