@@ -12,6 +12,13 @@ class schedulerDriver (object):
         self.scienceProposals = []
 
         self.observatoryModel = ObservatoryModel(self.log)
+        siteConf, pairs  = readConfFile("../conf/system/site.conf")
+
+        observatoryConf, pairs = readConfFile("../conf/system/observatoryModel.conf")
+	observatoryConf.update(siteConf)
+
+	self.observatoryModel.configure(observatoryConf)
+
         self.buildFieldsDict()
 
         surveyConfigDict, pairs = readConfFile("../conf/survey/survey.conf")
