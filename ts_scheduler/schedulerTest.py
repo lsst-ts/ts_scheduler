@@ -1,15 +1,17 @@
 import sys
 import time
-import datetime
 
-from SALPY_scheduler import *
+from SALPY_scheduler import SAL_scheduler
+from SALPY_scheduler import scheduler_timeHandlerC
+from SALPY_scheduler import scheduler_observationTestC
+from SALPY_scheduler import scheduler_targetTestC
 
 sal = SAL_scheduler()
 sal.setDebugLevel(0)
 
-topicTime           = scheduler_timeHandlerC()
-topicObservation    = scheduler_observationTestC()
-topicTarget         = scheduler_targetTestC()
+topicTime = scheduler_timeHandlerC()
+topicObservation = scheduler_observationTestC()
+topicTarget = scheduler_targetTestC()
 
 sal.salTelemetryPub("scheduler_timeHandler")
 sal.salTelemetryPub("scheduler_observationTest")
@@ -36,7 +38,7 @@ try:
             if scode == 0 and topicTarget.targetId != 0:
                 observationId += 1
                 topicObservation.observationId = observationId
-                topicObservation.targetId      = topicTarget.targetId
+                topicObservation.targetId = topicTarget.targetId
 
 #                topicTime.timestamp += delta_seconds
                 topicTime.timestamp = time.time()
@@ -48,7 +50,7 @@ try:
         ntime = time.time()
         dtime = ntime - stime
         if dtime >= measInterval:
-            rate = float(count)/dtime
+            rate = float(count) / dtime
             print("tx %.0f msg/sec total=%i messages" % (rate, totalcount))
             stime = ntime
             count = 0
@@ -60,4 +62,3 @@ try:
 except KeyboardInterrupt:
     sal.salShutdown()
     sys.exit(0)
-
