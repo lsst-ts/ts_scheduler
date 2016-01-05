@@ -12,12 +12,12 @@ class schedulerDriver (object):
         self.scienceProposals = []
 
         self.observatoryModel = ObservatoryModel(self.log)
-        siteConf, pairs  = readConfFile("../conf/system/site.conf")
+        siteConf = readNewConfFile("../conf/system/site.conf")
 
-        observatoryConf, pairs = readConfFile("../conf/system/observatoryModel.conf")
-	observatoryConf.update(siteConf)
+        observatoryConf = readNewConfFile("../conf/system/observatoryModel.conf")
+        observatoryConf.update(siteConf)
 
-	self.observatoryModel.configure(observatoryConf)
+        self.observatoryModel.configure(observatoryConf)
 
         self.buildFieldsDict()
 
@@ -81,7 +81,7 @@ class schedulerDriver (object):
     def getFieldsDict(self):
 
         return self.fieldsDict
-        
+
     def startSurvey(self):
 
         for prop in self.scienceProposals:
@@ -144,7 +144,7 @@ class schedulerDriver (object):
             winnerTarget = None
             for target in targetsList:
                 if target.value > winnerValue:
-                    winnerTarget = target               
+                    winnerTarget = target
 
             self.targetId += 1
             self.newTarget.targetId = self.targetId

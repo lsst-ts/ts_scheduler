@@ -1,17 +1,20 @@
+import math
+import re
+
 from schedulerDefinitions import *
 import palpy as pal
 
 #####################################################################
 class ObservatoryLocation(object):
 
-    def __init__ (self, 
+    def __init__ (self,
                   latitude_RAD  = 0.0,
                   longitude_RAD = 0.0,
                   height        = 0.0):
         # meters
         self.Height    = height
 
-        # radians 
+        # radians
         self.latitude_RAD  = latitude_RAD
         self.longitude_RAD = longitude_RAD
 
@@ -42,11 +45,11 @@ class ObservatoryPosition(object):
         self.az_RAD   = az_RAD
         self.pa_RAD   = pa_RAD
         self.rot_RAD  = rot_RAD
-        
+
         return
 
     def __str__(self):
-        return "t=%.1f ra=%.3f dec=%.3f ang=%.3f filter=%s track=%s alt=%.3f az=%.3f rot=%.3f" % (self.time, self.ra_RAD*RAD2DEG, self.dec_RAD*RAD2DEG, self.ang_RAD*RAD2DEG, self.filter, self.tracking, self.alt_RAD*RAD2DEG, self.az_RAD*RAD2DEG, self.rot_RAD*RAD2DEG) 
+        return "t=%.1f ra=%.3f dec=%.3f ang=%.3f filter=%s track=%s alt=%.3f az=%.3f rot=%.3f" % (self.time, self.ra_RAD*RAD2DEG, self.dec_RAD*RAD2DEG, self.ang_RAD*RAD2DEG, self.filter, self.tracking, self.alt_RAD*RAD2DEG, self.az_RAD*RAD2DEG, self.rot_RAD*RAD2DEG)
 
 #####################################################################
 class ObservatoryState(ObservatoryPosition):
@@ -142,7 +145,7 @@ class ObservatoryModel(object):
 
         self.log = log
 
-        self.location  = ObservatoryLocation()
+        self.location = ObservatoryLocation()
         self.parkState = ObservatoryState()
         self.currentState = ObservatoryState()
 
@@ -153,101 +156,97 @@ class ObservatoryModel(object):
 
     def configure(self, observatoryConf):
 
-        self.location.latitude_RAD   = eval(str(observatoryConf["latitude"]))*DEG2RAD
-        self.location.longitude_RAD  = eval(str(observatoryConf["longitude"]))*DEG2RAD
-        self.location.height         = eval(str(observatoryConf["height"]))*DEG2RAD
+        self.location.latitude_RAD = math.radians(observatoryConf["obs_site"]["latitude"])
+        self.location.longitude_RAD = math.radians(observatoryConf["obs_site"]["longitude"])
+        self.location.height = observatoryConf["obs_site"]["height"]
 
-        self.TelAlt_MinPos_RAD    = eval(str(observatoryConf["TelAlt_MinPos"]))*DEG2RAD
-        self.TelAlt_MaxPos_RAD    = eval(str(observatoryConf["TelAlt_MaxPos"]))*DEG2RAD
-        self.TelAz_MinPos_RAD     = eval(str(observatoryConf["TelAz_MinPos"]))*DEG2RAD
-        self.TelAz_MaxPos_RAD     = eval(str(observatoryConf["TelAz_MaxPos"]))*DEG2RAD
-        self.TelRot_MinPos_RAD    = eval(str(observatoryConf["TelRot_MinPos"]))*DEG2RAD
-        self.TelRot_MaxPos_RAD    = eval(str(observatoryConf["TelRot_MaxPos"]))*DEG2RAD
-        self.TelRot_FilterPos_RAD = eval(str(observatoryConf["TelRot_FilterPos"]))*DEG2RAD
+        self.TelAlt_MinPos_RAD = math.radians(observatoryConf["telescope"]["altitude_minpos"])
+        self.TelAlt_MaxPos_RAD = math.radians(observatoryConf["telescope"]["altitude_maxpos"])
+        self.TelAz_MinPos_RAD = math.radians(observatoryConf["telescope"]["azimuth_minpos"])
+        self.TelAz_MaxPos_RAD = math.radians(observatoryConf["telescope"]["azimuth_maxpos"])
+        self.TelRot_MinPos_RAD = math.radians(observatoryConf["rotator"]["minpos"])
+        self.TelRot_MaxPos_RAD = math.radians(observatoryConf["rotator"]["maxpos"])
+        self.TelRot_FilterPos_RAD = math.radians(observatoryConf["rotator"]["filter_pos"])
 
-        self.log.log(INFOX, "ObservatoryModel: configure TelAlt_MinPos_RAD=%.3f"    % (self.TelAlt_MinPos_RAD))
-        self.log.log(INFOX, "ObservatoryModel: configure TelAlt_MaxPos_RAD=%.3f"    % (self.TelAlt_MaxPos_RAD))
-        self.log.log(INFOX, "ObservatoryModel: configure TelAz_MinPos_RAD=%.3f"     % (self.TelAz_MinPos_RAD))
-        self.log.log(INFOX, "ObservatoryModel: configure TelAz_MaxPos_RAD=%.3f"     % (self.TelAz_MaxPos_RAD))
-        self.log.log(INFOX, "ObservatoryModel: configure TelRot_MinPos_RAD=%.3f"    % (self.TelRot_MinPos_RAD))
-        self.log.log(INFOX, "ObservatoryModel: configure TelRot_MaxPos_RAD=%.3f"    % (self.TelRot_MaxPos_RAD))
-        self.log.log(INFOX, "ObservatoryModel: configure TelRot_FilterPos_RAD=%.3f" % (self.TelRot_FilterPos_RAD))
+        self.log.log(INFOX, "ObservatoryModel: configure TelAlt_MinPos_RAD=%.3f" % (self.TelAlt_MinPos_RAD))
+        self.log.log(INFOX, "ObservatoryModel: configure TelAlt_MaxPos_RAD=%.3f" % (self.TelAlt_MaxPos_RAD))
+        self.log.log(INFOX, "ObservatoryModel: configure TelAz_MinPos_RAD=%.3f" % (self.TelAz_MinPos_RAD))
+        self.log.log(INFOX, "ObservatoryModel: configure TelAz_MaxPos_RAD=%.3f" % (self.TelAz_MaxPos_RAD))
+        self.log.log(INFOX, "ObservatoryModel: configure TelRot_MinPos_RAD=%.3f" % (self.TelRot_MinPos_RAD))
+        self.log.log(INFOX, "ObservatoryModel: configure TelRot_MaxPos_RAD=%.3f" % (self.TelRot_MaxPos_RAD))
+        self.log.log(INFOX,
+                     "ObservatoryModel: configure TelRot_FilterPos_RAD=%.3f" % (self.TelRot_FilterPos_RAD))
 
-        self.Rotator_FollowSky   = eval(str(observatoryConf["Rotator_FollowSky"]))
-        self.Rotator_ResumeAngle = eval(str(observatoryConf["Rotator_ResumeAngleAfterFilterChange"]))
+        self.Rotator_FollowSky = observatoryConf["rotator"]["follow_sky"]
+        self.Rotator_ResumeAngle = observatoryConf["rotator"]["resume_angle"]
 
-        self.log.log(INFOX, "ObservatoryModel: configure Rotator_FollowSky=%s"   % (self.Rotator_FollowSky))
+        self.log.log(INFOX, "ObservatoryModel: configure Rotator_FollowSky=%s" % (self.Rotator_FollowSky))
         self.log.log(INFOX, "ObservatoryModel: configure Rotator_ResumeAngle=%s" % (self.Rotator_ResumeAngle))
 
-        self.Filter_MountedList = observatoryConf["Filter_Mounted"]
-    	if observatoryConf.has_key("Filter_Removable"):
-            self.Filter_RemovableList = observatoryConf["Filter_Removable"]
-            if (not isinstance(self.Filter_RemovableList,list)):
-                self.Filter_RemovableList = [self.Filter_RemovableList]
-    	else:
-	        self.Filter_RemovableList = []
+        self.Filter_MountedList = observatoryConf["camera"]["filter_mounted"]
+        self.Filter_RemovableList = observatoryConf["camera"]["filter_removable"]
+        self.Filter_UnmountedList = observatoryConf["camera"]["filter_unmounted"]
 
-        if observatoryConf.has_key("Filter_Unmounted"):
-            self.Filter_UnmountedList = observatoryConf["Filter_Unmounted"]
-    	    if (not isinstance(self.Filter_UnmountedList,list)):
-                self.Filter_UnmountedList = [self.Filter_UnmountedList]
-        else:
-            self.Filter_UnmountedList = []
+        self.log.log(INFOX, "ObservatoryModel: configure Filter_MountedList=%s" % (self.Filter_MountedList))
+        self.log.log(INFOX,
+                     "ObservatoryModel: configure Filter_RemovableList=%s" % (self.Filter_RemovableList))
+        self.log.log(INFOX,
+                     "ObservatoryModel: configure Filter_UnmountedList=%s" % (self.Filter_UnmountedList))
 
-        self.log.log(INFOX, "ObservatoryModel: configure Filter_MountedList=%s"   % (self.Filter_MountedList))
-        self.log.log(INFOX, "ObservatoryModel: configure Filter_RemovableList=%s" % (self.Filter_RemovableList))
-        self.log.log(INFOX, "ObservatoryModel: configure Filter_UnmountedList=%s" % (self.Filter_UnmountedList))
+        self.TelAlt_MaxSpeed_RAD = math.radians(observatoryConf["telescope"]["altitude_maxspeed"])
+        self.TelAlt_Accel_RAD = math.radians(observatoryConf["telescope"]["altitude_accel"])
+        self.TelAlt_Decel_RAD = math.radians(observatoryConf["telescope"]["altitude_decel"])
+        self.TelAz_MaxSpeed_RAD = math.radians(observatoryConf["telescope"]["azimuth_maxspeed"])
+        self.TelAz_Accel_RAD = math.radians(observatoryConf["telescope"]["azimuth_accel"])
+        self.TelAz_Decel_RAD = math.radians(observatoryConf["telescope"]["azimuth_decel"])
+        self.TelRot_MaxSpeed_RAD = math.radians(observatoryConf["rotator"]["maxspeed"])
+        self.TelRot_Accel_RAD = math.radians(observatoryConf["rotator"]["accel"])
+        self.TelRot_Decel_RAD = math.radians(observatoryConf["rotator"]["decel"])
+        self.DomAlt_MaxSpeed_RAD = math.radians(observatoryConf["dome"]["altitude_maxspeed"])
+        self.DomAlt_Accel_RAD = math.radians(observatoryConf["dome"]["altitude_accel"])
+        self.DomAlt_Decel_RAD = math.radians(observatoryConf["dome"]["altitude_decel"])
+        self.DomAz_MaxSpeed_RAD = math.radians(observatoryConf["dome"]["azimuth_maxspeed"])
+        self.DomAz_Accel_RAD = math.radians(observatoryConf["dome"]["azimuth_accel"])
+        self.DomAz_Decel_RAD = math.radians(observatoryConf["dome"]["azimuth_decel"])
 
-        self.TelAlt_MaxSpeed_RAD = eval(str(observatoryConf["TelAlt_MaxSpeed"]))*DEG2RAD
-        self.TelAlt_Accel_RAD    = eval(str(observatoryConf["TelAlt_Accel"]))*DEG2RAD
-        self.TelAlt_Decel_RAD    = eval(str(observatoryConf["TelAlt_Decel"]))*DEG2RAD
-        self.TelAz_MaxSpeed_RAD  = eval(str(observatoryConf["TelAz_MaxSpeed"]))*DEG2RAD
-        self.TelAz_Accel_RAD     = eval(str(observatoryConf["TelAz_Accel"]))*DEG2RAD
-        self.TelAz_Decel_RAD     = eval(str(observatoryConf["TelAz_Decel"]))*DEG2RAD
-        self.TelRot_MaxSpeed_RAD = eval(str(observatoryConf["TelRot_MaxSpeed"]))*DEG2RAD
-        self.TelRot_Accel_RAD    = eval(str(observatoryConf["TelRot_Accel"]))*DEG2RAD
-        self.TelRot_Decel_RAD    = eval(str(observatoryConf["TelRot_Decel"]))*DEG2RAD
-        self.DomAlt_MaxSpeed_RAD = eval(str(observatoryConf["DomAlt_MaxSpeed"]))*DEG2RAD
-        self.DomAlt_Accel_RAD    = eval(str(observatoryConf["DomAlt_Accel"]))*DEG2RAD
-        self.DomAlt_Decel_RAD    = eval(str(observatoryConf["DomAlt_Decel"]))*DEG2RAD
-        self.DomAz_MaxSpeed_RAD  = eval(str(observatoryConf["DomAz_MaxSpeed"]))*DEG2RAD
-        self.DomAz_Accel_RAD     = eval(str(observatoryConf["DomAz_Accel"]))*DEG2RAD
-        self.DomAz_Decel_RAD     = eval(str(observatoryConf["DomAz_Decel"]))*DEG2RAD
+        self.log.log(INFOX,
+                     "ObservatoryModel: configure TelAlt_MaxSpeed_RAD=%.3f" % (self.TelAlt_MaxSpeed_RAD))
+        self.log.log(INFOX, "ObservatoryModel: configure TelAlt_Accel_RAD=%.3f" % (self.TelAlt_Accel_RAD))
+        self.log.log(INFOX, "ObservatoryModel: configure TelAlt_Decel_RAD=%.3f" % (self.TelAlt_Decel_RAD))
+        self.log.log(INFOX, "ObservatoryModel: configure TelAz_MaxSpeed_RAD=%.3f" % (self.TelAz_MaxSpeed_RAD))
+        self.log.log(INFOX, "ObservatoryModel: configure TelAz_Accel_RAD=%.3f" % (self.TelAz_Accel_RAD))
+        self.log.log(INFOX, "ObservatoryModel: configure TelAz_Decel_RAD=%.3f" % (self.TelAz_Decel_RAD))
+        self.log.log(INFOX,
+                     "ObservatoryModel: configure TelRot_MaxSpeed_RAD=%.3f" % (self.TelRot_MaxSpeed_RAD))
+        self.log.log(INFOX, "ObservatoryModel: configure TelRot_Accel_RAD=%.3f" % (self.TelRot_Accel_RAD))
+        self.log.log(INFOX, "ObservatoryModel: configure TelRot_Decel_RAD=%.3f" % (self.TelRot_Decel_RAD))
+        self.log.log(INFOX,
+                     "ObservatoryModel: configure DomAlt_MaxSpeed_RAD=%.3f" % (self.DomAlt_MaxSpeed_RAD))
+        self.log.log(INFOX, "ObservatoryModel: configure DomAlt_Accel_RAD=%.3f" % (self.DomAlt_Accel_RAD))
+        self.log.log(INFOX, "ObservatoryModel: configure DomAlt_Decel_RAD=%.3f" % (self.DomAlt_Decel_RAD))
+        self.log.log(INFOX, "ObservatoryModel: configure DomAz_MaxSpeed_RAD=%.3f" % (self.DomAz_MaxSpeed_RAD))
+        self.log.log(INFOX, "ObservatoryModel: configure DomAz_Accel_RAD=%.3f" % (self.DomAz_Accel_RAD))
+        self.log.log(INFOX, "ObservatoryModel: configure DomAz_Decel_RAD=%.3f" % (self.DomAz_Decel_RAD))
 
-        self.log.log(INFOX, "ObservatoryModel: configure TelAlt_MaxSpeed_RAD=%.3f" % (self.TelAlt_MaxSpeed_RAD))
-        self.log.log(INFOX, "ObservatoryModel: configure TelAlt_Accel_RAD=%.3f"    % (self.TelAlt_Accel_RAD))
-        self.log.log(INFOX, "ObservatoryModel: configure TelAlt_Decel_RAD=%.3f"    % (self.TelAlt_Decel_RAD))
-        self.log.log(INFOX, "ObservatoryModel: configure TelAz_MaxSpeed_RAD=%.3f"  % (self.TelAz_MaxSpeed_RAD))
-        self.log.log(INFOX, "ObservatoryModel: configure TelAz_Accel_RAD=%.3f"     % (self.TelAz_Accel_RAD))
-        self.log.log(INFOX, "ObservatoryModel: configure TelAz_Decel_RAD=%.3f"     % (self.TelAz_Decel_RAD))
-        self.log.log(INFOX, "ObservatoryModel: configure TelRot_MaxSpeed_RAD=%.3f" % (self.TelRot_MaxSpeed_RAD))
-        self.log.log(INFOX, "ObservatoryModel: configure TelRot_Accel_RAD=%.3f"    % (self.TelRot_Accel_RAD))
-        self.log.log(INFOX, "ObservatoryModel: configure TelRot_Decel_RAD=%.3f"    % (self.TelRot_Decel_RAD))
-        self.log.log(INFOX, "ObservatoryModel: configure DomAlt_MaxSpeed_RAD=%.3f" % (self.DomAlt_MaxSpeed_RAD))
-        self.log.log(INFOX, "ObservatoryModel: configure DomAlt_Accel_RAD=%.3f"    % (self.DomAlt_Accel_RAD))
-        self.log.log(INFOX, "ObservatoryModel: configure DomAlt_Decel_RAD=%.3f"    % (self.DomAlt_Decel_RAD))
-        self.log.log(INFOX, "ObservatoryModel: configure DomAz_MaxSpeed_RAD=%.3f"  % (self.DomAz_MaxSpeed_RAD))
-        self.log.log(INFOX, "ObservatoryModel: configure DomAz_Accel_RAD=%.3f"     % (self.DomAz_Accel_RAD))
-        self.log.log(INFOX, "ObservatoryModel: configure DomAz_Decel_RAD=%.3f"     % (self.DomAz_Decel_RAD))
-
-        self.Filter_ChangeTime = eval(str(observatoryConf["Filter_ChangeTime"]))
-        self.Mount_SettleTime  = eval(str(observatoryConf["Mount_SettleTime"]))
-        self.DomAz_SettleTime  = eval(str(observatoryConf["DomAz_SettleTime"]))
-        self.ReadoutTime       = eval(str(observatoryConf["ReadoutTime"]))
-        self.ShutterTime       = eval(str(observatoryConf["ShutterTime"]))
+        self.Filter_ChangeTime = observatoryConf["camera"]["filter_change_time"]
+        self.Mount_SettleTime = observatoryConf["telescope"]["settle_time"]
+        self.DomAz_SettleTime = observatoryConf["dome"]["settle_time"]
+        self.ReadoutTime = observatoryConf["camera"]["readout_time"]
+        self.ShutterTime = observatoryConf["camera"]["shutter_time"]
 
         self.log.log(INFOX, "ObservatoryModel: configure Filter_ChangeTime=%.1f" % (self.Filter_ChangeTime))
-        self.log.log(INFOX, "ObservatoryModel: configure Mount_SettleTime=%.1f"  % (self.Mount_SettleTime))
-        self.log.log(INFOX, "ObservatoryModel: configure DomAz_SettleTime=%.1f"  % (self.DomAz_SettleTime))
-        self.log.log(INFOX, "ObservatoryModel: configure ReadoutTime=%.1f"       % (self.ReadoutTime))
-        self.log.log(INFOX, "ObservatoryModel: configure ShutterTime=%.1f"       % (self.ShutterTime))
+        self.log.log(INFOX, "ObservatoryModel: configure Mount_SettleTime=%.1f" % (self.Mount_SettleTime))
+        self.log.log(INFOX, "ObservatoryModel: configure DomAz_SettleTime=%.1f" % (self.DomAz_SettleTime))
+        self.log.log(INFOX, "ObservatoryModel: configure ReadoutTime=%.1f" % (self.ReadoutTime))
+        self.log.log(INFOX, "ObservatoryModel: configure ShutterTime=%.1f" % (self.ShutterTime))
 
-        self.OpticsOL_Slope    = eval(str(observatoryConf["OpticsOL_Slope"]))
-        self.OpticsCL_Delay    = eval(str(observatoryConf["OpticsCL_Delay"]))
-        self.OpticsCL_AltLimit = eval(str(observatoryConf["OpticsCL_AltLimit"]))
+        # Shouldn't these be converted to radians?
+        self.OpticsOL_Slope = observatoryConf["slew"]["tel_optics_ol_slope"]
+        self.OpticsCL_Delay = observatoryConf["slew"]["tel_optics_cl_delay"]
+        self.OpticsCL_AltLimit = observatoryConf["slew"]["tel_optics_cl_alt_limit"]
 
-        self.log.log(INFOX, "ObservatoryModel: configure OpticsOL_Slope=%.3f"  % (self.OpticsOL_Slope))
-        self.log.log(INFOX, "ObservatoryModel: configure OpticsCL_Delay=%s"    % (self.OpticsCL_Delay))
+        self.log.log(INFOX, "ObservatoryModel: configure OpticsOL_Slope=%.3f" % (self.OpticsOL_Slope))
+        self.log.log(INFOX, "ObservatoryModel: configure OpticsCL_Delay=%s" % (self.OpticsCL_Delay))
         self.log.log(INFOX, "ObservatoryModel: configure OpticsCL_AltLimit=%s" % (self.OpticsCL_AltLimit))
 
         self.activities = ["TelAlt",
@@ -256,41 +255,45 @@ class ObservatoryModel(object):
                            "DomAlt",
                            "DomAz",
                            "Filter",
-                           "MountSettle",
+                           "TelSettle",
                            "DomAzSettle",
                            "Readout",
-                           "OpticsOL",
-                           "OpticsCL",
-                           "Exposures"]
+                           "TelOpticsOL",
+                           "TelOpticsCL",
+                           "Exposure"]
 
+        # Split on camel case and acronyms
+        key_re = re.compile(r'[A-Z](?:[a-z]+|[A-Z]*(?=[A-Z]|$))')
         self.prerequisites = {}
         for activity in self.activities:
-            key = "prereq_" + activity
-            self.prerequisites[activity] = eval(observatoryConf[key])
-            self.log.log(INFOX, "ObservatoryModel: configure prerequisites[%s]=%s"  % (activity, self.prerequisites[activity]))
+            activity_key = "_".join([s.lower() for s in key_re.findall(activity)])
+            key = "prereq_" + activity_key
+            self.prerequisites[activity] = observatoryConf["slew"][key]
+            self.log.log(INFOX,
+                         "ObservatoryModel: configure prerequisites[%s]=%s" %
+                         (activity, self.prerequisites[activity]))
 
-        self.parkState.alt_RAD    = eval(str(observatoryConf["park_TelAlt"]))*DEG2RAD
-        self.parkState.az_RAD     = eval(str(observatoryConf["park_TelAz"]))*DEG2RAD
-        self.parkState.rot_RAD    = eval(str(observatoryConf["park_TelRot"]))*DEG2RAD
-        self.parkState.telAlt_RAD = eval(str(observatoryConf["park_TelAlt"]))*DEG2RAD
-        self.parkState.telAz_RAD  = eval(str(observatoryConf["park_TelAz"]))*DEG2RAD
-        self.parkState.telRot_RAD = eval(str(observatoryConf["park_TelRot"]))*DEG2RAD
-        self.parkState.domAlt_RAD = eval(str(observatoryConf["park_DomAlt"]))*DEG2RAD
-        self.parkState.domAz_RAD  = eval(str(observatoryConf["park_DomAz"]))*DEG2RAD
-        self.parkState.filter     = str(observatoryConf["park_Filter"])
-        self.parkState.mountedFilters   = list(self.Filter_MountedList)
-        self.parkState.unmountedFilters = list(self.Filter_UnmountedList)
-        self.parkState.tracking   = False
+        self.parkState.alt_RAD = math.radians(observatoryConf["park"]["telescope_altitude"])
+        self.parkState.az_RAD = math.radians(observatoryConf["park"]["telescope_azimuth"])
+        self.parkState.rot_RAD = math.radians(observatoryConf["park"]["telescope_rotator"])
+        self.parkState.telAlt_RAD = math.radians(observatoryConf["park"]["telescope_altitude"])
+        self.parkState.telAz_RAD = math.radians(observatoryConf["park"]["telescope_azimuth"])
+        self.parkState.telRot_RAD = math.radians(observatoryConf["park"]["telescope_rotator"])
+        self.parkState.domAlt_RAD = math.radians(observatoryConf["park"]["dome_altitude"])
+        self.parkState.domAz_RAD = math.radians(observatoryConf["park"]["dome_azimuth"])
+        self.parkState.filter = observatoryConf["park"]["filter_position"]
+        self.parkState.mountedFilters = self.Filter_MountedList
+        self.parkState.unmountedFilters = self.Filter_UnmountedList
+        self.parkState.tracking = False
 
         self.log.log(INFOX, "ObservatoryModel: configure park_TelAlt_RAD=%.3f" % (self.parkState.telAlt_RAD))
-        self.log.log(INFOX, "ObservatoryModel: configure park_TelAz_RAD=%.3f"  % (self.parkState.telAz_RAD))
+        self.log.log(INFOX, "ObservatoryModel: configure park_TelAz_RAD=%.3f" % (self.parkState.telAz_RAD))
         self.log.log(INFOX, "ObservatoryModel: configure park_TelRot_RAD=%.3f" % (self.parkState.telRot_RAD))
         self.log.log(INFOX, "ObservatoryModel: configure park_DomAlt_RAD=%.3f" % (self.parkState.domAlt_RAD))
-        self.log.log(INFOX, "ObservatoryModel: configure park_DomAz_RAD=%.3f"  % (self.parkState.domAz_RAD))
-        self.log.log(INFOX, "ObservatoryModel: configure park_Filter=%s"       % (self.parkState.filter))
+        self.log.log(INFOX, "ObservatoryModel: configure park_DomAz_RAD=%.3f" % (self.parkState.domAz_RAD))
+        self.log.log(INFOX, "ObservatoryModel: configure park_Filter=%s" % (self.parkState.filter))
 
         self.reset()
-
 
         return
 
@@ -339,18 +342,18 @@ class ObservatoryModel(object):
         output:
                LST:  Local Sidereal Time in radians.
         """
-                                                                                            
+
         UT_day   = 57388 + time/86400.0
 
         # LSST convention of West=negative, East=positive
         LST_RAD = pal.gmst(UT_day) + self.location.longitude_RAD
-                                                                                            
+
         return LST_RAD
 
     def AltAz2RaDecPa(self, time, alt_RAD, az_RAD):
         """
         Converts ALT, AZ coordinates into RA DEC for the given TIME.
-                                                                                                                                        
+
         inputs:
                alt_RAD: Altitude in radians [-90.0deg  90.0deg] 90deg=>zenith
                az_RAD:  Azimuth in radians [  0.0deg 360.0deg] 0deg=>N 90deg=>E
@@ -411,7 +414,7 @@ class ObservatoryModel(object):
             az_RAD = divmod(az_RAD, TWOPI)[1]
             pa_RAD = divmod(pa_RAD, TWOPI)[1]
             rot_RAD = pa_RAD + self.currentState.ang_RAD
-                                                                                                    
+
             self.currentState.time    = time
             self.currentState.alt_RAD = alt_RAD
             self.currentState.az_RAD  = az_RAD
