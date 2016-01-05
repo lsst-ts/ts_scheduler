@@ -1,5 +1,4 @@
-from schedulerDefinitions import *
-from schedulerTarget      import *
+from schedulerDefinitions import readConfFile
 
 class schedulerProposal(object):
     def __init__(self, log, configFilePath):
@@ -29,4 +28,3 @@ class schedulerProposal(object):
     def suggestTargets(self):
 
         return
-
