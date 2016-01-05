@@ -1,4 +1,6 @@
-from schedulerMain import *
+import sys
+
+from schedulerMain import schedulerMain
 
 if (__name__ == '__main__'):
 
@@ -7,4 +9,3 @@ if (__name__ == '__main__'):
     scheduler.run()
 
     sys.exit(0)
-
