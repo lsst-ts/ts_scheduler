@@ -1,12 +1,12 @@
-import time
+from observatoryModel import ObservatoryModel
 
-from schedulerTarget  import *
-from observatoryModel import *
-from schedulerField   import *
-from schedulerScriptedProposal import *
+from schedulerDefinitions import INFOX, DEG2RAD, readConfFile, readNewConfFile
+from schedulerField import schedulerField
+from schedulerTarget import schedulerTarget
+from schedulerScriptedProposal import schedulerScriptedProposal
 
 class schedulerDriver (object):
-    def __init__ (self, log):
+    def __init__(self, log):
 
         self.log = log
         self.scienceProposals = []
@@ -22,19 +22,19 @@ class schedulerDriver (object):
         self.buildFieldsDict()
 
         surveyConfigDict, pairs = readConfFile("../conf/survey/survey.conf")
-        if (surveyConfigDict.has_key('scriptedPropConf')) :
+        if ('scriptedPropConf' in surveyConfigDict):
             scriptedPropConf = surveyConfigDict["scriptedPropConf"]
             print("    scriptedPropConf:%s" % (scriptedPropConf))
         else:
-            scriptedPropConf =  None
+            scriptedPropConf = None
             print("    scriptedPropConf:%s default" % (scriptedPropConf))
-        if (not isinstance(scriptedPropConf,list)):
+        if (not isinstance(scriptedPropConf, list)):
             # turn it into a list with one entry
             saveConf = scriptedPropConf
             scriptedPropConf = []
             scriptedPropConf.append(saveConf)
 
-        if ( scriptedPropConf[0] != None):
+        if (scriptedPropConf[0] is not None):
             for k in range(len(scriptedPropConf)):
                 scriptedProp = schedulerScriptedProposal(self.log, "../conf/survey/%s" % scriptedPropConf[k])
                 self.scienceProposals.append(scriptedProp)
@@ -54,19 +54,19 @@ class schedulerDriver (object):
             line = line.strip()
             if not line:			# skip blank line
                 continue
-            if line[0]=='#': 		# skip comment line
+            if line[0] == '#': 		# skip comment line
                 continue
             fieldId += 1
             values = line.split()
             field = schedulerField()
             field.fieldId = fieldId
-            field.ra_RAD  = eval(values[0])*DEG2RAD
-            field.dec_RAD = eval(values[1])*DEG2RAD
-            field.gl_RAD  = eval(values[2])*DEG2RAD
-            field.gb_RAD  = eval(values[3])*DEG2RAD
-            field.el_RAD  = eval(values[4])*DEG2RAD
-            field.eb_RAD  = eval(values[5])*DEG2RAD
-            field.fov_RAD = 3.5*DEG2RAD
+            field.ra_RAD = eval(values[0]) * DEG2RAD
+            field.dec_RAD = eval(values[1]) * DEG2RAD
+            field.gl_RAD = eval(values[2]) * DEG2RAD
+            field.gb_RAD = eval(values[3]) * DEG2RAD
+            field.el_RAD = eval(values[4]) * DEG2RAD
+            field.eb_RAD = eval(values[5]) * DEG2RAD
+            field.fov_RAD = 3.5 * DEG2RAD
 
             self.fieldsDict[fieldId] = field
             self.log.info("schedulerDriver.buildFieldsTable: %s" % (self.fieldsDict[fieldId]))
@@ -89,14 +89,14 @@ class schedulerDriver (object):
 
         self.log.log(INFOX, "schedulerDriver.startSurvey")
 
-    	return
+        return
 
     def endSurvey(self):
 
         for prop in self.scienceProposals:
             prop.endSurvey()
 
-    	return
+        return
 
     def startNight(self):
 
@@ -140,7 +140,7 @@ class schedulerDriver (object):
                     nTargets += 1
 
         if nTargets > 0:
-            winnerValue  = 0.0
+            winnerValue = 0.0
             winnerTarget = None
             for target in targetsList:
                 if target.value > winnerValue:
@@ -148,12 +148,12 @@ class schedulerDriver (object):
 
             self.targetId += 1
             self.newTarget.targetId = self.targetId
-            self.newTarget.fieldId  = winnerTarget.fieldId
-            self.newTarget.filter   = winnerTarget.filter
-            self.newTarget.ra_RAD   = winnerTarget.ra_RAD
-            self.newTarget.dec_RAD  = winnerTarget.dec_RAD
-            self.newTarget.ang_RAD  = winnerTarget.ang_RAD
-            self.newTarget.numexp   = winnerTarget.numexp
+            self.newTarget.fieldId = winnerTarget.fieldId
+            self.newTarget.filter = winnerTarget.filter
+            self.newTarget.ra_RAD = winnerTarget.ra_RAD
+            self.newTarget.dec_RAD = winnerTarget.dec_RAD
+            self.newTarget.ang_RAD = winnerTarget.ang_RAD
+            self.newTarget.numexp = winnerTarget.numexp
 
         return self.newTarget
 
@@ -162,4 +162,3 @@ class schedulerDriver (object):
         self.observatoryModel.observe(topicObservation)
 
         return
-
