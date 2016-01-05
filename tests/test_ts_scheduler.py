@@ -10,7 +10,7 @@ Tests for `ts_scheduler` module.
 
 import unittest
 
-from ts_scheduler import scheduler
+#from ts_scheduler import scheduler
 
 class TestTs_scheduler(unittest.TestCase):
 
