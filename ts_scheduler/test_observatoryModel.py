@@ -2,9 +2,13 @@ import logging
 import time
 import sys
 
-from observatoryModel import *
+from observatoryModel import ObservatoryModel
+
+from schedulerDefinitions import INFOX, readNewConfFile
 
 if (__name__ == '__main__'):
+    logging.INFOX = INFOX
+    logging.addLevelName(logging.INFOX, 'INFOX')
 
     formatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
     log = logging.getLogger("test_observatoryModel")
@@ -22,16 +26,16 @@ if (__name__ == '__main__'):
     log.addHandler(console)
 
     model = ObservatoryModel(log)
-    siteConf, pairs  = readConfFile("../conf/system/site.conf")
-    observatoryConf, pairs = readConfFile("../conf/system/observatoryModel.conf")
+    siteConf = readNewConfFile("../conf/system/site.conf")
+    observatoryConf = readNewConfFile("../conf/system/observatoryModel.conf")
     observatoryConf.update(siteConf)
 
     model.configure(observatoryConf)
 
-    vTime = [ 0, 100, 200, 300, 400]
-    vAlt  = [80,  70,  60,  50,  40]
-    vAz   = [ 0,  30,  60,  90, 120]
-    vRot  = [ 0,  15,  30,  45,  60]
+    vTime = [0, 100, 200, 300, 400]
+    vAlt = [80, 70, 60, 50, 40]
+    vAz = [0, 30, 60, 90, 120]
+    vRot = [0, 15, 30, 45, 60]
 
     model.reset()
     print model
@@ -40,6 +44,5 @@ if (__name__ == '__main__'):
         print model
         model.slewAltAzRot(vTime[k], vAlt[k], vAz[k], vRot[k])
         model.startTracking(vTime[k])
-        print model   
+        print model
     sys.exit(0)
-
