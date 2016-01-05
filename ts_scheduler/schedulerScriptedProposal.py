@@ -1,4 +1,6 @@
-from schedulerProposal import *
+from schedulerDefinitions import DEG2RAD
+from schedulerTarget import schedulerTarget
+from schedulerProposal import schedulerProposal
 
 class schedulerScriptedProposal(schedulerProposal):
     def __init__(self, log, configFilePath):
@@ -23,17 +25,17 @@ class schedulerScriptedProposal(schedulerProposal):
             line = line.strip()
             if not line:			# skip blank line
                 continue
-            if line[0]=='#': 		# skip comment line
+            if line[0] == '#': 		# skip comment line
                 continue
             targetId += 1
             values = line.split()
             target = schedulerTarget()
             target.fieldId = eval(values[0])
-            target.filter  = values[1]
-            target.ra_RAD  = eval(values[2])*DEG2RAD
-            target.dec_RAD  = eval(values[3])*DEG2RAD
-            target.ang_RAD  = eval(values[4])*DEG2RAD
-            target.numexp   = eval(values[5])
+            target.filter = values[1]
+            target.ra_RAD = eval(values[2]) * DEG2RAD
+            target.dec_RAD = eval(values[3]) * DEG2RAD
+            target.ang_RAD = eval(values[4]) * DEG2RAD
+            target.numexp = eval(values[5])
 
             self.targetsList.append(target)
             print target
@@ -54,5 +56,3 @@ class schedulerScriptedProposal(schedulerProposal):
             nextTarget.value = 1.0
             self.targetId += 1
             return list([nextTarget])
-
-
