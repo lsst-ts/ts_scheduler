@@ -4,7 +4,7 @@ import re
 # Routines and non user-specific globals
 DEG2RAD = math.pi / 180.    # radians = degrees * DEG2RAD
 RAD2DEG = 180. / math.pi    # degrees = radians * RAD2DEG
-TWOPI   = 2*math.pi
+TWOPI = 2 * math.pi
 
 # Logger level for stdout, higher than Logging.INFO and lower than Logging.WARNING
 INFOX = 25
@@ -55,43 +55,40 @@ def readConfFile(fileName):
 
     # Try and read the file fileName (raise IOError if something bad
     # happens).
-    lines = file(fileName).readlines ()
+    lines = file(fileName).readlines()
 
     for line in lines:
         line = line.strip()
         if not line:			# skip blank line
             continue
-        if line[0]=='#': 		# skip comment line
+        if line[0] == '#': 		# skip comment line
             continue
 
-        comment = ""
-        m = re.search (_config_line_re, line)
+        m = re.search(_config_line_re, line)
         if m:
-            good, comment = m.group(1), m.group(2)
+            good = m.group(1)
 
-        m = re.search (_config_item_re, good)
+        m = re.search(_config_item_re, good)
         if m:
             key, val = m.group(1), m.group(2)
 
             # store "key = value" string
-            pairs.append({
-                    'key' : key,
-                    'val' : val,
-                    'index' : index,
-            })
+            pairs.append({'key': key,
+                          'val': val,
+                          'index': index})
             index += 1
 
             # Try and convert val to a float
             try:
-                val = float (val)
+                val = float(val)
             except:
                 # Ops, must be a string, then
                 pass
 
-            if not conf.has_key (key):
+            if key not in conf:
                 conf[key] = val
-            elif (isinstance (conf[key], list)):
-                conf[key].append (val)
+            elif (isinstance(conf[key], list)):
+                conf[key].append(val)
             else:
                 conf[key] = [conf[key], val]
     return conf, pairs
