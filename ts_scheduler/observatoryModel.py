@@ -1,21 +1,22 @@
 import math
 import re
 
-from schedulerDefinitions import *
 import palpy as pal
+
+from schedulerDefinitions import TWOPI, RAD2DEG, DEG2RAD, INFOX
 
 #####################################################################
 class ObservatoryLocation(object):
 
-    def __init__ (self,
-                  latitude_RAD  = 0.0,
-                  longitude_RAD = 0.0,
-                  height        = 0.0):
+    def __init__(self,
+                 latitude_RAD=0.0,
+                 longitude_RAD=0.0,
+                 height=0.0):
         # meters
-        self.Height    = height
+        self.Height = height
 
         # radians
-        self.latitude_RAD  = latitude_RAD
+        self.latitude_RAD = latitude_RAD
         self.longitude_RAD = longitude_RAD
 
         return
@@ -24,95 +25,98 @@ class ObservatoryLocation(object):
 class ObservatoryPosition(object):
 
     def __init__(self,
-                    time     = 0.0,
-                    ra_RAD   = 0.0,
-                    dec_RAD  = 0.0,
-                    ang_RAD  = 0.0,
-                    filter   = 'r',
-                    tracking = False,
-                    alt_RAD  = 1.5,
-                    az_RAD   = 0.0,
-                    pa_RAD   = 0.0,
-                    rot_RAD  = 0.0):
+                 time=0.0,
+                 ra_RAD=0.0,
+                 dec_RAD=0.0,
+                 ang_RAD=0.0,
+                 filter='r',
+                 tracking=False,
+                 alt_RAD=1.5,
+                 az_RAD=0.0,
+                 pa_RAD=0.0,
+                 rot_RAD=0.0):
 
-        self.time     = time
-        self.ra_RAD   = ra_RAD
-        self.dec_RAD  = dec_RAD
-        self.ang_RAD  = ang_RAD
-        self.filter   = filter
+        self.time = time
+        self.ra_RAD = ra_RAD
+        self.dec_RAD = dec_RAD
+        self.ang_RAD = ang_RAD
+        self.filter = filter
         self.tracking = tracking
-        self.alt_RAD  = alt_RAD
-        self.az_RAD   = az_RAD
-        self.pa_RAD   = pa_RAD
-        self.rot_RAD  = rot_RAD
+        self.alt_RAD = alt_RAD
+        self.az_RAD = az_RAD
+        self.pa_RAD = pa_RAD
+        self.rot_RAD = rot_RAD
 
         return
 
     def __str__(self):
-        return "t=%.1f ra=%.3f dec=%.3f ang=%.3f filter=%s track=%s alt=%.3f az=%.3f rot=%.3f" % (self.time, self.ra_RAD*RAD2DEG, self.dec_RAD*RAD2DEG, self.ang_RAD*RAD2DEG, self.filter, self.tracking, self.alt_RAD*RAD2DEG, self.az_RAD*RAD2DEG, self.rot_RAD*RAD2DEG)
+        return ("t=%.1f ra=%.3f dec=%.3f ang=%.3f filter=%s track=%s alt=%.3f az=%.3f rot=%.3f" %
+                (self.time, self.ra_RAD * RAD2DEG, self.dec_RAD * RAD2DEG, self.ang_RAD * RAD2DEG,
+                 self.filter, self.tracking, self.alt_RAD * RAD2DEG, self.az_RAD * RAD2DEG,
+                 self.rot_RAD * RAD2DEG))
 
 #####################################################################
 class ObservatoryState(ObservatoryPosition):
 
     def __init__(self,
-                    time       = 0.0,
-                    ra_RAD     = 0.0,
-                    dec_RAD    = 0.0,
-                    ang_RAD    = 0.0,
-                    filter     = 'r',
-                    tracking   = False,
-                    alt_RAD    = 1.5,
-                    az_RAD     = 0.0,
-                    pa_RAD     = 0.0,
-                    rot_RAD    = 0.0,
-                    telAlt_RAD = 1.5,
-                    telAz_RAD  = 0.0,
-                    telRot_RAD = 0.0,
-                    domAlt_RAD = 1.5,
-                    domAz_RAD  = 0.0,
-                    mountedFilters   = ['g','r','i','z','y'],
-                    unmountedFilters = ['u']):
+                 time=0.0,
+                 ra_RAD=0.0,
+                 dec_RAD=0.0,
+                 ang_RAD=0.0,
+                 filter='r',
+                 tracking=False,
+                 alt_RAD=1.5,
+                 az_RAD=0.0,
+                 pa_RAD=0.0,
+                 rot_RAD=0.0,
+                 telAlt_RAD=1.5,
+                 telAz_RAD=0.0,
+                 telRot_RAD=0.0,
+                 domAlt_RAD=1.5,
+                 domAz_RAD=0.0,
+                 mountedFilters=['g', 'r', 'i', 'z', 'y'],
+                 unmountedFilters=['u']):
 
         super(ObservatoryState, self).__init__(time,
-                                                ra_RAD,
-                                                dec_RAD,
-                                                ang_RAD,
-                                                filter,
-                                                tracking,
-                                                alt_RAD,
-                                                az_RAD,
-                                                pa_RAD,
-                                                rot_RAD)
+                                               ra_RAD,
+                                               dec_RAD,
+                                               ang_RAD,
+                                               filter,
+                                               tracking,
+                                               alt_RAD,
+                                               az_RAD,
+                                               pa_RAD,
+                                               rot_RAD)
 
         self.telAlt_RAD = telAlt_RAD
-        self.telAz_RAD  = telAz_RAD
+        self.telAz_RAD = telAz_RAD
         self.telRot_RAD = telRot_RAD
         self.domAlt_RAD = domAlt_RAD
-        self.domAz_RAD  = domAz_RAD
-        self.mountedFilters   = list(mountedFilters)
+        self.domAz_RAD = domAz_RAD
+        self.mountedFilters = list(mountedFilters)
         self.unmountedFilters = list(unmountedFilters)
 
         return
 
     def set(self, newState):
 
-        self.time       = newState.time
-        self.ra_RAD     = newState.ra_RAD
-        self.dec_RAD    = newState.dec_RAD
-        self.ang_RAD    = newState.ang_RAD
-        self.filter     = newState.filter
-        self.tracking   = newState.tracking
-        self.alt_RAD    = newState.alt_RAD
-        self.az_RAD     = newState.az_RAD
-        self.pa_RAD     = newState.pa_RAD
-        self.rot_RAD    = newState.rot_RAD
+        self.time = newState.time
+        self.ra_RAD = newState.ra_RAD
+        self.dec_RAD = newState.dec_RAD
+        self.ang_RAD = newState.ang_RAD
+        self.filter = newState.filter
+        self.tracking = newState.tracking
+        self.alt_RAD = newState.alt_RAD
+        self.az_RAD = newState.az_RAD
+        self.pa_RAD = newState.pa_RAD
+        self.rot_RAD = newState.rot_RAD
 
         self.telAlt_RAD = newState.telAlt_RAD
-        self.telAz_RAD  = newState.telAz_RAD
+        self.telAz_RAD = newState.telAz_RAD
         self.telRot_RAD = newState.telRot_RAD
         self.domAlt_RAD = newState.domAlt_RAD
-        self.domAz_RAD  = newState.domAz_RAD
-        self.mountedFilters   = list(newState.mountedFilters)
+        self.domAz_RAD = newState.domAz_RAD
+        self.mountedFilters = list(newState.mountedFilters)
         self.unmountedFilters = list(newState.unmountedFilters)
 
         return
@@ -120,21 +124,21 @@ class ObservatoryState(ObservatoryPosition):
     def setPosition(self, newPosition):
 
         self.time = newPosition.time
-        self.ra_RAD     = newPosition.ra_RAD
-        self.dec_RAD    = newPosition.dec_RAD
-        self.ang_RAD    = newPosition.ang_RAD
-        self.filter     = newPosition.filter
-        self.tracking   = newPosition.tracking
-        self.alt_RAD    = newPosition.alt_RAD
-        self.az_RAD     = newPosition.az_RAD
-        self.pa_RAD     = newPosition.pa_RAD
-        self.rot_RAD    = newPosition.rot_RAD
+        self.ra_RAD = newPosition.ra_RAD
+        self.dec_RAD = newPosition.dec_RAD
+        self.ang_RAD = newPosition.ang_RAD
+        self.filter = newPosition.filter
+        self.tracking = newPosition.tracking
+        self.alt_RAD = newPosition.alt_RAD
+        self.az_RAD = newPosition.az_RAD
+        self.pa_RAD = newPosition.pa_RAD
+        self.rot_RAD = newPosition.rot_RAD
 
         self.telAlt_RAD = newPosition.alt_RAD
-        self.telAz_RAD  = newPosition.az_RAD
+        self.telAz_RAD = newPosition.az_RAD
         self.telRot_RAD = newPosition.rot_RAD
         self.domAlt_RAD = newPosition.alt_RAD
-        self.domAz_RAD  = newPosition.az_RAD
+        self.domAz_RAD = newPosition.az_RAD
 
         return
 
@@ -315,11 +319,11 @@ class ObservatoryModel(object):
     def slewAltAzRot(self, time, alt, az, rot):
 
         targetPosition = ObservatoryPosition()
-        targetPosition.time     = time
+        targetPosition.time = time
         targetPosition.tracking = False
-        targetPosition.alt_RAD  = alt*DEG2RAD
-        targetPosition.az_RAD   = az*DEG2RAD
-        targetPosition.rot_RAD  = rot*DEG2RAD
+        targetPosition.alt_RAD = alt * DEG2RAD
+        targetPosition.az_RAD = az * DEG2RAD
+        targetPosition.rot_RAD = rot * DEG2RAD
 
         self.currentState.setPosition(targetPosition)
 
@@ -343,7 +347,7 @@ class ObservatoryModel(object):
                LST:  Local Sidereal Time in radians.
         """
 
-        UT_day   = 57388 + time/86400.0
+        UT_day = 57388 + time / 86400.0
 
         # LSST convention of West=negative, East=positive
         LST_RAD = pal.gmst(UT_day) + self.location.longitude_RAD
@@ -366,8 +370,8 @@ class ObservatoryModel(object):
         LST_RAD = self.Date2Lst(time)
 
         (HA_RAD, dec_RAD) = pal.dh2e(az_RAD, alt_RAD, self.location.latitude_RAD)
-        pa_RAD            = pal.pa(HA_RAD, dec_RAD, self.location.latitude_RAD)
-        ra_RAD            = LST_RAD - HA_RAD
+        pa_RAD = pal.pa(HA_RAD, dec_RAD, self.location.latitude_RAD)
+        ra_RAD = LST_RAD - HA_RAD
 
         return (ra_RAD, dec_RAD, pa_RAD)
 
@@ -386,10 +390,10 @@ class ObservatoryModel(object):
                HA_HOU:  Hour Angle in hours
         """
         LST_RAD = self.Date2Lst(time)
-        HA_RAD  = LST_RAD - ra_RAD
+        HA_RAD = LST_RAD - ra_RAD
 
         (az_RAD, alt_RAD) = pal.de2h(HA_RAD, dec_RAD, self.location.latitude_RAD)
-        pa_RAD            = pal.pa(HA_RAD, dec_RAD, self.location.latitude_RAD)
+        pa_RAD = pal.pa(HA_RAD, dec_RAD, self.location.latitude_RAD)
 
         return (alt_RAD, az_RAD, pa_RAD)
 
@@ -409,31 +413,30 @@ class ObservatoryModel(object):
 
         if self.currentState.tracking:
             (alt_RAD, az_RAD, pa_RAD) = self.RaDec2AltAzPa(time,
-                                                            self.currentState.ra_RAD,
-                                                            self.currentState.dec_RAD)
+                                                           self.currentState.ra_RAD,
+                                                           self.currentState.dec_RAD)
             az_RAD = divmod(az_RAD, TWOPI)[1]
             pa_RAD = divmod(pa_RAD, TWOPI)[1]
             rot_RAD = pa_RAD + self.currentState.ang_RAD
 
-            self.currentState.time    = time
+            self.currentState.time = time
             self.currentState.alt_RAD = alt_RAD
-            self.currentState.az_RAD  = az_RAD
-            self.currentState.pa_RAD  = pa_RAD
+            self.currentState.az_RAD = az_RAD
+            self.currentState.pa_RAD = pa_RAD
             self.currentState.rot_RAD = rot_RAD
 
             self.currentState.telAlt_RAD = alt_RAD
-            self.currentState.telAz_RAD  = az_RAD
+            self.currentState.telAz_RAD = az_RAD
             self.currentState.telRot_RAD = rot_RAD
             self.currentState.domAlt_RAD = alt_RAD
-            self.currentState.domAz_RAD  = az_RAD
+            self.currentState.domAz_RAD = az_RAD
         else:
             (ra_RAD, dec_RAD, pa_RAD) = self.AltAz2RaDecPa(time,
-                                                            self.currentState.alt_RAD,
-                                                            self.currentState.az_RAD)
+                                                           self.currentState.alt_RAD,
+                                                           self.currentState.az_RAD)
             pa_RAD = divmod(pa_RAD, TWOPI)[1]
-            self.currentState.time    = time
-            self.currentState.ra_RAD  = ra_RAD
+            self.currentState.time = time
+            self.currentState.ra_RAD = ra_RAD
             self.currentState.dec_RAD = dec_RAD
             self.currentState.ang_RAD = self.currentState.rot_RAD - pa_RAD
         return
-
