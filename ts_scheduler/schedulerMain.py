@@ -61,8 +61,6 @@ class schedulerMain(object):
         self.topicField = scheduler_fieldC()
         self.topicTarget = scheduler_targetTestC()
 
-        return
-
     def configLogFile(self, logFileName):
         if (self.logFile is not None):
             self.log.removeHandler(self.logFile)
@@ -71,8 +69,6 @@ class schedulerMain(object):
         self.logFile.setLevel(self.logLevel)
         self.log.addHandler(self.logFile)
         self.log.log(INFOX, "Main: configure logFile=%s" % logFileName)
-
-        return
 
     def run(self):
 

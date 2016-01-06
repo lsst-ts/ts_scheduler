@@ -19,8 +19,6 @@ class ObservatoryLocation(object):
         self.latitude_RAD = latitude_RAD
         self.longitude_RAD = longitude_RAD
 
-        return
-
 #####################################################################
 class ObservatoryPosition(object):
 
@@ -46,8 +44,6 @@ class ObservatoryPosition(object):
         self.az_RAD = az_RAD
         self.pa_RAD = pa_RAD
         self.rot_RAD = rot_RAD
-
-        return
 
     def __str__(self):
         return ("t=%.1f ra=%.3f dec=%.3f ang=%.3f filter=%s track=%s alt=%.3f az=%.3f rot=%.3f" %
@@ -96,8 +92,6 @@ class ObservatoryState(ObservatoryPosition):
         self.mountedFilters = list(mountedFilters)
         self.unmountedFilters = list(unmountedFilters)
 
-        return
-
     def set(self, newState):
 
         self.time = newState.time
@@ -119,8 +113,6 @@ class ObservatoryState(ObservatoryPosition):
         self.mountedFilters = list(newState.mountedFilters)
         self.unmountedFilters = list(newState.unmountedFilters)
 
-        return
-
     def setPosition(self, newPosition):
 
         self.time = newPosition.time
@@ -140,8 +132,6 @@ class ObservatoryState(ObservatoryPosition):
         self.domAlt_RAD = newPosition.alt_RAD
         self.domAz_RAD = newPosition.az_RAD
 
-        return
-
 #####################################################################
 class ObservatoryModel(object):
 
@@ -152,8 +142,6 @@ class ObservatoryModel(object):
         self.location = ObservatoryLocation()
         self.parkState = ObservatoryState()
         self.currentState = ObservatoryState()
-
-        return
 
     def __str__(self):
         return self.currentState.__str__()
@@ -299,19 +287,13 @@ class ObservatoryModel(object):
 
         self.reset()
 
-        return
-
     def reset(self):
 
         self.setState(self.parkState)
 
-        return
-
     def setState(self, newState):
 
         self.currentState.set(newState)
-
-        return
 
     def observe(self, topicObservation):
         return
@@ -326,8 +308,6 @@ class ObservatoryModel(object):
         targetPosition.rot_RAD = rot * DEG2RAD
 
         self.currentState.setPosition(targetPosition)
-
-        return
 
     def estimateSlewTime(self):
         return
@@ -401,13 +381,11 @@ class ObservatoryModel(object):
         if not self.currentState.tracking:
             self.updateState(time)
             self.currentState.tracking = True
-        return
 
     def stopTracking(self, time):
         if self.currentState.tracking:
             self.updateState(time)
             self.currentState.tracking = False
-        return
 
     def updateState(self, time):
 
@@ -439,4 +417,3 @@ class ObservatoryModel(object):
             self.currentState.ra_RAD = ra_RAD
             self.currentState.dec_RAD = dec_RAD
             self.currentState.ang_RAD = self.currentState.rot_RAD - pa_RAD
-        return

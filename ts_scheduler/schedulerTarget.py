@@ -23,8 +23,6 @@ class schedulerTarget(object):
         self.propValues = []
         self.value = 0.0
 
-        return
-
     def __str__(self):
         return ("ID=%d field=%d ra=%.3f dec=%.3f" %
                 (self.targetId, self.fieldId, self.ra_RAD * RAD2DEG, self.dec_RAD * RAD2DEG))

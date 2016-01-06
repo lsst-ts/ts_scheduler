@@ -13,8 +13,6 @@ class schedulerScriptedProposal(schedulerProposal):
 
         self.targetId = 0
 
-        return
-
     def readScript(self):
 
         scriptFilePath = "../conf/survey/%s" % self.scriptFile
@@ -39,8 +37,6 @@ class schedulerScriptedProposal(schedulerProposal):
 
             self.targetsList.append(target)
             print target
-
-        return
 
     def suggestTargets(self):
 

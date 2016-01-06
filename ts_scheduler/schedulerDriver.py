@@ -43,8 +43,6 @@ class schedulerDriver (object):
         self.targetId = 0
         self.newTarget = schedulerTarget()
 
-        return
-
     def buildFieldsDict(self):
 
         lines = file("../conf/system/tessellationFields").readlines()
@@ -76,8 +74,6 @@ class schedulerDriver (object):
 
         self.log.log(INFOX, "schedulerDriver.buildFieldsTable: %d fields" % (len(self.fieldsDict)))
 
-        return
-
     def getFieldsDict(self):
 
         return self.fieldsDict
@@ -89,28 +85,20 @@ class schedulerDriver (object):
 
         self.log.log(INFOX, "schedulerDriver.startSurvey")
 
-        return
-
     def endSurvey(self):
 
         for prop in self.scienceProposals:
             prop.endSurvey()
-
-        return
 
     def startNight(self):
 
         for prop in self.scienceProposals:
             prop.startNight()
 
-        return
-
     def endNight(self):
 
         for prop in self.scienceProposals:
             prop.endNight()
-
-        return
 
     def swapFilterIn(self):
         return
@@ -122,8 +110,6 @@ class schedulerDriver (object):
 
         self.time = topicTime.timestamp
         self.observatoryModel.updateState(self.time)
-
-        return
 
     def updateExternalConditions(self, topicTime):
         return
@@ -160,5 +146,3 @@ class schedulerDriver (object):
     def registerObservation(self, topicObservation):
 
         self.observatoryModel.observe(topicObservation)
-
-        return
