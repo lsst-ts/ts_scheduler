@@ -4,7 +4,7 @@ import sys
 
 from observatoryModel import ObservatoryModel
 
-from schedulerDefinitions import INFOX, readNewConfFile
+from schedulerDefinitions import INFOX, read_conf_file
 
 if (__name__ == '__main__'):
     logging.INFOX = INFOX
@@ -26,8 +26,8 @@ if (__name__ == '__main__'):
     log.addHandler(console)
 
     model = ObservatoryModel(log)
-    siteConf = readNewConfFile("../conf/system/site.conf")
-    observatoryConf = readNewConfFile("../conf/system/observatoryModel.conf")
+    siteConf = read_conf_file("../conf/system/site.conf")
+    observatoryConf = read_conf_file("../conf/system/observatoryModel.conf")
     observatoryConf.update(siteConf)
 
     model.configure(observatoryConf)
@@ -40,9 +40,9 @@ if (__name__ == '__main__'):
     model.reset()
     print model
     for k in range(len(vTime)):
-        model.updateState(vTime[k])
+        model.update_state(vTime[k])
         print model
-        model.slewAltAzRot(vTime[k], vAlt[k], vAz[k], vRot[k])
-        model.startTracking(vTime[k])
+        model.slew_altazrot(vTime[k], vAlt[k], vAz[k], vRot[k])
+        model.start_tracking(vTime[k])
         print model
     sys.exit(0)
