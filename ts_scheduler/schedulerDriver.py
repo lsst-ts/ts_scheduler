@@ -1,52 +1,52 @@
 from observatoryModel import ObservatoryModel
 
-from schedulerDefinitions import INFOX, DEG2RAD, readConfFile, readNewConfFile
-from schedulerField import schedulerField
-from schedulerTarget import schedulerTarget
-from schedulerScriptedProposal import schedulerScriptedProposal
+from schedulerDefinitions import INFOX, DEG2RAD, readConfFile, read_conf_file
+from schedulerField import Field
+from schedulerTarget import Target
+from schedulerScriptedProposal import ScriptedProposal
 
-class schedulerDriver (object):
+class Driver(object):
     def __init__(self, log):
 
         self.log = log
-        self.scienceProposals = []
+        self.science_proposal_list = []
 
         self.observatoryModel = ObservatoryModel(self.log)
-        siteConf = readNewConfFile("../conf/system/site.conf")
+        site_confdict = read_conf_file("../conf/system/site.conf")
 
-        observatoryConf = readNewConfFile("../conf/system/observatoryModel.conf")
-        observatoryConf.update(siteConf)
+        observatory_confdict = read_conf_file("../conf/system/observatoryModel.conf")
+        observatory_confdict.update(site_confdict)
 
-        self.observatoryModel.configure(observatoryConf)
+        self.observatoryModel.configure(observatory_confdict)
 
-        self.buildFieldsDict()
+        self.build_fields_dict()
 
         surveyConfigDict, pairs = readConfFile("../conf/survey/survey.conf")
         if ('scriptedPropConf' in surveyConfigDict):
-            scriptedPropConf = surveyConfigDict["scriptedPropConf"]
-            print("    scriptedPropConf:%s" % (scriptedPropConf))
+            scriptedprop_conflist = surveyConfigDict["scriptedPropConf"]
+            print("    scriptedPropConf:%s" % (scriptedprop_conflist))
         else:
-            scriptedPropConf = None
-            print("    scriptedPropConf:%s default" % (scriptedPropConf))
-        if (not isinstance(scriptedPropConf, list)):
+            scriptedprop_conflist = None
+            print("    scriptedPropConf:%s default" % (scriptedprop_conflist))
+        if (not isinstance(scriptedprop_conflist, list)):
             # turn it into a list with one entry
-            saveConf = scriptedPropConf
-            scriptedPropConf = []
-            scriptedPropConf.append(saveConf)
+            propconf = scriptedprop_conflist
+            scriptedprop_conflist = []
+            scriptedprop_conflist.append(propconf)
 
-        if (scriptedPropConf[0] is not None):
-            for k in range(len(scriptedPropConf)):
-                scriptedProp = schedulerScriptedProposal(self.log, "../conf/survey/%s" % scriptedPropConf[k])
-                self.scienceProposals.append(scriptedProp)
+        if (scriptedprop_conflist[0] is not None):
+            for k in range(len(scriptedprop_conflist)):
+                scriptedprop = ScriptedProposal(self.log, "../conf/survey/%s" % scriptedprop_conflist[k])
+                self.science_proposal_list.append(scriptedprop)
 
         self.time = 0.0
-        self.targetId = 0
-        self.newTarget = schedulerTarget()
+        self.targetid = 0
+        self.newTarget = Target()
 
-    def buildFieldsDict(self):
+    def build_fields_dict(self):
 
         lines = file("../conf/system/tessellationFields").readlines()
-        fieldId = 0
+        fieldid = 0
         self.fieldsDict = {}
         for line in lines:
             line = line.strip()
@@ -54,95 +54,95 @@ class schedulerDriver (object):
                 continue
             if line[0] == '#': 		# skip comment line
                 continue
-            fieldId += 1
+            fieldid += 1
             values = line.split()
-            field = schedulerField()
-            field.fieldId = fieldId
-            field.ra_RAD = eval(values[0]) * DEG2RAD
-            field.dec_RAD = eval(values[1]) * DEG2RAD
-            field.gl_RAD = eval(values[2]) * DEG2RAD
-            field.gb_RAD = eval(values[3]) * DEG2RAD
-            field.el_RAD = eval(values[4]) * DEG2RAD
-            field.eb_RAD = eval(values[5]) * DEG2RAD
-            field.fov_RAD = 3.5 * DEG2RAD
+            field = Field()
+            field.fieldid = fieldid
+            field.ra_rad = eval(values[0]) * DEG2RAD
+            field.dec_rad = eval(values[1]) * DEG2RAD
+            field.gl_rad = eval(values[2]) * DEG2RAD
+            field.gb_rad = eval(values[3]) * DEG2RAD
+            field.el_rad = eval(values[4]) * DEG2RAD
+            field.eb_rad = eval(values[5]) * DEG2RAD
+            field.fov_rad = 3.5 * DEG2RAD
 
-            self.fieldsDict[fieldId] = field
-            self.log.info("schedulerDriver.buildFieldsTable: %s" % (self.fieldsDict[fieldId]))
+            self.fieldsDict[fieldid] = field
+            self.log.info("schedulerDriver.buildFieldsTable: %s" % (self.fieldsDict[fieldid]))
 
-            if fieldId > 10:
+            if fieldid > 10:
                 break
 
         self.log.log(INFOX, "schedulerDriver.buildFieldsTable: %d fields" % (len(self.fieldsDict)))
 
-    def getFieldsDict(self):
+    def get_fields_dict(self):
 
         return self.fieldsDict
 
-    def startSurvey(self):
+    def start_survey(self):
 
-        for prop in self.scienceProposals:
-            prop.startSurvey()
+        for prop in self.science_proposal_list:
+            prop.start_survey()
 
         self.log.log(INFOX, "schedulerDriver.startSurvey")
 
-    def endSurvey(self):
+    def end_survey(self):
 
-        for prop in self.scienceProposals:
-            prop.endSurvey()
+        for prop in self.science_proposal_list:
+            prop.end_survey()
 
-    def startNight(self):
+    def start_night(self):
 
-        for prop in self.scienceProposals:
-            prop.startNight()
+        for prop in self.science_proposal_list:
+            prop.start_night()
 
-    def endNight(self):
+    def end_night(self):
 
-        for prop in self.scienceProposals:
-            prop.endNight()
+        for prop in self.science_proposal_list:
+            prop.end_night()
 
-    def swapFilterIn(self):
+    def swap_filter_in(self):
         return
 
-    def swapFilterOut(self):
+    def swap_filter_out(self):
         return
 
-    def updateInternalConditions(self, topicTime):
+    def update_internal_conditions(self, topic_time):
 
-        self.time = topicTime.timestamp
-        self.observatoryModel.updateState(self.time)
+        self.time = topic_time.timestamp
+        self.observatoryModel.update_state(self.time)
 
-    def updateExternalConditions(self, topicTime):
+    def update_external_conditions(self, topic_time):
         return
 
-    def selectNextTarget(self):
+    def select_next_target(self):
 
-        targetsList = []
-        nTargets = 0
-        for prop in self.scienceProposals:
-            propTargetsList = prop.suggestTargets()
+        target_list = []
+        ntargets = 0
+        for prop in self.science_proposal_list:
+            proptarget_list = prop.suggest_targets()
 
-            for target in propTargetsList:
-                    targetsList.append(target)
-                    nTargets += 1
+            for target in proptarget_list:
+                    target_list.append(target)
+                    ntargets += 1
 
-        if nTargets > 0:
-            winnerValue = 0.0
-            winnerTarget = None
-            for target in targetsList:
-                if target.value > winnerValue:
-                    winnerTarget = target
+        if ntargets > 0:
+            winnervalue = 0.0
+            winnertarget = None
+            for target in target_list:
+                if target.value > winnervalue:
+                    winnertarget = target
 
-            self.targetId += 1
-            self.newTarget.targetId = self.targetId
-            self.newTarget.fieldId = winnerTarget.fieldId
-            self.newTarget.filter = winnerTarget.filter
-            self.newTarget.ra_RAD = winnerTarget.ra_RAD
-            self.newTarget.dec_RAD = winnerTarget.dec_RAD
-            self.newTarget.ang_RAD = winnerTarget.ang_RAD
-            self.newTarget.numexp = winnerTarget.numexp
+            self.targetid += 1
+            self.newTarget.targetid = self.targetid
+            self.newTarget.fieldid = winnertarget.fieldid
+            self.newTarget.filter = winnertarget.filter
+            self.newTarget.ra_rad = winnertarget.ra_rad
+            self.newTarget.dec_rad = winnertarget.dec_rad
+            self.newTarget.ang_rad = winnertarget.ang_rad
+            self.newTarget.numexp = winnertarget.numexp
 
         return self.newTarget
 
-    def registerObservation(self, topicObservation):
+    def register_observation(self, topic_observation):
 
-        self.observatoryModel.observe(topicObservation)
+        self.observatoryModel.observe(topic_observation)
