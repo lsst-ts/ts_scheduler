@@ -93,7 +93,7 @@ def readConfFile(fileName):
                 conf[key] = [conf[key], val]
     return conf, pairs
 
-def readNewConfFile(filename):
+def read_conf_file(filename):
     """Read the new type of configuration file.
 
     This function reads the new type of configuration file that contains sections. It also
