@@ -10,31 +10,31 @@ from SALPY_scheduler import scheduler_schedulerConfigC
 from SALPY_scheduler import scheduler_fieldC
 
 from schedulerDefinitions import INFOX, RAD2DEG, readConfFile
-from schedulerDriver import schedulerDriver
+from schedulerDriver import Driver
 
-class schedulerMain(object):
+class Main(object):
 
     def __init__(self):
         logging.INFOX = INFOX
         logging.addLevelName(logging.INFOX, 'INFOX')
 
-        schedulerMainConfig, pairs = readConfFile("../conf/scheduler/main.conf")
-        if ('logLevel' in schedulerMainConfig):
-            logLevelStr = schedulerMainConfig['logLevel']
-            if (logLevelStr == 'INFOX'):
+        main_confdict, pairs = readConfFile("../conf/scheduler/main.conf")
+        if ('logLevel' in main_confdict):
+            loglevelstr = main_confdict['logLevel']
+            if (loglevelstr == 'INFOX'):
                 self.logLevel = logging.INFOX
-            elif (logLevelStr == 'INFO'):
+            elif (loglevelstr == 'INFO'):
                 self.logLevel = logging.INFO
-            elif (logLevelStr == 'DEBUG'):
+            elif (loglevelstr == 'DEBUG'):
                 self.logLevel = logging.DEBUG
             else:
                 self.logLevel = logging.INFO
         else:
             self.logLevel = logging.INFO
-        if ('rateMeasurementInterval' in schedulerMainConfig):
-            self.measInterval = schedulerMainConfig['rateMeasurementInterval']
+        if ('rateMeasurementInterval' in main_confdict):
+            self.measinterval = main_confdict['rateMeasurementInterval']
         else:
-            self.measInterval = 1.0
+            self.measinterval = 1.0
 
         self.logFormatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
         self.log = logging.getLogger("scheduler")
@@ -48,9 +48,9 @@ class schedulerMain(object):
         timestr = time.strftime("%Y-%m-%d_%H:%M:%S")
         self.defaultLogFileName = "../log/scheduler.%s.log" % (timestr)
         self.logFile = None
-        self.configLogFile(self.defaultLogFileName)
+        self.config_logfile(self.defaultLogFileName)
 
-        self.schedulerDriver = schedulerDriver(self.log)
+        self.schedulerDriver = Driver(self.log)
 
         self.sal = SAL_scheduler()
         self.sal.setDebugLevel(0)
@@ -61,14 +61,14 @@ class schedulerMain(object):
         self.topicField = scheduler_fieldC()
         self.topicTarget = scheduler_targetTestC()
 
-    def configLogFile(self, logFileName):
+    def config_logfile(self, logfilename):
         if (self.logFile is not None):
             self.log.removeHandler(self.logFile)
-        self.logFile = logging.FileHandler(logFileName)
+        self.logFile = logging.FileHandler(logfilename)
         self.logFile.setFormatter(self.logFormatter)
         self.logFile.setLevel(self.logLevel)
         self.log.addHandler(self.logFile)
-        self.log.log(INFOX, "Main: configure logFile=%s" % logFileName)
+        self.log.log(INFOX, "Main: configure logFile=%s" % logfilename)
 
     def run(self):
 
@@ -80,93 +80,93 @@ class schedulerMain(object):
         self.sal.salTelemetryPub("scheduler_field")
         self.sal.salTelemetryPub("scheduler_targetTest")
 
-        self.schedulerDriver.startSurvey()
+        self.schedulerDriver.start_survey()
 
-        measCount = 0
-        visitCount = 0
-        syncCount = 0
+        meascount = 0
+        visitcount = 0
+        synccount = 0
 
-        measTime = time.time()
+        meastime = time.time()
 
         timestamp = 0.0
 
         try:
-            waitConfig = True
-            lastConfigTime = time.time()
-            while waitConfig:
+            waitconfig = True
+            lastconfigtime = time.time()
+            while waitconfig:
                 scode = self.sal.getNextSample_schedulerConfig(self.topicConfig)
                 if (scode == 0 and self.topicConfig.log_file != ""):
-                    lastConfigTime = time.time()
-                    logFileName = self.topicConfig.log_file
-                    self.log.log(INFOX, "schedulerMain.run: config logfile=%s" % (logFileName))
-                    waitConfig = False
-                    self.configLogFile(logFileName)
+                    lastconfigtime = time.time()
+                    logfilename = self.topicConfig.log_file
+                    self.log.log(INFOX, "schedulerMain.run: config logfile=%s" % (logfilename))
+                    waitconfig = False
+                    self.configLogFile(logfilename)
 
                 else:
                     tf = time.time()
-                    if (tf - lastConfigTime > 10.0):
-                        waitConfig = False
+                    if (tf - lastconfigtime > 10.0):
+                        waitconfig = False
                         self.log.log(INFOX, "Main: config timeout")
 
-            fieldsDict = self.schedulerDriver.getFieldsDict()
-            if len(fieldsDict) > 0:
+            field_dict = self.schedulerDriver.get_fields_dict()
+            if len(field_dict) > 0:
                 self.topicField.ID = -1
                 self.sal.putSample_field(self.topicField)
-                for fieldId in fieldsDict:
-                    self.topicField.ID = fieldsDict[fieldId].fieldId
-                    self.topicField.ra = fieldsDict[fieldId].ra_RAD * RAD2DEG
-                    self.topicField.dec = fieldsDict[fieldId].dec_RAD * RAD2DEG
-                    self.topicField.gl = fieldsDict[fieldId].gl_RAD * RAD2DEG
-                    self.topicField.gb = fieldsDict[fieldId].gb_RAD * RAD2DEG
-                    self.topicField.el = fieldsDict[fieldId].el_RAD * RAD2DEG
-                    self.topicField.eb = fieldsDict[fieldId].eb_RAD * RAD2DEG
-                    self.topicField.fov = fieldsDict[fieldId].fov_RAD * RAD2DEG
+                for fieldid in field_dict:
+                    self.topicField.ID = field_dict[fieldid].fieldid
+                    self.topicField.ra = field_dict[fieldid].ra_rad * RAD2DEG
+                    self.topicField.dec = field_dict[fieldid].dec_rad * RAD2DEG
+                    self.topicField.gl = field_dict[fieldid].gl_rad * RAD2DEG
+                    self.topicField.gb = field_dict[fieldid].gb_rad * RAD2DEG
+                    self.topicField.el = field_dict[fieldid].el_rad * RAD2DEG
+                    self.topicField.eb = field_dict[fieldid].eb_rad * RAD2DEG
+                    self.topicField.fov = field_dict[fieldid].fov_rad * RAD2DEG
                     self.sal.putSample_field(self.topicField)
-                    self.log.log(INFOX, "schedulerMain.run: tx field %s" % (fieldsDict[fieldId]))
+                    self.log.log(INFOX, "schedulerMain.run: tx field %s" % (field_dict[fieldid]))
                 self.topicField.ID = -1
                 self.sal.putSample_field(self.topicField)
 
-            waitConditions = True
-            lastCondTime = time.time()
-            while waitConditions:
+            waitconditions = True
+            lastcondtime = time.time()
+            while waitconditions:
                 scode = self.sal.getNextSample_timeHandler(self.topicTime)
                 if (scode == 0 and self.topicTime.timestamp != 0):
                     if (self.topicTime.timestamp > timestamp):
-                        lastCondTime = time.time()
+                        lastcondtime = time.time()
                         timestamp = self.topicTime.timestamp
 
                         self.log.info("Main: rx time=%f" % (timestamp))
 
-                        self.schedulerDriver.updateInternalConditions(self.topicTime)
-                        self.schedulerDriver.updateExternalConditions(self.topicTime)
+                        self.schedulerDriver.update_internal_conditions(self.topicTime)
+                        self.schedulerDriver.update_external_conditions(self.topicTime)
 
-                        target = self.schedulerDriver.selectNextTarget()
-                        self.topicTarget.targetId = target.targetId
-                        self.topicTarget.fieldId = target.fieldId
+                        target = self.schedulerDriver.select_next_target()
+                        self.topicTarget.targetId = target.targetid
+                        self.topicTarget.fieldId = target.fieldid
                         self.topicTarget.filter = target.filter
-                        self.topicTarget.ra = target.ra_RAD * RAD2DEG
-                        self.topicTarget.dec = target.dec_RAD * RAD2DEG
-                        self.topicTarget.angle = target.ang_RAD * RAD2DEG
+                        self.topicTarget.ra = target.ra_rad * RAD2DEG
+                        self.topicTarget.dec = target.dec_rad * RAD2DEG
+                        self.topicTarget.angle = target.ang_rad * RAD2DEG
                         self.topicTarget.num_exposures = target.numexp
 
                         self.sal.putSample_targetTest(self.topicTarget)
                         self.log.info("Main: tx target Id=%i, field=%i, filter=%s" %
-                                      (target.targetId, target.fieldId, target.filter))
+                                      (target.targetid, target.fieldid, target.filter))
 
-                        waitObservation = True
-                        lastObsTime = time.time()
-                        while waitObservation:
+                        waitobservation = True
+                        lastobstime = time.time()
+                        while waitobservation:
                             scode = self.sal.getNextSample_observationTest(self.topicObservation)
                             if (scode == 0 and self.topicObservation.targetId != 0):
-                                measCount += 1
-                                visitCount += 1
+                                meascount += 1
+                                visitcount += 1
                                 if (self.topicTarget.targetId == self.topicObservation.targetId):
-                                    lastObsTime = time.time()
-                                    syncCount += 1
+                                    lastobstime = time.time()
+                                    synccount += 1
 
                                     self.log.info("Main: rx observation target Id=%i" %
                                                   (self.topicObservation.targetId))
-                                    self.schedulerDriver.registerObservation(self.topicObservation)
+                                    self.schedulerDriver.register_observation(self.topicObservation)
 
                                     break
                                 else:
@@ -175,40 +175,40 @@ class schedulerMain(object):
                                                       self.topicTarget.targetId))
                             else:
                                 to = time.time()
-                                if (to - lastObsTime > 10.0):
-                                    waitObservation = False
-                                self.log.debug("Main: t=%f lastObsTime=%f" % (to, lastObsTime))
+                                if (to - lastobstime > 10.0):
+                                    waitobservation = False
+                                self.log.debug("Main: t=%f lastobstime=%f" % (to, lastobstime))
 
-                            newTime = time.time()
-                            deltaTime = newTime - measTime
-                            if (deltaTime >= self.measInterval):
-                                rate = float(measCount) / deltaTime
+                            newtime = time.time()
+                            deltatime = newtime - meastime
+                            if (deltatime >= self.measinterval):
+                                rate = float(meascount) / deltatime
                                 self.log.log(INFOX, "Main: rix %.0f visits/sec total=%i visits sync=%i" %
-                                             (rate, visitCount, syncCount))
-                                measTime = newTime
-                                measCount = 0
+                                             (rate, visitcount, synccount))
+                                meastime = newtime
+                                meascount = 0
                     else:
                         self.log.warning("Main: rx backward time previous=%f new=%f" %
                                          (timestamp, self.topicTime.timestamp))
 
                 else:
                     tc = time.time()
-                    if (tc - lastCondTime > 30.0):
-                        waitConditions = False
+                    if (tc - lastcondtime > 30.0):
+                        waitconditions = False
 
-                newTime = time.time()
-                deltaTime = newTime - measTime
-                if (deltaTime >= self.measInterval):
-                    rate = float(measCount) / deltaTime
+                newtime = time.time()
+                deltatime = newtime - meastime
+                if (deltatime >= self.measinterval):
+                    rate = float(meascount) / deltatime
                     self.log.log(INFOX, "Main: rx %.0f visits/sec total=%i visits sync=%i" %
-                                 (rate, visitCount, syncCount))
-                    measTime = newTime
-                    measCount = 0
+                                 (rate, visitcount, synccount))
+                    meastime = newtime
+                    meascount = 0
 
         except KeyboardInterrupt:
             self.log.info("Main: scheduler interrupted")
 
-        self.schedulerDriver.endSurvey()
+        self.schedulerDriver.end_survey()
 
         self.log.info("Main: scheduler stopped")
         self.sal.salShutdown()
