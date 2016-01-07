@@ -1,23 +1,23 @@
 from schedulerDefinitions import DEG2RAD
-from schedulerTarget import schedulerTarget
-from schedulerProposal import schedulerProposal
+from schedulerTarget import Target
+from schedulerProposal import Proposal
 
-class schedulerScriptedProposal(schedulerProposal):
-    def __init__(self, log, configFilePath):
+class ScriptedProposal(Proposal):
+    def __init__(self, log, configfilepath):
 
-        super(schedulerScriptedProposal, self).__init__(log, configFilePath)
+        super(ScriptedProposal, self).__init__(log, configfilepath)
 
-        self.scriptFile = self.propConfigDict["scriptFile"]
+        self.script_file = self.proposal_confdict["scriptFile"]
 
-        self.readScript()
+        self.read_script()
 
-        self.targetId = 0
+        self.targetid = 0
 
-    def readScript(self):
+    def read_script(self):
 
-        scriptFilePath = "../conf/survey/%s" % self.scriptFile
-        lines = file(scriptFilePath).readlines()
-        targetId = 0
+        scriptfilepath = "../conf/survey/%s" % self.script_file
+        lines = file(scriptfilepath).readlines()
+        targetid = 0
         self.targetsList = []
         for line in lines:
             line = line.strip()
@@ -25,30 +25,30 @@ class schedulerScriptedProposal(schedulerProposal):
                 continue
             if line[0] == '#': 		# skip comment line
                 continue
-            targetId += 1
+            targetid += 1
             values = line.split()
-            target = schedulerTarget()
-            target.fieldId = eval(values[0])
+            target = Target()
+            target.fieldid = eval(values[0])
             target.filter = values[1]
-            target.ra_RAD = eval(values[2]) * DEG2RAD
-            target.dec_RAD = eval(values[3]) * DEG2RAD
-            target.ang_RAD = eval(values[4]) * DEG2RAD
+            target.ra_rad = eval(values[2]) * DEG2RAD
+            target.dec_rad = eval(values[3]) * DEG2RAD
+            target.ang_rad = eval(values[4]) * DEG2RAD
             target.numexp = eval(values[5])
 
             self.targetsList.append(target)
             print target
 
-    def suggestTargets(self):
+    def suggest_targets(self):
 
-        super(schedulerScriptedProposal, self).suggestTargets()
+        super(ScriptedProposal, self).suggest_targets()
 
-        if self.targetId < len(self.targetsList):
-            nextTarget = self.targetsList[self.targetId]
-            nextTarget.value = 1.0
-            self.targetId += 1
-            return list([nextTarget])
+        if self.targetid < len(self.targetsList):
+            nexttarget = self.targetsList[self.targetid]
+            nexttarget.value = 1.0
+            self.targetid += 1
+            return list([nexttarget])
         else:
-            nextTarget = self.targetsList[-1]
-            nextTarget.value = 1.0
-            self.targetId += 1
-            return list([nextTarget])
+            nexttarget = self.targetsList[-1]
+            nexttarget.value = 1.0
+            self.targetid += 1
+            return list([nexttarget])
