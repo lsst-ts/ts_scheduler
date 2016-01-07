@@ -1,23 +1,23 @@
 from schedulerDefinitions import readConfFile
 
-class schedulerProposal(object):
-    def __init__(self, log, configFilePath):
+class Proposal(object):
+    def __init__(self, log, configfilepath):
 
         self.log = log
 
-        self.propConfigDict, pairs = readConfFile(configFilePath)
+        self.proposal_confdict, pairs = readConfFile(configfilepath)
 
-    def startSurvey(self):
+    def start_survey(self):
         return
 
-    def endSurvey(self):
+    def end_survey(self):
         return
 
-    def startNight(self):
+    def start_night(self):
         return
 
-    def endNight(self):
+    def end_night(self):
         return
 
-    def suggestTargets(self):
+    def suggest_targets(self):
         return
