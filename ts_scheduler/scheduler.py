@@ -1,10 +1,10 @@
 import sys
 
-from schedulerMain import schedulerMain
+from schedulerMain import Main
 
 if (__name__ == '__main__'):
 
-    scheduler = schedulerMain()
+    scheduler = Main()
 
     scheduler.run()
 
