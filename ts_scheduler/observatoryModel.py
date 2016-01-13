@@ -1,5 +1,6 @@
 import math
 import re
+import logging
 
 import palpy as pal
 
@@ -135,9 +136,9 @@ class ObservatoryState(ObservatoryPosition):
 #####################################################################
 class ObservatoryModel(object):
 
-    def __init__(self, log):
+    def __init__(self):
 
-        self.log = log
+        self.log = logging.getLogger("scheduler")
 
         self.location = ObservatoryLocation()
         self.parkState = ObservatoryState()

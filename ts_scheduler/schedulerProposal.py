@@ -1,9 +1,11 @@
+import logging
+
 from schedulerDefinitions import read_conf_file
 
 class Proposal(object):
-    def __init__(self, log, configfilepath):
+    def __init__(self, configfilepath):
 
-        self.log = log
+        self.log = logging.getLogger("scheduler")
 
         self.proposal_confdict = read_conf_file(configfilepath)
 

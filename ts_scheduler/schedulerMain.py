@@ -45,7 +45,7 @@ class Main(object):
         self.logFile = None
         self.config_logfile(self.defaultLogFileName)
 
-        self.schedulerDriver = Driver(self.log)
+        self.schedulerDriver = Driver()
 
         self.sal = SAL_scheduler()
         self.sal.setDebugLevel(0)

@@ -3,9 +3,9 @@ from schedulerTarget import Target
 from schedulerProposal import Proposal
 
 class ScriptedProposal(Proposal):
-    def __init__(self, log, configfilepath):
+    def __init__(self, configfilepath):
 
-        super(ScriptedProposal, self).__init__(log, configfilepath)
+        super(ScriptedProposal, self).__init__(configfilepath)
 
         self.script_file = self.proposal_confdict["script"]["scriptfile"]
 

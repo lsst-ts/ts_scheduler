@@ -1,3 +1,5 @@
+import logging
+
 from observatoryModel import ObservatoryModel
 
 from schedulerDefinitions import INFOX, DEG2RAD, read_conf_file
@@ -6,12 +8,13 @@ from schedulerTarget import Target
 from schedulerScriptedProposal import ScriptedProposal
 
 class Driver(object):
-    def __init__(self, log):
+    def __init__(self):
 
-        self.log = log
+        self.log = logging.getLogger("scheduler")
+
         self.science_proposal_list = []
 
-        self.observatoryModel = ObservatoryModel(self.log)
+        self.observatoryModel = ObservatoryModel()
         site_confdict = read_conf_file("../conf/system/site.conf")
 
         observatory_confdict = read_conf_file("../conf/system/observatoryModel.conf")
@@ -37,7 +40,7 @@ class Driver(object):
 
         if (scriptedprop_conflist[0] is not None):
             for k in range(len(scriptedprop_conflist)):
-                scriptedprop = ScriptedProposal(self.log, "../conf/survey/%s" % scriptedprop_conflist[k])
+                scriptedprop = ScriptedProposal("../conf/survey/%s" % scriptedprop_conflist[k])
                 self.science_proposal_list.append(scriptedprop)
 
         self.time = 0.0

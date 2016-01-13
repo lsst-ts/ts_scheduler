@@ -11,7 +11,7 @@ if (__name__ == '__main__'):
     logging.addLevelName(logging.INFOX, 'INFOX')
 
     formatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
-    log = logging.getLogger("test_observatoryModel")
+    log = logging.getLogger("scheduler")
     log.setLevel(logging.INFO)
 
     timestr = time.strftime("%Y-%m-%d_%H:%M:%S")
@@ -25,7 +25,7 @@ if (__name__ == '__main__'):
     console.setLevel(logging.INFO)
     log.addHandler(console)
 
-    model = ObservatoryModel(log)
+    model = ObservatoryModel()
     siteConf = read_conf_file("../conf/system/site.conf")
     observatoryConf = read_conf_file("../conf/system/observatoryModel.conf")
     observatoryConf.update(siteConf)
