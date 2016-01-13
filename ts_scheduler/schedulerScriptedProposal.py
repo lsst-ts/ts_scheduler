@@ -7,7 +7,7 @@ class ScriptedProposal(Proposal):
 
         super(ScriptedProposal, self).__init__(log, configfilepath)
 
-        self.script_file = self.proposal_confdict["scriptFile"]
+        self.script_file = self.proposal_confdict["script"]["scriptfile"]
 
         self.read_script()
 

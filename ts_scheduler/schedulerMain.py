@@ -9,7 +9,7 @@ from SALPY_scheduler import scheduler_targetTestC
 from SALPY_scheduler import scheduler_schedulerConfigC
 from SALPY_scheduler import scheduler_fieldC
 
-from schedulerDefinitions import INFOX, RAD2DEG, readConfFile
+from schedulerDefinitions import INFOX, RAD2DEG, read_conf_file
 from schedulerDriver import Driver
 
 class Main(object):
@@ -18,23 +18,18 @@ class Main(object):
         logging.INFOX = INFOX
         logging.addLevelName(logging.INFOX, 'INFOX')
 
-        main_confdict, pairs = readConfFile("../conf/scheduler/main.conf")
-        if ('logLevel' in main_confdict):
-            loglevelstr = main_confdict['logLevel']
-            if (loglevelstr == 'INFOX'):
-                self.logLevel = logging.INFOX
-            elif (loglevelstr == 'INFO'):
-                self.logLevel = logging.INFO
-            elif (loglevelstr == 'DEBUG'):
-                self.logLevel = logging.DEBUG
-            else:
-                self.logLevel = logging.INFO
+        main_confdict = read_conf_file("../conf/scheduler/main.conf")
+        loglevelstr = main_confdict['log']['log_level']
+        if (loglevelstr == 'INFOX'):
+            self.logLevel = logging.INFOX
+        elif (loglevelstr == 'INFO'):
+            self.logLevel = logging.INFO
+        elif (loglevelstr == 'DEBUG'):
+            self.logLevel = logging.DEBUG
         else:
             self.logLevel = logging.INFO
-        if ('rateMeasurementInterval' in main_confdict):
-            self.measinterval = main_confdict['rateMeasurementInterval']
-        else:
-            self.measinterval = 1.0
+
+        self.measinterval = main_confdict['log']['rate_meas_interval']
 
         self.logFormatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
         self.log = logging.getLogger("scheduler")

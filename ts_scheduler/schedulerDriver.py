@@ -1,6 +1,6 @@
 from observatoryModel import ObservatoryModel
 
-from schedulerDefinitions import INFOX, DEG2RAD, readConfFile, read_conf_file
+from schedulerDefinitions import INFOX, DEG2RAD, read_conf_file
 from schedulerField import Field
 from schedulerTarget import Target
 from schedulerScriptedProposal import ScriptedProposal
@@ -21,10 +21,11 @@ class Driver(object):
 
         self.build_fields_dict()
 
-        surveyConfigDict, pairs = readConfFile("../conf/survey/survey.conf")
-        if ('scriptedPropConf' in surveyConfigDict):
-            scriptedprop_conflist = surveyConfigDict["scriptedPropConf"]
-            print("    scriptedPropConf:%s" % (scriptedprop_conflist))
+        survey_confdict = read_conf_file("../conf/survey/survey.conf")
+	print survey_confdict
+        if ('scripted_propconf' in survey_confdict["proposals"]):
+            scriptedprop_conflist = survey_confdict["proposals"]["scripted_propconf"]
+            print("    scriptedpropconf:%s" % (scriptedprop_conflist))
         else:
             scriptedprop_conflist = None
             print("    scriptedPropConf:%s default" % (scriptedprop_conflist))
