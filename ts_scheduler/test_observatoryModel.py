@@ -2,7 +2,7 @@ import logging
 import time
 import sys
 
-from observatoryModel import ObservatoryModel
+from observatoryModel.observatoryModel import ObservatoryModel
 
 from schedulerDefinitions import INFOX, read_conf_file
 
