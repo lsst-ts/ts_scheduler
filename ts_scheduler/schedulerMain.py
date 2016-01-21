@@ -95,7 +95,7 @@ class Main(object):
                     logfilename = self.topicConfig.log_file
                     self.log.log(INFOX, "schedulerMain.run: config logfile=%s" % (logfilename))
                     waitconfig = False
-                    self.configLogFile(logfilename)
+                    self.config_logfile(logfilename)
 
                 else:
                     tf = time.time()
