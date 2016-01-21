@@ -1,6 +1,6 @@
 import logging
 
-from observatoryModel import ObservatoryModel
+from observatoryModel.observatoryModel import ObservatoryModel
 
 from schedulerDefinitions import INFOX, DEG2RAD, read_conf_file
 from schedulerField import Field
