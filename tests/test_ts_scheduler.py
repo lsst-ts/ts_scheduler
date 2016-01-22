@@ -12,7 +12,7 @@ import unittest
 
 #from ts_scheduler import scheduler
 
-class TestTs_scheduler(unittest.TestCase):
+class TestScheduler(unittest.TestCase):
 
     def setUp(self):
         pass
