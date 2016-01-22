@@ -25,7 +25,7 @@ class Driver(object):
         self.build_fields_dict()
 
         survey_confdict = read_conf_file("../conf/survey/survey.conf")
-	print survey_confdict
+
         if ('scripted_propconf' in survey_confdict["proposals"]):
             scriptedprop_conflist = survey_confdict["proposals"]["scripted_propconf"]
             print("    scriptedpropconf:%s" % (scriptedprop_conflist))
