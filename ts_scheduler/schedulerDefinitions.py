@@ -1,5 +1,4 @@
 import math
-import re
 
 # Routines and non user-specific globals
 DEG2RAD = math.pi / 180.    # radians = degrees * DEG2RAD
