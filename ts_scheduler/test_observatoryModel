@@ -1,0 +1,4 @@
+./drun python test_observatoryModel.py | sed -r 's/[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{3}/TIMESTAMP/' > test_observatoryModel.out
+diff test_observatoryModel.out test_observatoryModel.ref > test_observatoryModel.dif
+cat test_observatoryModel.dif
+
