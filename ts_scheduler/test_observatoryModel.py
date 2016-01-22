@@ -4,7 +4,7 @@ import sys
 
 from observatoryModel.observatoryModel import ObservatoryModel
 
-from schedulerDefinitions import INFOX, read_conf_file
+from schedulerDefinitions import INFOX, DEG2RAD, read_conf_file
 
 if (__name__ == '__main__'):
     logging.INFOX = INFOX
@@ -45,4 +45,49 @@ if (__name__ == '__main__'):
         model.slew_altazrot(vTime[k], vAlt[k], vAz[k], vRot[k])
         model.start_tracking(vTime[k])
         print model
+
+    print model.get_closest_angle_distance(0, 0)
+    print model.get_closest_angle_distance(90 * DEG2RAD, 0)
+    print model.get_closest_angle_distance(180 * DEG2RAD, 0)
+    print model.get_closest_angle_distance(360 * DEG2RAD, 0)
+    print model.get_closest_angle_distance(-90 * DEG2RAD, 0)
+    print model.get_closest_angle_distance(-180 * DEG2RAD, 0)
+    print model.get_closest_angle_distance(-360 * DEG2RAD, 0)
+    print
+    print model.get_closest_angle_distance(0, 0, -270 * DEG2RAD, 270 * DEG2RAD)
+    print model.get_closest_angle_distance(90 * DEG2RAD, 0, -270 * DEG2RAD, 270 * DEG2RAD)
+    print model.get_closest_angle_distance(180 * DEG2RAD, 0, -270 * DEG2RAD, 270 * DEG2RAD)
+    print model.get_closest_angle_distance(360 * DEG2RAD, 0, -270 * DEG2RAD, 270 * DEG2RAD)
+    print model.get_closest_angle_distance(-90 * DEG2RAD, 0, -270 * DEG2RAD, 270 * DEG2RAD)
+    print model.get_closest_angle_distance(-180 * DEG2RAD, 0, -270 * DEG2RAD, 270 * DEG2RAD)
+    print model.get_closest_angle_distance(-360 * DEG2RAD, 0, -270 * DEG2RAD, 270 * DEG2RAD)
+    print
+    print model.get_closest_angle_distance(0, 180 * DEG2RAD, -270 * DEG2RAD, 270 * DEG2RAD)
+    print model.get_closest_angle_distance(90 * DEG2RAD, 180 * DEG2RAD, -270 * DEG2RAD, 270 * DEG2RAD)
+    print model.get_closest_angle_distance(180 * DEG2RAD, 180 * DEG2RAD, -270 * DEG2RAD, 270 * DEG2RAD)
+    print model.get_closest_angle_distance(360 * DEG2RAD, 180 * DEG2RAD, -270 * DEG2RAD, 270 * DEG2RAD)
+    print model.get_closest_angle_distance(-90 * DEG2RAD, 180 * DEG2RAD, -270 * DEG2RAD, 270 * DEG2RAD)
+    print model.get_closest_angle_distance(-180 * DEG2RAD, 180 * DEG2RAD, -270 * DEG2RAD, 270 * DEG2RAD)
+    print model.get_closest_angle_distance(-360 * DEG2RAD, 180 * DEG2RAD, -270 * DEG2RAD, 270 * DEG2RAD)
+    print
+    print model.get_closest_angle_distance(0, -180 * DEG2RAD, -270 * DEG2RAD, 270 * DEG2RAD)
+    print model.get_closest_angle_distance(90 * DEG2RAD, -180 * DEG2RAD, -270 * DEG2RAD, 270 * DEG2RAD)
+    print model.get_closest_angle_distance(180 * DEG2RAD, -180 * DEG2RAD, -270 * DEG2RAD, 270 * DEG2RAD)
+    print model.get_closest_angle_distance(360 * DEG2RAD, -180 * DEG2RAD, -270 * DEG2RAD, 270 * DEG2RAD)
+    print model.get_closest_angle_distance(-90 * DEG2RAD, -180 * DEG2RAD, -270 * DEG2RAD, 270 * DEG2RAD)
+    print model.get_closest_angle_distance(-180 * DEG2RAD, -180 * DEG2RAD, -270 * DEG2RAD, 270 * DEG2RAD)
+    print model.get_closest_angle_distance(-360 * DEG2RAD, -180 * DEG2RAD, -270 * DEG2RAD, 270 * DEG2RAD)
+    print
+    print model.get_closest_angle_distance(0, 0, -90 * DEG2RAD, 90 * DEG2RAD)
+    print model.get_closest_angle_distance(45 * DEG2RAD, 0, -90 * DEG2RAD, 90 * DEG2RAD)
+    print model.get_closest_angle_distance(90 * DEG2RAD, 0, -90 * DEG2RAD, 90 * DEG2RAD)
+    print model.get_closest_angle_distance(180 * DEG2RAD, 0, -90 * DEG2RAD, 90 * DEG2RAD)
+    print model.get_closest_angle_distance(270 * DEG2RAD, 0, -90 * DEG2RAD, 90 * DEG2RAD)
+    print model.get_closest_angle_distance(360 * DEG2RAD, 0, -90 * DEG2RAD, 90 * DEG2RAD)
+    print model.get_closest_angle_distance(-45 * DEG2RAD, 0, -90 * DEG2RAD, 90 * DEG2RAD)
+    print model.get_closest_angle_distance(-90 * DEG2RAD, 0, -90 * DEG2RAD, 90 * DEG2RAD)
+    print model.get_closest_angle_distance(-180 * DEG2RAD, 0, -90 * DEG2RAD, 90 * DEG2RAD)
+    print model.get_closest_angle_distance(-270 * DEG2RAD, 0, -90 * DEG2RAD, 90 * DEG2RAD)
+    print model.get_closest_angle_distance(-360 * DEG2RAD, 0, -90 * DEG2RAD, 90 * DEG2RAD)
+
     sys.exit(0)
