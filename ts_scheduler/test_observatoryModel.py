@@ -42,52 +42,49 @@ if (__name__ == '__main__'):
     for k in range(len(vTime)):
         model.update_state(vTime[k])
         print model
-        model.slew_altazrot(vTime[k], vAlt[k], vAz[k], vRot[k])
+        model.slew_altazrot(vTime[k], vAlt[k] * DEG2RAD, vAz[k] * DEG2RAD, vRot[k] * DEG2RAD)
         model.start_tracking(vTime[k])
         print model
 
-    print model.get_closest_angle_distance(0, 0)
-    print model.get_closest_angle_distance(90 * DEG2RAD, 0)
-    print model.get_closest_angle_distance(180 * DEG2RAD, 0)
-    print model.get_closest_angle_distance(360 * DEG2RAD, 0)
-    print model.get_closest_angle_distance(-90 * DEG2RAD, 0)
-    print model.get_closest_angle_distance(-180 * DEG2RAD, 0)
-    print model.get_closest_angle_distance(-360 * DEG2RAD, 0)
+    vTarget = [0, 90, 180, 360, -90, -180, -360]
+    vCurrent = [0, 0, 0, 0, 0, 0, 0]
+    for k in range(len(vTarget)):
+        print model.get_closest_angle_distance(vTarget[k] * DEG2RAD, vCurrent[k] * DEG2RAD)
     print
-    print model.get_closest_angle_distance(0, 0, -270 * DEG2RAD, 270 * DEG2RAD)
-    print model.get_closest_angle_distance(90 * DEG2RAD, 0, -270 * DEG2RAD, 270 * DEG2RAD)
-    print model.get_closest_angle_distance(180 * DEG2RAD, 0, -270 * DEG2RAD, 270 * DEG2RAD)
-    print model.get_closest_angle_distance(360 * DEG2RAD, 0, -270 * DEG2RAD, 270 * DEG2RAD)
-    print model.get_closest_angle_distance(-90 * DEG2RAD, 0, -270 * DEG2RAD, 270 * DEG2RAD)
-    print model.get_closest_angle_distance(-180 * DEG2RAD, 0, -270 * DEG2RAD, 270 * DEG2RAD)
-    print model.get_closest_angle_distance(-360 * DEG2RAD, 0, -270 * DEG2RAD, 270 * DEG2RAD)
+
+    vTarget = [0, 90, 180, 360, -90, -180, -360]
+    vCurrent = [0, 0, 0, 0, 0, 0, 0]
+    vMin = [-270, -270, -270, -270, -270, -270, -270]
+    vMax = [270, 270, 270, 270, 270, 270, 270]
+    for k in range(len(vTarget)):
+        print model.get_closest_angle_distance(vTarget[k] * DEG2RAD, vCurrent[k] * DEG2RAD,
+                                               vMin[k] * DEG2RAD, vMax[k] * DEG2RAD)
     print
-    print model.get_closest_angle_distance(0, 180 * DEG2RAD, -270 * DEG2RAD, 270 * DEG2RAD)
-    print model.get_closest_angle_distance(90 * DEG2RAD, 180 * DEG2RAD, -270 * DEG2RAD, 270 * DEG2RAD)
-    print model.get_closest_angle_distance(180 * DEG2RAD, 180 * DEG2RAD, -270 * DEG2RAD, 270 * DEG2RAD)
-    print model.get_closest_angle_distance(360 * DEG2RAD, 180 * DEG2RAD, -270 * DEG2RAD, 270 * DEG2RAD)
-    print model.get_closest_angle_distance(-90 * DEG2RAD, 180 * DEG2RAD, -270 * DEG2RAD, 270 * DEG2RAD)
-    print model.get_closest_angle_distance(-180 * DEG2RAD, 180 * DEG2RAD, -270 * DEG2RAD, 270 * DEG2RAD)
-    print model.get_closest_angle_distance(-360 * DEG2RAD, 180 * DEG2RAD, -270 * DEG2RAD, 270 * DEG2RAD)
+
+    vTarget = [0, 90, 180, 360, -90, -180, -360]
+    vCurrent = [180, 180, 180, 180, 180, 180, 180]
+    vMin = [-270, -270, -270, -270, -270, -270, -270]
+    vMax = [270, 270, 270, 270, 270, 270, 270]
+    for k in range(len(vTarget)):
+        print model.get_closest_angle_distance(vTarget[k] * DEG2RAD, vCurrent[k] * DEG2RAD,
+                                               vMin[k] * DEG2RAD, vMax[k] * DEG2RAD)
     print
-    print model.get_closest_angle_distance(0, -180 * DEG2RAD, -270 * DEG2RAD, 270 * DEG2RAD)
-    print model.get_closest_angle_distance(90 * DEG2RAD, -180 * DEG2RAD, -270 * DEG2RAD, 270 * DEG2RAD)
-    print model.get_closest_angle_distance(180 * DEG2RAD, -180 * DEG2RAD, -270 * DEG2RAD, 270 * DEG2RAD)
-    print model.get_closest_angle_distance(360 * DEG2RAD, -180 * DEG2RAD, -270 * DEG2RAD, 270 * DEG2RAD)
-    print model.get_closest_angle_distance(-90 * DEG2RAD, -180 * DEG2RAD, -270 * DEG2RAD, 270 * DEG2RAD)
-    print model.get_closest_angle_distance(-180 * DEG2RAD, -180 * DEG2RAD, -270 * DEG2RAD, 270 * DEG2RAD)
-    print model.get_closest_angle_distance(-360 * DEG2RAD, -180 * DEG2RAD, -270 * DEG2RAD, 270 * DEG2RAD)
+
+    vTarget = [0, 90, 180, 360, -90, -180, -360]
+    vCurrent = [-180, -180, -180, -180, -180, -180, -180]
+    vMin = [-270, -270, -270, -270, -270, -270, -270]
+    vMax = [270, 270, 270, 270, 270, 270, 270]
+    for k in range(len(vTarget)):
+        print model.get_closest_angle_distance(vTarget[k] * DEG2RAD, vCurrent[k] * DEG2RAD,
+                                               vMin[k] * DEG2RAD, vMax[k] * DEG2RAD)
     print
-    print model.get_closest_angle_distance(0, 0, -90 * DEG2RAD, 90 * DEG2RAD)
-    print model.get_closest_angle_distance(45 * DEG2RAD, 0, -90 * DEG2RAD, 90 * DEG2RAD)
-    print model.get_closest_angle_distance(90 * DEG2RAD, 0, -90 * DEG2RAD, 90 * DEG2RAD)
-    print model.get_closest_angle_distance(180 * DEG2RAD, 0, -90 * DEG2RAD, 90 * DEG2RAD)
-    print model.get_closest_angle_distance(270 * DEG2RAD, 0, -90 * DEG2RAD, 90 * DEG2RAD)
-    print model.get_closest_angle_distance(360 * DEG2RAD, 0, -90 * DEG2RAD, 90 * DEG2RAD)
-    print model.get_closest_angle_distance(-45 * DEG2RAD, 0, -90 * DEG2RAD, 90 * DEG2RAD)
-    print model.get_closest_angle_distance(-90 * DEG2RAD, 0, -90 * DEG2RAD, 90 * DEG2RAD)
-    print model.get_closest_angle_distance(-180 * DEG2RAD, 0, -90 * DEG2RAD, 90 * DEG2RAD)
-    print model.get_closest_angle_distance(-270 * DEG2RAD, 0, -90 * DEG2RAD, 90 * DEG2RAD)
-    print model.get_closest_angle_distance(-360 * DEG2RAD, 0, -90 * DEG2RAD, 90 * DEG2RAD)
+
+    vTarget = [0, 45, 90, 180, 270, 360, -45, -90, -180, -270, -360]
+    vCurrent = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    vMin = [-90, -90, -90, -90, -90, -90, -90, -90, -90, -90, -90]
+    vMax = [90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90]
+    for k in range(len(vTarget)):
+        print model.get_closest_angle_distance(vTarget[k] * DEG2RAD, vCurrent[k] * DEG2RAD,
+                                               vMin[k] * DEG2RAD, vMax[k] * DEG2RAD)
 
     sys.exit(0)
