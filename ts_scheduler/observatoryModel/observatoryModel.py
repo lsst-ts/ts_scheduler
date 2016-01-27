@@ -1,10 +1,9 @@
 import math
-import re
 import logging
 
 import palpy as pal
 
-from schedulerDefinitions import TWOPI, RAD2DEG, DEG2RAD, INFOX
+from ts_scheduler.schedulerDefinitions import TWOPI, INFOX
 
 #####################################################################
 class ObservatoryLocation(object):
@@ -46,11 +45,38 @@ class ObservatoryPosition(object):
         self.pa_rad = pa_rad
         self.rot_rad = rot_rad
 
+    @property
+    def ra(self):
+        return math.degrees(self.ra_rad)
+
+    @property
+    def dec(self):
+        return math.degrees(self.dec_rad)
+
+    @property
+    def ang(self):
+        return math.degrees(self.ang_rad)
+
+    @property
+    def alt(self):
+        return math.degrees(self.alt_rad)
+
+    @property
+    def az(self):
+        return math.degrees(self.az_rad)
+
+    @property
+    def pa(self):
+        return math.degrees(self.pa_rad)
+
+    @property
+    def rot(self):
+        return math.degrees(self.rot_rad)
+
     def __str__(self):
         return ("t=%.1f ra=%.3f dec=%.3f ang=%.3f filter=%s track=%s alt=%.3f az=%.3f rot=%.3f" %
-                (self.time, self.ra_rad * RAD2DEG, self.dec_rad * RAD2DEG, self.ang_rad * RAD2DEG,
-                 self.filter, self.tracking, self.alt_rad * RAD2DEG, self.az_rad * RAD2DEG,
-                 self.rot_rad * RAD2DEG))
+                (self.time, self.ra, self.dec, self.ang, self.filter, self.tracking,
+                 self.alt, self.az, self.rot))
 
 #####################################################################
 class ObservatoryState(ObservatoryPosition):
@@ -242,29 +268,35 @@ class ObservatoryModel(object):
         self.log.log(INFOX, "ObservatoryModel: configure OpticsCL_Delay=%s" % (self.OpticsCL_Delay))
         self.log.log(INFOX, "ObservatoryModel: configure OpticsCL_AltLimit=%s" % (self.OpticsCL_AltLimit))
 
-        self.activities = ["TelAlt",
-                           "TelAz",
-                           "TelRot",
-                           "DomAlt",
-                           "DomAz",
-                           "Filter",
-                           "TelSettle",
-                           "DomAzSettle",
-                           "Readout",
-                           "TelOpticsOL",
-                           "TelOpticsCL",
-                           "Exposure"]
+        self.activities = ["telalt",
+                           "telaz",
+                           "telrot",
+                           "telsettle",
+                           "telopticsopenloop",
+                           "telopticsclosedloop",
+                           "domalt",
+                           "domaz",
+                           "domazsettle",
+                           "filter",
+                           "readout",
+                           "exposures"]
 
-        # Split on camel case and acronyms
-        key_re = re.compile(r'[A-Z](?:[a-z]+|[A-Z]*(?=[A-Z]|$))')
         self.prerequisites = {}
         for activity in self.activities:
-            activity_key = "_".join([s.lower() for s in key_re.findall(activity)])
-            key = "prereq_" + activity_key
+            key = "prereq_" + activity
             self.prerequisites[activity] = observatory_confdict["slew"][key]
             self.log.log(INFOX,
                          "ObservatoryModel: configure prerequisites[%s]=%s" %
                          (activity, self.prerequisites[activity]))
+
+        self.function_get_delay_for = {}
+        self.delay_for = {}
+        self.longest_prereq_for = {}
+        for activity in self.activities:
+            self.delay_for[activity] = 0.0
+            self.longest_prereq_for[activity] = ""
+            function_name = "get_delay_for_" + activity
+            self.function_get_delay_for[activity] = getattr(self, function_name)
 
         self.parkState.alt_rad = math.radians(observatory_confdict["park"]["telescope_altitude"])
         self.parkState.az_rad = math.radians(observatory_confdict["park"]["telescope_azimuth"])
@@ -332,19 +364,193 @@ class ObservatoryModel(object):
 
         return (final_abs_rad, distance_rad)
 
+    def get_closest_state(self, targetposition):
+
+        targetstate = ObservatoryState()
+
+        targetstate.set_position(targetposition)
+
+        (targetstate.telalt_rad, delta_telalt_rad) = self.get_closest_angle_distance(targetposition.alt_rad,
+                                                                                     self.currentState.telalt_rad,
+                                                                                     self.TelAlt_MinPos_rad,
+                                                                                     self.TelAlt_MaxPos_rad)
+        (targetstate.telaz_rad, delta_telaz_rad) = self.get_closest_angle_distance(targetposition.az_rad,
+                                                                                   self.currentState.telaz_rad,
+                                                                                   self.TelAz_MinPos_rad,
+                                                                                   self.TelAz_MaxPos_rad)
+        (targetstate.telrot_rad, delta_telrot_rad) = self.get_closest_angle_distance(targetposition.rot_rad,
+                                                                                     self.currentState.telrot_rad,
+                                                                                     self.TelRot_MinPos_rad,
+                                                                                     self.TelRot_MaxPos_rad)
+        (targetstate.domalt_rad, delta_domalt_rad) = self.get_closest_angle_distance(targetposition.alt_rad,
+                                                                                     self.currentState.domalt_rad,
+                                                                                     self.TelAlt_MinPos_rad,
+                                                                                     self.TelAlt_MaxPos_rad)
+        (targetstate.domaz_rad, delta_domaz_rad) = self.get_closest_angle_distance(targetposition.az_rad,
+                                                                                   self.currentState.domaz_rad)
+
+        return targetstate
+
     def observe(self, topic_observation):
         return
 
-    def slew_altazrot(self, time, alt, az, rot):
+    def compute_kinematic_delay(self, distance, maxspeed, accel, decel):
+
+        d = abs(distance)
+
+        vpeak = (2 * d / (1 / accel + 1 / decel)) ** 0.5
+        if (vpeak <= maxspeed):
+            delay = vpeak / accel + vpeak / decel
+        else:
+            d1 = 0.5 * (maxspeed * maxspeed) / accel
+            d3 = 0.5 * (maxspeed * maxspeed) / decel
+            d2 = d - d1 - d3
+
+            t1 = maxspeed / accel
+            t3 = maxspeed / decel
+            t2 = d2 / maxspeed
+
+            delay = t1 + t2 + t3
+            vpeak = maxspeed
+
+        return (delay, vpeak * cmp(distance, 0))
+
+    def slew_altazrot(self, time, alt_rad, az_rad, rot_rad):
+
+        self.update_state(time)
 
         targetposition = ObservatoryPosition()
         targetposition.time = time
         targetposition.tracking = False
-        targetposition.alt_rad = alt * DEG2RAD
-        targetposition.az_rad = az * DEG2RAD
-        targetposition.rot_rad = rot * DEG2RAD
+        targetposition.alt_rad = alt_rad
+        targetposition.az_rad = az_rad
+        targetposition.rot_rad = rot_rad
 
-        self.currentState.set_position(targetposition)
+        targetstate = self.get_closest_state(targetposition)
+        slew_delay = self.get_slew_delay(targetstate, self.currentState)
+        targetstate.time = targetstate.time + slew_delay
+        self.currentState.set(targetstate)
+
+    def get_slew_delay(self, targetstate, initstate):
+
+        slew_delay = self.get_delay_after("exposures", targetstate, initstate)
+
+        return slew_delay
+
+    def get_delay_after(self, activity, targetstate, initstate):
+
+        activity_delay = self.function_get_delay_for[activity](targetstate, initstate)
+
+        prereq_list = self.prerequisites[activity]
+
+        longest_previous_delay = 0.0
+        longest_prereq = ""
+        for prereq in prereq_list:
+            previous_delay = self.get_delay_after(prereq, targetstate, initstate)
+            if (previous_delay > longest_previous_delay):
+                longest_previous_delay = previous_delay
+                longest_prereq = prereq
+        self.longest_prereq_for[activity] = longest_prereq
+        self.delay_for[activity] = activity_delay
+
+        return activity_delay + longest_previous_delay
+
+    def get_delay_for_telalt(self, targetstate, initstate):
+
+        distance = targetstate.telalt_rad - initstate.telalt_rad
+        maxspeed = self.TelAlt_MaxSpeed_rad
+        accel = self.TelAlt_Accel_rad
+        decel = self.TelAlt_Decel_rad
+
+        (delay, peakspeed) = self.compute_kinematic_delay(distance, maxspeed, accel, decel)
+        targetstate.telalt_peakspeed_rad = peakspeed
+
+        return delay
+
+    def get_delay_for_telaz(self, targetstate, initstate):
+
+        distance = targetstate.telaz_rad - initstate.telaz_rad
+        maxspeed = self.TelAz_MaxSpeed_rad
+        accel = self.TelAz_Accel_rad
+        decel = self.TelAz_Decel_rad
+
+        (delay, peakspeed) = self.compute_kinematic_delay(distance, maxspeed, accel, decel)
+        targetstate.telaz_peakspeed_rad = peakspeed
+
+        return delay
+
+    def get_delay_for_telrot(self, targetstate, initstate):
+
+        distance = targetstate.telrot_rad - initstate.telrot_rad
+        maxspeed = self.TelRot_MaxSpeed_rad
+        accel = self.TelRot_Accel_rad
+        decel = self.TelRot_Decel_rad
+
+        (delay, peakspeed) = self.compute_kinematic_delay(distance, maxspeed, accel, decel)
+        targetstate.telrot_peakspeed_rad = peakspeed
+
+        return delay
+
+    def get_delay_for_telsettle(self, targetstate, initstate):
+
+        distance = abs(targetstate.telalt_rad - initstate.telalt_rad) + abs(targetstate.telaz_rad - initstate.telaz_rad)
+
+        if (distance > 0):
+            delay = self.Mount_SettleTime
+        else:
+            delay = 0
+
+        return delay
+
+    def get_delay_for_telopticsopenloop(self, targetstate, initstate):
+        return 0.0
+
+    def get_delay_for_telopticsclosedloop(self, targetstate, initstate):
+        return 0.0
+
+    def get_delay_for_domalt(self, targetstate, initstate):
+
+        distance = targetstate.domalt_rad - initstate.domalt_rad
+        maxspeed = self.DomAlt_MaxSpeed_rad
+        accel = self.DomAlt_Accel_rad
+        decel = self.DomAlt_Decel_rad
+
+        (delay, peakspeed) = self.compute_kinematic_delay(distance, maxspeed, accel, decel)
+        targetstate.domalt_peakspeed_rad = peakspeed
+
+        return delay
+
+    def get_delay_for_domaz(self, targetstate, initstate):
+
+        distance = targetstate.domaz_rad - initstate.domaz_rad
+        maxspeed = self.DomAz_MaxSpeed_rad
+        accel = self.DomAz_Accel_rad
+        decel = self.DomAz_Decel_rad
+
+        (delay, peakspeed) = self.compute_kinematic_delay(distance, maxspeed, accel, decel)
+        targetstate.domaz_peakspeed_rad = peakspeed
+
+        return delay
+
+    def get_delay_for_domazsettle(self, targetstate, initstate):
+
+        distance = abs(targetstate.domaz_rad - initstate.domaz_rad)
+
+        if (distance > 0):
+            delay = self.DomAz_SettleTime
+        else:
+            delay = 0
+
+        return delay
+
+    def get_delay_for_filter(self, targetstate, initstate):
+        return 0.0
+
+    def get_delay_for_readout(self, targetstate, initstate):
+        return 0.0
+
+    def get_delay_for_exposures(self, targetstate, initstate):
+        return 0.0
 
     def estimate_slewtime(self):
         return
