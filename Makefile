@@ -33,6 +33,8 @@ clean-test:
 	rm -fr .tox/
 	rm -f .coverage
 	rm -fr htmlcov/
+	find . -name '*.out' -exec rm -f {} +
+	find . -name '*.dif' -exec rm -f {} +
 
 lint:
 	flake8 ts_scheduler tests
