@@ -59,7 +59,7 @@ class Sun(object):
         int
             The number of days elapsed.
         """
-        date = datetime.fromtimestamp(timestamp)
+        date = datetime.utcfromtimestamp(timestamp)
         start = datetime(1999, 12, 31)
         return (date - start).days
 
