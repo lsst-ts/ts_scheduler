@@ -1,4 +1,5 @@
 from enum import Enum
+import logging
 
 from .date_profile import DateProfile
 
@@ -28,6 +29,7 @@ class AstronomicalSkyModel(object):
         location : ts_scheduler.observatoryModel.ObservatoryLocation
             The instance containing the observatory location information.
         """
+        self.log = logging.getLogger("sky_model.AstronomicalSkyModel")
         self.date_profile = DateProfile(0, location)
 
     def update(self, timestamp):
