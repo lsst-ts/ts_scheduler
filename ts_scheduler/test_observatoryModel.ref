@@ -53,17 +53,25 @@ TIMESTAMP INFOX ObservatoryModel: configure park_Telrot_rad=0.000
 TIMESTAMP INFOX ObservatoryModel: configure park_Domalt_rad=1.571
 TIMESTAMP INFOX ObservatoryModel: configure park_Domaz_rad=0.000
 TIMESTAMP INFOX ObservatoryModel: configure park_Filter=r
-t=0.0 ra=0.000 dec=0.000 ang=0.000 filter=r track=False alt=86.500 az=0.000 rot=0.000
-t=0.0 ra=29.342 dec=-26.744 ang=-180.000 filter=r track=False alt=86.500 az=0.000 rot=0.000
-t=0.0 ra=29.342 dec=-20.244 ang=-180.000 filter=r track=True alt=80.000 az=0.000 rot=0.000
-t=100.0 ra=29.342 dec=-20.244 ang=-180.000 filter=r track=True alt=79.993 az=357.744 rot=-2.078
-t=100.0 ra=39.850 dec=-12.558 ang=-191.265 filter=r track=True alt=70.000 az=30.000 rot=15.000
-t=200.0 ra=39.850 dec=-12.558 ang=-191.265 filter=r track=True alt=70.178 az=28.922 rot=14.077
-t=200.0 ra=56.531 dec=-12.723 ang=-200.083 filter=r track=True alt=60.000 az=60.000 rot=30.000
-t=300.0 ra=56.531 dec=-12.723 ang=-200.083 filter=r track=True alt=60.312 az=59.472 rot=29.634
-t=300.0 ra=74.761 dec=-22.696 ang=-204.455 filter=r track=True alt=50.000 az=90.000 rot=45.000
-t=400.0 ra=74.761 dec=-22.696 ang=-204.455 filter=r track=True alt=50.361 az=89.789 rot=44.999
-t=400.0 ra=92.369 dec=-40.893 ang=-201.771 filter=r track=True alt=40.000 az=120.000 rot=60.000
+t=0.0 ra=0.000 dec=0.000 ang=0.000 filter=r track=False alt=86.500 az=0.000 rot=0.000 telaz=0.000 telrot=0.000
+t=0.0 ra=29.342 dec=-26.744 ang=180.000 filter=r track=False alt=86.500 az=0.000 rot=0.000 telaz=0.000 telrot=0.000
+t=7.7 ra=29.374 dec=-20.244 ang=180.000 filter=r track=True alt=80.000 az=0.000 rot=0.000 telaz=0.000 telrot=0.000
+t=100.0 ra=29.374 dec=-20.244 ang=180.000 filter=r track=True alt=79.994 az=357.918 rot=358.083 telaz=-2.082 telrot=-1.917
+t=124.4 ra=39.952 dec=-12.558 ang=168.735 filter=r track=True alt=70.000 az=30.000 rot=15.000 telaz=30.000 telrot=15.000
+t=200.0 ra=39.952 dec=-12.558 ang=168.735 filter=r track=True alt=70.135 az=29.186 rot=14.304 telaz=29.186 telrot=14.304
+t=223.5 ra=56.629 dec=-12.723 ang=159.917 filter=r track=True alt=60.000 az=60.000 rot=30.000 telaz=60.000 telrot=30.000
+t=300.0 ra=56.629 dec=-12.723 ang=159.917 filter=r track=True alt=60.239 az=59.597 rot=29.721 telaz=59.597 telrot=29.721
+t=323.3 ra=74.858 dec=-22.696 ang=155.545 filter=r track=True alt=50.000 az=90.000 rot=45.000 telaz=90.000 telrot=45.000
+t=400.0 ra=74.858 dec=-22.696 ang=155.545 filter=r track=True alt=50.277 az=89.838 rot=44.999 telaz=89.838 telrot=44.999
+t=423.1 ra=92.465 dec=-40.893 ang=158.229 filter=r track=True alt=40.000 az=120.000 rot=60.000 telaz=120.000 telrot=60.000
+t=500.0 ra=92.465 dec=-40.893 ang=158.229 filter=r track=True alt=40.240 az=119.955 rot=60.181 telaz=119.955 telrot=60.181
+t=543.0 ra=211.610 dec=-89.756 ang=265.000 filter=r track=True alt=30.000 az=180.000 rot=85.000 telaz=180.000 telrot=85.000
+t=600.0 ra=211.610 dec=-89.756 ang=265.000 filter=r track=True alt=30.000 az=179.999 rot=85.237 telaz=179.999 telrot=85.237
+t=656.3 ra=-19.664 dec=-27.532 ang=13.619 filter=r track=True alt=45.000 az=260.000 rot=120.000 telaz=260.000 telrot=-60.000
+t=700.0 ra=-19.664 dec=-27.532 ang=13.619 filter=r track=True alt=44.845 az=259.935 rot=120.039 telaz=259.935 telrot=-59.961
+t=749.7 ra=11.734 dec=-17.150 ang=21.532 filter=r track=True alt=67.000 az=300.000 rot=150.000 telaz=-60.000 telrot=-30.000
+t=800.0 ra=11.734 dec=-17.150 ang=21.532 filter=r track=True alt=66.843 az=299.682 rot=149.770 telaz=-60.318 telrot=-30.230
+t=843.2 ra=32.865 dec=-25.244 ang=0.000 filter=r track=True alt=85.000 az=0.000 rot=180.000 telaz=0.000 telrot=0.000
 (0.0, 0.0)
 (1.5707963267948966, 1.5707963267948966)
 (3.141592653589793, 3.141592653589793)
