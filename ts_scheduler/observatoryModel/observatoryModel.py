@@ -119,6 +119,17 @@ class ObservatoryState(ObservatoryPosition):
         self.mountedfilters = list(mountedfilters)
         self.unmountedfilters = list(unmountedfilters)
 
+    @property
+    def telaz(self):
+        return math.degrees(self.telaz_rad)
+
+    @property
+    def telrot(self):
+        return math.degrees(self.telrot_rad)
+
+    def __str__(self):
+        return ("%s telaz=%.3f telrot=%.3f" % (super(ObservatoryState, self).__str__(), self.telaz, self.telrot))
+
     def set(self, newstate):
 
         self.time = newstate.time
@@ -169,6 +180,7 @@ class ObservatoryModel(object):
         self.location = ObservatoryLocation()
         self.parkState = ObservatoryState()
         self.currentState = ObservatoryState()
+        self.targetPosition = ObservatoryPosition()
 
     def __str__(self):
         return self.currentState.__str__()
@@ -417,6 +429,9 @@ class ObservatoryModel(object):
 
     def slew_altazrot(self, time, alt_rad, az_rad, rot_rad):
 
+        if (time < self.currentState.time):
+            time = self.currentState
+
         self.update_state(time)
 
         targetposition = ObservatoryPosition()
@@ -621,11 +636,15 @@ class ObservatoryModel(object):
         return (alt_rad, az_rad, pa_rad)
 
     def start_tracking(self, time):
+        if (time < self.currentState.time):
+            time = self.currentState.time
         if not self.currentState.tracking:
             self.update_state(time)
             self.currentState.tracking = True
 
     def stop_tracking(self, time):
+        if (time < self.currentState.time):
+            time = self.currentState.time
         if self.currentState.tracking:
             self.update_state(time)
             self.currentState.tracking = False
@@ -638,19 +657,26 @@ class ObservatoryModel(object):
                                                            self.currentState.dec_rad)
             az_rad = divmod(az_rad, TWOPI)[1]
             pa_rad = divmod(pa_rad, TWOPI)[1]
-            rot_rad = pa_rad + self.currentState.ang_rad
+            rot_rad = divmod(pa_rad + self.currentState.ang_rad, TWOPI)[1]
 
-            self.currentState.time = time
-            self.currentState.alt_rad = alt_rad
-            self.currentState.az_rad = az_rad
-            self.currentState.pa_rad = pa_rad
-            self.currentState.rot_rad = rot_rad
+            self.targetPosition.time = time
+            self.targetPosition.tracking = True
+            self.targetPosition.alt_rad = alt_rad
+            self.targetPosition.az_rad = az_rad
+            self.targetPosition.rot_rad = rot_rad
+            targetstate = self.get_closest_state(self.targetPosition)
 
-            self.currentState.telalt_rad = alt_rad
-            self.currentState.telaz_rad = az_rad
-            self.currentState.telrot_rad = rot_rad
-            self.currentState.domalt_rad = alt_rad
-            self.currentState.domaz_rad = az_rad
+            self.currentState.time = targetstate.time
+            self.currentState.alt_rad = targetstate.alt_rad
+            self.currentState.az_rad = targetstate.az_rad
+            self.currentState.pa_rad = targetstate.pa_rad
+            self.currentState.rot_rad = targetstate.rot_rad
+
+            self.currentState.telalt_rad = targetstate.telalt_rad
+            self.currentState.telaz_rad = targetstate.telaz_rad
+            self.currentState.telrot_rad = targetstate.telrot_rad
+            self.currentState.domalt_rad = targetstate.domalt_rad
+            self.currentState.domaz_rad = targetstate.domaz_rad
         else:
             (ra_rad, dec_rad, pa_rad) = self.altaz2radecpa(time,
                                                            self.currentState.alt_rad,
@@ -659,4 +685,4 @@ class ObservatoryModel(object):
             self.currentState.time = time
             self.currentState.ra_rad = ra_rad
             self.currentState.dec_rad = dec_rad
-            self.currentState.ang_rad = self.currentState.rot_rad - pa_rad
+            self.currentState.ang_rad = divmod(self.currentState.rot_rad - pa_rad, TWOPI)[1]
