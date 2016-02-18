@@ -46,6 +46,20 @@ if (__name__ == '__main__'):
         model.start_tracking(vTime[k])
         print model
 
+    vTime = [0, 100, 200, 300, 400, 500, 600, 700, 800]
+    vRa = [80, 70, 60, 50, 40, 30, 0, -70, -100]
+    vDec = [0, -30, -60, -90, 20, 80, 60, 30, 0]
+    vAng = [0, 15, 30, 45, 60, 85, 120, 150, 180]
+
+    print
+    model.reset()
+    print model
+    for k in range(len(vTime)):
+        model.update_state(vTime[k])
+        print model
+        model.slew_radecang(vTime[k], vRa[k] * DEG2RAD, vDec[k] * DEG2RAD, vAng[k] * DEG2RAD)
+        print model
+
     vTarget = [0, 90, 180, 360, -90, -180, -360]
     vCurrent = [0, 0, 0, 0, 0, 0, 0]
     for k in range(len(vTarget)):

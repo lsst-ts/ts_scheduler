@@ -74,9 +74,9 @@ class ObservatoryPosition(object):
         return math.degrees(self.rot_rad)
 
     def __str__(self):
-        return ("t=%.1f ra=%.3f dec=%.3f ang=%.3f filter=%s track=%s alt=%.3f az=%.3f rot=%.3f" %
+        return ("t=%.1f ra=%.3f dec=%.3f ang=%.3f filter=%s track=%s alt=%.3f az=%.3f pa=%.3f rot=%.3f" %
                 (self.time, self.ra, self.dec, self.ang, self.filter, self.tracking,
-                 self.alt, self.az, self.rot))
+                 self.alt, self.az, self.pa, self.rot))
 
 #####################################################################
 class ObservatoryState(ObservatoryPosition):
@@ -128,7 +128,8 @@ class ObservatoryState(ObservatoryPosition):
         return math.degrees(self.telrot_rad)
 
     def __str__(self):
-        return ("%s telaz=%.3f telrot=%.3f" % (super(ObservatoryState, self).__str__(), self.telaz, self.telrot))
+        return ("%s telaz=%.3f telrot=%.3f" %
+                (super(ObservatoryState, self).__str__(), self.telaz, self.telrot))
 
     def set(self, newstate):
 
@@ -340,6 +341,128 @@ class ObservatoryModel(object):
 
         self.currentState.set(newstate)
 
+    def update_state(self, time):
+
+        if (time < self.currentState.time):
+            time = self.currentState.time
+
+        if self.currentState.tracking:
+            (alt_rad, az_rad, pa_rad) = self.radec2altazpa(time,
+                                                           self.currentState.ra_rad,
+                                                           self.currentState.dec_rad)
+            az_rad = divmod(az_rad, TWOPI)[1]
+            rot_rad = divmod(pa_rad - self.currentState.ang_rad, TWOPI)[1]
+
+            targetposition = ObservatoryPosition()
+            targetposition.time = time
+            targetposition.tracking = True
+            targetposition.alt_rad = alt_rad
+            targetposition.az_rad = az_rad
+            targetposition.pa_rad = pa_rad
+            targetposition.rot_rad = rot_rad
+            targetstate = self.get_closest_state(targetposition)
+
+            self.currentState.time = targetstate.time
+            self.currentState.alt_rad = targetstate.alt_rad
+            self.currentState.az_rad = targetstate.az_rad
+            self.currentState.pa_rad = targetstate.pa_rad
+            self.currentState.rot_rad = targetstate.rot_rad
+
+            self.currentState.telalt_rad = targetstate.telalt_rad
+            self.currentState.telaz_rad = targetstate.telaz_rad
+            self.currentState.telrot_rad = targetstate.telrot_rad
+            self.currentState.domalt_rad = targetstate.domalt_rad
+            self.currentState.domaz_rad = targetstate.domaz_rad
+        else:
+            (ra_rad, dec_rad, pa_rad) = self.altaz2radecpa(time,
+                                                           self.currentState.alt_rad,
+                                                           self.currentState.az_rad)
+            self.currentState.time = time
+            self.currentState.ra_rad = ra_rad
+            self.currentState.dec_rad = dec_rad
+            self.currentState.ang_rad = divmod(pa_rad - self.currentState.rot_rad, TWOPI)[1]
+            self.currentState.pa_rad = pa_rad
+
+    def slew_altazrot(self, time, alt_rad, az_rad, rot_rad):
+
+        self.update_state(time)
+        time = self.currentState.time
+
+        targetposition = ObservatoryPosition()
+        targetposition.time = time
+        targetposition.tracking = False
+        targetposition.alt_rad = alt_rad
+        targetposition.az_rad = az_rad
+        targetposition.rot_rad = rot_rad
+
+        self.slew_to_position(targetposition)
+
+    def slew_radecang(self, time, ra_rad, dec_rad, ang_rad):
+
+        self.update_state(time)
+        time = self.currentState.time
+
+        (alt_rad, az_rad, pa_rad) = self.radec2altazpa(time, ra_rad, dec_rad)
+
+        targetposition = ObservatoryPosition()
+        targetposition.time = time
+        targetposition.tracking = True
+        targetposition.ra_rad = ra_rad
+        targetposition.dec_rad = dec_rad
+        targetposition.ang_rad = ang_rad
+        targetposition.alt_rad = alt_rad
+        targetposition.az_rad = az_rad
+        targetposition.pa_rad = pa_rad
+        targetposition.rot_rad = divmod(pa_rad - ang_rad, TWOPI)[1]
+
+        self.slew_to_position(targetposition)
+
+    def slew_to_position(self, targetposition):
+
+        targetstate = self.get_closest_state(targetposition)
+        slew_delay = self.get_slew_delay(targetstate, self.currentState)
+        targetstate.time = targetstate.time + slew_delay
+        self.currentState.set(targetstate)
+        self.update_state(targetstate.time)
+
+    def get_closest_state(self, targetposition):
+
+        (telalt_rad, delta_telalt_rad) = self.get_closest_angle_distance(targetposition.alt_rad,
+                                                                         self.currentState.telalt_rad,
+                                                                         self.TelAlt_MinPos_rad,
+                                                                         self.TelAlt_MaxPos_rad)
+        (telaz_rad, delta_telaz_rad) = self.get_closest_angle_distance(targetposition.az_rad,
+                                                                       self.currentState.telaz_rad,
+                                                                       self.TelAz_MinPos_rad,
+                                                                       self.TelAz_MaxPos_rad)
+
+        # if the target rotator angle is unreachable
+        # then sets an arbitrary value
+        norm_rot_rad = divmod(targetposition.rot_rad - self.TelRot_MinPos_rad, TWOPI)[1] + self.TelRot_MinPos_rad
+        if (norm_rot_rad > self.TelRot_MaxPos_rad):
+            targetposition.rot_rad = norm_rot_rad - math.pi
+        (telrot_rad, delta_telrot_rad) = self.get_closest_angle_distance(targetposition.rot_rad,
+                                                                         self.currentState.telrot_rad,
+                                                                         self.TelRot_MinPos_rad,
+                                                                         self.TelRot_MaxPos_rad)
+        targetposition.ang_rad = targetposition.pa_rad - telrot_rad
+
+        (domalt_rad, delta_domalt_rad) = self.get_closest_angle_distance(targetposition.alt_rad,
+                                                                         self.currentState.domalt_rad,
+                                                                         self.TelAlt_MinPos_rad,
+                                                                         self.TelAlt_MaxPos_rad)
+        (domaz_rad, delta_domaz_rad) = self.get_closest_angle_distance(targetposition.az_rad,
+                                                                       self.currentState.domaz_rad)
+        targetstate = ObservatoryState()
+        targetstate.set_position(targetposition)
+        targetstate.telalt_rad = telalt_rad
+        targetstate.telaz_rad = telaz_rad
+        targetstate.telrot_rad = telrot_rad
+        targetstate.domalt_rad = domalt_rad
+        targetstate.domaz_rad = domaz_rad
+
+        return targetstate
+
     def get_closest_angle_distance(self, target_rad, current_abs_rad, min_abs_rad=None, max_abs_rad=None):
 
         # if there are wrap limits, normalizes the target angle
@@ -376,33 +499,6 @@ class ObservatoryModel(object):
 
         return (final_abs_rad, distance_rad)
 
-    def get_closest_state(self, targetposition):
-
-        targetstate = ObservatoryState()
-
-        targetstate.set_position(targetposition)
-
-        (targetstate.telalt_rad, delta_telalt_rad) = self.get_closest_angle_distance(targetposition.alt_rad,
-                                                                                     self.currentState.telalt_rad,
-                                                                                     self.TelAlt_MinPos_rad,
-                                                                                     self.TelAlt_MaxPos_rad)
-        (targetstate.telaz_rad, delta_telaz_rad) = self.get_closest_angle_distance(targetposition.az_rad,
-                                                                                   self.currentState.telaz_rad,
-                                                                                   self.TelAz_MinPos_rad,
-                                                                                   self.TelAz_MaxPos_rad)
-        (targetstate.telrot_rad, delta_telrot_rad) = self.get_closest_angle_distance(targetposition.rot_rad,
-                                                                                     self.currentState.telrot_rad,
-                                                                                     self.TelRot_MinPos_rad,
-                                                                                     self.TelRot_MaxPos_rad)
-        (targetstate.domalt_rad, delta_domalt_rad) = self.get_closest_angle_distance(targetposition.alt_rad,
-                                                                                     self.currentState.domalt_rad,
-                                                                                     self.TelAlt_MinPos_rad,
-                                                                                     self.TelAlt_MaxPos_rad)
-        (targetstate.domaz_rad, delta_domaz_rad) = self.get_closest_angle_distance(targetposition.az_rad,
-                                                                                   self.currentState.domaz_rad)
-
-        return targetstate
-
     def observe(self, topic_observation):
         return
 
@@ -426,25 +522,6 @@ class ObservatoryModel(object):
             vpeak = maxspeed
 
         return (delay, vpeak * cmp(distance, 0))
-
-    def slew_altazrot(self, time, alt_rad, az_rad, rot_rad):
-
-        if (time < self.currentState.time):
-            time = self.currentState
-
-        self.update_state(time)
-
-        targetposition = ObservatoryPosition()
-        targetposition.time = time
-        targetposition.tracking = False
-        targetposition.alt_rad = alt_rad
-        targetposition.az_rad = az_rad
-        targetposition.rot_rad = rot_rad
-
-        targetstate = self.get_closest_state(targetposition)
-        slew_delay = self.get_slew_delay(targetstate, self.currentState)
-        targetstate.time = targetstate.time + slew_delay
-        self.currentState.set(targetstate)
 
     def get_slew_delay(self, targetstate, initstate):
 
@@ -508,7 +585,8 @@ class ObservatoryModel(object):
 
     def get_delay_for_telsettle(self, targetstate, initstate):
 
-        distance = abs(targetstate.telalt_rad - initstate.telalt_rad) + abs(targetstate.telaz_rad - initstate.telaz_rad)
+        distance = abs(targetstate.telalt_rad - initstate.telalt_rad) + \
+            abs(targetstate.telaz_rad - initstate.telaz_rad)
 
         if (distance > 0):
             delay = self.Mount_SettleTime
@@ -609,7 +687,7 @@ class ObservatoryModel(object):
 
         (ha_rad, dec_rad) = pal.dh2e(az_rad, alt_rad, self.location.latitude_rad)
         pa_rad = pal.pa(ha_rad, dec_rad, self.location.latitude_rad)
-        ra_rad = lst_rad - ha_rad
+        ra_rad = divmod(lst_rad - ha_rad, TWOPI)[1]
 
         return (ra_rad, dec_rad, pa_rad)
 
@@ -648,41 +726,3 @@ class ObservatoryModel(object):
         if self.currentState.tracking:
             self.update_state(time)
             self.currentState.tracking = False
-
-    def update_state(self, time):
-
-        if self.currentState.tracking:
-            (alt_rad, az_rad, pa_rad) = self.radec2altazpa(time,
-                                                           self.currentState.ra_rad,
-                                                           self.currentState.dec_rad)
-            az_rad = divmod(az_rad, TWOPI)[1]
-            pa_rad = divmod(pa_rad, TWOPI)[1]
-            rot_rad = divmod(pa_rad + self.currentState.ang_rad, TWOPI)[1]
-
-            self.targetPosition.time = time
-            self.targetPosition.tracking = True
-            self.targetPosition.alt_rad = alt_rad
-            self.targetPosition.az_rad = az_rad
-            self.targetPosition.rot_rad = rot_rad
-            targetstate = self.get_closest_state(self.targetPosition)
-
-            self.currentState.time = targetstate.time
-            self.currentState.alt_rad = targetstate.alt_rad
-            self.currentState.az_rad = targetstate.az_rad
-            self.currentState.pa_rad = targetstate.pa_rad
-            self.currentState.rot_rad = targetstate.rot_rad
-
-            self.currentState.telalt_rad = targetstate.telalt_rad
-            self.currentState.telaz_rad = targetstate.telaz_rad
-            self.currentState.telrot_rad = targetstate.telrot_rad
-            self.currentState.domalt_rad = targetstate.domalt_rad
-            self.currentState.domaz_rad = targetstate.domaz_rad
-        else:
-            (ra_rad, dec_rad, pa_rad) = self.altaz2radecpa(time,
-                                                           self.currentState.alt_rad,
-                                                           self.currentState.az_rad)
-            pa_rad = divmod(pa_rad, TWOPI)[1]
-            self.currentState.time = time
-            self.currentState.ra_rad = ra_rad
-            self.currentState.dec_rad = dec_rad
-            self.currentState.ang_rad = divmod(self.currentState.rot_rad - pa_rad, TWOPI)[1]
