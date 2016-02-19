@@ -7,8 +7,9 @@ from ..test_constants import LSST_SITE, LSST_START_TIMESTAMP
 
 class AstronomicalSkyTest(unittest.TestCase):
 
-    def setUp(self):
-        self.astro_sky = AstronomicalSkyModel(LSST_SITE)
+    @classmethod
+    def setUpClass(cls):
+        cls.astro_sky = AstronomicalSkyModel(LSST_SITE)
 
     def test_basic_information_after_initial_creation(self):
         self.assertIsNotNone(self.astro_sky.date_profile)
