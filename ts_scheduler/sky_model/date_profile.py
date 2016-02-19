@@ -1,4 +1,5 @@
 from datetime import datetime
+import math
 
 import palpy
 
@@ -55,7 +56,10 @@ class DateProfile(object):
         -------
         float
         """
-        return palpy.gmst(self.mjd) + self.location.longitude_rad
+        value = palpy.gmst(self.mjd) + self.location.longitude_rad
+        if value < 0.:
+            value += 2.0 * math.pi
+        return value
 
     def __call__(self, timestamp):
         """Modified Julian Date and Local Sidereal Time from instance.

@@ -28,3 +28,9 @@ class DateProfileTest(unittest.TestCase):
         (mjd, lst_rad) = self.dp(new_timestamp)
         self.assertEqual(mjd, LSST_START_MJD + (2.0 / 24.0))
         self.assertAlmostEqual(lst_rad, 1.0465478232515026, delta=1E-7)
+
+    def test_negative_lst(self):
+        new_timestamp = LSST_START_TIMESTAMP + (18.0 * 3600.0)
+        (mjd, lst_rad) = self.dp(new_timestamp)
+        self.assertEqual(mjd, LSST_START_MJD + (18.0 / 24.0))
+        self.assertAlmostEqual(lst_rad, 5.246806555968448, delta=1E-7)
