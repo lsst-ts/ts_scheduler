@@ -1,5 +1,6 @@
 from enum import Enum
 import logging
+import numpy
 
 from lsst.sims.skybrightness import SkyModel
 
@@ -65,3 +66,37 @@ class AstronomicalSkyModel(object):
         """
         self.sky_brightness.setRaDecMjd(ra, dec, self.date_profile.mjd)
         return self.sky_brightness.returnMags()
+
+    def get_sky_brightness_timeblock(self, timestamp, timestep, num_steps, ra, dec):
+        """Get LSST 6 filter sky brightness for a set of positions for a range of times.
+
+        This function retrieves the LSST 6 filter sky brightness magnitudes for a given set
+        of sky positions at a range of MJDs provided via the timeblock information.
+
+        Parameters
+        ----------
+        timestamp : float
+            The UNIX timestamp to start the time block.
+        timestep : float
+            The number of seconds to increment the timestamp with.
+        num_steps : int
+            The number of steps to create for the time block.
+        ra : numpy.ndarray
+            The right ascension values (radians) for the sky positions.
+        dec : numpy.ndarray
+            The declination values (radians) for the sky positions.
+
+        Returns
+        -------
+        numpy.ndarray
+            The LSST 6 filter sky brightness magnitudes.
+        """
+        dp = DateProfile(0, self.date_profile.location)
+        mags = []
+        for i in xrange(num_steps):
+            ts = timestamp + i * timestep
+            mjd, _ = dp(ts)
+            self.sky_brightness.setRaDecMjd(ra, dec, mjd)
+            mags.append(self.sky_brightness.returnMags())
+
+        return numpy.stack(mags)

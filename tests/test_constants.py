@@ -19,3 +19,6 @@ LSST_ELEVATION = 2650.0
 
 """LSST observing site information"""
 LSST_SITE = ObservatoryLocation(math.radians(LSST_LATITUDE), math.radians(LSST_LONGITUDE), LSST_ELEVATION)
+
+"Number of LSST Filters"
+LSST_NUM_FILTERS = 6
