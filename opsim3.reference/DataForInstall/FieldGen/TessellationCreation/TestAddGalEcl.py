@@ -15,9 +15,6 @@ class TestAddGalEcl(unittest.TestCase):
 
         diff = orig - calc
 
-        print diff
-        print diff > .01
-
         self.assertEqual(numpy.array_equal(orig, calc), True)
 
 if __name__ == "__main__":
