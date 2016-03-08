@@ -438,7 +438,8 @@ class ObservatoryModel(object):
 
         # if the target rotator angle is unreachable
         # then sets an arbitrary value
-        norm_rot_rad = divmod(targetposition.rot_rad - self.TelRot_MinPos_rad, TWOPI)[1] + self.TelRot_MinPos_rad
+        norm_rot_rad = divmod(targetposition.rot_rad - self.TelRot_MinPos_rad, TWOPI)[1] \
+            + self.TelRot_MinPos_rad
         if (norm_rot_rad > self.TelRot_MaxPos_rad):
             targetposition.rot_rad = norm_rot_rad - math.pi
         (telrot_rad, delta_telrot_rad) = self.get_closest_angle_distance(targetposition.rot_rad,
