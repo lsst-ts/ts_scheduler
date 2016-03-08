@@ -3,17 +3,18 @@ import unittest
 
 from ts_scheduler.sky_model import Sun
 
+from ..test_constants import LSST_LATITUDE, LSST_LONGITUDE
+from ..test_constants import LSST_START_TIMESTAMP
+
 class SunTest(unittest.TestCase):
 
     def setUp(self):
         self.sun = Sun()
-        # Set timestamp as 2022-01-01
-        self.timestamp = 1641020400.0
-        self.date = datetime.fromtimestamp(self.timestamp)
+        self.timestamp = LSST_START_TIMESTAMP
+        self.date = datetime.utcfromtimestamp(self.timestamp)
         self.days = 8037.0
-        # Set LSST coordinates
-        self.latitude = -30.2444
-        self.longitude = -70.7494
+        self.latitude = LSST_LATITUDE
+        self.longitude = LSST_LONGITUDE
         # Set an arbitrary sun altitude for rise/set calculations
         self.arb_alt = -15.0
         # Tolerance for float comparisions

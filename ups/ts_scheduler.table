@@ -1,0 +1,5 @@
+setupRequired(python)
+setupRequired(palpy)
+setupRequired(sims_skybrightness)
+
+envPrepend(PYTHONPATH, ${PRODUCT_DIR})
