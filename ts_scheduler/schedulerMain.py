@@ -1,3 +1,5 @@
+import os
+import pkg_resources
 import sys
 import time
 import logging
@@ -9,16 +11,17 @@ from SALPY_scheduler import scheduler_targetTestC
 from SALPY_scheduler import scheduler_schedulerConfigC
 from SALPY_scheduler import scheduler_fieldC
 
-from schedulerDefinitions import INFOX, RAD2DEG, read_conf_file
+from schedulerDefinitions import INFOX, RAD2DEG, read_conf_file, conf_file_path
 from schedulerDriver import Driver
 
 class Main(object):
 
-    def __init__(self):
+    def __init__(self, logfile_name=""):
         logging.INFOX = INFOX
         logging.addLevelName(logging.INFOX, 'INFOX')
 
-        main_confdict = read_conf_file("../conf/scheduler/main.conf")
+        main_confdict = read_conf_file(conf_file_path(__name__, "../conf", "scheduler", "main.conf"))
+
         loglevelstr = main_confdict['log']['log_level']
         if (loglevelstr == 'INFOX'):
             self.logLevel = logging.INFOX
@@ -40,8 +43,12 @@ class Main(object):
         console.setLevel(logging.INFOX)
         self.log.addHandler(console)
 
-        timestr = time.strftime("%Y-%m-%d_%H:%M:%S")
-        self.defaultLogFileName = "../log/scheduler.%s.log" % (timestr)
+        if logfile_name != "":
+            self.defaultLogFileName = logfile_name
+        else:
+            timestr = time.strftime("%Y-%m-%d_%H:%M:%S")
+            log_path = pkg_resources.resource_filename(__name__, "../log")
+            self.defaultLogFileName = os.path.join(log_path, "scheduler.%s.log" % (timestr))
         self.logFile = None
         self.config_logfile(self.defaultLogFileName)
 
@@ -95,7 +102,7 @@ class Main(object):
                     logfilename = self.topicConfig.log_file
                     self.log.log(INFOX, "schedulerMain.run: config logfile=%s" % (logfilename))
                     waitconfig = False
-                    self.config_logfile(logfilename)
+                    #self.config_logfile(logfilename)
 
                 else:
                     tf = time.time()

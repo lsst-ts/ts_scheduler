@@ -1,4 +1,6 @@
 import math
+import os
+import pkg_resources
 
 # Routines and non user-specific globals
 DEG2RAD = math.pi / 180.    # radians = degrees * DEG2RAD
@@ -80,3 +82,24 @@ def read_conf_file(filename):
             config_dict[section][key] = value
 
     return config_dict
+
+def conf_file_path(resource, *paths):
+    """Find a configuration file in the package.
+
+    This function uses internal knowledge to determine the correct path of a given
+    configuration file.
+
+    Parameters
+    ----------
+    resource : str
+        The name of a module. Usually passed via __name__.
+    paths : set of strs
+        A variable length set of strings giving the sub-directories and finally the file name.
+
+    Returns
+    -------
+    str
+        The fully qualified path for the given configuration file.
+    """
+    resource_path = os.path.join(*paths)
+    return pkg_resources.resource_filename(resource, resource_path)
