@@ -1,8 +1,9 @@
+import logging
+import logging.handlers
 import os
 import pkg_resources
 import sys
 import time
-import logging
 
 from SALPY_scheduler import SAL_scheduler
 from SALPY_scheduler import scheduler_timeHandlerC
@@ -43,6 +44,9 @@ class Main(object):
         console.setLevel(logging.INFOX)
         self.log.addHandler(console)
 
+        socket = logging.handlers.SocketHandler('localhost', logging.handlers.DEFAULT_TCP_LOGGING_PORT)
+        self.log.addHandler(socket)
+
         if logfile_name != "":
             self.defaultLogFileName = logfile_name
         else:
@@ -50,7 +54,7 @@ class Main(object):
             log_path = pkg_resources.resource_filename(__name__, "../log")
             self.defaultLogFileName = os.path.join(log_path, "scheduler.%s.log" % (timestr))
         self.logFile = None
-        self.config_logfile(self.defaultLogFileName)
+        #self.config_logfile(self.defaultLogFileName)
 
         self.schedulerDriver = Driver()
 

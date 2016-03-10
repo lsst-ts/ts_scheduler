@@ -8,7 +8,7 @@ RAD2DEG = 180. / math.pi    # degrees = radians * RAD2DEG
 TWOPI = 2 * math.pi
 
 # Logger level for stdout, higher than Logging.INFO and lower than Logging.WARNING
-INFOX = 25
+INFOX = 15
 
 def read_conf_file(filename):
     """Read the new type of configuration file.
