@@ -18,40 +18,10 @@ from schedulerDriver import Driver
 class Main(object):
 
     def __init__(self, options):
-        logging.INFOX = INFOX
-        logging.addLevelName(logging.INFOX, 'INFOX')
+        self.log = logging.getLogger("schedulerMain.Main")
 
         main_confdict = read_conf_file(conf_file_path(__name__, "../conf", "scheduler", "main.conf"))
-
-        loglevelstr = main_confdict['log']['log_level']
-        try:
-            self.logLevel = getattr(logging, loglevelstr)
-        except AttributeError:
-            self.logLevel = logging.INFO
-
         self.measinterval = main_confdict['log']['rate_meas_interval']
-
-        self.logFormatter = logging.Formatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s")
-        self.log = logging.getLogger("schedulerMain.Main")
-        self.log.setLevel(self.logLevel)
-
-        console = logging.StreamHandler(sys.stdout)
-        if options.console_format is None:
-            console.setFormatter(self.logFormatter)
-        else:
-            console.setFormatter(logging.Formatter(options.console_format))
-        console.setLevel(logging.INFOX)
-        self.log.addHandler(console)
-
-        socket = logging.handlers.SocketHandler('localhost', logging.handlers.DEFAULT_TCP_LOGGING_PORT)
-        self.log.addHandler(socket)
-
-        if not options.scripted:
-            timestr = time.strftime("%Y-%m-%d_%H:%M:%S")
-            log_path = pkg_resources.resource_filename(__name__, "../log")
-            self.defaultLogFileName = os.path.join(log_path, "scheduler.%s.log" % (timestr))
-            self.logFile = None
-            self.config_logfile(self.defaultLogFileName)
 
         self.schedulerDriver = Driver()
 
@@ -63,15 +33,6 @@ class Main(object):
         self.topicObservation = scheduler_observationTestC()
         self.topicField = scheduler_fieldC()
         self.topicTarget = scheduler_targetTestC()
-
-    def config_logfile(self, logfilename):
-        if self.logFile is not None:
-            self.log.removeHandler(self.logFile)
-        self.logFile = logging.FileHandler(logfilename)
-        self.logFile.setFormatter(self.logFormatter)
-        self.logFile.setLevel(self.logLevel)
-        self.log.addHandler(self.logFile)
-        self.log.info("Configure logFile=%s" % logfilename)
 
     def run(self):
 
@@ -103,7 +64,6 @@ class Main(object):
                     logfilename = self.topicConfig.log_file
                     self.log.log(INFOX, "run: Config logfile=%s" % (logfilename))
                     waitconfig = False
-                    self.config_logfile(logfilename)
 
                 else:
                     tf = time.time()
