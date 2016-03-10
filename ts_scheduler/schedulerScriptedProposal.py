@@ -1,6 +1,7 @@
+import logging
 import os
 
-from schedulerDefinitions import DEG2RAD
+from schedulerDefinitions import DEG2RAD, INFOX
 from schedulerTarget import Target
 from schedulerProposal import Proposal
 
@@ -8,6 +9,8 @@ class ScriptedProposal(Proposal):
     def __init__(self, configfilepath):
 
         super(ScriptedProposal, self).__init__(configfilepath)
+        self.log = logging.getLogger("schedulerScriptedProposal.ScriptedProposal")
+
         resource_path = os.path.dirname(configfilepath)
         self.script_file = os.path.join(resource_path, self.proposal_confdict["script"]["scriptfile"])
 
@@ -38,7 +41,7 @@ class ScriptedProposal(Proposal):
             target.numexp = eval(values[5])
 
             self.targetsList.append(target)
-            print target
+            self.log.log(INFOX, target)
 
     def suggest_targets(self):
 

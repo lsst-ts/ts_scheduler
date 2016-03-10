@@ -12,7 +12,7 @@ class ObservatoryModel(object):
 
     def __init__(self):
 
-        self.log = logging.getLogger("scheduler")
+        self.log = logging.getLogger("observatorModel.ObservatoryModel")
 
         self.location = ObservatoryLocation()
         self.parkState = ObservatoryState()
