@@ -61,7 +61,7 @@ def configure_logging(options, logfilename=None):
         logging.getLogger().addHandler(socket)
 
     if not options.scripted:
-        logFile = logging.FileHandler(logfilename)
-        logFile.setFormatter(log_format)
-        logFile.setLevel(DETAIL_LEVEL[3])
-        logging.getLogger().addHandler(logFile)
+        log_file = logging.FileHandler(logfilename)
+        log_file.setFormatter(log_format)
+        log_file.setLevel(DETAIL_LEVEL[3])
+        logging.getLogger().addHandler(log_file)

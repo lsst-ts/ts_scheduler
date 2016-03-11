@@ -1,7 +1,5 @@
 import logging
 import logging.handlers
-import os
-import pkg_resources
 import sys
 import time
 
