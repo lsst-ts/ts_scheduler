@@ -2,7 +2,7 @@ import logging
 
 from observatoryModel.observatoryModel import ObservatoryModel
 
-from schedulerDefinitions import INFOX, DEG2RAD, read_conf_file
+from schedulerDefinitions import INFOX, DEG2RAD, read_conf_file, conf_file_path
 from schedulerField import Field
 from schedulerTarget import Target
 from schedulerScriptedProposal import ScriptedProposal
@@ -10,37 +10,40 @@ from schedulerScriptedProposal import ScriptedProposal
 class Driver(object):
     def __init__(self):
 
-        self.log = logging.getLogger("scheduler")
+        self.log = logging.getLogger("schedulerDriver.Driver")
 
         self.science_proposal_list = []
 
         self.observatoryModel = ObservatoryModel()
-        site_confdict = read_conf_file("../conf/system/site.conf")
 
-        observatory_confdict = read_conf_file("../conf/system/observatoryModel.conf")
+        site_confdict = read_conf_file(conf_file_path(__name__, "../conf", "system", "site.conf"))
+
+        observatory_confdict = read_conf_file(conf_file_path(__name__, "../conf", "system",
+                                                             "observatoryModel.conf"))
         observatory_confdict.update(site_confdict)
 
         self.observatoryModel.configure(observatory_confdict)
 
         self.build_fields_dict()
 
-        survey_confdict = read_conf_file("../conf/survey/survey.conf")
+        survey_confdict = read_conf_file(conf_file_path(__name__, "../conf", "survey", "survey.conf"))
 
-        if ('scripted_propconf' in survey_confdict["proposals"]):
+        if 'scripted_propconf' in survey_confdict["proposals"]:
             scriptedprop_conflist = survey_confdict["proposals"]["scripted_propconf"]
-            print("    scriptedpropconf:%s" % (scriptedprop_conflist))
+            self.log.info("scriptedpropconf:%s" % (scriptedprop_conflist))
         else:
             scriptedprop_conflist = None
-            print("    scriptedPropConf:%s default" % (scriptedprop_conflist))
-        if (not isinstance(scriptedprop_conflist, list)):
+            self.log.info("scriptedPropConf:%s default" % (scriptedprop_conflist))
+        if not isinstance(scriptedprop_conflist, list):
             # turn it into a list with one entry
             propconf = scriptedprop_conflist
             scriptedprop_conflist = []
             scriptedprop_conflist.append(propconf)
 
-        if (scriptedprop_conflist[0] is not None):
+        if scriptedprop_conflist[0] is not None:
             for k in range(len(scriptedprop_conflist)):
-                scriptedprop = ScriptedProposal("../conf/survey/%s" % scriptedprop_conflist[k])
+                scriptedprop = ScriptedProposal(conf_file_path(__name__, "../conf", "survey",
+                                                               "{}".format(scriptedprop_conflist[k])))
                 self.science_proposal_list.append(scriptedprop)
 
         self.time = 0.0
@@ -49,7 +52,7 @@ class Driver(object):
 
     def build_fields_dict(self):
 
-        lines = file("../conf/system/tessellationFields").readlines()
+        lines = file(conf_file_path(__name__, "../conf", "system", "tessellationFields")).readlines()
         fieldid = 0
         self.fieldsDict = {}
         for line in lines:
@@ -71,12 +74,12 @@ class Driver(object):
             field.fov_rad = 3.5 * DEG2RAD
 
             self.fieldsDict[fieldid] = field
-            self.log.info("schedulerDriver.buildFieldsTable: %s" % (self.fieldsDict[fieldid]))
+            self.log.log(INFOX, "buildFieldsTable: %s" % (self.fieldsDict[fieldid]))
 
             if fieldid > 10:
                 break
 
-        self.log.log(INFOX, "schedulerDriver.buildFieldsTable: %d fields" % (len(self.fieldsDict)))
+        self.log.info("buildFieldsTable: %d fields" % (len(self.fieldsDict)))
 
     def get_fields_dict(self):
 
@@ -87,7 +90,7 @@ class Driver(object):
         for prop in self.science_proposal_list:
             prop.start_survey()
 
-        self.log.log(INFOX, "schedulerDriver.startSurvey")
+        self.log.info("StartSurvey")
 
     def end_survey(self):
 
