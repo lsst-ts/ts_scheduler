@@ -1,4 +1,7 @@
-from schedulerDefinitions import DEG2RAD
+import logging
+import os
+
+from schedulerDefinitions import DEG2RAD, INFOX
 from schedulerTarget import Target
 from schedulerProposal import Proposal
 
@@ -6,8 +9,10 @@ class ScriptedProposal(Proposal):
     def __init__(self, configfilepath):
 
         super(ScriptedProposal, self).__init__(configfilepath)
+        self.log = logging.getLogger("schedulerScriptedProposal.ScriptedProposal")
 
-        self.script_file = self.proposal_confdict["script"]["scriptfile"]
+        resource_path = os.path.dirname(configfilepath)
+        self.script_file = os.path.join(resource_path, self.proposal_confdict["script"]["scriptfile"])
 
         self.read_script()
 
@@ -15,7 +20,7 @@ class ScriptedProposal(Proposal):
 
     def read_script(self):
 
-        scriptfilepath = "../conf/survey/%s" % self.script_file
+        scriptfilepath = self.script_file
         lines = file(scriptfilepath).readlines()
         targetid = 0
         self.targetsList = []
@@ -36,7 +41,7 @@ class ScriptedProposal(Proposal):
             target.numexp = eval(values[5])
 
             self.targetsList.append(target)
-            print target
+            self.log.log(INFOX, target)
 
     def suggest_targets(self):
 
