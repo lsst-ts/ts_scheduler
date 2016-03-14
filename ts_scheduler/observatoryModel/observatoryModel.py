@@ -179,7 +179,7 @@ class ObservatoryModel(object):
 
     def update_state(self, time):
 
-        if (time < self.currentState.time):
+        if time < self.currentState.time:
             time = self.currentState.time
 
         if self.currentState.tracking:
@@ -276,7 +276,7 @@ class ObservatoryModel(object):
         # then sets an arbitrary value
         norm_rot_rad = divmod(targetposition.rot_rad - self.TelRot_MinPos_rad, TWOPI)[1] \
             + self.TelRot_MinPos_rad
-        if (norm_rot_rad > self.TelRot_MaxPos_rad):
+        if norm_rot_rad > self.TelRot_MaxPos_rad:
             targetposition.rot_rad = norm_rot_rad - math.pi
         (telrot_rad, delta_telrot_rad) = self.get_closest_angle_distance(targetposition.rot_rad,
                                                                          self.currentState.telrot_rad,
@@ -303,12 +303,12 @@ class ObservatoryModel(object):
     def get_closest_angle_distance(self, target_rad, current_abs_rad, min_abs_rad=None, max_abs_rad=None):
 
         # if there are wrap limits, normalizes the target angle
-        if (min_abs_rad is not None):
+        if min_abs_rad is not None:
             norm_target_rad = divmod(target_rad - min_abs_rad, TWOPI)[1] + min_abs_rad
-            if (max_abs_rad is not None):
+            if max_abs_rad is not None:
                 # if the target angle is unreachable
                 # then sets an arbitrary value
-                if (norm_target_rad > max_abs_rad):
+                if norm_target_rad > max_abs_rad:
                     norm_target_rad = max(min_abs_rad, norm_target_rad - math.pi)
         else:
             norm_target_rad = target_rad
@@ -317,18 +317,18 @@ class ObservatoryModel(object):
         distance_rad = divmod(norm_target_rad - current_abs_rad, TWOPI)[1]
 
         # take the counter-clockwise distance if shorter
-        if (distance_rad > math.pi):
+        if distance_rad > math.pi:
             distance_rad = distance_rad - TWOPI
 
         # if there are wrap limits
-        if (min_abs_rad is not None and max_abs_rad is not None):
+        if (min_abs_rad is not None) and (max_abs_rad is not None):
             # compute accumulated angle
             accum_abs_rad = current_abs_rad + distance_rad
 
             # if limits reached chose the other direction
-            if (accum_abs_rad > max_abs_rad):
+            if accum_abs_rad > max_abs_rad:
                 distance_rad = distance_rad - TWOPI
-            if (accum_abs_rad < min_abs_rad):
+            if accum_abs_rad < min_abs_rad:
                 distance_rad = distance_rad + TWOPI
 
         # compute final accumulated angle
@@ -344,7 +344,7 @@ class ObservatoryModel(object):
         d = abs(distance)
 
         vpeak = (2 * d / (1 / accel + 1 / decel)) ** 0.5
-        if (vpeak <= maxspeed):
+        if vpeak <= maxspeed:
             delay = vpeak / accel + vpeak / decel
         else:
             d1 = 0.5 * (maxspeed * maxspeed) / accel
@@ -376,7 +376,7 @@ class ObservatoryModel(object):
         longest_prereq = ""
         for prereq in prereq_list:
             previous_delay = self.get_delay_after(prereq, targetstate, initstate)
-            if (previous_delay > longest_previous_delay):
+            if previous_delay > longest_previous_delay:
                 longest_previous_delay = previous_delay
                 longest_prereq = prereq
         self.longest_prereq_for[activity] = longest_prereq
@@ -425,7 +425,7 @@ class ObservatoryModel(object):
         distance = abs(targetstate.telalt_rad - initstate.telalt_rad) + \
             abs(targetstate.telaz_rad - initstate.telaz_rad)
 
-        if (distance > 0):
+        if distance > 0:
             delay = self.Mount_SettleTime
         else:
             delay = 0
@@ -466,7 +466,7 @@ class ObservatoryModel(object):
 
         distance = abs(targetstate.domaz_rad - initstate.domaz_rad)
 
-        if (distance > 0):
+        if distance > 0:
             delay = self.DomAz_SettleTime
         else:
             delay = 0
@@ -551,14 +551,14 @@ class ObservatoryModel(object):
         return (alt_rad, az_rad, pa_rad)
 
     def start_tracking(self, time):
-        if (time < self.currentState.time):
+        if time < self.currentState.time:
             time = self.currentState.time
         if not self.currentState.tracking:
             self.update_state(time)
             self.currentState.tracking = True
 
     def stop_tracking(self, time):
-        if (time < self.currentState.time):
+        if time < self.currentState.time:
             time = self.currentState.time
         if self.currentState.tracking:
             self.update_state(time)
