@@ -16,12 +16,12 @@ DETAIL_LEVEL = {
 
 MAX_LEVEL = 3
 
-def generate_logfile():
+def generate_logfile(basename="scheduler"):
     """Generate a log file name based on current time.
     """
     timestr = time.strftime("%Y-%m-%d_%H:%M:%S")
     log_path = pkg_resources.resource_filename(__name__, "../../log")
-    logfilename = os.path.join(log_path, "scheduler.%s.log" % (timestr))
+    logfilename = os.path.join(log_path, "%s.%s.log" % (basename, timestr))
     return logfilename
 
 def configure_logging(options, logfilename=None):
@@ -34,7 +34,7 @@ def configure_logging(options, logfilename=None):
     logfilename : str
         A name, including path, for a log file.
     """
-    console_detail_level = options.verbose if options.scripted else options.verbose + 2
+    console_detail_level = options.verbose if options.scripted else 1
 
     log_level = DETAIL_LEVEL[console_detail_level]
 
@@ -63,5 +63,5 @@ def configure_logging(options, logfilename=None):
     if not options.scripted:
         log_file = logging.FileHandler(logfilename)
         log_file.setFormatter(logging.Formatter(log_format))
-        log_file.setLevel(DETAIL_LEVEL[3])
+        log_file.setLevel(DETAIL_LEVEL[min(2 + options.verbose, 3)])
         logging.getLogger().addHandler(log_file)
