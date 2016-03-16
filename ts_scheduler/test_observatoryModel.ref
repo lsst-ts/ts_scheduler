@@ -1,58 +1,5 @@
 SAL development environment is configured
 <<< OpenSplice HDE Release V6.4.140320OSS For x86_64.linux, Date 2014-03-19 >>>
-TIMESTAMP INFOX ObservatoryModel: configure TelAlt_MinPos_rad=0.349
-TIMESTAMP INFOX ObservatoryModel: configure TelAlt_MaxPos_rad=1.510
-TIMESTAMP INFOX ObservatoryModel: configure TelAz_MinPos_rad=-4.712
-TIMESTAMP INFOX ObservatoryModel: configure TelAz_MaxPos_rad=4.712
-TIMESTAMP INFOX ObservatoryModel: configure TelRot_MinPos_rad=-1.571
-TIMESTAMP INFOX ObservatoryModel: configure TelRot_MaxPos_rad=1.571
-TIMESTAMP INFOX ObservatoryModel: configure TelRot_FilterPos_rad=0.000
-TIMESTAMP INFOX ObservatoryModel: configure Rotator_FollowSky=False
-TIMESTAMP INFOX ObservatoryModel: configure Rotator_ResumeAngle=False
-TIMESTAMP INFOX ObservatoryModel: configure Filter_MountedList=['g', 'r', 'i', 'z', 'y']
-TIMESTAMP INFOX ObservatoryModel: configure Filter_RemovableList=['y', 'z']
-TIMESTAMP INFOX ObservatoryModel: configure Filter_UnmountedList=['u']
-TIMESTAMP INFOX ObservatoryModel: configure TelAlt_MaxSpeed_rad=0.061
-TIMESTAMP INFOX ObservatoryModel: configure TelAlt_Accel_rad=0.061
-TIMESTAMP INFOX ObservatoryModel: configure TelAlt_Decel_rad=0.061
-TIMESTAMP INFOX ObservatoryModel: configure TelAz_MaxSpeed_rad=0.122
-TIMESTAMP INFOX ObservatoryModel: configure TelAz_Accel_rad=0.122
-TIMESTAMP INFOX ObservatoryModel: configure TelAz_Decel_rad=0.122
-TIMESTAMP INFOX ObservatoryModel: configure TelRot_MaxSpeed_rad=0.061
-TIMESTAMP INFOX ObservatoryModel: configure TelRot_Accel_rad=0.017
-TIMESTAMP INFOX ObservatoryModel: configure TelRot_Decel_rad=0.017
-TIMESTAMP INFOX ObservatoryModel: configure DomAlt_MaxSpeed_rad=0.031
-TIMESTAMP INFOX ObservatoryModel: configure DomAlt_Accel_rad=0.015
-TIMESTAMP INFOX ObservatoryModel: configure DomAlt_Decel_rad=0.015
-TIMESTAMP INFOX ObservatoryModel: configure DomAz_MaxSpeed_rad=0.026
-TIMESTAMP INFOX ObservatoryModel: configure DomAz_Accel_rad=0.013
-TIMESTAMP INFOX ObservatoryModel: configure DomAz_Decel_rad=0.013
-TIMESTAMP INFOX ObservatoryModel: configure Filter_ChangeTime=120.0
-TIMESTAMP INFOX ObservatoryModel: configure Mount_SettleTime=3.0
-TIMESTAMP INFOX ObservatoryModel: configure DomAz_SettleTime=1.0
-TIMESTAMP INFOX ObservatoryModel: configure ReadoutTime=2.0
-TIMESTAMP INFOX ObservatoryModel: configure ShutterTime=1.0
-TIMESTAMP INFOX ObservatoryModel: configure OpticsOL_Slope=0.286
-TIMESTAMP INFOX ObservatoryModel: configure OpticsCL_Delay=[0.0, 20.0]
-TIMESTAMP INFOX ObservatoryModel: configure OpticsCL_AltLimit=[0.0, 9.0, 90.0]
-TIMESTAMP INFOX ObservatoryModel: configure prerequisites[telalt]=[]
-TIMESTAMP INFOX ObservatoryModel: configure prerequisites[telaz]=[]
-TIMESTAMP INFOX ObservatoryModel: configure prerequisites[telrot]=[]
-TIMESTAMP INFOX ObservatoryModel: configure prerequisites[telsettle]=['telalt', 'telaz']
-TIMESTAMP INFOX ObservatoryModel: configure prerequisites[telopticsopenloop]=['telalt', 'telaz']
-TIMESTAMP INFOX ObservatoryModel: configure prerequisites[telopticsclosedloop]=['domalt', 'domazsettle', 'telsettle', 'readout', 'telopticsopenloop', 'filter', 'telrot']
-TIMESTAMP INFOX ObservatoryModel: configure prerequisites[domalt]=[]
-TIMESTAMP INFOX ObservatoryModel: configure prerequisites[domaz]=[]
-TIMESTAMP INFOX ObservatoryModel: configure prerequisites[domazsettle]=['domaz']
-TIMESTAMP INFOX ObservatoryModel: configure prerequisites[filter]=[]
-TIMESTAMP INFOX ObservatoryModel: configure prerequisites[readout]=[]
-TIMESTAMP INFOX ObservatoryModel: configure prerequisites[exposures]=['telopticsclosedloop']
-TIMESTAMP INFOX ObservatoryModel: configure park_Telalt_rad=1.510
-TIMESTAMP INFOX ObservatoryModel: configure park_Telaz_rad=0.000
-TIMESTAMP INFOX ObservatoryModel: configure park_Telrot_rad=0.000
-TIMESTAMP INFOX ObservatoryModel: configure park_Domalt_rad=1.571
-TIMESTAMP INFOX ObservatoryModel: configure park_Domaz_rad=0.000
-TIMESTAMP INFOX ObservatoryModel: configure park_Filter=r
 t=0.0 ra=0.000 dec=0.000 ang=0.000 filter=r track=False alt=86.500 az=0.000 pa=0.000 rot=0.000 telaz=0.000 telrot=0.000
 t=0.0 ra=29.342 dec=-26.744 ang=180.000 filter=r track=False alt=86.500 az=0.000 pa=-180.000 rot=0.000 telaz=0.000 telrot=0.000
 t=7.7 ra=29.374 dec=-20.244 ang=180.000 filter=r track=True alt=80.000 az=0.000 pa=-180.000 rot=0.000 telaz=0.000 telrot=0.000
