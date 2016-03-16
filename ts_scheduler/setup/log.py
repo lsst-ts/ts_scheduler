@@ -62,6 +62,6 @@ def configure_logging(options, logfilename=None):
 
     if not options.scripted:
         log_file = logging.FileHandler(logfilename)
-        log_file.setFormatter(log_format)
+        log_file.setFormatter(logging.Formatter(log_format))
         log_file.setLevel(DETAIL_LEVEL[3])
         logging.getLogger().addHandler(log_file)
