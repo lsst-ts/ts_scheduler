@@ -1,29 +1,20 @@
 import logging
-import time
 import sys
 
 from observatoryModel.observatoryModel import ObservatoryModel
 
-from schedulerDefinitions import INFOX, DEG2RAD, read_conf_file
+from schedulerDefinitions import DEG2RAD, read_conf_file
+from ts_scheduler.setup import configure_logging, create_parser, generate_logfile
 
 if (__name__ == '__main__'):
-    logging.INFOX = INFOX
-    logging.addLevelName(logging.INFOX, 'INFOX')
+    parser = create_parser()
+    args = parser.parse_args()
 
-    formatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
-    log = logging.getLogger("scheduler")
-    log.setLevel(logging.INFO)
+    logfilename = generate_logfile("test_observatoryModel")
+    configure_logging(args, logfilename)
 
-    timestr = time.strftime("%Y-%m-%d_%H:%M:%S")
-    logfile = logging.FileHandler("../log/test_observatoryModel.%s.log" % (timestr))
-    logfile.setFormatter(formatter)
-    logfile.setLevel(logging.INFO)
-    log.addHandler(logfile)
-
-    console = logging.StreamHandler(sys.stdout)
-    console.setFormatter(formatter)
-    console.setLevel(logging.INFO)
-    log.addHandler(console)
+    logger = logging.getLogger("scheduler")
+    logger.info("Configure logFile=%s" % logfilename)
 
     model = ObservatoryModel()
     siteConf = read_conf_file("../conf/system/site.conf")
