@@ -246,6 +246,10 @@ class ObservatoryModelTest(unittest.TestCase):
         delay = self.model.get_slew_delay(target)
         self.assertAlmostEquals(delay, 22.487, delta=1e-3)
 
+        self.model.slew(target)
+        delay = self.model.get_slew_delay(target)
+        self.assertAlmostEquals(delay, 2.0, delta=1e-3)
+
     def test_slew(self):
         siteconf = read_conf_file("conf/system/site.conf")
         observatoryconf = read_conf_file("conf/system/observatoryModel.conf")

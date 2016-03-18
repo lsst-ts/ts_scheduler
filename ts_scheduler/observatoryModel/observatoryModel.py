@@ -103,7 +103,7 @@ class ObservatoryModel(object):
         self.log.log(INFOX, "configure ShutterTime=%.1f" % (self.ShutterTime))
 
         # Shouldn't these be converted to radians?
-        self.OpticsOL_Slope = observatory_confdict["slew"]["tel_optics_ol_slope"]/math.radians(1)
+        self.OpticsOL_Slope = observatory_confdict["slew"]["tel_optics_ol_slope"] / math.radians(1)
         self.OpticsCL_Delay = observatory_confdict["slew"]["tel_optics_cl_delay"]
         self.OpticsCL_AltLimit = observatory_confdict["slew"]["tel_optics_cl_alt_limit"]
         for index, alt in enumerate(self.OpticsCL_AltLimit):
@@ -456,7 +456,7 @@ class ObservatoryModel(object):
         distance = abs(targetstate.telalt_rad - initstate.telalt_rad) + \
             abs(targetstate.telaz_rad - initstate.telaz_rad)
 
-        if distance > 0:
+        if distance > 1e-6:
             delay = self.Mount_SettleTime
         else:
             delay = 0
@@ -467,7 +467,10 @@ class ObservatoryModel(object):
 
         distance = abs(targetstate.telalt_rad - initstate.telalt_rad)
 
-        delay = distance * self.OpticsOL_Slope
+        if distance > 1e-6:
+            delay = distance * self.OpticsOL_Slope
+        else:
+            delay = 0
 
         return delay
 
@@ -475,7 +478,7 @@ class ObservatoryModel(object):
 
         distance = abs(targetstate.telalt_rad - initstate.telalt_rad)
 
-        delay = 0.0                                                                                  
+        delay = 0.0
         for k, cl_delay in enumerate(self.OpticsCL_Delay):
             if self.OpticsCL_AltLimit[k] <= distance < self.OpticsCL_AltLimit[k + 1]:
                 delay = cl_delay
@@ -511,7 +514,7 @@ class ObservatoryModel(object):
 
         distance = abs(targetstate.domaz_rad - initstate.domaz_rad)
 
-        if distance > 0:
+        if distance > 1e-6:
             delay = self.DomAz_SettleTime
         else:
             delay = 0
@@ -520,7 +523,7 @@ class ObservatoryModel(object):
 
     def get_delay_for_filter(self, targetstate, initstate):
 
-        if (targetstate.filter != initstate.filter):
+        if targetstate.filter != initstate.filter:
             delay = self.Filter_ChangeTime
         else:
             delay = 0.0
@@ -528,9 +531,11 @@ class ObservatoryModel(object):
         return delay
 
     def get_delay_for_readout(self, targetstate, initstate):
-        return 0.0
+
+        return self.ReadoutTime
 
     def get_delay_for_exposures(self, targetstate, initstate):
+
         return 0.0
 
     def estimate_slewtime(self):
