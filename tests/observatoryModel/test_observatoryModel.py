@@ -176,7 +176,7 @@ class ObservatoryModelTest(unittest.TestCase):
                          "telaz=-2.082 telrot=-1.917")
         self.model.slew_altazrot(100, math.radians(70), math.radians(30), math.radians(15), "r")
         self.model.start_tracking(0)
-        self.assertEqual(self.model.currentState.__str__(), "t=124.4 ra=39.952 dec=-12.558 ang=191.265 "
+        self.assertEqual(self.model.currentState.__str__(), "t=144.4 ra=40.035 dec=-12.558 ang=191.265 "
                          "filter=r track=True alt=70.000 az=30.000 pa=-153.735 rot=15.000 "
                          "telaz=30.000 telrot=15.000")
 
@@ -192,18 +192,18 @@ class ObservatoryModelTest(unittest.TestCase):
                          "filter=r track=False alt=86.500 az=0.000 pa=-180.000 rot=0.000 "
                          "telaz=0.000 telrot=0.000")
         self.model.slew_radecang(0, math.radians(80), math.radians(0), math.radians(0), "r")
-        self.assertEqual(self.model.currentState.__str__(), "t=48.0 ra=80.000 dec=0.000 ang=-180.000 "
-                         "filter=r track=True alt=33.366 az=67.421 pa=-127.092 rot=52.908 "
-                         "telaz=67.421 telrot=52.908")
+        self.assertEqual(self.model.currentState.__str__(), "t=68.0 ra=80.000 dec=0.000 ang=-180.000 "
+                         "filter=r track=True alt=33.433 az=67.360 pa=-127.125 rot=52.875 "
+                         "telaz=67.360 telrot=52.875")
 
         self.model.update_state(100)
         self.assertEqual(self.model.currentState.__str__(), "t=100.0 ra=80.000 dec=0.000 ang=-180.000 "
                          "filter=r track=True alt=33.539 az=67.264 pa=-127.179 rot=52.821 "
                          "telaz=67.264 telrot=52.821")
         self.model.slew_radecang(100, math.radians(70), math.radians(-30), math.radians(15), "r")
-        self.assertEqual(self.model.currentState.__str__(), "t=124.8 ra=70.000 dec=-30.000 ang=-165.000 "
-                         "filter=r track=True alt=55.468 az=100.002 pa=-100.776 rot=64.224 "
-                         "telaz=100.002 telrot=64.224")
+        self.assertEqual(self.model.currentState.__str__(), "t=144.8 ra=70.000 dec=-30.000 ang=-165.000 "
+                         "filter=r track=True alt=55.539 az=99.978 pa=-100.754 rot=64.246 "
+                         "telaz=99.978 telrot=64.246")
 
     def test_get_slew_delay(self):
         siteconf = read_conf_file("conf/system/site.conf")
@@ -224,7 +224,7 @@ class ObservatoryModelTest(unittest.TestCase):
         target.filter = "g"
 
         delay = self.model.get_slew_delay(target)
-        self.assertAlmostEquals(delay, 54.253, delta=1e-3)
+        self.assertAlmostEquals(delay, 74.253, delta=1e-3)
 
     def test_slew(self):
         siteconf = read_conf_file("conf/system/site.conf")
@@ -245,6 +245,6 @@ class ObservatoryModelTest(unittest.TestCase):
         target.filter = "g"
 
         self.model.slew(target)
-        self.assertEqual(self.model.currentState.__str__(), "t=54.3 ra=60.000 dec=-20.000 ang=-180.000 "
-                         "filter=g track=True alt=60.718 az=76.685 pa=-116.541 rot=63.459 "
-                         "telaz=76.685 telrot=63.459")
+        self.assertEqual(self.model.currentState.__str__(), "t=74.3 ra=60.000 dec=-20.000 ang=-180.000 "
+                         "filter=g track=True alt=60.788 az=76.614 pa=-116.575 rot=63.425 "
+                         "telaz=76.614 telrot=63.425")

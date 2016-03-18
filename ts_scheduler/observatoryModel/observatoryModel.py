@@ -103,9 +103,11 @@ class ObservatoryModel(object):
         self.log.log(INFOX, "configure ShutterTime=%.1f" % (self.ShutterTime))
 
         # Shouldn't these be converted to radians?
-        self.OpticsOL_Slope = observatory_confdict["slew"]["tel_optics_ol_slope"]
+        self.OpticsOL_Slope = observatory_confdict["slew"]["tel_optics_ol_slope"]/math.radians(1)
         self.OpticsCL_Delay = observatory_confdict["slew"]["tel_optics_cl_delay"]
         self.OpticsCL_AltLimit = observatory_confdict["slew"]["tel_optics_cl_alt_limit"]
+        for index, alt in enumerate(self.OpticsCL_AltLimit):
+            self.OpticsCL_AltLimit[index] = math.radians(self.OpticsCL_AltLimit[index])
 
         self.log.log(INFOX, "configure OpticsOL_Slope=%.3f" % (self.OpticsOL_Slope))
         self.log.log(INFOX, "configure OpticsCL_Delay=%s" % (self.OpticsCL_Delay))
@@ -462,10 +464,24 @@ class ObservatoryModel(object):
         return delay
 
     def get_delay_for_telopticsopenloop(self, targetstate, initstate):
-        return 0.0
+
+        distance = abs(targetstate.telalt_rad - initstate.telalt_rad)
+
+        delay = distance * self.OpticsOL_Slope
+
+        return delay
 
     def get_delay_for_telopticsclosedloop(self, targetstate, initstate):
-        return 0.0
+
+        distance = abs(targetstate.telalt_rad - initstate.telalt_rad)
+
+        delay = 0.0                                                                                  
+        for k, cl_delay in enumerate(self.OpticsCL_Delay):
+            if self.OpticsCL_AltLimit[k] <= distance < self.OpticsCL_AltLimit[k + 1]:
+                delay = cl_delay
+                break
+
+        return delay
 
     def get_delay_for_domalt(self, targetstate, initstate):
 
