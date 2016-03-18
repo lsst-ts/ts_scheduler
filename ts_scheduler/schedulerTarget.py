@@ -13,6 +13,7 @@ class Target(object):
 
         self.targetid = targetid
         self.fieldid = fieldid
+        self.filter = filter
         self.ra_rad = ra_rad
         self.dec_rad = dec_rad
         self.ang_rad = ang_rad
@@ -24,5 +25,5 @@ class Target(object):
         self.value = 0.0
 
     def __str__(self):
-        return ("ID=%d field=%d ra=%.3f dec=%.3f" %
-                (self.targetid, self.fieldid, self.ra_rad * RAD2DEG, self.dec_rad * RAD2DEG))
+        return ("ID=%d field=%d filter=%s ra=%.3f dec=%.3f" %
+                (self.targetid, self.fieldid, self.filter, self.ra_rad * RAD2DEG, self.dec_rad * RAD2DEG))
