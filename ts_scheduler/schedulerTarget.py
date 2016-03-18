@@ -23,6 +23,7 @@ class Target(object):
         self.propIds = []
         self.propValues = []
         self.value = 0.0
+        self.cost = 0.0
 
     def __str__(self):
         return ("ID=%d field=%d filter=%s ra=%.3f dec=%.3f" %

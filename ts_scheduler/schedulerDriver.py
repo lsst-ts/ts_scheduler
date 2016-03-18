@@ -129,8 +129,9 @@ class Driver(object):
             proptarget_list = prop.suggest_targets()
 
             for target in proptarget_list:
-                    target_list.append(target)
-                    ntargets += 1
+                target.cost = self.observatoryModel.get_slew_delay(target)
+                target_list.append(target)
+                ntargets += 1
 
         if ntargets > 0:
             winnervalue = 0.0

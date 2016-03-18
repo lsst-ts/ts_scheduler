@@ -2,4 +2,4 @@
 
 __author__ = 'Francisco Delgado'
 __email__ = 'fdelgado@lsst.org'
-__version__ = '0.2.2'
+__version__ = '0.2.5'
