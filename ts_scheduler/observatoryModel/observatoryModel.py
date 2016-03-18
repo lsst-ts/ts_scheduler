@@ -162,33 +162,19 @@ class ObservatoryModel(object):
 
         self.reset()
 
-    def reset(self):
-
-        self.set_state(self.parkState)
-
-    def set_state(self, newstate):
-
-        self.currentState.set(newstate)
-
     def update_state(self, time):
 
         if time < self.currentState.time:
             time = self.currentState.time
 
         if self.currentState.tracking:
-            (alt_rad, az_rad, pa_rad) = self.radec2altazpa(time,
-                                                           self.currentState.ra_rad,
-                                                           self.currentState.dec_rad)
-            az_rad = divmod(az_rad, TWOPI)[1]
-            rot_rad = divmod(pa_rad - self.currentState.ang_rad, TWOPI)[1]
 
-            targetposition = ObservatoryPosition()
-            targetposition.time = time
-            targetposition.tracking = True
-            targetposition.alt_rad = alt_rad
-            targetposition.az_rad = az_rad
-            targetposition.pa_rad = pa_rad
-            targetposition.rot_rad = rot_rad
+            targetposition = self.radecang2position(time,
+                                                    self.currentState.ra_rad,
+                                                    self.currentState.dec_rad,
+                                                    self.currentState.ang_rad,
+                                                    self.currentState.filter)
+
             targetstate = self.get_closest_state(targetposition)
 
             self.currentState.time = targetstate.time
@@ -212,7 +198,21 @@ class ObservatoryModel(object):
             self.currentState.ang_rad = divmod(pa_rad - self.currentState.rot_rad, TWOPI)[1]
             self.currentState.pa_rad = pa_rad
 
-    def slew_altazrot(self, time, alt_rad, az_rad, rot_rad):
+    def start_tracking(self, time):
+        if time < self.currentState.time:
+            time = self.currentState.time
+        if not self.currentState.tracking:
+            self.update_state(time)
+            self.currentState.tracking = True
+
+    def stop_tracking(self, time):
+        if time < self.currentState.time:
+            time = self.currentState.time
+        if self.currentState.tracking:
+            self.update_state(time)
+            self.currentState.tracking = False
+
+    def slew_altazrot(self, time, alt_rad, az_rad, rot_rad, filter):
 
         self.update_state(time)
         time = self.currentState.time
@@ -223,36 +223,75 @@ class ObservatoryModel(object):
         targetposition.alt_rad = alt_rad
         targetposition.az_rad = az_rad
         targetposition.rot_rad = rot_rad
+        targetposition.filter = filter
 
         self.slew_to_position(targetposition)
 
-    def slew_radecang(self, time, ra_rad, dec_rad, ang_rad):
+    def slew_radecang(self, time, ra_rad, dec_rad, ang_rad, filter):
 
         self.update_state(time)
         time = self.currentState.time
 
-        (alt_rad, az_rad, pa_rad) = self.radec2altazpa(time, ra_rad, dec_rad)
-
-        targetposition = ObservatoryPosition()
-        targetposition.time = time
-        targetposition.tracking = True
-        targetposition.ra_rad = ra_rad
-        targetposition.dec_rad = dec_rad
-        targetposition.ang_rad = ang_rad
-        targetposition.alt_rad = alt_rad
-        targetposition.az_rad = az_rad
-        targetposition.pa_rad = pa_rad
-        targetposition.rot_rad = divmod(pa_rad - ang_rad, TWOPI)[1]
+        targetposition = self.radecang2position(time, ra_rad, dec_rad, ang_rad, filter)
 
         self.slew_to_position(targetposition)
+
+    def slew(self, target):
+
+        self.slew_radecang(self.currentState.time,
+                           target.ra_rad, target.dec_rad, target.ang_rad, target.filter)
+
+    def get_slew_delay(self, target):
+
+        targetposition = self.radecang2position(self.currentState.time,
+                                                target.ra_rad,
+                                                target.dec_rad,
+                                                target.ang_rad,
+                                                target.filter)
+
+        targetstate = self.get_closest_state(targetposition)
+
+        return self.get_slew_delay_for_state(targetstate, self.currentState)
+
+    def observe(self, target):
+        return
+
+    def park(self):
+        return
 
     def slew_to_position(self, targetposition):
 
         targetstate = self.get_closest_state(targetposition)
-        slew_delay = self.get_slew_delay(targetstate, self.currentState)
+        slew_delay = self.get_slew_delay_for_state(targetstate, self.currentState)
         targetstate.time = targetstate.time + slew_delay
         self.currentState.set(targetstate)
         self.update_state(targetstate.time)
+
+    def reset(self):
+
+        self.set_state(self.parkState)
+
+    def set_state(self, newstate):
+
+        self.currentState.set(newstate)
+
+    def radecang2position(self, time, ra_rad, dec_rad, ang_rad, filter):
+
+        (alt_rad, az_rad, pa_rad) = self.radec2altazpa(time, ra_rad, dec_rad)
+
+        position = ObservatoryPosition()
+        position.time = time
+        position.tracking = True
+        position.ra_rad = ra_rad
+        position.dec_rad = dec_rad
+        position.ang_rad = ang_rad
+        position.filter = filter
+        position.alt_rad = alt_rad
+        position.az_rad = az_rad
+        position.pa_rad = pa_rad
+        position.rot_rad = divmod(pa_rad - ang_rad, TWOPI)[1]
+
+        return position
 
     def get_closest_state(self, targetposition):
 
@@ -329,9 +368,6 @@ class ObservatoryModel(object):
 
         return (final_abs_rad, distance_rad)
 
-    def observe(self, topic_observation):
-        return
-
     def compute_kinematic_delay(self, distance, maxspeed, accel, decel):
 
         d = abs(distance)
@@ -353,7 +389,7 @@ class ObservatoryModel(object):
 
         return (delay, vpeak * cmp(distance, 0))
 
-    def get_slew_delay(self, targetstate, initstate):
+    def get_slew_delay_for_state(self, targetstate, initstate):
 
         slew_delay = self.get_delay_after("exposures", targetstate, initstate)
 
@@ -478,12 +514,6 @@ class ObservatoryModel(object):
     def estimate_slewtime(self):
         return
 
-    def park(self):
-        return
-
-    def slew(self, target):
-        return
-
     def date2lst(self, time):
         """
         Computes the Local Sidereal Time for the given TIME.
@@ -542,17 +572,3 @@ class ObservatoryModel(object):
         pa_rad = pal.pa(ha_rad, dec_rad, self.location.latitude_rad)
 
         return (alt_rad, az_rad, pa_rad)
-
-    def start_tracking(self, time):
-        if time < self.currentState.time:
-            time = self.currentState.time
-        if not self.currentState.tracking:
-            self.update_state(time)
-            self.currentState.tracking = True
-
-    def stop_tracking(self, time):
-        if time < self.currentState.time:
-            time = self.currentState.time
-        if self.currentState.tracking:
-            self.update_state(time)
-            self.currentState.tracking = False
