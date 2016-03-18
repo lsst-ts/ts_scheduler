@@ -3,7 +3,7 @@ import logging
 
 import palpy as pal
 
-from ts_scheduler.schedulerDefinitions import TWOPI
+from ts_scheduler.schedulerDefinitions import TWOPI, INFOX
 from .observatoryLocation import ObservatoryLocation
 from .observatoryPosition import ObservatoryPosition
 from .observatoryState import ObservatoryState
@@ -12,7 +12,7 @@ class ObservatoryModel(object):
 
     def __init__(self):
 
-        self.log = logging.getLogger("observatorModel.ObservatoryModel")
+        self.log = logging.getLogger("observatoryModel.ObservatoryModel")
 
         self.location = ObservatoryLocation()
         self.parkState = ObservatoryState()
@@ -36,27 +36,27 @@ class ObservatoryModel(object):
         self.TelRot_MaxPos_rad = math.radians(observatory_confdict["rotator"]["maxpos"])
         self.TelRot_FilterPos_rad = math.radians(observatory_confdict["rotator"]["filter_pos"])
 
-        self.log.info("configure TelAlt_MinPos_rad=%.3f" % (self.TelAlt_MinPos_rad))
-        self.log.info("configure TelAlt_MaxPos_rad=%.3f" % (self.TelAlt_MaxPos_rad))
-        self.log.info("configure TelAz_MinPos_rad=%.3f" % (self.TelAz_MinPos_rad))
-        self.log.info("configure TelAz_MaxPos_rad=%.3f" % (self.TelAz_MaxPos_rad))
-        self.log.info("configure TelRot_MinPos_rad=%.3f" % (self.TelRot_MinPos_rad))
-        self.log.info("configure TelRot_MaxPos_rad=%.3f" % (self.TelRot_MaxPos_rad))
-        self.log.info("configure TelRot_FilterPos_rad=%.3f" % (self.TelRot_FilterPos_rad))
+        self.log.log(INFOX, "configure TelAlt_MinPos_rad=%.3f" % (self.TelAlt_MinPos_rad))
+        self.log.log(INFOX, "configure TelAlt_MaxPos_rad=%.3f" % (self.TelAlt_MaxPos_rad))
+        self.log.log(INFOX, "configure TelAz_MinPos_rad=%.3f" % (self.TelAz_MinPos_rad))
+        self.log.log(INFOX, "configure TelAz_MaxPos_rad=%.3f" % (self.TelAz_MaxPos_rad))
+        self.log.log(INFOX, "configure TelRot_MinPos_rad=%.3f" % (self.TelRot_MinPos_rad))
+        self.log.log(INFOX, "configure TelRot_MaxPos_rad=%.3f" % (self.TelRot_MaxPos_rad))
+        self.log.log(INFOX, "configure TelRot_FilterPos_rad=%.3f" % (self.TelRot_FilterPos_rad))
 
         self.Rotator_FollowSky = observatory_confdict["rotator"]["follow_sky"]
         self.Rotator_ResumeAngle = observatory_confdict["rotator"]["resume_angle"]
 
-        self.log.info("configure Rotator_FollowSky=%s" % (self.Rotator_FollowSky))
-        self.log.info("configure Rotator_ResumeAngle=%s" % (self.Rotator_ResumeAngle))
+        self.log.log(INFOX, "configure Rotator_FollowSky=%s" % (self.Rotator_FollowSky))
+        self.log.log(INFOX, "configure Rotator_ResumeAngle=%s" % (self.Rotator_ResumeAngle))
 
         self.Filter_MountedList = observatory_confdict["camera"]["filter_mounted"]
         self.Filter_RemovableList = observatory_confdict["camera"]["filter_removable"]
         self.Filter_UnmountedList = observatory_confdict["camera"]["filter_unmounted"]
 
-        self.log.info("configure Filter_MountedList=%s" % (self.Filter_MountedList))
-        self.log.info("configure Filter_RemovableList=%s" % (self.Filter_RemovableList))
-        self.log.info("configure Filter_UnmountedList=%s" % (self.Filter_UnmountedList))
+        self.log.log(INFOX, "configure Filter_MountedList=%s" % (self.Filter_MountedList))
+        self.log.log(INFOX, "configure Filter_RemovableList=%s" % (self.Filter_RemovableList))
+        self.log.log(INFOX, "configure Filter_UnmountedList=%s" % (self.Filter_UnmountedList))
 
         self.TelAlt_MaxSpeed_rad = math.radians(observatory_confdict["telescope"]["altitude_maxspeed"])
         self.TelAlt_Accel_rad = math.radians(observatory_confdict["telescope"]["altitude_accel"])
@@ -74,21 +74,21 @@ class ObservatoryModel(object):
         self.DomAz_Accel_rad = math.radians(observatory_confdict["dome"]["azimuth_accel"])
         self.DomAz_Decel_rad = math.radians(observatory_confdict["dome"]["azimuth_decel"])
 
-        self.log.info("configure TelAlt_MaxSpeed_rad=%.3f" % (self.TelAlt_MaxSpeed_rad))
-        self.log.info("configure TelAlt_Accel_rad=%.3f" % (self.TelAlt_Accel_rad))
-        self.log.info("configure TelAlt_Decel_rad=%.3f" % (self.TelAlt_Decel_rad))
-        self.log.info("configure TelAz_MaxSpeed_rad=%.3f" % (self.TelAz_MaxSpeed_rad))
-        self.log.info("configure TelAz_Accel_rad=%.3f" % (self.TelAz_Accel_rad))
-        self.log.info("configure TelAz_Decel_rad=%.3f" % (self.TelAz_Decel_rad))
-        self.log.info("configure TelRot_MaxSpeed_rad=%.3f" % (self.TelRot_MaxSpeed_rad))
-        self.log.info("configure TelRot_Accel_rad=%.3f" % (self.TelRot_Accel_rad))
-        self.log.info("configure TelRot_Decel_rad=%.3f" % (self.TelRot_Decel_rad))
-        self.log.info("configure DomAlt_MaxSpeed_rad=%.3f" % (self.DomAlt_MaxSpeed_rad))
-        self.log.info("configure DomAlt_Accel_rad=%.3f" % (self.DomAlt_Accel_rad))
-        self.log.info("configure DomAlt_Decel_rad=%.3f" % (self.DomAlt_Decel_rad))
-        self.log.info("configure DomAz_MaxSpeed_rad=%.3f" % (self.DomAz_MaxSpeed_rad))
-        self.log.info("configure DomAz_Accel_rad=%.3f" % (self.DomAz_Accel_rad))
-        self.log.info("configure DomAz_Decel_rad=%.3f" % (self.DomAz_Decel_rad))
+        self.log.log(INFOX, "configure TelAlt_MaxSpeed_rad=%.3f" % (self.TelAlt_MaxSpeed_rad))
+        self.log.log(INFOX, "configure TelAlt_Accel_rad=%.3f" % (self.TelAlt_Accel_rad))
+        self.log.log(INFOX, "configure TelAlt_Decel_rad=%.3f" % (self.TelAlt_Decel_rad))
+        self.log.log(INFOX, "configure TelAz_MaxSpeed_rad=%.3f" % (self.TelAz_MaxSpeed_rad))
+        self.log.log(INFOX, "configure TelAz_Accel_rad=%.3f" % (self.TelAz_Accel_rad))
+        self.log.log(INFOX, "configure TelAz_Decel_rad=%.3f" % (self.TelAz_Decel_rad))
+        self.log.log(INFOX, "configure TelRot_MaxSpeed_rad=%.3f" % (self.TelRot_MaxSpeed_rad))
+        self.log.log(INFOX, "configure TelRot_Accel_rad=%.3f" % (self.TelRot_Accel_rad))
+        self.log.log(INFOX, "configure TelRot_Decel_rad=%.3f" % (self.TelRot_Decel_rad))
+        self.log.log(INFOX, "configure DomAlt_MaxSpeed_rad=%.3f" % (self.DomAlt_MaxSpeed_rad))
+        self.log.log(INFOX, "configure DomAlt_Accel_rad=%.3f" % (self.DomAlt_Accel_rad))
+        self.log.log(INFOX, "configure DomAlt_Decel_rad=%.3f" % (self.DomAlt_Decel_rad))
+        self.log.log(INFOX, "configure DomAz_MaxSpeed_rad=%.3f" % (self.DomAz_MaxSpeed_rad))
+        self.log.log(INFOX, "configure DomAz_Accel_rad=%.3f" % (self.DomAz_Accel_rad))
+        self.log.log(INFOX, "configure DomAz_Decel_rad=%.3f" % (self.DomAz_Decel_rad))
 
         self.Filter_ChangeTime = observatory_confdict["camera"]["filter_change_time"]
         self.Mount_SettleTime = observatory_confdict["telescope"]["settle_time"]
@@ -96,20 +96,20 @@ class ObservatoryModel(object):
         self.ReadoutTime = observatory_confdict["camera"]["readout_time"]
         self.ShutterTime = observatory_confdict["camera"]["shutter_time"]
 
-        self.log.info("configure Filter_ChangeTime=%.1f" % (self.Filter_ChangeTime))
-        self.log.info("configure Mount_SettleTime=%.1f" % (self.Mount_SettleTime))
-        self.log.info("configure DomAz_SettleTime=%.1f" % (self.DomAz_SettleTime))
-        self.log.info("configure ReadoutTime=%.1f" % (self.ReadoutTime))
-        self.log.info("configure ShutterTime=%.1f" % (self.ShutterTime))
+        self.log.log(INFOX, "configure Filter_ChangeTime=%.1f" % (self.Filter_ChangeTime))
+        self.log.log(INFOX, "configure Mount_SettleTime=%.1f" % (self.Mount_SettleTime))
+        self.log.log(INFOX, "configure DomAz_SettleTime=%.1f" % (self.DomAz_SettleTime))
+        self.log.log(INFOX, "configure ReadoutTime=%.1f" % (self.ReadoutTime))
+        self.log.log(INFOX, "configure ShutterTime=%.1f" % (self.ShutterTime))
 
         # Shouldn't these be converted to radians?
         self.OpticsOL_Slope = observatory_confdict["slew"]["tel_optics_ol_slope"]
         self.OpticsCL_Delay = observatory_confdict["slew"]["tel_optics_cl_delay"]
         self.OpticsCL_AltLimit = observatory_confdict["slew"]["tel_optics_cl_alt_limit"]
 
-        self.log.info("configure OpticsOL_Slope=%.3f" % (self.OpticsOL_Slope))
-        self.log.info("configure OpticsCL_Delay=%s" % (self.OpticsCL_Delay))
-        self.log.info("configure OpticsCL_AltLimit=%s" % (self.OpticsCL_AltLimit))
+        self.log.log(INFOX, "configure OpticsOL_Slope=%.3f" % (self.OpticsOL_Slope))
+        self.log.log(INFOX, "configure OpticsCL_Delay=%s" % (self.OpticsCL_Delay))
+        self.log.log(INFOX, "configure OpticsCL_AltLimit=%s" % (self.OpticsCL_AltLimit))
 
         self.activities = ["telalt",
                            "telaz",
@@ -128,8 +128,8 @@ class ObservatoryModel(object):
         for activity in self.activities:
             key = "prereq_" + activity
             self.prerequisites[activity] = observatory_confdict["slew"][key]
-            self.log.info("configure prerequisites[%s]=%s" %
-                          (activity, self.prerequisites[activity]))
+            self.log.log(INFOX, "configure prerequisites[%s]=%s" %
+                         (activity, self.prerequisites[activity]))
 
         self.function_get_delay_for = {}
         self.delay_for = {}
@@ -153,12 +153,12 @@ class ObservatoryModel(object):
         self.parkState.unmountedfilters = self.Filter_UnmountedList
         self.parkState.tracking = False
 
-        self.log.info("configure park_Telalt_rad=%.3f" % (self.parkState.telalt_rad))
-        self.log.info("configure park_Telaz_rad=%.3f" % (self.parkState.telaz_rad))
-        self.log.info("configure park_Telrot_rad=%.3f" % (self.parkState.telrot_rad))
-        self.log.info("configure park_Domalt_rad=%.3f" % (self.parkState.domalt_rad))
-        self.log.info("configure park_Domaz_rad=%.3f" % (self.parkState.domaz_rad))
-        self.log.info("configure park_Filter=%s" % (self.parkState.filter))
+        self.log.log(INFOX, "configure park_Telalt_rad=%.3f" % (self.parkState.telalt_rad))
+        self.log.log(INFOX, "configure park_Telaz_rad=%.3f" % (self.parkState.telaz_rad))
+        self.log.log(INFOX, "configure park_Telrot_rad=%.3f" % (self.parkState.telrot_rad))
+        self.log.log(INFOX, "configure park_Domalt_rad=%.3f" % (self.parkState.domalt_rad))
+        self.log.log(INFOX, "configure park_Domaz_rad=%.3f" % (self.parkState.domaz_rad))
+        self.log.log(INFOX, "configure park_Filter=%s" % (self.parkState.filter))
 
         self.reset()
 
