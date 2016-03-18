@@ -221,10 +221,30 @@ class ObservatoryModelTest(unittest.TestCase):
         target.ra_rad = math.radians(60)
         target.dec_rad = math.radians(-20)
         target.ang_rad = math.radians(0)
-        target.filter = "g"
+        target.filter = "r"
 
         delay = self.model.get_slew_delay(target)
         self.assertAlmostEquals(delay, 74.253, delta=1e-3)
+
+        self.model.slew(target)
+
+        target = Target()
+        target.ra_rad = math.radians(60)
+        target.dec_rad = math.radians(-20)
+        target.ang_rad = math.radians(0)
+        target.filter = "g"
+
+        delay = self.model.get_slew_delay(target)
+        self.assertAlmostEquals(delay, 120, delta=1e-3)
+
+        target = Target()
+        target.ra_rad = math.radians(50)
+        target.dec_rad = math.radians(-10)
+        target.ang_rad = math.radians(10)
+        target.filter = "r"
+
+        delay = self.model.get_slew_delay(target)
+        self.assertAlmostEquals(delay, 22.487, delta=1e-3)
 
     def test_slew(self):
         siteconf = read_conf_file("conf/system/site.conf")
@@ -242,9 +262,20 @@ class ObservatoryModelTest(unittest.TestCase):
         target.ra_rad = math.radians(60)
         target.dec_rad = math.radians(-20)
         target.ang_rad = math.radians(0)
-        target.filter = "g"
+        target.filter = "r"
 
         self.model.slew(target)
         self.assertEqual(self.model.currentState.__str__(), "t=74.3 ra=60.000 dec=-20.000 ang=-180.000 "
-                         "filter=g track=True alt=60.788 az=76.614 pa=-116.575 rot=63.425 "
+                         "filter=r track=True alt=60.788 az=76.614 pa=-116.575 rot=63.425 "
                          "telaz=76.614 telrot=63.425")
+
+        target = Target()
+        target.ra_rad = math.radians(60)
+        target.dec_rad = math.radians(-20)
+        target.ang_rad = math.radians(0)
+        target.filter = "i"
+
+        self.model.slew(target)
+        self.assertEqual(self.model.currentState.__str__(), "t=194.3 ra=60.000 dec=-20.000 ang=-180.000 "
+                         "filter=i track=True alt=61.209 az=76.177 pa=-116.785 rot=63.215 "
+                         "telaz=76.177 telrot=63.215")

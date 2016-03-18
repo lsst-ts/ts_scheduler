@@ -519,7 +519,13 @@ class ObservatoryModel(object):
         return delay
 
     def get_delay_for_filter(self, targetstate, initstate):
-        return 0.0
+
+        if (targetstate.filter != initstate.filter):
+            delay = self.Filter_ChangeTime
+        else:
+            delay = 0.0
+
+        return delay
 
     def get_delay_for_readout(self, targetstate, initstate):
         return 0.0
