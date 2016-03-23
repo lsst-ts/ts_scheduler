@@ -6,9 +6,9 @@ from schedulerTarget import Target
 from schedulerProposal import Proposal
 
 class ScriptedProposal(Proposal):
-    def __init__(self, configfilepath):
+    def __init__(self, configfilepath, skymodel):
 
-        super(ScriptedProposal, self).__init__(configfilepath)
+        super(ScriptedProposal, self).__init__(configfilepath, skymodel)
         self.log = logging.getLogger("schedulerScriptedProposal.ScriptedProposal")
 
         resource_path = os.path.dirname(configfilepath)
@@ -43,17 +43,45 @@ class ScriptedProposal(Proposal):
             self.targetsList.append(target)
             self.log.log(INFOX, target)
 
-    def suggest_targets(self):
+    def suggest_targets(self, time):
 
         super(ScriptedProposal, self).suggest_targets()
 
         if self.targetid < len(self.targetsList):
             nexttarget = self.targetsList[self.targetid]
-            nexttarget.value = 1.0
-            self.targetid += 1
-            return list([nexttarget])
         else:
             nexttarget = self.targetsList[-1]
-            nexttarget.value = 1.0
-            self.targetid += 1
-            return list([nexttarget])
+        nexttarget.targetid = self.targetid
+        nexttarget.value = 1.0
+        nexttarget.time = time
+
+        target_list = list([nexttarget])
+
+        ra_list = []
+        dec_list = []
+        filter_list = []
+        for target in target_list:
+            ra_list.append(target.ra_rad)
+            dec_list.append(target.dec_rad)
+            filter_list.append(target.filter)
+        sky_mags = self.skyModel.get_sky_brightness_timeblock(time, 1, 1, ra_list, dec_list)
+
+        for ix, filter in enumerate(filter_list):
+            if filter == "u":
+                target_list[ix].skybrightness = sky_mags[0][ix].u
+            elif filter == "g":
+                target_list[ix].skybrightness = sky_mags[0][ix].g
+            elif filter == "r":
+                target_list[ix].skybrightness = sky_mags[0][ix].r
+            elif filter == "i":
+                target_list[ix].skybrightness = sky_mags[0][ix].i
+            elif filter == "z":
+                target_list[ix].skybrightness = sky_mags[0][ix].z
+            elif filter == "y":
+                target_list[ix].skybrightness = sky_mags[0][ix].y
+            else:
+                target_list[ix].skybrightness = 0.0
+
+        self.targetid += 1
+
+        return target_list
