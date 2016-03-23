@@ -21,8 +21,7 @@ class Driver(object):
 
         observatory_confdict = read_conf_file(conf_file_path(__name__, "../conf", "system",
                                                              "observatoryModel.conf"))
-        observatory_confdict.update(site_confdict)
-        self.observatoryModel = ObservatoryModel()
+        self.observatoryModel = ObservatoryModel(self.location)
         self.observatoryModel.configure(observatory_confdict)
 
         self.skyModel = AstronomicalSkyModel(self.location)

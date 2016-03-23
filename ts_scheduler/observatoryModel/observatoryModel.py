@@ -10,11 +10,11 @@ from .observatoryState import ObservatoryState
 
 class ObservatoryModel(object):
 
-    def __init__(self):
+    def __init__(self, location):
 
         self.log = logging.getLogger("observatoryModel.ObservatoryModel")
 
-        self.location = ObservatoryLocation()
+        self.location = location
         self.parkState = ObservatoryState()
         self.currentState = ObservatoryState()
         self.targetPosition = ObservatoryPosition()
@@ -23,10 +23,6 @@ class ObservatoryModel(object):
         return self.currentState.__str__()
 
     def configure(self, observatory_confdict):
-
-        self.location.latitude_rad = math.radians(observatory_confdict["obs_site"]["latitude"])
-        self.location.longitude_rad = math.radians(observatory_confdict["obs_site"]["longitude"])
-        self.location.height = observatory_confdict["obs_site"]["height"]
 
         self.TelAlt_MinPos_rad = math.radians(observatory_confdict["telescope"]["altitude_minpos"])
         self.TelAlt_MaxPos_rad = math.radians(observatory_confdict["telescope"]["altitude_maxpos"])
@@ -214,7 +210,7 @@ class ObservatoryModel(object):
             self.update_state(time)
             self.currentState.tracking = False
 
-    def slew_altazrot(self, time, alt_rad, az_rad, rot_rad, filter):
+    def slew_altaz(self, time, alt_rad, az_rad, rot_rad, filter):
 
         self.update_state(time)
         time = self.currentState.time
@@ -229,7 +225,7 @@ class ObservatoryModel(object):
 
         self.slew_to_position(targetposition)
 
-    def slew_radecang(self, time, ra_rad, dec_rad, ang_rad, filter):
+    def slew_radec(self, time, ra_rad, dec_rad, ang_rad, filter):
 
         self.update_state(time)
         time = self.currentState.time
@@ -240,8 +236,8 @@ class ObservatoryModel(object):
 
     def slew(self, target):
 
-        self.slew_radecang(self.currentState.time,
-                           target.ra_rad, target.dec_rad, target.ang_rad, target.filter)
+        self.slew_radec(self.currentState.time,
+                        target.ra_rad, target.dec_rad, target.ang_rad, target.filter)
 
     def get_slew_delay(self, target):
 
