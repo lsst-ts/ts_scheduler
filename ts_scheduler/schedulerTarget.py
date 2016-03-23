@@ -20,11 +20,15 @@ class Target(object):
         self.numexp = numexp
         self.exptimes = list(exptimes)
 
+        self.time = 0.0
+        self.skybrightness = 0.0
+
         self.propIds = []
         self.propValues = []
         self.value = 0.0
         self.cost = 0.0
 
     def __str__(self):
-        return ("ID=%d field=%d filter=%s ra=%.3f dec=%.3f" %
-                (self.targetid, self.fieldid, self.filter, self.ra_rad * RAD2DEG, self.dec_rad * RAD2DEG))
+        return ("ID=%d field=%d filter=%s ra=%.3f dec=%.3f time=%.1f skybrightness=%.3f" %
+                (self.targetid, self.fieldid, self.filter, self.ra_rad * RAD2DEG, self.dec_rad * RAD2DEG,
+                 self.time, self.skybrightness))
