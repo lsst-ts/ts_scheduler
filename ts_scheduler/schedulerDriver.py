@@ -1,6 +1,7 @@
 import logging
 
-from observatoryModel.observatoryModel import ObservatoryModel
+from observatoryModel.observatoryModel import ObservatoryModel, ObservatoryLocation
+from ts_scheduler.sky_model import AstronomicalSkyModel
 
 from schedulerDefinitions import INFOX, DEG2RAD, read_conf_file, conf_file_path
 from schedulerField import Field
@@ -14,15 +15,17 @@ class Driver(object):
 
         self.science_proposal_list = []
 
-        self.observatoryModel = ObservatoryModel()
-
         site_confdict = read_conf_file(conf_file_path(__name__, "../conf", "system", "site.conf"))
+        self.location = ObservatoryLocation()
+        self.location.configure(site_confdict)
 
         observatory_confdict = read_conf_file(conf_file_path(__name__, "../conf", "system",
                                                              "observatoryModel.conf"))
         observatory_confdict.update(site_confdict)
-
+        self.observatoryModel = ObservatoryModel()
         self.observatoryModel.configure(observatory_confdict)
+
+        self.skyModel = AstronomicalSkyModel(self.location)
 
         self.build_fields_dict()
 
@@ -43,7 +46,7 @@ class Driver(object):
         if scriptedprop_conflist[0] is not None:
             for k in range(len(scriptedprop_conflist)):
                 scriptedprop = ScriptedProposal(conf_file_path(__name__, "../conf", "survey",
-                                                               "{}".format(scriptedprop_conflist[k])))
+                                                "{}".format(scriptedprop_conflist[k])), self.skyModel)
                 self.science_proposal_list.append(scriptedprop)
 
         self.time = 0.0
@@ -126,7 +129,7 @@ class Driver(object):
         target_list = []
         ntargets = 0
         for prop in self.science_proposal_list:
-            proptarget_list = prop.suggest_targets()
+            proptarget_list = prop.suggest_targets(self.time)
 
             for target in proptarget_list:
                 target.cost = self.observatoryModel.get_slew_delay(target)
