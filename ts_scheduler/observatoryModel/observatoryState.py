@@ -43,6 +43,18 @@ class ObservatoryState(ObservatoryPosition):
         self.unmountedfilters = list(unmountedfilters)
 
     @property
+    def domalt(self):
+        return math.degrees(self.domalt_rad)
+
+    @property
+    def domaz(self):
+        return math.degrees(self.domaz_rad)
+
+    @property
+    def telalt(self):
+        return math.degrees(self.telalt_rad)
+
+    @property
     def telaz(self):
         return math.degrees(self.telaz_rad)
 
