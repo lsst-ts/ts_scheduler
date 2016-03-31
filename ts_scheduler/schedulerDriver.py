@@ -1,3 +1,4 @@
+import copy
 import logging
 
 from observatoryModel.observatoryModel import ObservatoryModel, ObservatoryLocation
@@ -143,13 +144,8 @@ class Driver(object):
                     winnertarget = target
 
             self.targetid += 1
+            self.newTarget = copy.deepcopy(winnertarget)
             self.newTarget.targetid = self.targetid
-            self.newTarget.fieldid = winnertarget.fieldid
-            self.newTarget.filter = winnertarget.filter
-            self.newTarget.ra_rad = winnertarget.ra_rad
-            self.newTarget.dec_rad = winnertarget.dec_rad
-            self.newTarget.ang_rad = winnertarget.ang_rad
-            self.newTarget.numexp = winnertarget.numexp
 
         return self.newTarget
 

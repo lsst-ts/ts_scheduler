@@ -102,6 +102,9 @@ class Main(object):
                         self.schedulerDriver.update_external_conditions(self.topicTime)
 
                         target = self.schedulerDriver.select_next_target()
+                        self.log.log(INFOX, "tx target Id=%i, field=%i, filter=%s, exposure_times=%s" %
+                                     (target.targetid, target.fieldid, target.filter, str(target.exptimes)))
+
                         self.topicTarget.targetId = target.targetid
                         self.topicTarget.fieldId = target.fieldid
                         self.topicTarget.filter = target.filter
@@ -109,10 +112,10 @@ class Main(object):
                         self.topicTarget.dec = target.dec_rad * RAD2DEG
                         self.topicTarget.angle = target.ang_rad * RAD2DEG
                         self.topicTarget.num_exposures = target.numexp
+                        for i, exptime in enumerate(target.exptimes):
+                            self.topicTarget.exposure_times[i] = exptime
 
                         self.sal.putSample_targetTest(self.topicTarget)
-                        self.log.log(INFOX, "tx target Id=%i, field=%i, filter=%s" %
-                                     (target.targetid, target.fieldid, target.filter))
 
                         waitobservation = True
                         lastobstime = time.time()

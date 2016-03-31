@@ -7,11 +7,14 @@ from ts_scheduler.sky_model import AstronomicalSkyModel
 
 class ScriptedProposalTest(unittest.TestCase):
 
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
         site_confdict = read_conf_file(conf_file_path(__name__, "../conf", "system", "site.conf"))
-        self.location = ObservatoryLocation()
-        self.location.configure(site_confdict)
-        self.skyModel = AstronomicalSkyModel(self.location)
+        location = ObservatoryLocation()
+        location.configure(site_confdict)
+        cls.skyModel = AstronomicalSkyModel(location)
+
+    def setUp(self):
         self.scriptedprop = ScriptedProposal(conf_file_path(__name__, "../conf", "survey",
                                              "scriptedProp1.conf"), self.skyModel)
 

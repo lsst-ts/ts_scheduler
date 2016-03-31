@@ -39,6 +39,7 @@ class ScriptedProposal(Proposal):
             target.dec_rad = eval(values[3]) * DEG2RAD
             target.ang_rad = eval(values[4]) * DEG2RAD
             target.numexp = eval(values[5])
+            target.exptimes = [int(x) for x in values[6].split(',')]
 
             self.targetsList.append(target)
             self.log.log(INFOX, target)
