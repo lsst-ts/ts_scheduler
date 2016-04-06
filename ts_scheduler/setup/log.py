@@ -35,6 +35,8 @@ def configure_logging(options, logfilename=None):
         A name, including path, for a log file.
     """
     console_detail_level = options.verbose if options.scripted else 1
+    if console_detail_level > MAX_LEVEL:
+        console_detail_level = MAX_LEVEL
 
     log_level = DETAIL_LEVEL[console_detail_level]
 
