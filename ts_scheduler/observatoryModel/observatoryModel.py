@@ -4,7 +4,6 @@ import logging
 import palpy as pal
 
 from ts_scheduler.schedulerDefinitions import TWOPI, INFOX
-from .observatoryLocation import ObservatoryLocation
 from .observatoryPosition import ObservatoryPosition
 from .observatoryState import ObservatoryState
 

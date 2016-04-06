@@ -1,6 +1,6 @@
 import math
 
-from ts_scheduler.observatoryModel.observatoryModel import ObservatoryLocation
+from ts_scheduler.observatoryModel import ObservatoryLocation
 
 """Set timestamp as 2022-01-01 0h UTC"""
 LSST_START_TIMESTAMP = 1640995200.0

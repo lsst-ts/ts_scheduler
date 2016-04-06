@@ -1,7 +1,8 @@
 import copy
 import logging
 
-from observatoryModel.observatoryModel import ObservatoryModel, ObservatoryLocation
+from observatoryModel.observatoryModel import ObservatoryModel
+from observatoryModel.observatoryLocation import ObservatoryLocation
 from ts_scheduler.sky_model import AstronomicalSkyModel
 
 from schedulerDefinitions import INFOX, DEG2RAD, read_conf_file, conf_file_path
