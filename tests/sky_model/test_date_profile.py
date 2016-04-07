@@ -2,7 +2,7 @@ import unittest
 
 from ts_scheduler.sky_model import DateProfile
 
-from ..test_constants import LSST_SITE, LSST_START_MJD, LSST_START_TIMESTAMP
+from tests.test_constants import LSST_SITE, LSST_START_MJD, LSST_START_TIMESTAMP
 
 class DateProfileTest(unittest.TestCase):
 
