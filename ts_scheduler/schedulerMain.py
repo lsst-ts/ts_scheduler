@@ -10,8 +10,8 @@ from SALPY_scheduler import scheduler_targetTestC
 from SALPY_scheduler import scheduler_schedulerConfigC
 from SALPY_scheduler import scheduler_fieldC
 
-from schedulerDefinitions import INFOX, RAD2DEG, read_conf_file, conf_file_path
-from schedulerDriver import Driver
+from ts_scheduler.schedulerDefinitions import INFOX, RAD2DEG, read_conf_file, conf_file_path
+from ts_scheduler.schedulerDriver import Driver
 
 class Main(object):
 

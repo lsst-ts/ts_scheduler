@@ -1,14 +1,14 @@
 import copy
 import logging
 
-from observatoryModel.observatoryModel import ObservatoryModel
-from observatoryModel.observatoryLocation import ObservatoryLocation
+from ts_scheduler.observatoryModel import ObservatoryModel
+from ts_scheduler.observatoryModel import ObservatoryLocation
 from ts_scheduler.sky_model import AstronomicalSkyModel
 
-from schedulerDefinitions import INFOX, DEG2RAD, read_conf_file, conf_file_path
-from schedulerField import Field
-from schedulerTarget import Target
-from schedulerScriptedProposal import ScriptedProposal
+from ts_scheduler.schedulerDefinitions import INFOX, DEG2RAD, read_conf_file, conf_file_path
+from ts_scheduler.schedulerField import Field
+from ts_scheduler.schedulerTarget import Target
+from ts_scheduler.schedulerScriptedProposal import ScriptedProposal
 
 class Driver(object):
     def __init__(self):

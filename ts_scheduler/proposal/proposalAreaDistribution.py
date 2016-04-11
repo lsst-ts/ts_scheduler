@@ -1,4 +1,4 @@
-from proposal import Proposal
+from ts_scheduler.proposal import Proposal
 
 class AreaDistributionProposal(Proposal):
     def __init__(self, configfilepath, skymodel):
