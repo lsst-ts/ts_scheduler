@@ -3,8 +3,8 @@ import unittest
 
 from ts_scheduler.sky_model import Sun
 
-from ..test_constants import LSST_LATITUDE, LSST_LONGITUDE
-from ..test_constants import LSST_START_TIMESTAMP
+from tests.test_constants import LSST_LATITUDE, LSST_LONGITUDE
+from tests.test_constants import LSST_START_TIMESTAMP
 
 class SunTest(unittest.TestCase):
 

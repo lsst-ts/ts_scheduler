@@ -3,7 +3,7 @@ import unittest
 
 from ts_scheduler.sky_model import AstronomicalSkyModel
 
-from ..test_constants import LSST_SITE, LSST_START_TIMESTAMP
+from tests.test_constants import LSST_SITE, LSST_START_TIMESTAMP
 
 class AstronomicalSkyTest(unittest.TestCase):
 
