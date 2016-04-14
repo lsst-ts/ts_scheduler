@@ -7,7 +7,7 @@ def printUsage():
     print "Usage: python AddGalEcl.py <packFileName> <outputFileName>"
     print "The <packfile> should contain rows of ra dec values"
 
-def createTessellationFile(packFileName, outputFileName):
+def createTessellationGalEcl(packFileName, outputFileName):
     iy = 04
     im = 12
     id = 1
@@ -45,6 +45,6 @@ if __name__ == "__main__" :
     if len(sys.argv) != 3:
         printUsage()
     else :
-        createTessellationFile(sys.argv[1], sys.argv[2])
+        createTessellationGalEcl(sys.argv[1], sys.argv[2])
 
     sys.exit(0)
