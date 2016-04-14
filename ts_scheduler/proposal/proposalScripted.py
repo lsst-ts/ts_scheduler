@@ -1,13 +1,15 @@
+import logging
 import os
 
 from ts_scheduler.schedulerDefinitions import DEG2RAD, INFOX
 from ts_scheduler.schedulerTarget import Target
-from proposal import Proposal
+from ts_scheduler.proposal import Proposal
 
 class ScriptedProposal(Proposal):
     def __init__(self, configfilepath, skymodel):
 
         super(ScriptedProposal, self).__init__(configfilepath, skymodel)
+        self.log = logging.getLogger("schedulerScriptedProposal.ScriptedProposal")
 
         resource_path = os.path.dirname(configfilepath)
         self.script_file = os.path.join(resource_path, self.proposal_confdict["script"]["scriptfile"])

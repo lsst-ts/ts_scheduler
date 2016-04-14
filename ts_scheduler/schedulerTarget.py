@@ -1,6 +1,6 @@
 import math
 
-from schedulerDefinitions import RAD2DEG
+from ts_scheduler.schedulerDefinitions import RAD2DEG
 
 class Target(object):
     def __init__(self,

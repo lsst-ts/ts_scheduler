@@ -1,6 +1,6 @@
 import math
 
-from .observatoryPosition import ObservatoryPosition
+from ts_scheduler.observatoryModel import ObservatoryPosition
 
 class ObservatoryState(ObservatoryPosition):
 
