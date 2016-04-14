@@ -8,7 +8,8 @@ from ts_scheduler.sky_model import AstronomicalSkyModel
 from schedulerDefinitions import INFOX, DEG2RAD, read_conf_file, conf_file_path
 from schedulerField import Field
 from schedulerTarget import Target
-from schedulerScriptedProposal import ScriptedProposal
+from proposal.proposalScripted import ScriptedProposal
+from proposal.proposalAreaDistribution import AreaDistributionProposal
 
 class Driver(object):
     def __init__(self):
@@ -33,22 +34,41 @@ class Driver(object):
         survey_confdict = read_conf_file(conf_file_path(__name__, "../conf", "survey", "survey.conf"))
 
         if 'scripted_propconf' in survey_confdict["proposals"]:
-            scriptedprop_conflist = survey_confdict["proposals"]["scripted_propconf"]
-            self.log.info("scriptedpropconf:%s" % (scriptedprop_conflist))
+            scripted_propconflist = survey_confdict["proposals"]["scripted_propconf"]
+            self.log.info("scripted_propconf:%s" % (scripted_propconflist))
         else:
-            scriptedprop_conflist = None
-            self.log.info("scriptedPropConf:%s default" % (scriptedprop_conflist))
-        if not isinstance(scriptedprop_conflist, list):
+            scripted_propconflist = None
+            self.log.info("scriptedPropConf:%s default" % (scripted_propconflist))
+        if not isinstance(scripted_propconflist, list):
             # turn it into a list with one entry
-            propconf = scriptedprop_conflist
-            scriptedprop_conflist = []
-            scriptedprop_conflist.append(propconf)
+            propconf = scripted_propconflist
+            scripted_propconflist = []
+            scripted_propconflist.append(propconf)
 
-        if scriptedprop_conflist[0] is not None:
-            for k in range(len(scriptedprop_conflist)):
-                scriptedprop = ScriptedProposal(conf_file_path(__name__, "../conf", "survey",
-                                                "{}".format(scriptedprop_conflist[k])), self.skyModel)
-                self.science_proposal_list.append(scriptedprop)
+        if scripted_propconflist[0] is not None:
+            for k in range(len(scripted_propconflist)):
+                scripted_prop = ScriptedProposal(conf_file_path(__name__, "../conf", "survey",
+                                                 "{}".format(scripted_propconflist[k])), self.skyModel)
+                self.science_proposal_list.append(scripted_prop)
+
+        if 'areadistribution_propconf' in survey_confdict["proposals"]:
+            areadistribution_propconflist = survey_confdict["proposals"]["areadistribution_propconf"]
+            self.log.info("areadistribution_propconf:%s" % (areadistribution_propconflist))
+        else:
+            areadistribution_propconflist = None
+            self.log.info("areadistributionPropConf:%s default" % (areadistribution_propconflist))
+        if not isinstance(areadistribution_propconflist, list):
+            # turn it into a list with one entry
+            propconf = areadistribution_propconflist
+            areadistribution_propconflist = []
+            areadistribution_propconflist.append(propconf)
+
+        if areadistribution_propconflist[0] is not None:
+            for k in range(len(areadistribution_propconflist)):
+                area_prop = AreaDistributionProposal(conf_file_path(__name__, "../conf", "survey",
+                                                     "{}".format(areadistribution_propconflist[k])),
+                                                     self.skyModel)
+                self.science_proposal_list.append(area_prop)
 
         self.time = 0.0
         self.targetid = 0
