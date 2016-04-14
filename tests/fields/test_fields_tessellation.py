@@ -1,7 +1,8 @@
 import unittest
-from AddGalEcl import *
 import numpy
 import sqlite3
+
+from ts_scheduler.fields import *
 
 class TestFieldGen(unittest.TestCase):
 
