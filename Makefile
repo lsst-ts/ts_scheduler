@@ -40,7 +40,7 @@ lint:
 	flake8 ts_scheduler tests
 
 test:
-	python setup.py test
+	./drun python setup.py test
 
 test-all:
 	tox
