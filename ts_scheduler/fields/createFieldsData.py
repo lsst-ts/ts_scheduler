@@ -4,15 +4,15 @@ import numpy
 import sys
 
 def printUsage():
-    print "Usage: python AddGalEcl.py <packFileName> <outputFileName>"
-    print "The <packfile> should contain rows of ra dec values"
+    print "Usage: python createFieldsData.py <tessellationFileName> <fieldsDataFileName>"
+    print "The <tessellationFilename> should contain rows of ra dec values"
 
-def createTessellationGalEcl(packFileName, outputFileName):
+def createFieldsData(tessellationFileName, fieldsDataFileName):
     iy = 04
     im = 12
     id = 1
     mjd = palpy.caldj(iy, im, id)
-    input_array = numpy.loadtxt(packFileName)
+    input_array = numpy.loadtxt(tessellationFileName)
     output_array = []
 
     for row in input_array:
@@ -39,12 +39,12 @@ def createTessellationGalEcl(packFileName, outputFileName):
 
         output_array.append([ra, dec, l, b, el, eb])
 
-    numpy.savetxt(outputFileName, output_array, "%.6f")
+    numpy.savetxt(fieldsDataFileName, output_array, "%.6f")
 
 if __name__ == "__main__" :
     if len(sys.argv) != 3:
         printUsage()
     else :
-        createTessellationGalEcl(sys.argv[1], sys.argv[2])
+        createFieldsData(sys.argv[1], sys.argv[2])
 
     sys.exit(0)
