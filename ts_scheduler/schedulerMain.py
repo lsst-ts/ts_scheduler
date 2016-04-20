@@ -34,7 +34,7 @@ class Main(object):
 
     def run(self):
 
-        self.log.info("Scheduler started")
+        self.log.info("run")
 
         self.sal.salTelemetrySub("scheduler_schedulerConfig")
         self.sal.salTelemetrySub("scheduler_timeHandler")
@@ -102,8 +102,7 @@ class Main(object):
                         self.schedulerDriver.update_external_conditions(self.topicTime)
 
                         target = self.schedulerDriver.select_next_target()
-                        self.log.log(INFOX, "tx target Id=%i, field=%i, filter=%s, exposure_times=%s" %
-                                     (target.targetid, target.fieldid, target.filter, str(target.exptimes)))
+                        self.log.log(INFOX, str(target))
 
                         self.topicTarget.targetId = target.targetid
                         self.topicTarget.fieldId = target.fieldid
