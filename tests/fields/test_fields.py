@@ -2,10 +2,10 @@ import unittest
 import os
 import sqlite3
 
-from ts_scheduler.fields import createFieldsDB
-from ts_scheduler.fields import createFieldsTable
-from ts_scheduler.fields import createFieldsData
-from ts_scheduler.fields import ingestFieldsData
+from ts_scheduler.fields import create_fields_db
+from ts_scheduler.fields import create_fields_table
+from ts_scheduler.fields import create_fields_data
+from ts_scheduler.fields import ingest_fields_data
 
 class FieldsTest(unittest.TestCase):
 
@@ -16,13 +16,13 @@ class FieldsTest(unittest.TestCase):
     def test_fields(self):
 
         dbfilename = "test_Fields.db"
-        fieldsDataFilename = "test_Fields.txt"
+        fieldsdata_filename = "test_Fields.txt"
 
-        createFieldsDB(dbfilename)
+        create_fields_db(dbfilename)
         filestat = os.stat(dbfilename)
         self.assertEqual(filestat.st_size, 0)
 
-        createFieldsTable(dbfilename)
+        create_fields_table(dbfilename)
         conn = sqlite3.connect(dbfilename)
         cursor = conn.cursor()
         sql = "select * from Field"
@@ -30,15 +30,15 @@ class FieldsTest(unittest.TestCase):
         for row in data:
             self.assertEqual(row.__str__(), "")
 
-        createFieldsData("ts_scheduler/fields/tessellationInput.txt", fieldsDataFilename)
-        filestat = os.stat(fieldsDataFilename)
+        create_fields_data("ts_scheduler/fields/tessellationInput.txt", fieldsdata_filename)
+        filestat = os.stat(fieldsdata_filename)
         self.assertEqual(filestat.st_size, 335705)
 
-        ingestFieldsData(dbfilename, fieldsDataFilename)
+        ingest_fields_data(dbfilename, fieldsdata_filename)
         sql = "select * from Field limit 1"
         data = cursor.execute(sql)
         for row in data:
-            self.assertEqual(row.__str__(), "(1, 3.5, 0.0, -90.0, -57.068082, -27.128251, -89.93121, -66.561358)")
+            self.assertEqual(row.__str__(),
+                             "(1, 3.5, 0.0, -90.0, -57.068082, -27.128251, -89.93121, -66.561358)")
 
         conn.close()
-

@@ -1,18 +1,14 @@
 import palpy
-import math
 import numpy
 import sys
+import math
 
-def printUsage():
-    print "Usage: python createFieldsData.py <tessellationFileName> <fieldsDataFileName>"
-    print "The <tessellationFilename> should contain rows of ra dec values"
-
-def createFieldsData(tessellationFileName, fieldsDataFileName):
+def create_fields_data(tessellation_filename, fieldsdata_filename):
     iy = 04
     im = 12
     id = 1
     mjd = palpy.caldj(iy, im, id)
-    input_array = numpy.loadtxt(tessellationFileName)
+    input_array = numpy.loadtxt(tessellation_filename)
     output_array = []
 
     for row in input_array:
@@ -39,12 +35,13 @@ def createFieldsData(tessellationFileName, fieldsDataFileName):
 
         output_array.append([ra, dec, l, b, el, eb])
 
-    numpy.savetxt(fieldsDataFileName, output_array, "%.6f")
+    numpy.savetxt(fieldsdata_filename, output_array, "%.6f")
 
-if __name__ == "__main__" :
+if __name__ == "__main__":
     if len(sys.argv) != 3:
-        printUsage()
-    else :
-        createFieldsData(sys.argv[1], sys.argv[2])
+        print "Usage: python createFieldsData.py <tessellationFileName> <fieldsDataFileName>"
+        print "The <tessellationFilename> should contain rows of ra dec values"
+    else:
+        create_fields_data(sys.argv[1], sys.argv[2])
 
     sys.exit(0)

@@ -3,10 +3,7 @@ import os
 import time
 import sqlite3
 
-def printUsage():
-    print "Usage: python createFieldsDB.py"
-
-def createFieldsDB(dbfilename = "Fields.db") :
+def create_fields_db(dbfilename="Fields.db"):
 
     if os.path.isfile(dbfilename):
         timestr = time.strftime(".%Y-%m-%d_%H:%M:%S")
@@ -15,9 +12,9 @@ def createFieldsDB(dbfilename = "Fields.db") :
     conn = sqlite3.connect(dbfilename)
     conn.close()
 
-if __name__ == "__main__" :
+if __name__ == "__main__":
     if len(sys.argv) != 1:
-        printUsage()
-    else :
-        createFieldsDB()
+        print "Usage: python create_fields_db.py"
+    else:
+        create_fields_db()
     sys.exit(0)

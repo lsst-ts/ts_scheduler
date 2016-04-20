@@ -1,43 +1,34 @@
-import math
 import numpy
 import sys
 import sqlite3
 
 FOV = 3.5
 
-def printUsage():
-    print "Usage: python CreateFieldTable.py <tessellationFieldsFile>"
-    print "The <tessellationFieldsFile> is the output of AddGalEcl script"
-
-def ingestFieldsData(dbfilename, fieldsdatafilename):
+def ingest_fields_data(dbfilename, fieldsdatafilename):
     conn = sqlite3.connect(dbfilename)
     cursor = conn.cursor()
 
     sql = "delete from Field"
-#    print "Deleting data from Field"
     cursor.execute(sql)
 
-#    print "Reading %s file" % tessellationFieldsFile
     input_array = numpy.loadtxt(fieldsdatafilename)
 
-#    print "Inserting data into Field table"
-    fieldID = 1
+    field_id = 1
     for row in input_array:
         data_string = ','.join([str(x) for x in row])
-        sql = "insert into Field values (%s,%s,%s)" % (str(fieldID),str(FOV),data_string)
-#        print sql
+        sql = "insert into Field values (%s,%s,%s)" % (str(field_id), str(FOV), data_string)
         cursor.execute(sql)
-        fieldID = fieldID + 1
+        field_id = field_id + 1
     conn.commit()
     conn.close()
-#    print "Done Inserting data into Field table"
 
     return
 
-if __name__ == "__main__" :
+if __name__ == "__main__":
     if len(sys.argv) != 2:
-        printUsage()
-    else :
-        createTessellationDB(sys.argv[1])
+        print "Usage: python CreateFieldTable.py <tessellationFieldsFile>"
+        print "The <tessellationFieldsFile> is the output of AddGalEcl script"
+    else:
+        ingest_fields_data(sys.argv[1])
 
     sys.exit(0)

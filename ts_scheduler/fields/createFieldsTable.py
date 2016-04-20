@@ -1,22 +1,20 @@
 import sys
 import sqlite3
 
-def printUsage():
-    print "Usage: python createFieldsTable.py"
-
-def createFieldsTable(dbfilename = "Fields.db") :
+def create_fields_table(dbfilename="Fields.db"):
     conn = sqlite3.connect(dbfilename)
     cursor = conn.cursor()
 
-    sql = "CREATE TABLE Field(fieldID INT PRIMARY KEY NOT NULL, fieldFov REAL NOT NULL, fieldRA REAL NOT NULL, fieldDEC REAL NOT NULL, fieldGL REAL NOT NULL, fieldGB REAL NOT NULL, fieldEL REAL NOT NULL, fieldEB REAL NOT NULL);"
-    print "Creating Field Table"
+    sql = ("CREATE TABLE Field(fieldID INT PRIMARY KEY NOT NULL, fieldFov REAL NOT NULL, "
+           "fieldRA REAL NOT NULL, fieldDEC REAL NOT NULL, fieldGL REAL NOT NULL, "
+           "fieldGB REAL NOT NULL, fieldEL REAL NOT NULL, fieldEB REAL NOT NULL);")
     cursor.execute(sql)
     conn.commit()
     conn.close()
 
-if __name__ == "__main__" :
+if __name__ == "__main__":
     if len(sys.argv) != 1:
-        printUsage()
-    else :
-        createFieldsTable()
+        print "Usage: python createFieldsTable.py"
+    else:
+        create_fields_table()
     sys.exit(0)
