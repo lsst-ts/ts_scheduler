@@ -9,7 +9,7 @@ class ScriptedProposal(Proposal):
     def __init__(self, configfilepath, skymodel):
 
         super(ScriptedProposal, self).__init__(configfilepath, skymodel)
-        self.log = logging.getLogger("schedulerScriptedProposal.ScriptedProposal")
+        self.log = logging.getLogger("proposalScripted.ScriptedProposal")
 
         resource_path = os.path.dirname(configfilepath)
         self.script_file = os.path.join(resource_path, self.proposal_confdict["script"]["scriptfile"])
@@ -42,7 +42,7 @@ class ScriptedProposal(Proposal):
             target.exptimes = [int(x) for x in values[6].split(',')]
 
             self.targetsList.append(target)
-            self.log.log(INFOX, target)
+        self.log.info("%d targets" % len(self.targetsList))
 
     def suggest_targets(self, time):
 
