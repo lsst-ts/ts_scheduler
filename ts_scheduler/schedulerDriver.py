@@ -110,22 +110,28 @@ class Driver(object):
 
     def start_survey(self):
 
+        self.log.info("start survey")
+
         for prop in self.science_proposal_list:
             prop.start_survey()
 
-        self.log.info("StartSurvey")
-
     def end_survey(self):
+
+        self.log.info("end survey")
 
         for prop in self.science_proposal_list:
             prop.end_survey()
 
     def start_night(self):
 
+        self.log.info("start night")
+
         for prop in self.science_proposal_list:
             prop.start_night()
 
     def end_night(self):
+
+        self.log.info("end night")
 
         for prop in self.science_proposal_list:
             prop.end_night()
@@ -166,6 +172,7 @@ class Driver(object):
             self.targetid += 1
             self.newTarget = copy.deepcopy(winnertarget)
             self.newTarget.targetid = self.targetid
+            self.newTarget.time = self.time
 
         return self.newTarget
 
