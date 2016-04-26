@@ -32,8 +32,8 @@ class Target(object):
 
     def __str__(self):
         return ("targetid=%d field=%d filter=%s exposures=%s ra=%.3f dec=%.3f time=%.1f skybrightness=%.3f" %
-                (self.targetid, self.fieldid, self.filter, str(self.exptimes), self.ra_rad * RAD2DEG, self.dec_rad * RAD2DEG,
-                 self.time, self.skybrightness))
+                (self.targetid, self.fieldid, self.filter, str(self.exptimes),
+                 self.ra_rad * RAD2DEG, self.dec_rad * RAD2DEG, self.time, self.skybrightness))
 
     @classmethod
     def from_topic(cls, topic):
