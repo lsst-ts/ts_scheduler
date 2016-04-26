@@ -42,6 +42,9 @@ lint:
 test:
 	./drun python setup.py test
 
+test-alt:
+	./drun python -m unittest discover tests
+
 test-all:
 	tox
 
