@@ -264,3 +264,54 @@ class ObservatoryModelTest(unittest.TestCase):
         self.assertEqual(str(self.model.currentState), "t=194.3 ra=60.000 dec=-20.000 ang=-180.000 "
                          "filter=i track=True alt=61.209 az=76.177 pa=-116.785 rot=63.215 "
                          "telaz=76.177 telrot=63.215")
+
+    def test_slewdata(self):
+        self.model.update_state(0)
+
+        target = Target()
+        target.ra_rad = math.radians(60)
+        target.dec_rad = math.radians(-20)
+        target.ang_rad = math.radians(0)
+        target.filter = "r"
+
+        self.model.slew(target)
+        self.assertEqual(str(self.model.currentState), "t=74.3 ra=60.000 dec=-20.000 ang=-180.000 "
+                         "filter=r track=True alt=60.788 az=76.614 pa=-116.575 rot=63.425 "
+                         "telaz=76.614 telrot=63.425")
+        lastslew_delays_dict = self.model.lastslew_delays_dict
+        self.assertAlmostEquals(lastslew_delays_dict["telalt"], 8.421, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["telaz"], 11.983, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["telrot"], 21.657, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["telopticsopenloop"], 7.421, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["telopticsclosedloop"], 20.0, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["domalt"], 18.842, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["domaz"], 53.253, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["domazsettle"], 1.0, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["filter"], 0.0, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["readout"], 2.0, delta=1e-3)
+        lastslew_criticalpath = self.model.lastslew_criticalpath
+        self.assertEqual(str(lastslew_criticalpath), "['telopticsclosedloop', 'domazsettle', 'domaz']")
+
+        target = Target()
+        target.ra_rad = math.radians(60)
+        target.dec_rad = math.radians(-20)
+        target.ang_rad = math.radians(0)
+        target.filter = "i"
+
+        self.model.slew(target)
+        self.assertEqual(str(self.model.currentState), "t=194.3 ra=60.000 dec=-20.000 ang=-180.000 "
+                         "filter=i track=True alt=61.209 az=76.177 pa=-116.785 rot=63.215 "
+                         "telaz=76.177 telrot=63.215")
+        lastslew_delays_dict = self.model.lastslew_delays_dict
+        self.assertAlmostEquals(lastslew_delays_dict["telalt"], 0.0, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["telaz"], 0.0, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["telrot"], 0.0, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["telopticsopenloop"], 0.0, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["telopticsclosedloop"], 0.0, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["domalt"], 0.0, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["domaz"], 0.0, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["domazsettle"], 0.0, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["filter"], 120.0, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["readout"], 2.0, delta=1e-3)
+        lastslew_criticalpath = self.model.lastslew_criticalpath
+        self.assertEqual(str(lastslew_criticalpath), "['filter']")

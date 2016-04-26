@@ -18,6 +18,21 @@ class ObservatoryModel(object):
         self.currentState = ObservatoryState()
         self.targetPosition = ObservatoryPosition()
 
+        self.activities = ["telalt",
+                           "telaz",
+                           "telrot",
+                           "telsettle",
+                           "telopticsopenloop",
+                           "telopticsclosedloop",
+                           "domalt",
+                           "domaz",
+                           "domazsettle",
+                           "filter",
+                           "readout",
+                           "exposures"]
+        self.lastslew_delays_dict = {}
+        self.lastslew_criticalpath = []
+
     def __str__(self):
         return self.currentState.__str__()
 
@@ -107,19 +122,6 @@ class ObservatoryModel(object):
         self.log.log(INFOX, "configure OpticsOL_Slope=%.3f" % (self.OpticsOL_Slope))
         self.log.log(INFOX, "configure OpticsCL_Delay=%s" % (self.OpticsCL_Delay))
         self.log.log(INFOX, "configure OpticsCL_AltLimit=%s" % (self.OpticsCL_AltLimit))
-
-        self.activities = ["telalt",
-                           "telaz",
-                           "telrot",
-                           "telsettle",
-                           "telopticsopenloop",
-                           "telopticsclosedloop",
-                           "domalt",
-                           "domaz",
-                           "domazsettle",
-                           "filter",
-                           "readout",
-                           "exposures"]
 
         self.prerequisites = {}
         for activity in self.activities:
@@ -248,7 +250,7 @@ class ObservatoryModel(object):
 
         targetstate = self.get_closest_state(targetposition)
 
-        return self.get_slew_delay_for_state(targetstate, self.currentState)
+        return self.get_slew_delay_for_state(targetstate, self.currentState, False)
 
     def observe(self, target):
         return
@@ -259,7 +261,7 @@ class ObservatoryModel(object):
     def slew_to_position(self, targetposition):
 
         targetstate = self.get_closest_state(targetposition)
-        slew_delay = self.get_slew_delay_for_state(targetstate, self.currentState)
+        slew_delay = self.get_slew_delay_for_state(targetstate, self.currentState, True)
         targetstate.time = targetstate.time + slew_delay
         self.currentState.set(targetstate)
         self.update_state(targetstate.time)
@@ -386,9 +388,23 @@ class ObservatoryModel(object):
 
         return (delay, vpeak * cmp(distance, 0))
 
-    def get_slew_delay_for_state(self, targetstate, initstate):
+    def get_slew_delay_for_state(self, targetstate, initstate, include_slew_data=False):
 
-        slew_delay = self.get_delay_after("exposures", targetstate, initstate)
+        last_activity = "exposures"
+        slew_delay = self.get_delay_after(last_activity, targetstate, initstate)
+
+        self.lastslew_delays_dict = {}
+        self.lastslew_criticalpath = []
+        if include_slew_data:
+            for act in self.activities:
+                self.lastslew_delays_dict[act] = self.delay_for[act]
+
+            activity = last_activity
+            while activity != "":
+                dt = self.delay_for[activity]
+                if dt > 0:
+                    self.lastslew_criticalpath.append(activity)
+                activity = self.longest_prereq_for[activity]
 
         return slew_delay
 
