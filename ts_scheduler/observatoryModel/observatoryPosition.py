@@ -1,7 +1,5 @@
 import math
 
-from ts_scheduler.schedulerDefinitions import TWOPI
-
 class ObservatoryPosition(object):
 
     def __init__(self,
@@ -55,16 +53,7 @@ class ObservatoryPosition(object):
     def rot(self):
         return math.degrees(self.rot_rad)
 
-    @property
-    def rot_sky_rad(self):
-        return divmod(self.rot_rad - self.pa_rad, TWOPI)[1]
-
-    @property
-    def rot_sky(self):
-        return math.degrees(self.rot_sky_rad)
-
     def __str__(self):
-        return ("t=%.1f ra=%.3f dec=%.3f ang=%.3f filter=%s track=%s alt=%.3f az=%.3f pa=%.3f "
-                "rot=%.3f rot_sky=%.3f" %
+        return ("t=%.1f ra=%.3f dec=%.3f ang=%.3f filter=%s track=%s alt=%.3f az=%.3f pa=%.3f rot=%.3f" %
                 (self.time, self.ra, self.dec, self.ang, self.filter, self.tracking,
-                 self.alt, self.az, self.pa, self.rot, self.rot_sky))
+                 self.alt, self.az, self.pa, self.rot))
