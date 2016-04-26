@@ -1,7 +1,7 @@
 import logging
 import os
 
-from ts_scheduler.schedulerDefinitions import DEG2RAD, INFOX
+from ts_scheduler.schedulerDefinitions import DEG2RAD
 from ts_scheduler.schedulerTarget import Target
 from ts_scheduler.proposal import Proposal
 
