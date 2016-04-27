@@ -1,5 +1,6 @@
 import copy
 import logging
+import sqlite3
 
 from ts_scheduler.sky_model import AstronomicalSkyModel
 from ts_scheduler.schedulerDefinitions import INFOX, DEG2RAD, read_conf_file, conf_file_path
@@ -27,6 +28,8 @@ class Driver(object):
         self.observatoryModel.configure(observatory_confdict)
 
         self.skyModel = AstronomicalSkyModel(self.location)
+
+        self.dbfilename = conf_file_path(__name__, "fields", "Fields.db")
 
         self.build_fields_dict()
 
@@ -75,34 +78,29 @@ class Driver(object):
 
     def build_fields_dict(self):
 
-        lines = file(conf_file_path(__name__, "../conf", "system", "tessellationFields")).readlines()
+        conn = sqlite3.connect(self.dbfilename)
+        cursor = conn.cursor()
+        sql = "select * from Field"
+        data = cursor.execute(sql)
+
         fieldid = 0
         self.fieldsDict = {}
-        for line in lines:
-            line = line.strip()
-            if not line:			# skip blank line
-                continue
-            if line[0] == '#': 		# skip comment line
-                continue
-            fieldid += 1
-            values = line.split()
+        for row in data:
             field = Field()
+            fieldid = row[0]
             field.fieldid = fieldid
-            field.ra_rad = eval(values[0]) * DEG2RAD
-            field.dec_rad = eval(values[1]) * DEG2RAD
-            field.gl_rad = eval(values[2]) * DEG2RAD
-            field.gb_rad = eval(values[3]) * DEG2RAD
-            field.el_rad = eval(values[4]) * DEG2RAD
-            field.eb_rad = eval(values[5]) * DEG2RAD
-            field.fov_rad = 3.5 * DEG2RAD
-
+            field.fov_rad = row[1] * DEG2RAD
+            field.ra_rad = row[2] * DEG2RAD
+            field.dec_rad = row[3] * DEG2RAD
+            field.gl_rad = row[4] * DEG2RAD
+            field.gb_rad = row[5] * DEG2RAD
+            field.el_rad = row[6] * DEG2RAD
+            field.eb_rad = row[7] * DEG2RAD
             self.fieldsDict[fieldid] = field
             self.log.log(INFOX, "buildFieldsTable: %s" % (self.fieldsDict[fieldid]))
-
-            if fieldid > 10:
-                break
-
         self.log.info("buildFieldsTable: %d fields" % (len(self.fieldsDict)))
+
+        conn.close()
 
     def get_fields_dict(self):
 
