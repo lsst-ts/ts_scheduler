@@ -1,6 +1,7 @@
 import copy
 import logging
 import sqlite3
+import heapq
 
 from ts_scheduler.sky_model import AstronomicalSkyModel
 from ts_scheduler.schedulerDefinitions import INFOX, DEG2RAD, read_conf_file, conf_file_path
@@ -10,13 +11,21 @@ from ts_scheduler.observatoryModel import ObservatoryModel
 from ts_scheduler.observatoryModel import ObservatoryLocation
 from ts_scheduler.proposal import ScriptedProposal
 from ts_scheduler.proposal import AreaDistributionProposal
+from ts_scheduler.fields import FieldsDatabase
+
+class DriverParameters(object):
+
+    def __init__(self, confdict):
+
+        self.coadd_values = confdict["ranking"]["coadd_values"]
 
 class Driver(object):
     def __init__(self):
 
         self.log = logging.getLogger("schedulerDriver.Driver")
 
-        self.science_proposal_list = []
+        driver_confdict = read_conf_file(conf_file_path(__name__, "../conf", "scheduler", "driver.conf"))
+        self.params = DriverParameters(driver_confdict)
 
         site_confdict = read_conf_file(conf_file_path(__name__, "../conf", "system", "site.conf"))
         self.location = ObservatoryLocation()
@@ -29,11 +38,13 @@ class Driver(object):
 
         self.skyModel = AstronomicalSkyModel(self.location)
 
-        self.dbfilename = conf_file_path(__name__, "fields", "Fields.db")
+        self.db = FieldsDatabase()
 
         self.build_fields_dict()
 
         survey_confdict = read_conf_file(conf_file_path(__name__, "../conf", "survey", "survey.conf"))
+
+        self.science_proposal_list = []
 
         if 'scripted_propconf' in survey_confdict["proposals"]:
             scripted_propconflist = survey_confdict["proposals"]["scripted_propconf"]
@@ -74,18 +85,14 @@ class Driver(object):
 
         self.time = 0.0
         self.targetid = 0
-        self.newTarget = Target()
 
     def build_fields_dict(self):
 
-        conn = sqlite3.connect(self.dbfilename)
-        cursor = conn.cursor()
         sql = "select * from Field"
-        data = cursor.execute(sql)
+        res = self.db.query(sql)
 
-        fieldid = 0
         self.fieldsDict = {}
-        for row in data:
+        for row in res:
             field = Field()
             fieldid = row[0]
             field.fieldid = fieldid
@@ -99,8 +106,6 @@ class Driver(object):
             self.fieldsDict[fieldid] = field
             self.log.log(INFOX, "buildFieldsTable: %s" % (self.fieldsDict[fieldid]))
         self.log.info("buildFieldsTable: %d fields" % (len(self.fieldsDict)))
-
-        conn.close()
 
     def get_fields_dict(self):
 
@@ -150,29 +155,38 @@ class Driver(object):
 
     def select_next_target(self):
 
-        target_list = []
-        ntargets = 0
+        targets_dict = {}
+        targets_heap = []
+
         for prop in self.science_proposal_list:
             proptarget_list = prop.suggest_targets(self.time)
 
             for target in proptarget_list:
-                target.cost = self.observatoryModel.get_slew_delay(target)
-                target_list.append(target)
-                ntargets += 1
+                fieldfilter = (target.fieldid, target.filter)
+                if fieldfilter in targets_dict:
+                    if self.params.coadd_values:
+                        targets_dict[fieldfilter].value += target.value
+                        targets_dict[fieldfilter].propIds.append(prop.propid)
+                        targets_dict[fieldfilter].propValues.append(target.value)
+                    else:
+                        targets_dict[fieldfilter].append(copy.deepcopy(target))
+                else:
+                    targets_dict[fieldfilter] = [copy.deepcopy(target)]
 
-        if ntargets > 0:
-            winnervalue = 0.0
-            winnertarget = None
-            for target in target_list:
-                if target.value > winnervalue:
-                    winnertarget = target
+        for fieldfilter in targets_dict:
+            cost = self.observatoryModel.get_slew_delay(targets_dict[fieldfilter][0])
+            if cost >= 0:
+                for target in targets_dict[fieldfilter]:
+                    target.cost = cost
+                    target.rank = target.value - target.cost
+                    heapq.heappush(targets_heap, (-target.rank, target))
 
-            self.targetid += 1
-            self.newTarget = copy.deepcopy(winnertarget)
-            self.newTarget.targetid = self.targetid
-            self.newTarget.time = self.time
+        winner_target = heapq.heappop(targets_heap)[1]
+        self.targetid += 1
+        winner_target.targetid = self.targetid
+        winner_target.time = self.time
 
-        return self.newTarget
+        return winner_target
 
     def register_observation(self, topic_observation):
 
