@@ -156,7 +156,7 @@ class Main(object):
 
                 else:
                     tc = time.time()
-                    if (tc - lastcondtime) > 30.0:
+                    if (tc - lastcondtime) > 10.0:
                         waitconditions = False
 
                 newtime = time.time()
