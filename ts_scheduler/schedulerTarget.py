@@ -29,6 +29,7 @@ class Target(object):
         self.propValues = []
         self.value = 0.0
         self.cost = 0.0
+        self.rank = 0.0
 
     def __str__(self):
         return ("targetid=%d field=%d filter=%s exposures=%s ra=%.3f dec=%.3f time=%.1f skybrightness=%.3f" %
