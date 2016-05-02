@@ -3,3 +3,5 @@ numpy
 scipy
 palpy
 astropy
+enum
+mock
