@@ -35,10 +35,15 @@ class ObservatoryState(ObservatoryPosition):
                                                rot_rad)
 
         self.telalt_rad = telalt_rad
+        self.telalt_peakspeed_rad = 0
         self.telaz_rad = telaz_rad
+        self.telaz_peakspeed_rad = 0
         self.telrot_rad = telrot_rad
+        self.telrot_peakspeed_rad = 0
         self.domalt_rad = domalt_rad
+        self.domalt_peakspeed_rad = 0
         self.domaz_rad = domaz_rad
+        self.domaz_peakspeed_rad = 0
         self.mountedfilters = list(mountedfilters)
         self.unmountedfilters = list(unmountedfilters)
 
@@ -80,10 +85,15 @@ class ObservatoryState(ObservatoryPosition):
         self.rot_rad = newstate.rot_rad
 
         self.telalt_rad = newstate.telalt_rad
+        self.telalt_peakspeed_rad = newstate.telalt_peakspeed_rad
         self.telaz_rad = newstate.telaz_rad
+        self.telaz_peakspeed_rad = newstate.telaz_peakspeed_rad
         self.telrot_rad = newstate.telrot_rad
+        self.telrot_peakspeed_rad = newstate.telrot_peakspeed_rad
         self.domalt_rad = newstate.domalt_rad
+        self.domalt_peakspeed_rad = newstate.domalt_peakspeed_rad
         self.domaz_rad = newstate.domaz_rad
+        self.domaz_peakspeed_rad = newstate.domaz_peakspeed_rad
         self.mountedfilters = list(newstate.mountedfilters)
         self.unmountedfilters = list(newstate.unmountedfilters)
 
@@ -101,7 +111,12 @@ class ObservatoryState(ObservatoryPosition):
         self.rot_rad = newposition.rot_rad
 
         self.telalt_rad = newposition.alt_rad
+        self.telalt_peakspeed_rad = 0
         self.telaz_rad = newposition.az_rad
+        self.telaz_peakspeed_rad = 0
         self.telrot_rad = newposition.rot_rad
+        self.telrot_peakspeed_rad = 0
         self.domalt_rad = newposition.alt_rad
+        self.domalt_peakspeed_rad = 0
         self.domaz_rad = newposition.az_rad
+        self.domaz_peakspeed_rad = 0
