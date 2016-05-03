@@ -32,6 +32,7 @@ class ObservatoryModelTest(unittest.TestCase):
         temp_model.configure(observatoryconf)
 
         self.assertEqual(temp_model.location.longitude_rad, math.radians(-70.7494))
+        self.assertEqual(temp_model.location.longitude, -70.7494)
         self.assertEqual(temp_model.currentState.telalt_rad, math.radians(86.5))
 
     def test_get_closest_angle_distance_unlimited(self):
