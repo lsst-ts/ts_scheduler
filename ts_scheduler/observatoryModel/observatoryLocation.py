@@ -13,6 +13,14 @@ class ObservatoryLocation(object):
         self.latitude_rad = latitude_rad
         self.longitude_rad = longitude_rad
 
+    @property
+    def latitude(self):
+        return math.degrees(self.latitude_rad)
+
+    @property
+    def longitude(self):
+        return math.degrees(self.longitude_rad)
+
     def configure(self, location_confdict):
 
         self.latitude_rad = math.radians(location_confdict["obs_site"]["latitude"])

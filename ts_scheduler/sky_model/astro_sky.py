@@ -5,6 +5,7 @@ import numpy
 from lsst.sims.skybrightness import SkyModel
 
 from .date_profile import DateProfile
+from .sun import Sun
 
 class Planets(Enum):
     """Handle planet values for palpy calls.
@@ -35,6 +36,7 @@ class AstronomicalSkyModel(object):
         self.log = logging.getLogger("sky_model.AstronomicalSkyModel")
         self.date_profile = DateProfile(0, location)
         self.sky_brightness = SkyModel(mags=True)
+        self.sun = Sun()
 
     def update(self, timestamp):
         """Update the internal timestamp.
@@ -45,6 +47,37 @@ class AstronomicalSkyModel(object):
             The UNIX timestamp to update the internal timestamp to.
         """
         self.date_profile.update(timestamp)
+
+    def get_night_boundaries(self, sun_altitude, upper_limb_correction=False):
+        """Return the set/rise times of the sun for the given altitude.
+
+        This function calculates the night boundaries (the set and rise times) for a
+        given sun altitude. It uses the currently stored timestamp in the :class:`DateProfile`
+        instance.
+
+        Parameters
+        ----------
+        sun_altitude : float
+            The altitude of the sun to get the set/rise times for.
+        upper_limb_correction : bool
+            Set to True is the upper limb correction should be calculated.
+
+        Returns
+        -------
+        tuple (float, float)
+            A tuple of the set and rise times, respectively, for the sun_altitiude.
+        """
+        longitude, latitude = (self.date_profile.location.longitude, self.date_profile.location.latitude)
+        current_midnight_timestamp = self.date_profile.midnight_timestamp()
+        (_, set_time) = self.sun.altitude_times(current_midnight_timestamp, longitude, latitude,
+                                                sun_altitude, upper_limb_correction)
+        set_timestamp = current_midnight_timestamp + (set_time * self.date_profile.SECONDS_IN_HOUR)
+        next_midnight_timestamp = self.date_profile.next_midnight_timestamp()
+        (rise_time, _) = self.sun.altitude_times(next_midnight_timestamp, longitude, latitude,
+                                                 sun_altitude, upper_limb_correction)
+        rise_timestamp = next_midnight_timestamp + (rise_time * self.date_profile.SECONDS_IN_HOUR)
+
+        return (set_timestamp, rise_timestamp)
 
     def get_sky_brightness(self, ra, dec):
         """Get the LSST 6 filter sky brightness for a set of positions at a single time.
