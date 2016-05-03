@@ -1,6 +1,5 @@
 import copy
 import logging
-import sqlite3
 import heapq
 
 from ts_scheduler.sky_model import AstronomicalSkyModel
