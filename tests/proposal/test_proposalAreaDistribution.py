@@ -21,65 +21,32 @@ class AreaDistributionProposalTest(unittest.TestCase):
     def test_init(self):
         self.assertEqual(self.areaprop.name, "areaProp1")
 
-"""
-    def test_start_survey(self):
+    def test_build_night_target_list(self):
+        """Set timestamp as 2022-01-01 0h UTC"""
+        lsst_start_timestamp = 1640995200.0
 
-        time = 1000.0
-        self.areaprop.start_survey(time)
+        self.areaprop.build_night_target_list(lsst_start_timestamp)
+        fieldid_list = self.areaprop.fields_tonight_list
+        self.assertEqual(len(fieldid_list), 5)
+        self.assertEqual(str(fieldid_list), "[1764, 2006, 2234, 2464, 2692]")
+        self.assertEqual(str(self.areaprop.fields_tonight_dict[fieldid_list[0]]),
+                         "ID=1764 ra=13.726 dec=-19.793 gl=129.297 gb=-82.622 el=4.457 eb=-23.547 fov=3.500")
+        self.assertEqual(str(self.areaprop.fields_tonight_dict[fieldid_list[-1]]),
+                         "ID=2692 ra=14.146 dec=0.931 gl=125.664 gb=-61.913 el=13.451 eb=-4.720 fov=3.500")
 
-    def test_start_night(self):
+        lsst_six_months = lsst_start_timestamp + 182 * 24 * 3600
 
-    def test_suggest_targets(self):
-        tlist = self.scriptedprop.suggest_targets(1000)
-        self.assertEqual(str(tlist[0]), "ID=0 field=2001 filter=r ra=85.721 dec=-14.442 "
-                         "time=1000.0 skybrightness=20.970")
-
-        tlist = self.scriptedprop.suggest_targets(1040)
-        self.assertEqual(str(tlist[0]), "ID=1 field=2002 filter=r ra=229.721 dec=-14.442 "
-                         "time=1040.0 skybrightness=nan")
-
-        tlist = self.scriptedprop.suggest_targets(1080)
-        self.assertEqual(str(tlist[0]), "ID=2 field=2003 filter=r ra=130.279 dec=-14.442 "
-                         "time=1080.0 skybrightness=nan")
-
-        tlist = self.scriptedprop.suggest_targets(1120)
-        self.assertEqual(str(tlist[0]), "ID=3 field=2004 filter=i ra=346.279 dec=-14.441 "
-                         "time=1120.0 skybrightness=19.818")
-
-        tlist = self.scriptedprop.suggest_targets(1160)
-        self.assertEqual(str(tlist[0]), "ID=4 field=2005 filter=i ra=346.279 dec=-14.441 "
-                         "time=1160.0 skybrightness=19.816")
-
-        tlist = self.scriptedprop.suggest_targets(1200)
-        self.assertEqual(str(tlist[0]), "ID=5 field=2006 filter=i ra=13.721 dec=-14.441 "
-                         "time=1200.0 skybrightness=20.220")
-
-        tlist = self.scriptedprop.suggest_targets(1240)
-        self.assertEqual(str(tlist[0]), "ID=6 field=2007 filter=z ra=199.206 dec=-14.112 "
-                         "time=1240.0 skybrightness=nan")
-
-        tlist = self.scriptedprop.suggest_targets(1280)
-        self.assertEqual(str(tlist[0]), "ID=7 field=2008 filter=z ra=160.794 dec=-14.112 "
-                         "time=1280.0 skybrightness=nan")
-
-        tlist = self.scriptedprop.suggest_targets(1320)
-        self.assertEqual(str(tlist[0]), "ID=8 field=2009 filter=z ra=232.794 dec=-14.112 "
-                         "time=1320.0 skybrightness=nan")
-
-        tlist = self.scriptedprop.suggest_targets(1360)
-        self.assertEqual(str(tlist[0]), "ID=9 field=2010 filter=y ra=127.206 dec=-14.112 "
-                         "time=1360.0 skybrightness=nan")
-
-        tlist = self.scriptedprop.suggest_targets(1400)
-        self.assertEqual(str(tlist[0]), "ID=10 field=2010 filter=y ra=127.206 dec=-14.112 "
-                         "time=1400.0 skybrightness=nan")
-
-        tlist = self.scriptedprop.suggest_targets(1440)
-        self.assertEqual(str(tlist[0]), "ID=11 field=2010 filter=y ra=127.206 dec=-14.112 "
-                         "time=1440.0 skybrightness=nan")
-
-    def test_end_night(self):
-
-    def test_end_survey(self):
-
-"""
+        self.areaprop.build_night_target_list(lsst_six_months)
+        fieldid_list = self.areaprop.fields_tonight_list
+        self.assertEqual(len(fieldid_list), 73)
+        self.assertEqual(str(fieldid_list),
+                         "[1764, 1819, 1824, 1825, 1840, 1841, 1860, 1861, 1873, 1939, 1940, 1949, 1950, "
+                         "1973, 1974, 1996, 2006, 2061, 2066, 2067, 2084, 2085, 2105, 2106, 2108, 2183, "
+                         "2184, 2201, 2202, 2211, 2212, 2226, 2234, 2304, 2315, 2316, 2319, 2320, 2329, "
+                         "2330, 2346, 2425, 2426, 2427, 2428, 2439, 2440, 2450, 2464, 2536, 2543, 2544, "
+                         "2555, 2556, 2563, 2564, 2572, 2655, 2656, 2657, 2658, 2669, 2670, 2682, 2692, "
+                         "2762, 2769, 2770, 2783, 2784, 2787, 2788, 2802]")
+        self.assertEqual(str(self.areaprop.fields_tonight_dict[fieldid_list[0]]),
+                         "ID=1764 ra=13.726 dec=-19.793 gl=129.297 gb=-82.622 el=4.457 eb=-23.547 fov=3.500")
+        self.assertEqual(str(self.areaprop.fields_tonight_dict[fieldid_list[-1]]),
+                         "ID=2802 ra=12.654 dec=3.318 gl=122.527 gb=-59.554 el=13.001 eb=-1.942 fov=3.500")

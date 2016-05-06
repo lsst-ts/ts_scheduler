@@ -2,6 +2,7 @@ import os
 import logging
 
 from ts_scheduler.schedulerDefinitions import read_conf_file
+from ts_scheduler.fields import FieldsDatabase
 
 class Proposal(object):
     def __init__(self, configfilepath, skymodel):
@@ -14,7 +15,9 @@ class Proposal(object):
 
         self.proposal_confdict = read_conf_file(configfilepath)
 
-        self.skyModel = skymodel
+        self.sky = skymodel
+
+        self.db = FieldsDatabase()
 
     def start_survey(self):
         return
@@ -28,5 +31,5 @@ class Proposal(object):
     def end_night(self):
         return
 
-    def suggest_targets(self):
-        return
+    def suggest_targets(self, time):
+        return []

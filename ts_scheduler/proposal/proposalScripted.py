@@ -46,7 +46,7 @@ class ScriptedProposal(Proposal):
 
     def suggest_targets(self, time):
 
-        super(ScriptedProposal, self).suggest_targets()
+        super(ScriptedProposal, self).suggest_targets(time)
 
         if self.targetid < len(self.targetsList):
             nexttarget = self.targetsList[self.targetid]
@@ -65,7 +65,7 @@ class ScriptedProposal(Proposal):
             ra_list.append(target.ra_rad)
             dec_list.append(target.dec_rad)
             filter_list.append(target.filter)
-        sky_mags = self.skyModel.get_sky_brightness_timeblock(time, 1, 1, ra_list, dec_list)
+        sky_mags = self.sky.get_sky_brightness_timeblock(time, 1, 1, ra_list, dec_list)
 
         for ix, filter in enumerate(filter_list):
             if filter == "u":
