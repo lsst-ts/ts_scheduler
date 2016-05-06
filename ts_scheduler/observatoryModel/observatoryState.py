@@ -67,6 +67,26 @@ class ObservatoryState(ObservatoryPosition):
     def telrot(self):
         return math.degrees(self.telrot_rad)
 
+    @property
+    def domalt_peakspeed(self):
+        return math.degrees(self.domalt_peakspeed_rad)
+
+    @property
+    def domaz_peakspeed(self):
+        return math.degrees(self.domaz_peakspeed_rad)
+
+    @property
+    def telalt_peakspeed(self):
+        return math.degrees(self.telalt_peakspeed_rad)
+
+    @property
+    def telaz_peakspeed(self):
+        return math.degrees(self.telaz_peakspeed_rad)
+
+    @property
+    def telrot_peakspeed(self):
+        return math.degrees(self.telrot_peakspeed_rad)
+
     def __str__(self):
         return ("%s telaz=%.3f telrot=%.3f" %
                 (super(ObservatoryState, self).__str__(), self.telaz, self.telrot))
