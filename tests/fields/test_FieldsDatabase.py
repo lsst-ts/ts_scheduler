@@ -2,7 +2,7 @@ import unittest
 
 from ts_scheduler.fields import FieldsDatabase
 
-class FieldsDatabase_Test(unittest.TestCase):
+class FieldsDatabaseTest(unittest.TestCase):
 
     def setUp(self):
 

@@ -13,7 +13,7 @@ class FieldsDatabase(object):
 
         conn = sqlite3.connect(self.dbfilepath)
         cursor = conn.cursor()
-        data = cursor.execute(sql)
+        cursor.execute(sql)
         res = cursor.fetchall()
 
         return res
