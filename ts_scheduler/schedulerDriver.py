@@ -5,7 +5,6 @@ import heapq
 from ts_scheduler.sky_model import AstronomicalSkyModel
 from ts_scheduler.schedulerDefinitions import INFOX, DEG2RAD, read_conf_file, conf_file_path
 from ts_scheduler.schedulerField import Field
-from ts_scheduler.schedulerTarget import Target
 from ts_scheduler.observatoryModel import ObservatoryModel
 from ts_scheduler.observatoryModel import ObservatoryLocation
 from ts_scheduler.proposal import ScriptedProposal
