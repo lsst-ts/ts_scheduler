@@ -1,9 +1,10 @@
+import math
 import copy
 import logging
 import heapq
 
 from ts_scheduler.sky_model import AstronomicalSkyModel
-from ts_scheduler.schedulerDefinitions import INFOX, DEG2RAD, read_conf_file, conf_file_path
+from ts_scheduler.schedulerDefinitions import DEG2RAD, read_conf_file, conf_file_path
 from ts_scheduler.schedulerField import Field
 from ts_scheduler.observatoryModel import ObservatoryModel
 from ts_scheduler.observatoryModel import ObservatoryLocation
@@ -17,10 +18,18 @@ class DriverParameters(object):
 
         self.coadd_values = confdict["ranking"]["coadd_values"]
 
+        tmax = confdict["ranking"]["timebonus_tmax"]
+        bmax = confdict["ranking"]["timebonus_bmax"]
+        slope = confdict["ranking"]["timebonus_slope"]
+
+        self.timebonus_dt = (math.sqrt(tmax * tmax + 4 * slope * tmax / bmax) - tmax) / 2
+        self.timebonus_db = slope / (tmax + self.timebonus_dt)
+        self.timebonus_slope = slope
+
 class Driver(object):
     def __init__(self):
 
-        self.log = logging.getLogger("schedulerDriver.Driver")
+        self.log = logging.getLogger("schedulerDriver")
 
         driver_confdict = read_conf_file(conf_file_path(__name__, "../conf", "scheduler", "driver.conf"))
         self.params = DriverParameters(driver_confdict)
@@ -42,44 +51,47 @@ class Driver(object):
 
         survey_confdict = read_conf_file(conf_file_path(__name__, "../conf", "survey", "survey.conf"))
 
+        self.propid_counter = 0
         self.science_proposal_list = []
 
         if 'scripted_propconf' in survey_confdict["proposals"]:
             scripted_propconflist = survey_confdict["proposals"]["scripted_propconf"]
-            self.log.info("scripted_propconf:%s" % (scripted_propconflist))
         else:
-            scripted_propconflist = None
-            self.log.info("scriptedPropConf:%s default" % (scripted_propconflist))
+            scripted_propconflist = []
         if not isinstance(scripted_propconflist, list):
             # turn it into a list with one entry
             propconf = scripted_propconflist
             scripted_propconflist = []
             scripted_propconflist.append(propconf)
+        self.log.info("init: scripted proposals %s" % (scripted_propconflist))
 
-        if scripted_propconflist[0] is not None:
-            for k in range(len(scripted_propconflist)):
-                scripted_prop = ScriptedProposal(conf_file_path(__name__, "../conf", "survey",
-                                                 "{}".format(scripted_propconflist[k])), self.skyModel)
-                self.science_proposal_list.append(scripted_prop)
+        for k in range(len(scripted_propconflist)):
+            self.propid_counter += 1
+            scripted_prop = ScriptedProposal(self.propid_counter,
+                                             conf_file_path(__name__, "../conf", "survey",
+                                                            "{}".format(scripted_propconflist[k])),
+                                             self.skyModel)
+            self.science_proposal_list.append(scripted_prop)
 
         if 'areadistribution_propconf' in survey_confdict["proposals"]:
             areadistribution_propconflist = survey_confdict["proposals"]["areadistribution_propconf"]
-            self.log.info("areadistribution_propconf:%s" % (areadistribution_propconflist))
         else:
-            areadistribution_propconflist = None
+            areadistribution_propconflist = []
             self.log.info("areadistributionPropConf:%s default" % (areadistribution_propconflist))
         if not isinstance(areadistribution_propconflist, list):
             # turn it into a list with one entry
             propconf = areadistribution_propconflist
             areadistribution_propconflist = []
             areadistribution_propconflist.append(propconf)
+        self.log.info("init: areadistribution proposals %s" % (areadistribution_propconflist))
 
-        if areadistribution_propconflist[0] is not None:
-            for k in range(len(areadistribution_propconflist)):
-                area_prop = AreaDistributionProposal(conf_file_path(__name__, "../conf", "survey",
-                                                     "{}".format(areadistribution_propconflist[k])),
-                                                     self.skyModel)
-                self.science_proposal_list.append(area_prop)
+        for k in range(len(areadistribution_propconflist)):
+            self.propid_counter += 1
+            area_prop = AreaDistributionProposal(self.propid_counter,
+                                                 conf_file_path(__name__, "../conf", "survey",
+                                                                "{}".format(areadistribution_propconflist[k])),
+                                                 self.skyModel)
+            self.science_proposal_list.append(area_prop)
 
         self.time = 0.0
         self.targetid = 0
@@ -102,7 +114,7 @@ class Driver(object):
             field.el_rad = row[6] * DEG2RAD
             field.eb_rad = row[7] * DEG2RAD
             self.fieldsDict[fieldid] = field
-            self.log.log(INFOX, "buildFieldsTable: %s" % (self.fieldsDict[fieldid]))
+            self.log.debug("buildFieldsTable: %s" % (self.fieldsDict[fieldid]))
         self.log.info("buildFieldsTable: %d fields" % (len(self.fieldsDict)))
 
     def get_fields_dict(self):
@@ -111,28 +123,28 @@ class Driver(object):
 
     def start_survey(self):
 
-        self.log.info("start survey")
+        self.log.info("start_survey")
 
         for prop in self.science_proposal_list:
             prop.start_survey()
 
     def end_survey(self):
 
-        self.log.info("end survey")
+        self.log.info("end_survey")
 
         for prop in self.science_proposal_list:
             prop.end_survey()
 
     def start_night(self):
 
-        self.log.info("start night")
+        self.log.info("start_night")
 
         for prop in self.science_proposal_list:
             prop.start_night()
 
     def end_night(self):
 
-        self.log.info("end night")
+        self.log.info("end_night")
 
         for prop in self.science_proposal_list:
             prop.end_night()
@@ -143,12 +155,12 @@ class Driver(object):
     def swap_filter_out(self):
         return
 
-    def update_internal_conditions(self, topic_time):
+    def update_internal_conditions(self, timestamp):
 
-        self.time = topic_time.timestamp
+        self.time = timestamp
         self.observatoryModel.update_state(self.time)
 
-    def update_external_conditions(self, topic_time):
+    def update_external_conditions(self, timestamp):
         return
 
     def select_next_target(self):
@@ -160,23 +172,26 @@ class Driver(object):
             proptarget_list = prop.suggest_targets(self.time)
 
             for target in proptarget_list:
+                target.propid_list = [prop.propid]
+                target.value_list = [target.value]
                 fieldfilter = (target.fieldid, target.filter)
                 if fieldfilter in targets_dict:
                     if self.params.coadd_values:
-                        targets_dict[fieldfilter].value += target.value
-                        targets_dict[fieldfilter].propIds.append(prop.propid)
-                        targets_dict[fieldfilter].propValues.append(target.value)
+                        targets_dict[fieldfilter][0].value += target.value
+                        targets_dict[fieldfilter][0].propid_list.append(prop.propid)
+                        targets_dict[fieldfilter][0].propvalue_list.append(target.value)
                     else:
                         targets_dict[fieldfilter].append(copy.deepcopy(target))
                 else:
                     targets_dict[fieldfilter] = [copy.deepcopy(target)]
 
         for fieldfilter in targets_dict:
-            cost = self.observatoryModel.get_slew_delay(targets_dict[fieldfilter][0])
-            if cost >= 0:
+            slewtime = self.observatoryModel.get_slew_delay(targets_dict[fieldfilter][0])
+            if slewtime >= 0:
+                slewtimebonus = self.compute_slewtime_bonus(slewtime)
                 for target in targets_dict[fieldfilter]:
-                    target.cost = cost
-                    target.rank = target.value - target.cost
+                    target.cost = slewtime
+                    target.rank = target.value + slewtimebonus
                     heapq.heappush(targets_heap, (-target.rank, target))
 
         winner_target = heapq.heappop(targets_heap)[1]
@@ -186,6 +201,13 @@ class Driver(object):
 
         return winner_target
 
-    def register_observation(self, topic_observation):
+    def register_observation(self, observation):
 
-        self.observatoryModel.observe(topic_observation)
+        for prop in self.science_proposal_list:
+            prop.register_observation(observation)
+
+    def compute_slewtime_bonus(self, slewtime):
+
+        bonus = self.params.timebonus_slope / (slewtime + self.params.timebonus_dt) - self.params.timebonus_db
+
+        return bonus
