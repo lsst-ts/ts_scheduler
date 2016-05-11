@@ -79,3 +79,12 @@ class AstronomicalSkyTest(unittest.TestCase):
         # 2031/09/20
         self.astro_sky.update(1947628800)
         self.check_night_boundary_tuple(1947713387.331446, 1947750106.804758)
+
+    def test_moon_separation_function(self):
+        initial_timestamp = 1641081600 + (.04166666666 * 3600 * 24)
+        self.create_ra_dec()
+        self.astro_sky.update(initial_timestamp)
+        self.astro_sky.get_sky_brightness(self.ra_rads, self.dec_rads)
+        field_moon_sep = self.astro_sky.get_moon_separation(self.ra_rads, self.dec_rads)
+        self.assertEqual(field_moon_sep.size, 19)
+        self.assertAlmostEqual(field_moon_sep[0], numpy.radians(64.69897587))
