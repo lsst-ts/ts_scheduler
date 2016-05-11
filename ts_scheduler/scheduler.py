@@ -14,7 +14,7 @@ if __name__ == '__main__':
     configure_logging(args, logfilename)
 
     logger = logging.getLogger("scheduler")
-    logger.info("Configure logFile=%s" % logfilename)
+    logger.info("logfile=%s" % logfilename)
 
     scheduler = Main(args)
     scheduler.run()

@@ -6,9 +6,9 @@ from ts_scheduler.schedulerTarget import Target
 from ts_scheduler.proposal import Proposal
 
 class ScriptedProposal(Proposal):
-    def __init__(self, configfilepath, skymodel):
+    def __init__(self, propid, configfilepath, skymodel):
 
-        super(ScriptedProposal, self).__init__(configfilepath, skymodel)
+        super(ScriptedProposal, self).__init__(propid, configfilepath, skymodel)
         self.log = logging.getLogger("proposalScripted.ScriptedProposal")
 
         resource_path = os.path.dirname(configfilepath)
@@ -39,7 +39,7 @@ class ScriptedProposal(Proposal):
             target.dec_rad = eval(values[3]) * DEG2RAD
             target.ang_rad = eval(values[4]) * DEG2RAD
             target.numexp = eval(values[5])
-            target.exptimes = [int(x) for x in values[6].split(',')]
+            target.exp_times = [int(x) for x in values[6].split(',')]
 
             self.targetsList.append(target)
         self.log.info("%d targets" % len(self.targetsList))
@@ -53,8 +53,8 @@ class ScriptedProposal(Proposal):
         else:
             nexttarget = self.targetsList[-1]
         nexttarget.targetid = self.targetid
-        nexttarget.value = 1.0
         nexttarget.time = time
+        nexttarget.value = 1.0
 
         target_list = list([nexttarget])
 
@@ -69,20 +69,23 @@ class ScriptedProposal(Proposal):
 
         for ix, filter in enumerate(filter_list):
             if filter == "u":
-                target_list[ix].skybrightness = sky_mags[0][ix].u
+                target_list[ix].sky_brightness = sky_mags[0][ix].u
             elif filter == "g":
-                target_list[ix].skybrightness = sky_mags[0][ix].g
+                target_list[ix].sky_brightness = sky_mags[0][ix].g
             elif filter == "r":
-                target_list[ix].skybrightness = sky_mags[0][ix].r
+                target_list[ix].sky_brightness = sky_mags[0][ix].r
             elif filter == "i":
-                target_list[ix].skybrightness = sky_mags[0][ix].i
+                target_list[ix].sky_brightness = sky_mags[0][ix].i
             elif filter == "z":
-                target_list[ix].skybrightness = sky_mags[0][ix].z
+                target_list[ix].sky_brightness = sky_mags[0][ix].z
             elif filter == "y":
-                target_list[ix].skybrightness = sky_mags[0][ix].y
+                target_list[ix].sky_brightness = sky_mags[0][ix].y
             else:
-                target_list[ix].skybrightness = 0.0
+                target_list[ix].sky_brightness = 0.0
 
         self.targetid += 1
 
         return target_list
+
+    def register_observation(self, observation):
+        pass

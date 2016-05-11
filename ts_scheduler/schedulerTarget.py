@@ -11,7 +11,7 @@ class Target(object):
                  dec_rad=0.0,
                  ang_rad=0.0,
                  numexp=0,
-                 exptimes=[]):
+                 exp_times=[]):
 
         self.targetid = targetid
         self.fieldid = fieldid
@@ -20,21 +20,27 @@ class Target(object):
         self.dec_rad = dec_rad
         self.ang_rad = ang_rad
         self.numexp = numexp
-        self.exptimes = list(exptimes)
+        self.exp_times = list(exp_times)
 
         self.time = 0.0
-        self.skybrightness = 0.0
+        self.sky_brightness = 0.0
 
-        self.propIds = []
-        self.propValues = []
+        self.goal = 0
+        self.visits = 0
+        self.progress = 0.0
+
+        self.propid_list = []
+        self.propvalue_list = []
         self.value = 0.0
         self.cost = 0.0
         self.rank = 0.0
 
     def __str__(self):
-        return ("targetid=%d field=%d filter=%s exposures=%s ra=%.3f dec=%.3f time=%.1f skybrightness=%.3f" %
-                (self.targetid, self.fieldid, self.filter, str(self.exptimes),
-                 self.ra_rad * RAD2DEG, self.dec_rad * RAD2DEG, self.time, self.skybrightness))
+        return ("targetid=%d field=%d filter=%s exp_times=%s ra=%.3f dec=%.3f time=%.1f "
+                "sky_brightness=%.3f value=%.3f propid=%s" %
+                (self.targetid, self.fieldid, self.filter, str(self.exp_times),
+                 self.ra_rad * RAD2DEG, self.dec_rad * RAD2DEG, self.time, self.sky_brightness,
+                 self.value, self.propid_list))
 
     @classmethod
     def from_topic(cls, topic):

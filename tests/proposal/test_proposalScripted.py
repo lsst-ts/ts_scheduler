@@ -15,7 +15,7 @@ class ScriptedProposalTest(unittest.TestCase):
         cls.skyModel = AstronomicalSkyModel(location)
 
     def setUp(self):
-        self.scriptedprop = ScriptedProposal(conf_file_path(__name__, "../../conf", "survey",
+        self.scriptedprop = ScriptedProposal(1, conf_file_path(__name__, "../../conf", "survey",
                                              "scriptedProp1.conf"), self.skyModel)
 
     def test_init(self):
@@ -23,49 +23,49 @@ class ScriptedProposalTest(unittest.TestCase):
 
     def test_suggest_targets(self):
         tlist = self.scriptedprop.suggest_targets(1000)
-        self.assertEqual(str(tlist[0]), "targetid=0 field=2001 filter=r exposures=[15, 15] "
-                         "ra=85.721 dec=-14.442 time=1000.0 skybrightness=20.970")
+        self.assertEqual(str(tlist[0]), "targetid=0 field=2001 filter=r exp_times=[15, 15] "
+                         "ra=85.721 dec=-14.442 time=1000.0 sky_brightness=20.970 value=1.000 propid=[]")
 
         tlist = self.scriptedprop.suggest_targets(1040)
-        self.assertEqual(str(tlist[0]), "targetid=1 field=2002 filter=r exposures=[15, 15] "
-                         "ra=229.721 dec=-14.442 time=1040.0 skybrightness=nan")
+        self.assertEqual(str(tlist[0]), "targetid=1 field=2002 filter=r exp_times=[15, 15] "
+                         "ra=229.721 dec=-14.442 time=1040.0 sky_brightness=nan value=1.000 propid=[]")
 
         tlist = self.scriptedprop.suggest_targets(1080)
-        self.assertEqual(str(tlist[0]), "targetid=2 field=2003 filter=r exposures=[15, 15] "
-                         "ra=130.279 dec=-14.442 time=1080.0 skybrightness=nan")
+        self.assertEqual(str(tlist[0]), "targetid=2 field=2003 filter=r exp_times=[15, 15] "
+                         "ra=130.279 dec=-14.442 time=1080.0 sky_brightness=nan value=1.000 propid=[]")
 
         tlist = self.scriptedprop.suggest_targets(1120)
-        self.assertEqual(str(tlist[0]), "targetid=3 field=2004 filter=i exposures=[15, 15] "
-                         "ra=346.279 dec=-14.441 time=1120.0 skybrightness=19.818")
+        self.assertEqual(str(tlist[0]), "targetid=3 field=2004 filter=i exp_times=[15, 15] "
+                         "ra=346.279 dec=-14.441 time=1120.0 sky_brightness=19.818 value=1.000 propid=[]")
 
         tlist = self.scriptedprop.suggest_targets(1160)
-        self.assertEqual(str(tlist[0]), "targetid=4 field=2005 filter=i exposures=[15, 15] "
-                         "ra=346.279 dec=-14.441 time=1160.0 skybrightness=19.816")
+        self.assertEqual(str(tlist[0]), "targetid=4 field=2005 filter=i exp_times=[15, 15] "
+                         "ra=346.279 dec=-14.441 time=1160.0 sky_brightness=19.816 value=1.000 propid=[]")
 
         tlist = self.scriptedprop.suggest_targets(1200)
-        self.assertEqual(str(tlist[0]), "targetid=5 field=2006 filter=i exposures=[15, 15] "
-                         "ra=13.721 dec=-14.441 time=1200.0 skybrightness=20.220")
+        self.assertEqual(str(tlist[0]), "targetid=5 field=2006 filter=i exp_times=[15, 15] "
+                         "ra=13.721 dec=-14.441 time=1200.0 sky_brightness=20.220 value=1.000 propid=[]")
 
         tlist = self.scriptedprop.suggest_targets(1240)
-        self.assertEqual(str(tlist[0]), "targetid=6 field=2007 filter=z exposures=[15, 15] "
-                         "ra=199.206 dec=-14.112 time=1240.0 skybrightness=nan")
+        self.assertEqual(str(tlist[0]), "targetid=6 field=2007 filter=z exp_times=[15, 15] "
+                         "ra=199.206 dec=-14.112 time=1240.0 sky_brightness=nan value=1.000 propid=[]")
 
         tlist = self.scriptedprop.suggest_targets(1280)
-        self.assertEqual(str(tlist[0]), "targetid=7 field=2008 filter=z exposures=[15, 15] "
-                         "ra=160.794 dec=-14.112 time=1280.0 skybrightness=nan")
+        self.assertEqual(str(tlist[0]), "targetid=7 field=2008 filter=z exp_times=[15, 15] "
+                         "ra=160.794 dec=-14.112 time=1280.0 sky_brightness=nan value=1.000 propid=[]")
 
         tlist = self.scriptedprop.suggest_targets(1320)
-        self.assertEqual(str(tlist[0]), "targetid=8 field=2009 filter=z exposures=[15, 15] "
-                         "ra=232.794 dec=-14.112 time=1320.0 skybrightness=nan")
+        self.assertEqual(str(tlist[0]), "targetid=8 field=2009 filter=z exp_times=[15, 15] "
+                         "ra=232.794 dec=-14.112 time=1320.0 sky_brightness=nan value=1.000 propid=[]")
 
         tlist = self.scriptedprop.suggest_targets(1360)
-        self.assertEqual(str(tlist[0]), "targetid=9 field=2010 filter=y exposures=[15, 15] "
-                         "ra=127.206 dec=-14.112 time=1360.0 skybrightness=nan")
+        self.assertEqual(str(tlist[0]), "targetid=9 field=2010 filter=y exp_times=[15, 15] "
+                         "ra=127.206 dec=-14.112 time=1360.0 sky_brightness=nan value=1.000 propid=[]")
 
         tlist = self.scriptedprop.suggest_targets(1400)
-        self.assertEqual(str(tlist[0]), "targetid=10 field=2010 filter=y exposures=[15, 15] "
-                         "ra=127.206 dec=-14.112 time=1400.0 skybrightness=nan")
+        self.assertEqual(str(tlist[0]), "targetid=10 field=2010 filter=y exp_times=[15, 15] "
+                         "ra=127.206 dec=-14.112 time=1400.0 sky_brightness=nan value=1.000 propid=[]")
 
         tlist = self.scriptedprop.suggest_targets(1440)
-        self.assertEqual(str(tlist[0]), "targetid=11 field=2010 filter=y exposures=[15, 15] "
-                         "ra=127.206 dec=-14.112 time=1440.0 skybrightness=nan")
+        self.assertEqual(str(tlist[0]), "targetid=11 field=2010 filter=y exp_times=[15, 15] "
+                         "ra=127.206 dec=-14.112 time=1440.0 sky_brightness=nan value=1.000 propid=[]")
