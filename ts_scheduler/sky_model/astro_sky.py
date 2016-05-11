@@ -1,6 +1,7 @@
 from enum import Enum
 import logging
 import numpy
+import palpy
 
 from lsst.sims.skybrightness import SkyModel
 
@@ -47,6 +48,28 @@ class AstronomicalSkyModel(object):
             The UNIX timestamp to update the internal timestamp to.
         """
         self.date_profile.update(timestamp)
+
+    def get_moon_separation(self, field_ra, field_dec):
+        """Return the moon separation for a set of field coordinates.
+
+        This function returns the separation (in radians) between the moon and a given field. It uses
+        a list of (RA, Dec) coordinates. This function assumes that meth:`.get_sky_brightness` has been run.
+
+        Parameters
+        ----------
+        field_ra : numpy.array(float)
+            The list of field Righ Ascensions in radians.
+        field_dec : numpy.array(float)
+            The list of field Declinations in radians.
+
+        Returns
+        -------
+        numpy.array(float)
+            The list of field-moon separations in radians.
+        """
+        attrs = self.sky_brightness.getComputedVals()
+        return palpy.dsepVector(field_ra, field_dec, numpy.full_like(field_ra, attrs["moonRA"]),
+                                numpy.full_like(field_dec, attrs["moonDec"]))
 
     def get_night_boundaries(self, sun_altitude, upper_limb_correction=False):
         """Return the set/rise times of the sun for the given altitude.
