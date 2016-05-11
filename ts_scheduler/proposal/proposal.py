@@ -5,7 +5,9 @@ from ts_scheduler.schedulerDefinitions import read_conf_file
 from ts_scheduler.fields import FieldsDatabase
 
 class Proposal(object):
-    def __init__(self, configfilepath, skymodel):
+    def __init__(self, propid, configfilepath, skymodel):
+
+        self.propid = propid
 
         (path, name_ext) = os.path.split(configfilepath)
         (name, ext) = os.path.splitext(name_ext)

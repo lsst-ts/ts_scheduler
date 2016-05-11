@@ -15,29 +15,44 @@ class AreaDistributionProposalTest(unittest.TestCase):
         cls.skyModel = AstronomicalSkyModel(location)
 
     def setUp(self):
-        self.areaprop = AreaDistributionProposal(conf_file_path(__name__, "../../conf", "survey",
+        self.areaprop = AreaDistributionProposal(1, conf_file_path(__name__, "../../conf", "survey",
                                                  "areaProp1.conf"), self.skyModel)
 
     def test_init(self):
         self.assertEqual(self.areaprop.name, "areaProp1")
+        self.assertEqual(str(self.areaprop.params.filter_list),
+                         "['u', 'g', 'r', 'i', 'z', 'y']")
+        self.assertEqual(str(self.areaprop.params.filter_visits_dict),
+                         "{'g': 10.0, 'i': 25.0, 'r': 25.0, 'u': 7.0, 'y': 20.0, 'z': 20.0}")
+        self.assertEqual(str(self.areaprop.params.filter_min_brig_dict),
+                         "{'g': 21.0, 'i': 20.25, 'r': 20.5, 'u': 21.0, 'y': 17.5, 'z': 17.5}")
+        self.assertEqual(str(self.areaprop.params.filter_max_brig_dict),
+                         "{'g': 30.0, 'i': 30.0, 'r': 30.0, 'u': 30.0, 'y': 21.0, 'z': 21.0}")
+        self.assertEqual(str(self.areaprop.params.filter_max_seeing_dict),
+                         "{'g': 1.5, 'i': 0.8, 'r': 0.9, 'u': 1.5, 'y': 1.0, 'z': 1.3}")
+        self.assertEqual(str(self.areaprop.params.filter_exp_times_dict),
+                         "{'g': [15.0, 15.0], 'i': [15.0, 15.0], 'r': [15.0, 15.0], "
+                         "'u': [25.0, 25.0], 'y': [15.0, 15.0], 'z': [15.0, 15.0]}")
 
-    def test_build_night_target_list(self):
+    def test_build_fields_tonight_list(self):
         """Set timestamp as 2022-01-01 0h UTC"""
         lsst_start_timestamp = 1640995200.0
 
-        self.areaprop.build_night_target_list(lsst_start_timestamp)
-        fieldid_list = self.areaprop.fields_tonight_list
+        self.areaprop.build_fields_tonight_list(lsst_start_timestamp)
+        field_list = self.areaprop.fields_tonight_list
+        fieldid_list = []
+        for field in field_list:
+            fieldid_list.append(field.fieldid)
         self.assertEqual(len(fieldid_list), 5)
         self.assertEqual(str(fieldid_list), "[1764, 2006, 2234, 2464, 2692]")
-        self.assertEqual(str(self.areaprop.fields_tonight_dict[fieldid_list[0]]),
-                         "ID=1764 ra=13.726 dec=-19.793 gl=129.297 gb=-82.622 el=4.457 eb=-23.547 fov=3.500")
-        self.assertEqual(str(self.areaprop.fields_tonight_dict[fieldid_list[-1]]),
-                         "ID=2692 ra=14.146 dec=0.931 gl=125.664 gb=-61.913 el=13.451 eb=-4.720 fov=3.500")
 
         lsst_six_months = lsst_start_timestamp + 182 * 24 * 3600
 
-        self.areaprop.build_night_target_list(lsst_six_months)
-        fieldid_list = self.areaprop.fields_tonight_list
+        self.areaprop.build_fields_tonight_list(lsst_six_months)
+        field_list = self.areaprop.fields_tonight_list
+        fieldid_list = []
+        for field in field_list:
+            fieldid_list.append(field.fieldid)
         self.assertEqual(len(fieldid_list), 73)
         self.assertEqual(str(fieldid_list),
                          "[1764, 1819, 1824, 1825, 1840, 1841, 1860, 1861, 1873, 1939, 1940, 1949, 1950, "
@@ -46,7 +61,74 @@ class AreaDistributionProposalTest(unittest.TestCase):
                          "2330, 2346, 2425, 2426, 2427, 2428, 2439, 2440, 2450, 2464, 2536, 2543, 2544, "
                          "2555, 2556, 2563, 2564, 2572, 2655, 2656, 2657, 2658, 2669, 2670, 2682, 2692, "
                          "2762, 2769, 2770, 2783, 2784, 2787, 2788, 2802]")
-        self.assertEqual(str(self.areaprop.fields_tonight_dict[fieldid_list[0]]),
-                         "ID=1764 ra=13.726 dec=-19.793 gl=129.297 gb=-82.622 el=4.457 eb=-23.547 fov=3.500")
-        self.assertEqual(str(self.areaprop.fields_tonight_dict[fieldid_list[-1]]),
-                         "ID=2802 ra=12.654 dec=3.318 gl=122.527 gb=-59.554 el=13.001 eb=-1.942 fov=3.500")
+
+    def test_areadistributionproposal_start_night(self):
+
+        lsst_start_timestamp = 1640995200.0
+        self.areaprop.start_night(lsst_start_timestamp, ["g", "r", "i", "z", "y"])
+
+        field_list = self.areaprop.fields_tonight_list
+        fieldid_list = []
+        for field in field_list:
+            fieldid_list.append(field.fieldid)
+        self.assertEqual(str(fieldid_list), "[1764, 2006, 2234, 2464, 2692]")
+        self.assertEqual(str(self.areaprop.targets_dict[fieldid_list[0]]["g"]),
+                         "targetid=0 field=1764 filter=g exp_times=[15.0, 15.0] "
+                         "ra=13.726 dec=-19.793 time=0.0 sky_brightness=0.000 value=0.000 propid=[]")
+        self.assertEqual(str(self.areaprop.targets_dict[fieldid_list[-1]]["g"]),
+                         "targetid=0 field=2692 filter=g exp_times=[15.0, 15.0] "
+                         "ra=14.146 dec=0.931 time=0.0 sky_brightness=0.000 value=0.000 propid=[]")
+
+        self.assertEqual(self.areaprop.total_goal, 500)
+        self.assertEqual(self.areaprop.total_visits, 0)
+        self.assertEqual(self.areaprop.total_progress, 0.0)
+
+    def test_areadistributionproposal_suggest_targets(self):
+
+        lsst_start_timestamp = 1640995200.0
+        self.areaprop.start_night(lsst_start_timestamp, ["g", "r", "i", "z", "y"])
+
+        timestamp = lsst_start_timestamp
+        target_list = self.areaprop.suggest_targets(timestamp)
+        self.assertEqual(len(target_list), 25)
+        self.assertEqual(str(target_list[0]),
+                         "targetid=0 field=1764 filter=g exp_times=[15.0, 15.0] "
+                         "ra=13.726 dec=-19.793 time=0.0 sky_brightness=22.076 value=1.000 propid=[]")
+        self.assertEqual(str(target_list[-1]),
+                         "targetid=0 field=2692 filter=y exp_times=[15.0, 15.0] "
+                         "ra=14.146 dec=0.931 time=0.0 sky_brightness=18.019 value=1.000 propid=[]")
+
+        timestamp += 60
+        target_list = self.areaprop.suggest_targets(timestamp)
+        self.assertEqual(len(target_list), 25)
+        self.assertEqual(str(target_list[0]),
+                         "targetid=0 field=1764 filter=g exp_times=[15.0, 15.0] "
+                         "ra=13.726 dec=-19.793 time=0.0 sky_brightness=22.076 value=1.000 propid=[]")
+        self.assertEqual(str(target_list[-1]),
+                         "targetid=0 field=2692 filter=y exp_times=[15.0, 15.0] "
+                         "ra=14.146 dec=0.931 time=0.0 sky_brightness=18.017 value=1.000 propid=[]")
+
+        observation = target_list[0]
+        self.assertEqual(observation.goal, 10)
+        self.assertEqual(observation.visits, 0)
+        self.assertEqual(observation.progress, 0.0)
+        self.assertEqual(self.areaprop.total_goal, 500)
+        self.assertEqual(self.areaprop.total_visits, 0)
+        self.assertEqual(self.areaprop.total_progress, 0.0)
+        self.areaprop.register_observation(observation)
+        self.assertEqual(observation.goal, 10)
+        self.assertEqual(observation.visits, 1)
+        self.assertEqual(observation.progress, 0.1)
+        self.assertEqual(self.areaprop.total_goal, 500)
+        self.assertEqual(self.areaprop.total_visits, 1)
+        self.assertEqual(self.areaprop.total_progress, 0.002)
+
+        timestamp += 60
+        target_list = self.areaprop.suggest_targets(timestamp)
+        self.assertEqual(len(target_list), 25)
+        self.assertEqual(str(target_list[0]),
+                         "targetid=0 field=1764 filter=r exp_times=[15.0, 15.0] "
+                         "ra=13.726 dec=-19.793 time=0.0 sky_brightness=21.122 value=1.002 propid=[]")
+        self.assertEqual(str(target_list[-1]),
+                         "targetid=0 field=1764 filter=g exp_times=[15.0, 15.0] "
+                         "ra=13.726 dec=-19.793 time=0.0 sky_brightness=22.075 value=0.902 propid=[]")
