@@ -180,7 +180,7 @@ class Main(object):
     def create_observation(self, topic_observation):
 
         observation = Target()
-        observation.time = topic_observation.observationTime
+        observation.time = topic_observation.observation_start_time
         observation.targetid = topic_observation.targetId
         observation.fieldid = topic_observation.fieldId
         observation.filter = topic_observation.filter
