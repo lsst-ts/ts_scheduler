@@ -6,6 +6,7 @@ import heapq
 from ts_scheduler.sky_model import AstronomicalSkyModel
 from ts_scheduler.schedulerDefinitions import DEG2RAD, read_conf_file, conf_file_path
 from ts_scheduler.schedulerField import Field
+from ts_scheduler.schedulerTarget import Target
 from ts_scheduler.observatoryModel import ObservatoryModel
 from ts_scheduler.observatoryModel import ObservatoryLocation
 from ts_scheduler.proposal import ScriptedProposal
@@ -87,9 +88,12 @@ class Driver(object):
 
         for k in range(len(areadistribution_propconflist)):
             self.propid_counter += 1
+            configfilepath = conf_file_path(__name__,
+                                            "../conf",
+                                            "survey",
+                                            "{}".format(areadistribution_propconflist[k]))
             area_prop = AreaDistributionProposal(self.propid_counter,
-                                                 conf_file_path(__name__, "../conf", "survey",
-                                                                "{}".format(areadistribution_propconflist[k])),
+                                                 configfilepath,
                                                  self.skyModel)
             self.science_proposal_list.append(area_prop)
 
@@ -155,10 +159,15 @@ class Driver(object):
     def swap_filter_out(self):
         return
 
-    def update_internal_conditions(self, timestamp):
+    def update_time(self, timestamp):
 
         self.time = timestamp
         self.observatoryModel.update_state(self.time)
+
+    def update_internal_conditions(self, observatory_state):
+
+        self.time = observatory_state.time
+        self.observatoryModel.update_state(observatory_state)
 
     def update_external_conditions(self, timestamp):
         return
@@ -194,17 +203,23 @@ class Driver(object):
                     target.rank = target.value + slewtimebonus
                     heapq.heappush(targets_heap, (-target.rank, target))
 
-        winner_target = heapq.heappop(targets_heap)[1]
-        self.targetid += 1
-        winner_target.targetid = self.targetid
-        winner_target.time = self.time
+        try:
+            winner_target = heapq.heappop(targets_heap)[1]
+            self.targetid += 1
+            winner_target.targetid = self.targetid
+            winner_target.time = self.time
+        except:
+            # if no target to suggest
+            winner_target = Target()
+            winner_target.targetid = -1
 
         return winner_target
 
     def register_observation(self, observation):
 
-        for prop in self.science_proposal_list:
-            prop.register_observation(observation)
+        if observation.targetid > 0:
+            for prop in self.science_proposal_list:
+                prop.register_observation(observation)
 
     def compute_slewtime_bonus(self, slewtime):
 

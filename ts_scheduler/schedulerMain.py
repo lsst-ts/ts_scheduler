@@ -5,6 +5,7 @@ import time
 
 from SALPY_scheduler import SAL_scheduler
 from SALPY_scheduler import scheduler_timeHandlerC
+from SALPY_scheduler import scheduler_observatoryStateC
 from SALPY_scheduler import scheduler_observationTestC
 from SALPY_scheduler import scheduler_targetTestC
 from SALPY_scheduler import scheduler_schedulerConfigC
@@ -13,6 +14,7 @@ from SALPY_scheduler import scheduler_fieldC
 from ts_scheduler.schedulerDefinitions import INFOX, RAD2DEG, DEG2RAD, read_conf_file, conf_file_path
 from ts_scheduler.schedulerDriver import Driver
 from ts_scheduler.schedulerTarget import Target
+from ts_scheduler.observatoryModel import ObservatoryState
 
 class Main(object):
 
@@ -29,6 +31,7 @@ class Main(object):
 
         self.topicConfig = scheduler_schedulerConfigC()
         self.topicTime = scheduler_timeHandlerC()
+        self.topicObservatoryState = scheduler_observatoryStateC()
         self.topicObservation = scheduler_observationTestC()
         self.topicField = scheduler_fieldC()
         self.topicTarget = scheduler_targetTestC()
@@ -39,6 +42,7 @@ class Main(object):
 
         self.sal.salTelemetrySub("scheduler_schedulerConfig")
         self.sal.salTelemetrySub("scheduler_timeHandler")
+        self.sal.salTelemetrySub("scheduler_observatoryState")
         self.sal.salTelemetrySub("scheduler_observationTest")
         self.sal.salTelemetryPub("scheduler_field")
         self.sal.salTelemetryPub("scheduler_targetTest")
@@ -99,57 +103,75 @@ class Main(object):
 
                         self.log.log(INFOX, "run: rx time=%.1f" % (timestamp))
 
-                        self.schedulerDriver.update_internal_conditions(self.topicTime.timestamp)
-                        self.schedulerDriver.update_external_conditions(self.topicTime.timestamp)
+                        self.schedulerDriver.update_time(self.topicTime.timestamp)
 
-                        target = self.schedulerDriver.select_next_target()
+                        waitstate = True
+                        laststatetime = time.time()
+                        while waitstate:
+                            scode = self.sal.getNextSample_observatoryState(self.topicObservatoryState)
+                            if scode == 0 and self.topicObservatoryState.timestamp != 0:
+                                observatory_state = self.create_observatory_state(self.topicObservatoryState)
 
-                        self.topicTarget.targetId = target.targetid
-                        self.topicTarget.fieldId = target.fieldid
-                        self.topicTarget.filter = target.filter
-                        self.topicTarget.ra = target.ra_rad * RAD2DEG
-                        self.topicTarget.dec = target.dec_rad * RAD2DEG
-                        self.topicTarget.angle = target.ang_rad * RAD2DEG
-                        self.topicTarget.num_exposures = target.numexp
-                        for i, exptime in enumerate(target.exp_times):
-                            self.topicTarget.exposure_times[i] = exptime
-                        self.sal.putSample_targetTest(self.topicTarget)
-                        self.log.log(INFOX, "run: tx target %s", str(target))
+                                self.log.log(INFOX, "run: rx state=%s" % str(observatory_state))
 
-                        waitobservation = True
-                        lastobstime = time.time()
-                        while waitobservation:
-                            scode = self.sal.getNextSample_observationTest(self.topicObservation)
-                            if scode == 0 and self.topicObservation.targetId != 0:
-                                meascount += 1
-                                visitcount += 1
-                                if self.topicTarget.targetId == self.topicObservation.targetId:
-                                    lastobstime = time.time()
-                                    synccount += 1
+                                self.schedulerDriver.update_internal_conditions(observatory_state)
 
-                                    observation = self.create_observation(self.topicObservation)
-                                    self.log.log(INFOX, "run: rx observation %s", str(observation))
-                                    self.schedulerDriver.register_observation(observation)
+                                target = self.schedulerDriver.select_next_target()
 
-                                    break
-                                else:
-                                    self.log.warning("run: rx unsync observation Id=%i for target Id=%i" %
-                                                     (self.topicObservation.targetId,
-                                                      self.topicTarget.targetId))
+                                self.topicTarget.targetId = target.targetid
+                                self.topicTarget.fieldId = target.fieldid
+                                self.topicTarget.filter = target.filter
+                                self.topicTarget.ra = target.ra_rad * RAD2DEG
+                                self.topicTarget.dec = target.dec_rad * RAD2DEG
+                                self.topicTarget.angle = target.ang_rad * RAD2DEG
+                                self.topicTarget.num_exposures = target.numexp
+                                for i, exptime in enumerate(target.exp_times):
+                                    self.topicTarget.exposure_times[i] = exptime
+                                self.sal.putSample_targetTest(self.topicTarget)
+
+                                self.log.log(INFOX, "run: tx target %s", str(target))
+
+                                waitobservation = True
+                                lastobstime = time.time()
+                                while waitobservation:
+                                    scode = self.sal.getNextSample_observationTest(self.topicObservation)
+                                    if scode == 0 and self.topicObservation.targetId != 0:
+                                        meascount += 1
+                                        visitcount += 1
+                                        if self.topicTarget.targetId == self.topicObservation.targetId:
+                                            lastobstime = time.time()
+                                            synccount += 1
+
+                                            observation = self.create_observation(self.topicObservation)
+                                            self.log.log(INFOX, "run: rx observation %s", str(observation))
+                                            self.schedulerDriver.register_observation(observation)
+
+                                            break
+                                        else:
+                                            self.log.warning("run: rx unsync observation Id=%i "
+                                                             "for target Id=%i" %
+                                                             (self.topicObservation.targetId,
+                                                              self.topicTarget.targetId))
+                                    else:
+                                        to = time.time()
+                                        if (to - lastobstime > 10.0):
+                                            waitobservation = False
+                                        self.log.debug("run: t=%f lastobstime=%f" % (to, lastobstime))
+
+                                    newtime = time.time()
+                                    deltatime = newtime - meastime
+                                    if deltatime >= self.measinterval:
+                                        rate = float(meascount) / deltatime
+                                        self.log.info("run: rxi %.0f visits/sec total=%i visits sync=%i" %
+                                                      (rate, visitcount, synccount))
+                                        meastime = newtime
+                                        meascount = 0
                             else:
-                                to = time.time()
-                                if (to - lastobstime > 10.0):
-                                    waitobservation = False
-                                self.log.debug("run: t=%f lastobstime=%f" % (to, lastobstime))
+                                ts = time.time()
+                                if (ts - laststatetime > 10.0):
+                                    waitstate = False
+                                    self.log.debug("run: t=%f laststatetime=%f" % (ts, laststatetime))
 
-                            newtime = time.time()
-                            deltatime = newtime - meastime
-                            if deltatime >= self.measinterval:
-                                rate = float(meascount) / deltatime
-                                self.log.info("run: rxi %.0f visits/sec total=%i visits sync=%i" %
-                                              (rate, visitcount, synccount))
-                                meastime = newtime
-                                meascount = 0
                     else:
                         self.log.warning("run: rx backward time previous=%f new=%f" %
                                          (timestamp, self.topicTime.timestamp))
@@ -193,3 +215,27 @@ class Main(object):
             observation.exp_times.append(topic_observation.exposure_times[i])
 
         return observation
+
+    def create_observatory_state(self, topic_state):
+
+        state = ObservatoryState()
+
+        state.time = topic_state.timestamp
+        state.ra_rad = topic_state.pointing_ra
+        state.dec_rad = topic_state.pointing_dec
+        state.ang_rad = topic_state.pointing_angle
+        state.filter = topic_state.filter_position
+        state.tracking = topic_state.tracking
+        state.alt_rad = topic_state.pointing_altitude
+        state.az_rad = topic_state.pointing_azimuth
+        state.pa_rad = topic_state.pointing_pa
+        state.rot_rad = topic_state.pointing_rot
+        state.telalt_rad = topic_state.telescope_altitude
+        state.telaz_rad = topic_state.telescope_azimuth
+        state.telrot_rad = topic_state.telescope_rotator
+        state.domalt_rad = topic_state.dome_altitude
+        state.domaz_rad = topic_state.dome_azimuth
+        state.mountedfilters = topic_state.filter_mounted.split(",")
+        state.unmountedfilters = topic_state.filter_unmounted.split(",")
+
+        return state

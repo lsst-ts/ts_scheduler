@@ -160,6 +160,10 @@ class ObservatoryModel(object):
 
         self.reset()
 
+    def set_state(self, new_state):
+
+        self.currentState.set(new_state)
+
     def update_state(self, time):
 
         if time < self.currentState.time:
@@ -241,11 +245,21 @@ class ObservatoryModel(object):
 
     def get_slew_delay(self, target):
 
+        # check if filter is possible
+        if target.filter not in self.currentState.mountedfilters:
+            return -1.0
+
         targetposition = self.radecang2position(self.currentState.time,
                                                 target.ra_rad,
                                                 target.dec_rad,
                                                 target.ang_rad,
                                                 target.filter)
+
+        # check if altitude is possible
+        if targetposition.alt_rad < self.params.TelAlt_MinPos_rad:
+            return -1.0
+        if targetposition.alt_rad > self.params.TelAlt_MaxPos_rad:
+            return -1.0
 
         targetstate = self.get_closest_state(targetposition)
 
@@ -268,10 +282,6 @@ class ObservatoryModel(object):
     def reset(self):
 
         self.set_state(self.parkState)
-
-    def set_state(self, newstate):
-
-        self.currentState.set(newstate)
 
     def radecang2position(self, time, ra_rad, dec_rad, ang_rad, filter):
 
