@@ -47,8 +47,6 @@ class Main(object):
         self.sal.salTelemetryPub("scheduler_field")
         self.sal.salTelemetryPub("scheduler_targetTest")
 
-        self.schedulerDriver.start_survey()
-
         meascount = 0
         visitcount = 0
         synccount = 0

@@ -64,6 +64,15 @@ class AreaDistributionProposalTest(unittest.TestCase):
                          "2555, 2556, 2563, 2564, 2572, 2655, 2656, 2657, 2658, 2669, 2670, 2682, 2692, "
                          "2762, 2769, 2770, 2783, 2784, 2787, 2788, 2802]")
 
+        self.areaweak = AreaDistributionProposal(2, conf_file_path(__name__, "../../conf", "survey",
+                                                 "universal_weak.conf"), self.skyModel)
+        self.areaweak.build_fields_tonight_list(lsst_start_timestamp)
+        field_list = self.areaweak.fields_tonight_list
+        fieldid_list = []
+        for field in field_list:
+            fieldid_list.append(field.fieldid)
+        self.assertEqual(len(fieldid_list), 1518)
+
     def test_areadistributionproposal_start_night(self):
 
         lsst_start_timestamp = 1640995200.0

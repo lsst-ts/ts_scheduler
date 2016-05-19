@@ -4,7 +4,7 @@ import logging
 import heapq
 
 from ts_scheduler.sky_model import AstronomicalSkyModel
-from ts_scheduler.schedulerDefinitions import DEG2RAD, read_conf_file, conf_file_path
+from ts_scheduler.schedulerDefinitions import INFOX, DEG2RAD, read_conf_file, conf_file_path
 from ts_scheduler.schedulerField import Field
 from ts_scheduler.schedulerTarget import Target
 from ts_scheduler.observatoryModel import ObservatoryModel
@@ -99,6 +99,10 @@ class Driver(object):
 
         self.time = 0.0
         self.targetid = 0
+        self.survey_started = False
+        self.isnight = False
+        self.sunset_timestamp = 0.0
+        self.sunrise_timestamp = 0.0
 
     def build_fields_dict(self):
 
@@ -125,12 +129,22 @@ class Driver(object):
 
         return self.fieldsDict
 
-    def start_survey(self):
+    def start_survey(self, timestamp):
 
-        self.log.info("start_survey")
+        self.log.info("start_survey t=%.1f" % timestamp)
 
+        self.survey_started = True
         for prop in self.science_proposal_list:
             prop.start_survey()
+
+        self.sky.update(timestamp)
+        (sunset, sunrise) = self.sky.get_night_boundaries(self.params.twilight_boundary)
+        self.log.info("start_survey sunset=%.1f sunrise=%.1f" % (sunset, sunrise))
+        if sunset < timestamp < sunrise:
+            self.start_night(timestamp)
+
+        self.sunset_timestamp = sunset
+        self.sunrise_timestamp = sunrise
 
     def end_survey(self):
 
@@ -139,19 +153,30 @@ class Driver(object):
         for prop in self.science_proposal_list:
             prop.end_survey()
 
-    def start_night(self):
+    def start_night(self, timestamp):
 
-        self.log.info("start_night")
+        self.log.info("start_night t=%.1f" % timestamp)
+
+        self.isnight = True
 
         for prop in self.science_proposal_list:
             prop.start_night()
 
-    def end_night(self):
+    def end_night(self, timestamp):
 
-        self.log.info("end_night")
+        self.log.info("end_night t=%.1f" % timestamp)
+
+        self.isnight = False
 
         for prop in self.science_proposal_list:
             prop.end_night()
+
+        self.sky.update(timestamp)
+        (sunset, sunrise) = self.sky.get_night_boundaries(self.params.twilight_boundary)
+        self.log.info("end_night sunset=%.1f sunrise=%.1f" % (sunset, sunrise))
+
+        self.sunset_timestamp = sunset
+        self.sunrise_timestamp = sunrise
 
     def swap_filter_in(self):
         return
@@ -163,11 +188,20 @@ class Driver(object):
 
         self.time = timestamp
         self.observatoryModel.update_state(self.time)
+        if not self.survey_started:
+            self.start_survey(timestamp)
+
+        if self.isnight:
+            if timestamp > self.sunrise_timestamp:
+                self.end_night(timestamp)
+        else:
+            if timestamp > self.sunset_timestamp:
+                self.start_night(timestamp)
 
     def update_internal_conditions(self, observatory_state):
 
         self.time = observatory_state.time
-        self.observatoryModel.update_state(observatory_state)
+        self.observatoryModel.set_state(observatory_state)
 
     def update_external_conditions(self, timestamp):
         return
@@ -179,6 +213,8 @@ class Driver(object):
 
         for prop in self.science_proposal_list:
             proptarget_list = prop.suggest_targets(self.time)
+            self.log.log(INFOX, "select_next_target propid=%d name=%s targets=%d" %
+                         (prop.propdi, prop.name, len(proptarget_list)))
 
             for target in proptarget_list:
                 target.propid_list = [prop.propid]
