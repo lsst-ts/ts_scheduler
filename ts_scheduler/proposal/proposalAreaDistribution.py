@@ -1,5 +1,6 @@
 import copy
 import heapq
+import math
 
 from ts_scheduler.schedulerDefinitions import RAD2DEG, DEG2RAD
 from ts_scheduler.proposal import Proposal
@@ -22,6 +23,14 @@ class AreaDistributionProposalParameters(object):
         self.maxReach = confdict["sky_region"]["max_reach"]
         self.twilight_boundary = confdict["sky_region"]["twilight_boundary"]
 
+        self.max_airmass = confdict["constraints"]["max_airmass"]
+        max_zd_rad = math.acos(1 / self.max_airmass)
+        self.min_alt_rad = math.pi / 2 - max_zd_rad
+
+        self.max_num_targets = int(confdict["scheduling"]["max_num_targets"])
+        self.accept_serendipity = confdict["scheduling"]["accept_serendipity"]
+        self.accept_consecutive_visits = confdict["scheduling"]["accept_consecutive_visits"]
+
         self.filter_list = []
         self.filter_visits_dict = {}
         self.filter_min_brig_dict = {}
@@ -38,10 +47,6 @@ class AreaDistributionProposalParameters(object):
                 self.filter_max_brig_dict[filter] = confdict[filter_section]["max_brig"]
                 self.filter_max_seeing_dict[filter] = confdict[filter_section]["max_seeing"]
                 self.filter_exp_times_dict[filter] = confdict[filter_section]["exp_times"]
-
-        self.max_num_targets = int(confdict["scheduling"]["max_num_targets"])
-        self.accept_serendipity = confdict["scheduling"]["accept_serendipity"]
-        self.accept_consecutive_visits = confdict["scheduling"]["accept_consecutive_visits"]
 
 class AreaDistributionProposal(Proposal):
 
@@ -180,12 +185,13 @@ class AreaDistributionProposal(Proposal):
         sql += 'fieldDec BETWEEN %f AND %f ' % (min_rel_dec, max_rel_dec)
 
         # subtract galactic exclusion zone
-        if (self.params.taperB != 0) & (self.params.taperL != 0):
-            band = self.params.peakL - self.params.taperL
-            sql += 'AND ((fieldGL < 180 AND abs(fieldGB) > (%f - (%f * abs(fieldGL)) / %f)) OR ' % \
-                   (self.params.peakL, band, self.params.taperB)
-            sql += '(fieldGL > 180 AND abs(fieldGB) > (%f - (%f * abs(fieldGL - 360)) / %f))) ' % \
-                   (self.params.peakL, band, self.params.taperB)
+        if self.params.use_gal_exclusion:
+            if (self.params.taperB != 0) & (self.params.taperL != 0):
+                band = self.params.peakL - self.params.taperL
+                sql += 'AND ((fieldGL < 180 AND abs(fieldGB) > (%f - (%f * abs(fieldGL)) / %f)) OR ' % \
+                       (self.params.peakL, band, self.params.taperB)
+                sql += '(fieldGL > 180 AND abs(fieldGB) > (%f - (%f * abs(fieldGL - 360)) / %f))) ' % \
+                       (self.params.peakL, band, self.params.taperB)
 
         sql += 'order by fieldId'
 
@@ -251,9 +257,12 @@ class AreaDistributionProposal(Proposal):
 #                if seeing(filter) > self.params.max_seeing[filter]:
 #                    continue
 
-                # discard target beyond sky brightness limit
+                # discard target beyond sky brightness limits
                 sky_brightness = mags_dict[fieldid][filter]
                 if sky_brightness > self.params.filter_max_brig_dict[filter]:
+                    continue
+
+                if sky_brightness < self.params.filter_min_brig_dict[filter]:
                     continue
 
                 # target is accepted

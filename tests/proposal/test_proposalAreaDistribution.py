@@ -1,6 +1,6 @@
 import unittest
 
-from ts_scheduler.schedulerDefinitions import read_conf_file, conf_file_path
+from ts_scheduler.schedulerDefinitions import read_conf_file, conf_file_path, RAD2DEG
 from ts_scheduler.proposal import AreaDistributionProposal
 from ts_scheduler.observatoryModel import ObservatoryLocation
 from ts_scheduler.sky_model import AstronomicalSkyModel
@@ -33,6 +33,8 @@ class AreaDistributionProposalTest(unittest.TestCase):
         self.assertEqual(str(self.areaprop.params.filter_exp_times_dict),
                          "{'g': [15.0, 15.0], 'i': [15.0, 15.0], 'r': [15.0, 15.0], "
                          "'u': [25.0, 25.0], 'y': [15.0, 15.0], 'z': [15.0, 15.0]}")
+        self.assertEqual(self.areaprop.params.max_airmass, 2.5)
+        self.assertAlmostEqual(self.areaprop.params.min_alt_rad * RAD2DEG, 23.578, delta=1e-3)
 
     def test_build_fields_tonight_list(self):
         """Set timestamp as 2022-01-01 0h UTC"""
@@ -74,10 +76,12 @@ class AreaDistributionProposalTest(unittest.TestCase):
         self.assertEqual(str(fieldid_list), "[1764, 2006, 2234, 2464, 2692]")
         self.assertEqual(str(self.areaprop.targets_dict[fieldid_list[0]]["g"]),
                          "targetid=0 field=1764 filter=g exp_times=[15.0, 15.0] "
-                         "ra=13.726 dec=-19.793 time=0.0 sky_brightness=0.000 value=0.000 propid=[]")
+                         "ra=13.726 dec=-19.793 time=0.0 brightness=0.000 "
+                         "progress=0.000 slewtime=0.000 value=0.000 cost=0.000 rank=0.000 propid=[]")
         self.assertEqual(str(self.areaprop.targets_dict[fieldid_list[-1]]["g"]),
                          "targetid=0 field=2692 filter=g exp_times=[15.0, 15.0] "
-                         "ra=14.146 dec=0.931 time=0.0 sky_brightness=0.000 value=0.000 propid=[]")
+                         "ra=14.146 dec=0.931 time=0.0 brightness=0.000 "
+                         "progress=0.000 slewtime=0.000 value=0.000 cost=0.000 rank=0.000 propid=[]")
 
         self.assertEqual(self.areaprop.total_goal, 500)
         self.assertEqual(self.areaprop.total_visits, 0)
@@ -90,23 +94,27 @@ class AreaDistributionProposalTest(unittest.TestCase):
 
         timestamp = lsst_start_timestamp
         target_list = self.areaprop.suggest_targets(timestamp)
-        self.assertEqual(len(target_list), 25)
+        self.assertEqual(len(target_list), 21)
         self.assertEqual(str(target_list[0]),
                          "targetid=0 field=1764 filter=g exp_times=[15.0, 15.0] "
-                         "ra=13.726 dec=-19.793 time=0.0 sky_brightness=22.076 value=1.000 propid=[]")
+                         "ra=13.726 dec=-19.793 time=0.0 brightness=22.076 "
+                         "progress=0.000 slewtime=0.000 value=1.000 cost=0.000 rank=0.000 propid=[]")
         self.assertEqual(str(target_list[-1]),
                          "targetid=0 field=2692 filter=y exp_times=[15.0, 15.0] "
-                         "ra=14.146 dec=0.931 time=0.0 sky_brightness=18.019 value=1.000 propid=[]")
+                         "ra=14.146 dec=0.931 time=0.0 brightness=18.019 "
+                         "progress=0.000 slewtime=0.000 value=1.000 cost=0.000 rank=0.000 propid=[]")
 
         timestamp += 60
         target_list = self.areaprop.suggest_targets(timestamp)
-        self.assertEqual(len(target_list), 25)
+        self.assertEqual(len(target_list), 21)
         self.assertEqual(str(target_list[0]),
                          "targetid=0 field=1764 filter=g exp_times=[15.0, 15.0] "
-                         "ra=13.726 dec=-19.793 time=0.0 sky_brightness=22.076 value=1.000 propid=[]")
+                         "ra=13.726 dec=-19.793 time=0.0 brightness=22.076 "
+                         "progress=0.000 slewtime=0.000 value=1.000 cost=0.000 rank=0.000 propid=[]")
         self.assertEqual(str(target_list[-1]),
                          "targetid=0 field=2692 filter=y exp_times=[15.0, 15.0] "
-                         "ra=14.146 dec=0.931 time=0.0 sky_brightness=18.017 value=1.000 propid=[]")
+                         "ra=14.146 dec=0.931 time=0.0 brightness=18.017 "
+                         "progress=0.000 slewtime=0.000 value=1.000 cost=0.000 rank=0.000 propid=[]")
 
         observation = target_list[0]
         self.assertEqual(observation.goal, 10)
@@ -125,10 +133,12 @@ class AreaDistributionProposalTest(unittest.TestCase):
 
         timestamp += 60
         target_list = self.areaprop.suggest_targets(timestamp)
-        self.assertEqual(len(target_list), 25)
+        self.assertEqual(len(target_list), 21)
         self.assertEqual(str(target_list[0]),
                          "targetid=0 field=1764 filter=r exp_times=[15.0, 15.0] "
-                         "ra=13.726 dec=-19.793 time=0.0 sky_brightness=21.122 value=1.002 propid=[]")
+                         "ra=13.726 dec=-19.793 time=0.0 brightness=21.122 "
+                         "progress=0.000 slewtime=0.000 value=1.002 cost=0.000 rank=0.000 propid=[]")
         self.assertEqual(str(target_list[-1]),
                          "targetid=0 field=1764 filter=g exp_times=[15.0, 15.0] "
-                         "ra=13.726 dec=-19.793 time=0.0 sky_brightness=22.075 value=0.902 propid=[]")
+                         "ra=13.726 dec=-19.793 time=0.0 brightness=22.075 "
+                         "progress=0.100 slewtime=0.000 value=0.902 cost=0.000 rank=0.000 propid=[]")
