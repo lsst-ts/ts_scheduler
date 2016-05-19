@@ -32,15 +32,16 @@ class Target(object):
         self.propid_list = []
         self.propvalue_list = []
         self.value = 0.0
+        self.slewtime = 0.0
         self.cost = 0.0
         self.rank = 0.0
 
     def __str__(self):
         return ("targetid=%d field=%d filter=%s exp_times=%s ra=%.3f dec=%.3f time=%.1f "
-                "sky_brightness=%.3f value=%.3f propid=%s" %
+                "brightness=%.3f progress=%.3f slewtime=%.3f value=%.3f cost=%.3f rank=%.3f propid=%s" %
                 (self.targetid, self.fieldid, self.filter, str(self.exp_times),
                  self.ra_rad * RAD2DEG, self.dec_rad * RAD2DEG, self.time, self.sky_brightness,
-                 self.value, self.propid_list))
+                 self.progress, self.slewtime, self.value, self.cost, self.rank, self.propid_list))
 
     @classmethod
     def from_topic(cls, topic):
