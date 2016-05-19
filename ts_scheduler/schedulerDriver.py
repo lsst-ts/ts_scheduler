@@ -211,6 +211,7 @@ class Driver(object):
         except:
             # if no target to suggest
             winner_target = Target()
+            winner_target.numexp = 2
             winner_target.targetid = -1
 
         return winner_target
