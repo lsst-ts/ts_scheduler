@@ -1,4 +1,4 @@
-source ts_scheduler/scheduler.env
+source scheduler.env
 
 cd $SAL_WORK_DIR
 
