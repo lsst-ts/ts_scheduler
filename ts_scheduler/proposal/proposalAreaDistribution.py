@@ -224,6 +224,7 @@ class AreaDistributionProposal(Proposal):
         ra_rad_list = []
         dec_rad_list = []
         mags_dict = {}
+        airmass_dict = {}
         for field in fields_evaluation_list:
             # create coordinates arrays
             id_list.append(field.fieldid)
@@ -232,17 +233,19 @@ class AreaDistributionProposal(Proposal):
         if len(id_list) > 0:
             self.sky.update(timestamp)
             sky_mags = self.sky.get_sky_brightness(ra_rad_list, dec_rad_list)
+            attrs = self.sky.sky_brightness.getComputedVals()
             for ix, fieldid in enumerate(id_list):
                 mags_dict[fieldid] = sky_mags[ix]
+                airmass_dict[fieldid] = attrs["airmass"][ix]
 
         # compute target value
         for field in fields_evaluation_list:
             fieldid = field.fieldid
 
             # discard fields beyond airmass limit
-#            airmass = airmass(field)
-#            if airmass > self.params.max_airmass:
-#                continue
+            airmass = airmass_dict[fieldid]
+            if airmass > self.params.max_airmass:
+                continue
 
             for filter in self.filters_tonight_list:
 
