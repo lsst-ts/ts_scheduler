@@ -138,7 +138,7 @@ class Driver(object):
             prop.start_survey()
 
         self.sky.update(timestamp)
-        (sunset, sunrise) = self.sky.get_night_boundaries(-18.0)
+        (sunset, sunrise) = self.sky.get_night_boundaries(-12.0)
         self.log.info("start_survey sunset=%.1f sunrise=%.1f" % (sunset, sunrise))
         if sunset < timestamp < sunrise:
             self.start_night(timestamp)
@@ -172,7 +172,7 @@ class Driver(object):
             prop.end_night()
 
         self.sky.update(timestamp)
-        (sunset, sunrise) = self.sky.get_night_boundaries(-18.0)
+        (sunset, sunrise) = self.sky.get_night_boundaries(-12.0)
         self.log.info("end_night sunset=%.1f sunrise=%.1f" % (sunset, sunrise))
 
         self.sunset_timestamp = sunset

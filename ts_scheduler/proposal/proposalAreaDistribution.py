@@ -262,10 +262,10 @@ class AreaDistributionProposal(Proposal):
 
                 # discard target beyond sky brightness limits
                 sky_brightness = mags_dict[fieldid][filter]
-                if sky_brightness > self.params.filter_max_brig_dict[filter]:
+                if sky_brightness < self.params.filter_min_brig_dict[filter]:
                     continue
 
-                if sky_brightness < self.params.filter_min_brig_dict[filter]:
+                if sky_brightness > self.params.filter_max_brig_dict[filter]:
                     continue
 
                 # target is accepted
