@@ -89,6 +89,13 @@ class DateProfile(object):
         midnight_dt += timedelta(**{"days": 1})
         return self.__get_timestamp(midnight_dt)
 
+    def previous_midnight_timestamp(self):
+        """float: Return the UNIX timestamp of midnight for the next day after current date.
+        """
+        midnight_dt = datetime(self.current_dt.year, self.current_dt.month, self.current_dt.day)
+        midnight_dt -= timedelta(**{"days": 1})
+        return self.__get_timestamp(midnight_dt)
+
     def update(self, timestamp):
         """Change the internal timestamp to requested one.
 
