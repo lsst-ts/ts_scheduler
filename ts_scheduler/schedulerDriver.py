@@ -44,7 +44,7 @@ class Driver(object):
         self.observatoryModel = ObservatoryModel(self.location)
         self.observatoryModel.configure(observatory_confdict)
 
-        self.skyModel = AstronomicalSkyModel(self.location)
+        self.sky = AstronomicalSkyModel(self.location)
 
         self.db = FieldsDatabase()
 
@@ -71,7 +71,7 @@ class Driver(object):
             scripted_prop = ScriptedProposal(self.propid_counter,
                                              conf_file_path(__name__, "../conf", "survey",
                                                             "{}".format(scripted_propconflist[k])),
-                                             self.skyModel)
+                                             self.sky)
             self.science_proposal_list.append(scripted_prop)
 
         if 'areadistribution_propconf' in survey_confdict["proposals"]:
@@ -94,7 +94,7 @@ class Driver(object):
                                             "{}".format(areadistribution_propconflist[k]))
             area_prop = AreaDistributionProposal(self.propid_counter,
                                                  configfilepath,
-                                                 self.skyModel)
+                                                 self.sky)
             self.science_proposal_list.append(area_prop)
 
         self.time = 0.0
@@ -109,7 +109,7 @@ class Driver(object):
         sql = "select * from Field"
         res = self.db.query(sql)
 
-        self.fieldsDict = {}
+        self.fields_dict = {}
         for row in res:
             field = Field()
             fieldid = row[0]
@@ -121,13 +121,13 @@ class Driver(object):
             field.gb_rad = row[5] * DEG2RAD
             field.el_rad = row[6] * DEG2RAD
             field.eb_rad = row[7] * DEG2RAD
-            self.fieldsDict[fieldid] = field
-            self.log.debug("buildFieldsTable: %s" % (self.fieldsDict[fieldid]))
-        self.log.info("buildFieldsTable: %d fields" % (len(self.fieldsDict)))
+            self.fields_dict[fieldid] = field
+            self.log.debug("buildFieldsTable: %s" % (self.fields_dict[fieldid]))
+        self.log.info("buildFieldsTable: %d fields" % (len(self.fields_dict)))
 
     def get_fields_dict(self):
 
-        return self.fieldsDict
+        return self.fields_dict
 
     def start_survey(self, timestamp):
 
@@ -138,7 +138,7 @@ class Driver(object):
             prop.start_survey()
 
         self.sky.update(timestamp)
-        (sunset, sunrise) = self.sky.get_night_boundaries(self.params.twilight_boundary)
+        (sunset, sunrise) = self.sky.get_night_boundaries(-18.0)
         self.log.info("start_survey sunset=%.1f sunrise=%.1f" % (sunset, sunrise))
         if sunset < timestamp < sunrise:
             self.start_night(timestamp)
@@ -160,7 +160,7 @@ class Driver(object):
         self.isnight = True
 
         for prop in self.science_proposal_list:
-            prop.start_night()
+            prop.start_night(timestamp, self.observatoryModel.currentState.mountedfilters)
 
     def end_night(self, timestamp):
 
@@ -172,7 +172,7 @@ class Driver(object):
             prop.end_night()
 
         self.sky.update(timestamp)
-        (sunset, sunrise) = self.sky.get_night_boundaries(self.params.twilight_boundary)
+        (sunset, sunrise) = self.sky.get_night_boundaries(-18.0)
         self.log.info("end_night sunset=%.1f sunrise=%.1f" % (sunset, sunrise))
 
         self.sunset_timestamp = sunset

@@ -75,7 +75,7 @@ class AreaDistributionProposal(Proposal):
 
     def start_night(self, timestamp, filters_mounted_tonight_list):
 
-        super(AreaDistributionProposal, self).start_night()
+        super(AreaDistributionProposal, self).start_night(timestamp, filters_mounted_tonight_list)
 
         self.filters_tonight_list = []
         for filter in self.params.filter_list:
