@@ -76,8 +76,7 @@ class AstronomicalSkyModel(object):
 
         This function calculates the night boundaries (the set and rise times) for a
         given sun altitude. It uses the currently stored timestamp in the :class:`DateProfile`
-        instance. NOTE: It uses a hack that depends on the observing site being in Chile and
-        should be replaced with something more generic.
+        instance.
 
         Parameters
         ----------
@@ -93,25 +92,28 @@ class AstronomicalSkyModel(object):
         """
         longitude, latitude = (self.date_profile.location.longitude, self.date_profile.location.latitude)
 
-        if self.date_profile.current_dt.hour == 0:
-            current_timestamp = self.date_profile.previous_midnight_timestamp()
+        current_timestamp = self.date_profile.timestamp
+
+        midnight_timestamp = self.date_profile.midnight_timestamp()
+        (rise_time, set_time) = self.sun.altitude_times(midnight_timestamp, longitude, latitude,
+                                                        sun_altitude, upper_limb_correction)
+
+        set_timestamp = midnight_timestamp + (set_time * self.date_profile.SECONDS_IN_HOUR)
+        rise_timestamp = midnight_timestamp + (rise_time * self.date_profile.SECONDS_IN_HOUR)
+
+        if current_timestamp < rise_timestamp:
+            midnight_timestamp = self.date_profile.previous_midnight_timestamp()
+            (_, set_time) = self.sun.altitude_times(midnight_timestamp, longitude, latitude,
+                                                    sun_altitude, upper_limb_correction)
+
+            set_timestamp = midnight_timestamp + (set_time * self.date_profile.SECONDS_IN_HOUR)
+
         else:
-            current_timestamp = self.date_profile.midnight_timestamp()
+            midnight_timestamp = self.date_profile.next_midnight_timestamp()
+            (rise_time, _) = self.sun.altitude_times(midnight_timestamp, longitude, latitude,
+                                                     sun_altitude, upper_limb_correction)
 
-        (_, set_time) = self.sun.altitude_times(current_timestamp, longitude, latitude,
-                                                sun_altitude, upper_limb_correction)
-
-        set_timestamp = current_timestamp + (set_time * self.date_profile.SECONDS_IN_HOUR)
-
-        if self.date_profile.current_dt.hour == 0:
-            nextday_timestamp = self.date_profile.midnight_timestamp()
-        else:
-            nextday_timestamp = self.date_profile.next_midnight_timestamp()
-
-        (rise_time, _) = self.sun.altitude_times(nextday_timestamp, longitude, latitude,
-                                                 sun_altitude, upper_limb_correction)
-
-        rise_timestamp = nextday_timestamp + (rise_time * self.date_profile.SECONDS_IN_HOUR)
+            rise_timestamp = midnight_timestamp + (rise_time * self.date_profile.SECONDS_IN_HOUR)
 
         return (set_timestamp, rise_timestamp)
 

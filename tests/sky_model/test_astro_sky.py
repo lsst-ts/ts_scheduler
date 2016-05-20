@@ -56,8 +56,21 @@ class AstronomicalSkyTest(unittest.TestCase):
         self.assertAlmostEquals(sky_mags[0][0].y, 17.56788428, delta=1e-7)
 
     def test_get_night_boundaries(self):
+        # 2022/01/01
+        # At sunset
         self.astro_sky.update(1641084532.843324)
         self.check_night_boundary_tuple(1641084532.843324, 1641113113.755558)
+        # In night
+        self.astro_sky.update(1641098823.29944)
+        self.check_night_boundary_tuple(1641084532.843324, 1641113113.755558)
+        # At sunrise, next night bounds
+        self.astro_sky.update(1641113113.755558)
+        self.check_night_boundary_tuple(1641170940.8965435, 1641199562.951024)
+        # In daytime, next night bounds
+        self.astro_sky.update(1641113114.755558)
+        self.check_night_boundary_tuple(1641170940.8965435, 1641199562.951024)
+        self.astro_sky.update(1641133114.755558)
+        self.check_night_boundary_tuple(1641170940.8965435, 1641199562.951024)
         # 2022/02/01
         self.astro_sky.update(1643762299.348505)
         self.check_night_boundary_tuple(1643762299.348505, 1643793352.557206)
@@ -65,8 +78,15 @@ class AstronomicalSkyTest(unittest.TestCase):
         self.astro_sky.update(1646784061.294245)
         self.check_night_boundary_tuple(1646784061.294245, 1646819228.784648)
         # 2022/07/02
+        # At sunset
         self.astro_sky.update(1656802219.515093)
         self.check_night_boundary_tuple(1656802219.515093, 1656845034.696892)
+        # At sunrise, next night bounds
+        self.astro_sky.update(1656845034.696892)
+        self.check_night_boundary_tuple(1656888641.725961, 1656931433.3882337)
+        # In daytime, next night bounds
+        self.astro_sky.update(1656845035.696892)
+        self.check_night_boundary_tuple(1656888641.725961, 1656931433.3882337)
         # 2022/10/17
         self.astro_sky.update(1666050479.261601)
         self.check_night_boundary_tuple(1666050479.261601, 1666084046.869362)
