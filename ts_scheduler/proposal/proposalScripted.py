@@ -38,7 +38,7 @@ class ScriptedProposal(Proposal):
             target.ra_rad = eval(values[2]) * DEG2RAD
             target.dec_rad = eval(values[3]) * DEG2RAD
             target.ang_rad = eval(values[4]) * DEG2RAD
-            target.numexp = eval(values[5])
+            target.num_exp = eval(values[5])
             target.exp_times = [int(x) for x in values[6].split(',')]
 
             self.targetsList.append(target)

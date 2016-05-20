@@ -36,6 +36,7 @@ class AreaDistributionProposalParameters(object):
         self.filter_min_brig_dict = {}
         self.filter_max_brig_dict = {}
         self.filter_max_seeing_dict = {}
+        self.filter_num_exp_dict = {}
         self.filter_exp_times_dict = {}
         filters = ["u", "g", "r", "i", "z", "y"]
         for filter in filters:
@@ -47,6 +48,7 @@ class AreaDistributionProposalParameters(object):
                 self.filter_max_brig_dict[filter] = confdict[filter_section]["max_brig"]
                 self.filter_max_seeing_dict[filter] = confdict[filter_section]["max_seeing"]
                 self.filter_exp_times_dict[filter] = confdict[filter_section]["exp_times"]
+                self.filter_num_exp_dict[filter] = len(self.filter_exp_times_dict[filter])
 
 class AreaDistributionProposal(Proposal):
 
@@ -105,6 +107,7 @@ class AreaDistributionProposal(Proposal):
                     target = Target()
                     target.fieldid = fieldid
                     target.filter = filter
+                    target.num_exp = self.params.filter_num_exp_dict[filter]
                     target.exp_times = self.params.filter_exp_times_dict[filter]
                     target.ra_rad = field.ra_rad
                     target.dec_rad = field.dec_rad

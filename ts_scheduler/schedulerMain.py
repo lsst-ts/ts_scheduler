@@ -123,9 +123,9 @@ class Main(object):
                                 self.topicTarget.ra = target.ra_rad * RAD2DEG
                                 self.topicTarget.dec = target.dec_rad * RAD2DEG
                                 self.topicTarget.angle = target.ang_rad * RAD2DEG
-                                self.topicTarget.num_exposures = target.numexp
+                                self.topicTarget.num_exposures = target.num_exp
                                 for i, exptime in enumerate(target.exp_times):
-                                    self.topicTarget.exposure_times[i] = exptime
+                                    self.topicTarget.exposure_times[i] = int(exptime)
                                 self.sal.putSample_targetTest(self.topicTarget)
 
                                 self.log.log(INFOX, "run: tx target %s", str(target))
@@ -208,7 +208,7 @@ class Main(object):
         observation.ra_rad = topic_observation.ra * DEG2RAD
         observation.dec_rad = topic_observation.dec * DEG2RAD
         observation.ang_rad = topic_observation.angle * DEG2RAD
-        observation.numexp = topic_observation.num_exposures
+        observation.num_exp = topic_observation.num_exposures
         observation.exp_times = []
         for i in range(topic_observation.num_exposures):
             observation.exp_times.append(topic_observation.exposure_times[i])

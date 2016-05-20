@@ -10,7 +10,7 @@ class Target(object):
                  ra_rad=0.0,
                  dec_rad=0.0,
                  ang_rad=0.0,
-                 numexp=0,
+                 num_exp=0,
                  exp_times=[]):
 
         self.targetid = targetid
@@ -19,7 +19,7 @@ class Target(object):
         self.ra_rad = ra_rad
         self.dec_rad = dec_rad
         self.ang_rad = ang_rad
-        self.numexp = numexp
+        self.num_exp = num_exp
         self.exp_times = list(exp_times)
 
         self.time = 0.0
