@@ -56,28 +56,28 @@ class AstronomicalSkyTest(unittest.TestCase):
         self.assertAlmostEquals(sky_mags[0][0].y, 17.56788428, delta=1e-7)
 
     def test_get_night_boundaries(self):
-        self.astro_sky.update(LSST_START_TIMESTAMP)
+        self.astro_sky.update(1641084532.843324)
         self.check_night_boundary_tuple(1641084532.843324, 1641113113.755558)
         # 2022/02/01
-        self.astro_sky.update(1643673600)
+        self.astro_sky.update(1643762299.348505)
         self.check_night_boundary_tuple(1643762299.348505, 1643793352.557206)
         # 2022/03/08
-        self.astro_sky.update(1646697600)
+        self.astro_sky.update(1646784061.294245)
         self.check_night_boundary_tuple(1646784061.294245, 1646819228.784648)
         # 2022/07/02
-        self.astro_sky.update(1656720000)
+        self.astro_sky.update(1656802219.515093)
         self.check_night_boundary_tuple(1656802219.515093, 1656845034.696892)
         # 2022/10/17
-        self.astro_sky.update(1665964800)
+        self.astro_sky.update(1666050479.261601)
         self.check_night_boundary_tuple(1666050479.261601, 1666084046.869362)
         # 2025/04/01
-        self.astro_sky.update(1743465600)
+        self.astro_sky.update(1743550264.401366)
         self.check_night_boundary_tuple(1743550264.401366, 1743588178.165652)
         # 2027/06/21
-        self.astro_sky.update(1813536000)
+        self.astro_sky.update(1813618020.702736)
         self.check_night_boundary_tuple(1813618020.702736, 1813660969.989451)
         # 2031/09/20
-        self.astro_sky.update(1947628800)
+        self.astro_sky.update(1947713387.331446)
         self.check_night_boundary_tuple(1947713387.331446, 1947750106.804758)
 
     def test_moon_separation_function(self):

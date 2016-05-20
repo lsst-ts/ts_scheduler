@@ -44,3 +44,8 @@ class DateProfileTest(unittest.TestCase):
         new_timestamp = LSST_START_TIMESTAMP + (4.0 * 3600.0)
         self.dp.update(new_timestamp)
         self.assertEqual(self.dp.next_midnight_timestamp(), LSST_START_TIMESTAMP + (24.0 * 60.0 * 60.0))
+
+    def test_previous_midnight_timestamp(self):
+        new_timestamp = LSST_START_TIMESTAMP + (4.0 * 3600.0)
+        self.dp.update(new_timestamp)
+        self.assertEqual(self.dp.previous_midnight_timestamp(), LSST_START_TIMESTAMP - (24.0 * 60.0 * 60.0))

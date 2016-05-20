@@ -214,7 +214,7 @@ class Driver(object):
         for prop in self.science_proposal_list:
             proptarget_list = prop.suggest_targets(self.time)
             self.log.log(INFOX, "select_next_target propid=%d name=%s targets=%d" %
-                         (prop.propdi, prop.name, len(proptarget_list)))
+                         (prop.propid, prop.name, len(proptarget_list)))
 
             for target in proptarget_list:
                 target.propid_list = [prop.propid]
