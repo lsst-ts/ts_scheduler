@@ -6,10 +6,7 @@ import sys
 from schedulerMain import Main
 from ts_scheduler.setup import configure_logging, create_parser, generate_logfile
 
-if __name__ == '__main__':
-    parser = create_parser()
-    args = parser.parse_args()
-
+def main(args):
     logfilename = generate_logfile()
     configure_logging(args, logfilename)
 
@@ -20,3 +17,14 @@ if __name__ == '__main__':
     scheduler.run()
 
     sys.exit(0)
+
+if __name__ == '__main__':
+    parser = create_parser()
+    args = parser.parse_args()
+
+    if args.profile:
+        import cProfile
+        from datetime import datetime
+        cProfile.run("main(args)",
+                     "scheduler_prof_{}.dat".format(datetime.now().strftime("%Y-%m-%d_%H:%M:%S")))
+    main(args)
