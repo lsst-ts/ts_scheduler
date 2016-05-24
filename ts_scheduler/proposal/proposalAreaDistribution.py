@@ -1,8 +1,9 @@
 import copy
-import heapq
 import math
 
-from ts_scheduler.schedulerDefinitions import RAD2DEG, DEG2RAD
+from operator import itemgetter
+
+from ts_scheduler.schedulerDefinitions import INFOX, RAD2DEG, DEG2RAD
 from ts_scheduler.proposal import Proposal
 from ts_scheduler.schedulerField import Field
 from ts_scheduler.schedulerTarget import Target
@@ -66,7 +67,7 @@ class AreaDistributionProposal(Proposal):
         self.total_goal = 0
         self.total_visits = 0
         self.total_progress = 0.0
-        self.targets_heap = []
+        self.valued_targets_list = []
 
         self.last_observation = None
         self.last_observation_was_for_this_proposal = False
@@ -241,6 +242,12 @@ class AreaDistributionProposal(Proposal):
                 mags_dict[fieldid] = sky_mags[ix]
                 airmass_dict[fieldid] = attrs["airmass"][ix]
 
+        evaluated_fields = 0
+        discarded_fields_airmass = 0
+        discarded_targets_consecutive = 0
+        discarded_targets_lowbrightness = 0
+        discarded_targets_highbrightness = 0
+        evaluated_targets = 0
         # compute target value
         for field in fields_evaluation_list:
             fieldid = field.fieldid
@@ -248,15 +255,18 @@ class AreaDistributionProposal(Proposal):
             # discard fields beyond airmass limit
             airmass = airmass_dict[fieldid]
             if airmass > self.params.max_airmass:
+                discarded_fields_airmass += 1
                 continue
 
             for filter in self.filters_tonight_list:
-
                 target = self.targets_dict[fieldid][filter]
+                target.time = timestamp
+                target.airmass = airmass
                 # discard target if consecutive
                 if self.last_observation_was_for_this_proposal:
                     if (self.observation_fulfills_target(self.last_observation, target) and
                        not self.params.accept_consecutive_visits):
+                        discarded_targets_consecutive += 1
                         continue
 
                 # discard target beyond seeing limit
@@ -266,9 +276,11 @@ class AreaDistributionProposal(Proposal):
                 # discard target beyond sky brightness limits
                 sky_brightness = mags_dict[fieldid][filter]
                 if sky_brightness < self.params.filter_min_brig_dict[filter]:
+                    discarded_targets_lowbrightness += 1
                     continue
 
                 if sky_brightness > self.params.filter_max_brig_dict[filter]:
+                    discarded_targets_highbrightness += 1
                     continue
 
                 # target is accepted
@@ -283,26 +295,37 @@ class AreaDistributionProposal(Proposal):
                 target.value = need_ratio
 
                 self.add_evaluated_target(target)
+                evaluated_targets += 1
+            evaluated_fields += 1
+
+        self.log.log(INFOX,
+                     "suggest_targets: fields=%d, evaluated=%d, discarded airmass=%d" %
+                     (len(id_list), evaluated_fields, discarded_fields_airmass))
+        self.log.log(INFOX,
+                     "suggest_targets: evaluated targets=%d, discarded lowbright=%d highbright=%d" %
+                     (evaluated_targets, discarded_targets_lowbrightness, discarded_targets_highbrightness))
 
         return self.get_evaluated_target_list()
 
     def clear_evaluated_target_list(self):
 
-        self.targets_heap = []
+        self.valued_targets_list = []
 
     def add_evaluated_target(self, target):
 
-        heapq.heappush(self.targets_heap, (-target.value, target))
+        self.valued_targets_list.append((-target.value, target))
 
     def get_evaluated_target_list(self):
 
+        sorted_list = sorted(self.valued_targets_list, key=itemgetter(0))
+
         self.winners_list = []
-        for ix in range(min(len(self.targets_heap), self.params.max_num_targets)):
-            self.winners_list.append(heapq.heappop(self.targets_heap)[1])
+        for ix in range(min(len(sorted_list), self.params.max_num_targets)):
+            self.winners_list.append(sorted_list.pop(0)[1])
 
         self.losers_list = []
-        for ix in range(len(self.targets_heap)):
-            self.losers_list.append(heapq.heappop(self.targets_heap)[1])
+        for ix in range(min(len(sorted_list), self.params.max_num_targets)):
+            self.losers_list.append(sorted_list.pop(0)[1])
 
         return self.winners_list
 

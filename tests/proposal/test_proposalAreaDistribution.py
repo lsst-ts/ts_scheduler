@@ -45,8 +45,8 @@ class AreaDistributionProposalTest(unittest.TestCase):
         fieldid_list = []
         for field in field_list:
             fieldid_list.append(field.fieldid)
-        self.assertEqual(len(fieldid_list), 5)
-        self.assertEqual(str(fieldid_list), "[1764, 2006, 2234, 2464, 2692]")
+        self.assertEqual(len(fieldid_list), 10)
+        self.assertEqual(str(fieldid_list), "[1764, 1873, 2006, 2108, 2234, 2346, 2464, 2572, 2692, 2802]")
 
         lsst_six_months = lsst_start_timestamp + 182 * 24 * 3600
 
@@ -71,83 +71,83 @@ class AreaDistributionProposalTest(unittest.TestCase):
         fieldid_list = []
         for field in field_list:
             fieldid_list.append(field.fieldid)
-        self.assertEqual(len(fieldid_list), 1518)
+        self.assertEqual(len(fieldid_list), 1515)
 
     def test_areadistributionproposal_start_night(self):
 
-        lsst_start_timestamp = 1640995200.0
+        lsst_start_timestamp = 1641000000.0
         self.areaprop.start_night(lsst_start_timestamp, ["g", "r", "i", "z", "y"])
 
         field_list = self.areaprop.fields_tonight_list
         fieldid_list = []
         for field in field_list:
             fieldid_list.append(field.fieldid)
-        self.assertEqual(str(fieldid_list), "[1764, 2006, 2234, 2464, 2692]")
+        self.assertEqual(str(fieldid_list), "[1764, 1873, 2006, 2108, 2234, 2346, 2464, 2572, 2692, 2802]")
         self.assertEqual(str(self.areaprop.targets_dict[fieldid_list[0]]["g"]),
-                         "targetid=0 field=1764 filter=g exp_times=[15.0, 15.0] "
-                         "ra=13.726 dec=-19.793 time=0.0 brightness=0.000 "
-                         "progress=0.000 slewtime=0.000 value=0.000 cost=0.000 rank=0.000 propid=[]")
+                         "targetid=0 field=1764 filter=g exp_times=[15.0, 15.0] ra=13.726 dec=-19.793 "
+                         "time=0.0 airmass=0.000 brightness=0.000 "
+                         "progress=0.000 value=0.000 slewtime=0.000 cost=0.000 rank=0.000 propid=[]")
         self.assertEqual(str(self.areaprop.targets_dict[fieldid_list[-1]]["g"]),
-                         "targetid=0 field=2692 filter=g exp_times=[15.0, 15.0] "
-                         "ra=14.146 dec=0.931 time=0.0 brightness=0.000 "
-                         "progress=0.000 slewtime=0.000 value=0.000 cost=0.000 rank=0.000 propid=[]")
+                         "targetid=0 field=2802 filter=g exp_times=[15.0, 15.0] ra=12.654 dec=3.318 "
+                         "time=0.0 airmass=0.000 brightness=0.000 "
+                         "progress=0.000 value=0.000 slewtime=0.000 cost=0.000 rank=0.000 propid=[]")
 
-        self.assertEqual(self.areaprop.total_goal, 500)
+        self.assertEqual(self.areaprop.total_goal, 1000)
         self.assertEqual(self.areaprop.total_visits, 0)
         self.assertEqual(self.areaprop.total_progress, 0.0)
 
     def test_areadistributionproposal_suggest_targets(self):
 
-        lsst_start_timestamp = 1640995200.0
+        lsst_start_timestamp = 1641000000.0
         self.areaprop.start_night(lsst_start_timestamp, ["g", "r", "i", "z", "y"])
 
         timestamp = lsst_start_timestamp
         target_list = self.areaprop.suggest_targets(timestamp)
-        self.assertEqual(len(target_list), 21)
+        self.assertEqual(len(target_list), 40)
         self.assertEqual(str(target_list[0]),
-                         "targetid=0 field=1764 filter=g exp_times=[15.0, 15.0] "
-                         "ra=13.726 dec=-19.793 time=0.0 brightness=22.076 "
-                         "progress=0.000 slewtime=0.000 value=1.000 cost=0.000 rank=0.000 propid=[]")
+                         "targetid=0 field=1764 filter=g exp_times=[15.0, 15.0] ra=13.726 dec=-19.793 "
+                         "time=1641000000.0 airmass=1.210 brightness=21.964 "
+                         "progress=0.000 value=1.000 slewtime=0.000 cost=0.000 rank=0.000 propid=[]")
         self.assertEqual(str(target_list[-1]),
-                         "targetid=0 field=2692 filter=y exp_times=[15.0, 15.0] "
-                         "ra=14.146 dec=0.931 time=0.0 brightness=18.019 "
-                         "progress=0.000 slewtime=0.000 value=1.000 cost=0.000 rank=0.000 propid=[]")
+                         "targetid=0 field=2802 filter=y exp_times=[15.0, 15.0] ra=12.654 dec=3.318 "
+                         "time=1641000000.0 airmass=1.522 brightness=17.784 "
+                         "progress=0.000 value=1.000 slewtime=0.000 cost=0.000 rank=0.000 propid=[]")
 
         timestamp += 60
         target_list = self.areaprop.suggest_targets(timestamp)
-        self.assertEqual(len(target_list), 21)
+        self.assertEqual(len(target_list), 40)
         self.assertEqual(str(target_list[0]),
-                         "targetid=0 field=1764 filter=g exp_times=[15.0, 15.0] "
-                         "ra=13.726 dec=-19.793 time=0.0 brightness=22.076 "
-                         "progress=0.000 slewtime=0.000 value=1.000 cost=0.000 rank=0.000 propid=[]")
+                         "targetid=0 field=1764 filter=g exp_times=[15.0, 15.0] ra=13.726 dec=-19.793 "
+                         "time=1641000060.0 airmass=1.213 brightness=21.971 "
+                         "progress=0.000 value=1.000 slewtime=0.000 cost=0.000 rank=0.000 propid=[]")
         self.assertEqual(str(target_list[-1]),
-                         "targetid=0 field=2692 filter=y exp_times=[15.0, 15.0] "
-                         "ra=14.146 dec=0.931 time=0.0 brightness=18.017 "
-                         "progress=0.000 slewtime=0.000 value=1.000 cost=0.000 rank=0.000 propid=[]")
+                         "targetid=0 field=2802 filter=y exp_times=[15.0, 15.0] ra=12.654 dec=3.318 "
+                         "time=1641000060.0 airmass=1.527 brightness=17.783 "
+                         "progress=0.000 value=1.000 slewtime=0.000 cost=0.000 rank=0.000 propid=[]")
 
         observation = target_list[0]
         self.assertEqual(observation.goal, 10)
         self.assertEqual(observation.visits, 0)
         self.assertEqual(observation.progress, 0.0)
-        self.assertEqual(self.areaprop.total_goal, 500)
+        self.assertEqual(self.areaprop.total_goal, 1000)
         self.assertEqual(self.areaprop.total_visits, 0)
         self.assertEqual(self.areaprop.total_progress, 0.0)
         self.areaprop.register_observation(observation)
         self.assertEqual(observation.goal, 10)
         self.assertEqual(observation.visits, 1)
-        self.assertEqual(observation.progress, 0.1)
-        self.assertEqual(self.areaprop.total_goal, 500)
+        self.assertEqual(observation.progress, 0.10)
+        self.assertEqual(self.areaprop.total_goal, 1000)
         self.assertEqual(self.areaprop.total_visits, 1)
-        self.assertEqual(self.areaprop.total_progress, 0.002)
+        self.assertEqual(self.areaprop.total_progress, 0.001)
 
         timestamp += 60
         target_list = self.areaprop.suggest_targets(timestamp)
-        self.assertEqual(len(target_list), 21)
+        self.assertEqual(len(target_list), 40)
         self.assertEqual(str(target_list[0]),
-                         "targetid=0 field=1764 filter=r exp_times=[15.0, 15.0] "
-                         "ra=13.726 dec=-19.793 time=0.0 brightness=21.122 "
-                         "progress=0.000 slewtime=0.000 value=1.002 cost=0.000 rank=0.000 propid=[]")
+                         "targetid=0 field=1764 filter=r exp_times=[15.0, 15.0] ra=13.726 dec=-19.793 "
+                         "time=1641000120.0 airmass=1.216 brightness=21.019 "
+                         "progress=0.000 value=1.001 slewtime=0.000 cost=0.000 rank=0.000 propid=[]")
         self.assertEqual(str(target_list[-1]),
-                         "targetid=0 field=1764 filter=g exp_times=[15.0, 15.0] "
-                         "ra=13.726 dec=-19.793 time=0.0 brightness=22.075 "
-                         "progress=0.100 slewtime=0.000 value=0.902 cost=0.000 rank=0.000 propid=[]")
+                         "targetid=0 field=1764 filter=g exp_times=[15.0, 15.0] ra=13.726 dec=-19.793 "
+                         "time=1641000120.0 airmass=1.216 brightness=21.976 "
+                         "progress=0.100 value=0.901 slewtime=0.000 cost=0.000 rank=0.000 propid=[]")
