@@ -1,7 +1,8 @@
 import math
 import copy
 import logging
-import heapq
+
+from operator import itemgetter
 
 from ts_scheduler.sky_model import AstronomicalSkyModel
 from ts_scheduler.schedulerDefinitions import INFOX, DEG2RAD, read_conf_file, conf_file_path
@@ -26,6 +27,8 @@ class DriverParameters(object):
         self.timebonus_dt = (math.sqrt(tmax * tmax + 4 * slope * tmax / bmax) - tmax) / 2
         self.timebonus_db = slope / (tmax + self.timebonus_dt)
         self.timebonus_slope = slope
+
+        self.night_boundary = confdict["survey"]["night_boundary"]
 
 class Driver(object):
     def __init__(self):
@@ -138,9 +141,9 @@ class Driver(object):
             prop.start_survey()
 
         self.sky.update(timestamp)
-        (sunset, sunrise) = self.sky.get_night_boundaries(-12.0)
+        (sunset, sunrise) = self.sky.get_night_boundaries(self.params.night_boundary)
         self.log.info("start_survey sunset=%.1f sunrise=%.1f" % (sunset, sunrise))
-        if sunset < timestamp < sunrise:
+        if sunset <= timestamp < sunrise:
             self.start_night(timestamp)
 
         self.sunset_timestamp = sunset
@@ -172,7 +175,7 @@ class Driver(object):
             prop.end_night()
 
         self.sky.update(timestamp)
-        (sunset, sunrise) = self.sky.get_night_boundaries(-12.0)
+        (sunset, sunrise) = self.sky.get_night_boundaries(self.params.night_boundary)
         self.log.info("end_night sunset=%.1f sunrise=%.1f" % (sunset, sunrise))
 
         self.sunset_timestamp = sunset
@@ -192,10 +195,10 @@ class Driver(object):
             self.start_survey(timestamp)
 
         if self.isnight:
-            if timestamp > self.sunrise_timestamp:
+            if timestamp >= self.sunrise_timestamp:
                 self.end_night(timestamp)
         else:
-            if timestamp > self.sunset_timestamp:
+            if timestamp >= self.sunset_timestamp:
                 self.start_night(timestamp)
 
     def update_internal_conditions(self, observatory_state):
@@ -209,7 +212,7 @@ class Driver(object):
     def select_next_target(self):
 
         targets_dict = {}
-        targets_heap = []
+        ranked_targets_list = []
 
         for prop in self.science_proposal_list:
             proptarget_list = prop.suggest_targets(self.time)
@@ -217,12 +220,14 @@ class Driver(object):
                          (prop.propid, prop.name, len(proptarget_list)))
 
             for target in proptarget_list:
+                target.num_props = 1
                 target.propid_list = [prop.propid]
                 target.value_list = [target.value]
                 fieldfilter = (target.fieldid, target.filter)
                 if fieldfilter in targets_dict:
                     if self.params.coadd_values:
                         targets_dict[fieldfilter][0].value += target.value
+                        targets_dict[fieldfilter][0].num_props += 1
                         targets_dict[fieldfilter][0].propid_list.append(prop.propid)
                         targets_dict[fieldfilter][0].propvalue_list.append(target.value)
                     else:
@@ -233,14 +238,16 @@ class Driver(object):
         for fieldfilter in targets_dict:
             slewtime = self.observatoryModel.get_slew_delay(targets_dict[fieldfilter][0])
             if slewtime >= 0:
-                slewtimebonus = self.compute_slewtime_bonus(slewtime)
+                cost_bonus = self.compute_slewtime_bonus(slewtime)
                 for target in targets_dict[fieldfilter]:
-                    target.cost = slewtime
-                    target.rank = target.value + slewtimebonus
-                    heapq.heappush(targets_heap, (-target.rank, target))
+                    target.slewtime = slewtime
+                    target.cost_bonus = cost_bonus
+                    target.rank = target.value + cost_bonus
+                    ranked_targets_list.append((-target.rank, target))
 
+        sorted_list = sorted(ranked_targets_list, key=itemgetter(0))
         try:
-            winner_target = heapq.heappop(targets_heap)[1]
+            winner_target = sorted_list.pop(0)[1]
             self.targetid += 1
             winner_target.targetid = self.targetid
             winner_target.time = self.time
