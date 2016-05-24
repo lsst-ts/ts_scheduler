@@ -17,5 +17,7 @@ def create_parser():
                         help="Set the verbosity for the console logging.")
     parser.add_argument("-c", "--console-format", dest="console_format", default=None,
                         help="Override the console format.")
+    parser.add_argument("--profile", dest="profile", action="store_true", help="Run the profiler on Scheduler"
+                        "code.")
 
     return parser
