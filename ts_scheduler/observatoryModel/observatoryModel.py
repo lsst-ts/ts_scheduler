@@ -15,6 +15,7 @@ class ObservatoryModelParameters(object):
         self.TelAlt_MaxPos_rad = math.radians(confdict["telescope"]["altitude_maxpos"])
         self.TelAz_MinPos_rad = math.radians(confdict["telescope"]["azimuth_minpos"])
         self.TelAz_MaxPos_rad = math.radians(confdict["telescope"]["azimuth_maxpos"])
+
         self.TelAlt_MaxSpeed_rad = math.radians(confdict["telescope"]["altitude_maxspeed"])
         self.TelAlt_Accel_rad = math.radians(confdict["telescope"]["altitude_accel"])
         self.TelAlt_Decel_rad = math.radians(confdict["telescope"]["altitude_decel"])
@@ -28,10 +29,9 @@ class ObservatoryModelParameters(object):
         self.TelRot_MaxSpeed_rad = math.radians(confdict["rotator"]["maxspeed"])
         self.TelRot_Accel_rad = math.radians(confdict["rotator"]["accel"])
         self.TelRot_Decel_rad = math.radians(confdict["rotator"]["decel"])
+        self.TelRot_FilterChangePos_rad = math.radians(confdict["rotator"]["filter_change_pos"])
         self.Rotator_FollowSky = confdict["rotator"]["follow_sky"]
         self.Rotator_ResumeAngle = confdict["rotator"]["resume_angle"]
-
-        self.TelRot_FilterPos_rad = math.radians(confdict["rotator"]["filter_pos"])
 
         self.DomAlt_MaxSpeed_rad = math.radians(confdict["dome"]["altitude_maxspeed"])
         self.DomAlt_Accel_rad = math.radians(confdict["dome"]["altitude_accel"])
@@ -140,7 +140,7 @@ class ObservatoryModel(object):
 
         self.log.log(INFOX, "configure: TelRot_MinPos_rad=%.3f" % (self.params.TelRot_MinPos_rad))
         self.log.log(INFOX, "configure: TelRot_MaxPos_rad=%.3f" % (self.params.TelRot_MaxPos_rad))
-        self.log.log(INFOX, "configure: TelRot_FilterPos_rad=%.3f" % (self.params.TelRot_FilterPos_rad))
+        self.log.log(INFOX, "configure: TelRot_FilterChangePos_rad=%.3f" % (self.params.TelRot_FilterChangePos_rad))
         self.log.log(INFOX, "configure: Rotator_FollowSky=%s" % (self.params.Rotator_FollowSky))
         self.log.log(INFOX, "configure: Rotator_ResumeAngle=%s" % (self.params.Rotator_ResumeAngle))
         self.log.log(INFOX, "configure: Filter_RemovableList=%s" % (self.params.Filter_RemovableList))
@@ -207,7 +207,7 @@ class ObservatoryModel(object):
                           maxspeed_rad,
                           accel_rad,
                           decel_rad,
-                          filterpos_rad,
+                          filterchangepos_rad,
                           follow_sky,
                           resume_angle):
 
@@ -216,7 +216,7 @@ class ObservatoryModel(object):
         self.params.TelRot_MaxSpeed_rad = maxspeed_rad
         self.params.TelRot_Accel_rad = accel_rad
         self.params.TelRot_Decel_rad = decel_rad
-        self.params.TelRot_FilterPos_rad = filterpos_rad
+        self.params.TelRot_FilterChangePos_rad = filterchangepos_rad
         self.params.Rotator_FollowSky = follow_sky
         self.params.Rotator_ResumeAngle = resume_angle
 
@@ -225,7 +225,7 @@ class ObservatoryModel(object):
         self.log.info("configure_rotator: TelRot_MaxSpeed=%.3f" % (math.degrees(self.params.TelRot_MaxSpeed_rad)))
         self.log.info("configure_rotator: TelRot_Accel=%.3f" % (math.degrees(self.params.TelRot_Accel_rad)))
         self.log.info("configure_rotator: TelRot_Decel=%.3f" % (math.degrees(self.params.TelRot_Decel_rad)))
-        self.log.info("configure_rotator: TelRot_FilterPos=%.3f" % (math.degrees(self.params.TelRot_FilterPos_rad)))
+        self.log.info("configure_rotator: TelRot_FilterChangePos=%.3f" % (math.degrees(self.params.TelRot_FilterChangePos_rad)))
         self.log.info("configure_rotator: Rotator_FollowSky=%s" % (self.params.Rotator_FollowSky))
         self.log.info("configure_rotator: Rotator_ResumeAngle=%s" % (self.params.Rotator_ResumeAngle))
 

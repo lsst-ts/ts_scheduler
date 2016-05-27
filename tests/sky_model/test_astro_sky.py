@@ -1,5 +1,6 @@
 import numpy
 import unittest
+import warnings
 
 from ts_scheduler.sky_model import AstronomicalSkyModel
 
@@ -9,6 +10,8 @@ class AstronomicalSkyTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        warnings.filterwarnings('ignore', category=RuntimeWarning, append=True)
+        warnings.filterwarnings('ignore', category=FutureWarning, append=True)
         cls.astro_sky = AstronomicalSkyModel(LSST_SITE)
         cls.time_tolerance = 1e-6
         cls.sun_altitude = -12.0

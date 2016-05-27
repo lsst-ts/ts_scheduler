@@ -1,3 +1,4 @@
+import logging
 import unittest
 
 from ts_scheduler.schedulerDefinitions import read_conf_file, conf_file_path, RAD2DEG
@@ -15,6 +16,7 @@ class AreaDistributionProposalTest(unittest.TestCase):
         cls.skyModel = AstronomicalSkyModel(location)
 
     def setUp(self):
+        logging.getLogger().setLevel(logging.WARN)
         self.areaprop = AreaDistributionProposal(1, conf_file_path(__name__, "../../conf", "survey",
                                                  "areaProp1.conf"), self.skyModel)
 
@@ -37,7 +39,7 @@ class AreaDistributionProposalTest(unittest.TestCase):
         self.assertAlmostEqual(self.areaprop.params.min_alt_rad * RAD2DEG, 23.578, delta=1e-3)
 
     def test_build_fields_tonight_list(self):
-        """Set timestamp as 2022-01-01 0h UTC"""
+        # Set timestamp as 2022-01-01 0h UTC
         lsst_start_timestamp = 1640995200.0
 
         self.areaprop.build_fields_tonight_list(lsst_start_timestamp)
