@@ -8,7 +8,7 @@ except ImportError:
 import os
 import unittest
 
-from ts_scheduler.setup.log import configure_logging, generate_logfile
+from ts_scheduler.setup.log import configure_logging, generate_logfile, set_log_levels
 
 class LogTest(unittest.TestCase):
 
@@ -32,3 +32,33 @@ class LogTest(unittest.TestCase):
         self.assertEqual(len(logging.getLogger().handlers), 2)
         self.assertIsInstance(logging.getLogger().handlers[1], logging.FileHandler)
         self.assertEqual(logging.getLogger().getEffectiveLevel(), logging.DEBUG)
+
+    def test_verbose_level_zero(self):
+        console_detail, file_detail = set_log_levels(0)
+        self.assertEqual(console_detail, 0)
+        self.assertEqual(file_detail, 3)
+
+    def test_verbose_level_two(self):
+        console_detail, file_detail = set_log_levels(2)
+        self.assertEqual(console_detail, 2)
+        self.assertEqual(file_detail, 3)
+
+    def test_verbose_level_three(self):
+        console_detail, file_detail = set_log_levels(2)
+        self.assertEqual(console_detail, 2)
+        self.assertEqual(file_detail, 3)
+
+    def test_verbose_level_four(self):
+        console_detail, file_detail = set_log_levels(4)
+        self.assertEqual(console_detail, 2)
+        self.assertEqual(file_detail, 4)
+
+    def test_verbose_level_five(self):
+        console_detail, file_detail = set_log_levels(6)
+        self.assertEqual(console_detail, 2)
+        self.assertEqual(file_detail, 5)
+
+    def test_verbose_level_six(self):
+        console_detail, file_detail = set_log_levels(6)
+        self.assertEqual(console_detail, 2)
+        self.assertEqual(file_detail, 5)
