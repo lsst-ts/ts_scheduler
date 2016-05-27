@@ -144,7 +144,7 @@ class Driver(object):
                           maxspeed_rad,
                           accel_rad,
                           decel_rad,
-                          filterpos_rad,
+                          filterchangepos_rad,
                           follow_sky,
                           resume_angle):
 
@@ -153,7 +153,7 @@ class Driver(object):
                                                 maxspeed_rad,
                                                 accel_rad,
                                                 decel_rad,
-                                                filterpos_rad,
+                                                filterchangepos_rad,
                                                 follow_sky,
                                                 resume_angle)
 

@@ -198,7 +198,7 @@ class Main(object):
                     maxspeed = self.topic_rotatorConfig.maxspeed
                     accel = self.topic_rotatorConfig.accel
                     decel = self.topic_rotatorConfig.decel
-                    filterpos = 0.0
+                    filterchangepos = self.topic_rotatorConfig.filter_change_pos
                     follow_sky = self.topic_rotatorConfig.followsky
                     resume_angle = self.topic_rotatorConfig.resume_angle
 
@@ -210,7 +210,7 @@ class Main(object):
                                                            math.radians(maxspeed),
                                                            math.radians(accel),
                                                            math.radians(decel),
-                                                           math.radians(filterpos),
+                                                           math.radians(filterchangepos),
                                                            follow_sky,
                                                            resume_angle)
                     waitconfig = False
