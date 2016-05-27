@@ -2,14 +2,22 @@ import logging
 import logging.handlers
 import sys
 import time
+import math
 
 from SALPY_scheduler import SAL_scheduler
 from SALPY_scheduler import scheduler_timeHandlerC
 from SALPY_scheduler import scheduler_observatoryStateC
 from SALPY_scheduler import scheduler_observationTestC
 from SALPY_scheduler import scheduler_targetTestC
-from SALPY_scheduler import scheduler_schedulerConfigC
 from SALPY_scheduler import scheduler_fieldC
+from SALPY_scheduler import scheduler_schedulerConfigC
+from SALPY_scheduler import scheduler_obsSiteConfigC
+from SALPY_scheduler import scheduler_telescopeConfigC
+from SALPY_scheduler import scheduler_domeConfigC
+from SALPY_scheduler import scheduler_rotatorConfigC
+from SALPY_scheduler import scheduler_cameraConfigC
+from SALPY_scheduler import scheduler_slewConfigC
+from SALPY_scheduler import scheduler_parkConfigC
 
 from ts_scheduler.schedulerDefinitions import INFOX, RAD2DEG, DEG2RAD, read_conf_file, conf_file_path
 from ts_scheduler.schedulerDriver import Driver
@@ -29,7 +37,14 @@ class Main(object):
         self.sal = SAL_scheduler()
         self.sal.setDebugLevel(0)
 
-        self.topicConfig = scheduler_schedulerConfigC()
+        self.topic_schedulerConfig = scheduler_schedulerConfigC()
+        self.topic_obsSiteConfig = scheduler_obsSiteConfigC()
+        self.topic_telescopeConfig = scheduler_telescopeConfigC()
+        self.topic_domeConfig = scheduler_domeConfigC()
+        self.topic_rotatorConfig = scheduler_rotatorConfigC()
+        self.topic_cameraConfig = scheduler_cameraConfigC()
+        self.topic_slewConfig = scheduler_slewConfigC()
+        self.topic_parkConfig = scheduler_parkConfigC()
         self.topicTime = scheduler_timeHandlerC()
         self.topicObservatoryState = scheduler_observatoryStateC()
         self.topicObservation = scheduler_observationTestC()
@@ -41,6 +56,13 @@ class Main(object):
         self.log.info("run")
 
         self.sal.salTelemetrySub("scheduler_schedulerConfig")
+        self.sal.salTelemetrySub("scheduler_obsSiteConfig")
+        self.sal.salTelemetrySub("scheduler_telescopeConfig")
+        self.sal.salTelemetrySub("scheduler_domeConfig")
+        self.sal.salTelemetrySub("scheduler_rotatorConfig")
+        self.sal.salTelemetrySub("scheduler_cameraConfig")
+        self.sal.salTelemetrySub("scheduler_slewConfig")
+        self.sal.salTelemetrySub("scheduler_parkConfig")
         self.sal.salTelemetrySub("scheduler_timeHandler")
         self.sal.salTelemetrySub("scheduler_observatoryState")
         self.sal.salTelemetrySub("scheduler_observationTest")
@@ -59,18 +81,145 @@ class Main(object):
             waitconfig = True
             lastconfigtime = time.time()
             while waitconfig:
-                scode = self.sal.getNextSample_schedulerConfig(self.topicConfig)
-                if (scode == 0 and self.topicConfig.log_file != ""):
+                scode = self.sal.getNextSample_schedulerConfig(self.topic_schedulerConfig)
+                if (scode == 0 and self.topic_schedulerConfig.log_file != ""):
                     lastconfigtime = time.time()
-                    logfilename = self.topicConfig.log_file
-                    self.log.log(INFOX, "run: rx config logfile=%s" % (logfilename))
+                    logfilename = self.topic_schedulerConfig.log_file
+                    self.log.info("run: rx scheduler config logfile=%s" % (logfilename))
                     waitconfig = False
 
                 else:
                     tf = time.time()
                     if (tf - lastconfigtime > 10.0):
                         waitconfig = False
-                        self.log.info("run: config timeout")
+                        self.log.info("run: scheduler config timeout")
+
+            waitconfig = True
+            lastconfigtime = time.time()
+            while waitconfig:
+                scode = self.sal.getNextSample_obsSiteConfig(self.topic_obsSiteConfig)
+                if (scode == 0 and self.topic_obsSiteConfig.name != ""):
+                    lastconfigtime = time.time()
+                    latitude = self.topic_obsSiteConfig.latitude
+                    longitude = self.topic_obsSiteConfig.longitude
+                    height = self.topic_obsSiteConfig.height
+                    self.log.info("run: rx site config latitude=%.3f longitude=%.3f height=%.0f" % (latitude, longitude, height))
+                    self.schedulerDriver.configure_location(math.radians(latitude), math.radians(longitude), height)
+                    waitconfig = False
+
+                else:
+                    tf = time.time()
+                    if (tf - lastconfigtime > 10.0):
+                        waitconfig = False
+                        self.log.info("run: site config timeout")
+
+            waitconfig = True
+            lastconfigtime = time.time()
+            while waitconfig:
+                scode = self.sal.getNextSample_telescopeConfig(self.topic_telescopeConfig)
+                if (scode == 0 and self.topic_telescopeConfig.altitude_minpos >= 0):
+                    lastconfigtime = time.time()
+
+                    altitude_minpos = self.topic_telescopeConfig.altitude_minpos
+                    altitude_maxpos = self.topic_telescopeConfig.altitude_maxpos
+                    azimuth_minpos = self.topic_telescopeConfig.azimuth_minpos
+                    azimuth_maxpos = self.topic_telescopeConfig.azimuth_maxpos
+                    altitude_maxspeed = self.topic_telescopeConfig.altitude_maxspeed
+                    altitude_accel = self.topic_telescopeConfig.altitude_accel
+                    altitude_decel = self.topic_telescopeConfig.altitude_decel
+                    azimuth_maxspeed = self.topic_telescopeConfig.azimuth_maxspeed
+                    azimuth_accel = self.topic_telescopeConfig.azimuth_accel
+                    azimuth_decel = self.topic_telescopeConfig.azimuth_decel
+                    settle_time = self.topic_telescopeConfig.settle_time
+
+                    self.log.info("run: rx telescope config altitude_minpos=%.3f altitude_maxpos=%.3f "
+                                  "azimuth_minpos=%.3f azimuth_maxpos=%.3f" %
+                                  (altitude_minpos, altitude_maxpos, azimuth_minpos, azimuth_maxpos))
+                    self.schedulerDriver.configure_telescope(math.radians(altitude_minpos),
+                                                             math.radians(altitude_maxpos),
+                                                             math.radians(azimuth_minpos),
+                                                             math.radians(azimuth_maxpos),
+                                                             math.radians(altitude_maxspeed),
+                                                             math.radians(altitude_accel),
+                                                             math.radians(altitude_decel),
+                                                             math.radians(azimuth_maxspeed),
+                                                             math.radians(azimuth_accel),
+                                                             math.radians(azimuth_decel),
+                                                             settle_time)
+                    waitconfig = False
+
+                else:
+                    tf = time.time()
+                    if (tf - lastconfigtime > 10.0):
+                        waitconfig = False
+                        self.log.info("run: telescope config timeout")
+
+            waitconfig = True
+            lastconfigtime = time.time()
+            while waitconfig:
+                scode = self.sal.getNextSample_domeConfig(self.topic_domeConfig)
+                if (scode == 0 and self.topic_domeConfig.altitude_maxspeed >= 0):
+                    lastconfigtime = time.time()
+
+                    altitude_maxspeed = self.topic_domeConfig.altitude_maxspeed
+                    altitude_accel = self.topic_domeConfig.altitude_accel
+                    altitude_decel = self.topic_domeConfig.altitude_decel
+                    azimuth_maxspeed = self.topic_domeConfig.azimuth_maxspeed
+                    azimuth_accel = self.topic_domeConfig.azimuth_accel
+                    azimuth_decel = self.topic_domeConfig.azimuth_decel
+                    settle_time = self.topic_domeConfig.settle_time
+
+                    self.log.info("run: rx dome config altitude_maxspeed=%.3f azimuth_maxspeed=%.3f" %
+                                  (altitude_maxspeed, azimuth_maxspeed))
+                    self.schedulerDriver.configure_dome(math.radians(altitude_maxspeed),
+                                                        math.radians(altitude_accel),
+                                                        math.radians(altitude_decel),
+                                                        math.radians(azimuth_maxspeed),
+                                                        math.radians(azimuth_accel),
+                                                        math.radians(azimuth_decel),
+                                                        settle_time)
+                    waitconfig = False
+
+                else:
+                    tf = time.time()
+                    if (tf - lastconfigtime > 10.0):
+                        waitconfig = False
+                        self.log.info("run: dome config timeout")
+
+            waitconfig = True
+            lastconfigtime = time.time()
+            while waitconfig:
+                scode = self.sal.getNextSample_rotatorConfig(self.topic_rotatorConfig)
+                if (scode == 0 and self.topic_rotatorConfig.minpos >= 0):
+                    lastconfigtime = time.time()
+
+                    minpos = self.topic_rotatorConfig.minpos
+                    maxpos = self.topic_rotatorConfig.maxpos
+                    maxspeed = self.topic_rotatorConfig.maxspeed
+                    accel = self.topic_rotatorConfig.accel
+                    decel = self.topic_rotatorConfig.decel
+                    filterpos = 0.0
+                    follow_sky = self.topic_rotatorConfig.followsky
+                    resume_angle = self.topic_rotatorConfig.resume_angle
+
+                    self.log.info("run: rx rotator config minpos=%.3f maxpos=%.3f "
+                                  "followsky=%s resume_angle=%s" %
+                                  (minpos, maxpos, followsky, resume_angle))
+                    self.schedulerDriver.configure_rotator(math.radians(minpos),
+                                                           math.radians(maxpos),
+                                                           math.radians(maxspeed),
+                                                           math.radians(accel),
+                                                           math.radians(decel),
+                                                           math.radians(filterpos),
+                                                           follow_sky,
+                                                           resume_angle)
+                    waitconfig = False
+
+                else:
+                    tf = time.time()
+                    if (tf - lastconfigtime > 10.0):
+                        waitconfig = False
+                        self.log.info("run: telescope config timeout")
 
             field_dict = self.schedulerDriver.get_fields_dict()
             if len(field_dict) > 0:

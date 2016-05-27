@@ -15,29 +15,33 @@ class ObservatoryModelParameters(object):
         self.TelAlt_MaxPos_rad = math.radians(confdict["telescope"]["altitude_maxpos"])
         self.TelAz_MinPos_rad = math.radians(confdict["telescope"]["azimuth_minpos"])
         self.TelAz_MaxPos_rad = math.radians(confdict["telescope"]["azimuth_maxpos"])
-        self.TelRot_MinPos_rad = math.radians(confdict["rotator"]["minpos"])
-        self.TelRot_MaxPos_rad = math.radians(confdict["rotator"]["maxpos"])
-        self.TelRot_FilterPos_rad = math.radians(confdict["rotator"]["filter_pos"])
-
         self.TelAlt_MaxSpeed_rad = math.radians(confdict["telescope"]["altitude_maxspeed"])
         self.TelAlt_Accel_rad = math.radians(confdict["telescope"]["altitude_accel"])
         self.TelAlt_Decel_rad = math.radians(confdict["telescope"]["altitude_decel"])
         self.TelAz_MaxSpeed_rad = math.radians(confdict["telescope"]["azimuth_maxspeed"])
         self.TelAz_Accel_rad = math.radians(confdict["telescope"]["azimuth_accel"])
         self.TelAz_Decel_rad = math.radians(confdict["telescope"]["azimuth_decel"])
+        self.Mount_SettleTime = confdict["telescope"]["settle_time"]
+
+        self.TelRot_MinPos_rad = math.radians(confdict["rotator"]["minpos"])
+        self.TelRot_MaxPos_rad = math.radians(confdict["rotator"]["maxpos"])
         self.TelRot_MaxSpeed_rad = math.radians(confdict["rotator"]["maxspeed"])
         self.TelRot_Accel_rad = math.radians(confdict["rotator"]["accel"])
         self.TelRot_Decel_rad = math.radians(confdict["rotator"]["decel"])
+        self.Rotator_FollowSky = confdict["rotator"]["follow_sky"]
+        self.Rotator_ResumeAngle = confdict["rotator"]["resume_angle"]
+
+        self.TelRot_FilterPos_rad = math.radians(confdict["rotator"]["filter_pos"])
+
         self.DomAlt_MaxSpeed_rad = math.radians(confdict["dome"]["altitude_maxspeed"])
         self.DomAlt_Accel_rad = math.radians(confdict["dome"]["altitude_accel"])
         self.DomAlt_Decel_rad = math.radians(confdict["dome"]["altitude_decel"])
         self.DomAz_MaxSpeed_rad = math.radians(confdict["dome"]["azimuth_maxspeed"])
         self.DomAz_Accel_rad = math.radians(confdict["dome"]["azimuth_accel"])
         self.DomAz_Decel_rad = math.radians(confdict["dome"]["azimuth_decel"])
+        self.DomAz_SettleTime = confdict["dome"]["settle_time"]
 
         self.Filter_ChangeTime = confdict["camera"]["filter_change_time"]
-        self.Mount_SettleTime = confdict["telescope"]["settle_time"]
-        self.DomAz_SettleTime = confdict["dome"]["settle_time"]
         self.ReadoutTime = confdict["camera"]["readout_time"]
         self.ShutterTime = confdict["camera"]["shutter_time"]
 
@@ -47,8 +51,6 @@ class ObservatoryModelParameters(object):
         for index, alt in enumerate(self.OpticsCL_AltLimit):
             self.OpticsCL_AltLimit[index] = math.radians(self.OpticsCL_AltLimit[index])
 
-        self.Rotator_FollowSky = confdict["rotator"]["follow_sky"]
-        self.Rotator_ResumeAngle = confdict["rotator"]["resume_angle"]
 
         self.Filter_RemovableList = confdict["camera"]["filter_removable"]
 
@@ -116,34 +118,36 @@ class ObservatoryModel(object):
         self.parkState.unmountedfilters = self.Filter_UnmountedList
         self.parkState.tracking = False
 
-        self.log.log(INFOX, "configure: TelAlt_MinPos_rad=%.3f" % (self.params.TelAlt_MinPos_rad))
-        self.log.log(INFOX, "configure: TelAlt_MaxPos_rad=%.3f" % (self.params.TelAlt_MaxPos_rad))
-        self.log.log(INFOX, "configure: TelAz_MinPos_rad=%.3f" % (self.params.TelAz_MinPos_rad))
-        self.log.log(INFOX, "configure: TelAz_MaxPos_rad=%.3f" % (self.params.TelAz_MaxPos_rad))
+        self.log.log(INFOX, "configure: TelAlt_MinPos=%.3f" % (math.degrees(self.params.TelAlt_MinPos_rad)))
+        self.log.log(INFOX, "configure: TelAlt_MaxPos=%.3f" % (math.degrees(self.params.TelAlt_MaxPos_rad)))
+        self.log.log(INFOX, "configure: TelAz_MinPos=%.3f" % (math.degrees(self.params.TelAz_MinPos_rad)))
+        self.log.log(INFOX, "configure: TelAz_MaxPos=%.3f" % (math.degrees(self.params.TelAz_MaxPos_rad)))
+        self.log.log(INFOX, "configure: TelAlt_MaxSpeed=%.3f" % (math.degrees(self.params.TelAlt_MaxSpeed_rad)))
+        self.log.log(INFOX, "configure: TelAlt_Accel=%.3f" % (math.degrees(self.params.TelAlt_Accel_rad)))
+        self.log.log(INFOX, "configure: TelAlt_Decel=%.3f" % (math.degrees(self.params.TelAlt_Decel_rad)))
+        self.log.log(INFOX, "configure: TelAz_MaxSpeed=%.3f" % (math.degrees(self.params.TelAz_MaxSpeed_rad)))
+        self.log.log(INFOX, "configure: TelAz_Accel=%.3f" % (math.degrees(self.params.TelAz_Accel_rad)))
+        self.log.log(INFOX, "configure: TelAz_Decel=%.3f" % (math.degrees(self.params.TelAz_Decel_rad)))
+        self.log.log(INFOX, "configure: Mount_SettleTime=%.1f" % (self.params.Mount_SettleTime))
+
+        self.log.log(INFOX, "configure: DomAlt_MaxSpeed=%.3f" % (math.degrees(self.params.DomAlt_MaxSpeed_rad)))
+        self.log.log(INFOX, "configure: DomAlt_Accel=%.3f" % (math.degrees(self.params.DomAlt_Accel_rad)))
+        self.log.log(INFOX, "configure: DomAlt_Decel=%.3f" % (math.degrees(self.params.DomAlt_Decel_rad)))
+        self.log.log(INFOX, "configure: DomAz_MaxSpeed=%.3f" % (math.degrees(self.params.DomAz_MaxSpeed_rad)))
+        self.log.log(INFOX, "configure: DomAz_Accel=%.3f" % (math.degrees(self.params.DomAz_Accel_rad)))
+        self.log.log(INFOX, "configure: DomAz_Decel=%.3f" % (math.degrees(self.params.DomAz_Decel_rad)))
+        self.log.log(INFOX, "configure: DomAz_SettleTime=%.1f" % (self.params.DomAz_SettleTime))
+
         self.log.log(INFOX, "configure: TelRot_MinPos_rad=%.3f" % (self.params.TelRot_MinPos_rad))
         self.log.log(INFOX, "configure: TelRot_MaxPos_rad=%.3f" % (self.params.TelRot_MaxPos_rad))
         self.log.log(INFOX, "configure: TelRot_FilterPos_rad=%.3f" % (self.params.TelRot_FilterPos_rad))
         self.log.log(INFOX, "configure: Rotator_FollowSky=%s" % (self.params.Rotator_FollowSky))
         self.log.log(INFOX, "configure: Rotator_ResumeAngle=%s" % (self.params.Rotator_ResumeAngle))
         self.log.log(INFOX, "configure: Filter_RemovableList=%s" % (self.params.Filter_RemovableList))
-        self.log.log(INFOX, "configure: TelAlt_MaxSpeed_rad=%.3f" % (self.params.TelAlt_MaxSpeed_rad))
-        self.log.log(INFOX, "configure: TelAlt_Accel_rad=%.3f" % (self.params.TelAlt_Accel_rad))
-        self.log.log(INFOX, "configure: TelAlt_Decel_rad=%.3f" % (self.params.TelAlt_Decel_rad))
-        self.log.log(INFOX, "configure: TelAz_MaxSpeed_rad=%.3f" % (self.params.TelAz_MaxSpeed_rad))
-        self.log.log(INFOX, "configure: TelAz_Accel_rad=%.3f" % (self.params.TelAz_Accel_rad))
-        self.log.log(INFOX, "configure: TelAz_Decel_rad=%.3f" % (self.params.TelAz_Decel_rad))
         self.log.log(INFOX, "configure: TelRot_MaxSpeed_rad=%.3f" % (self.params.TelRot_MaxSpeed_rad))
         self.log.log(INFOX, "configure: TelRot_Accel_rad=%.3f" % (self.params.TelRot_Accel_rad))
         self.log.log(INFOX, "configure: TelRot_Decel_rad=%.3f" % (self.params.TelRot_Decel_rad))
-        self.log.log(INFOX, "configure: DomAlt_MaxSpeed_rad=%.3f" % (self.params.DomAlt_MaxSpeed_rad))
-        self.log.log(INFOX, "configure: DomAlt_Accel_rad=%.3f" % (self.params.DomAlt_Accel_rad))
-        self.log.log(INFOX, "configure: DomAlt_Decel_rad=%.3f" % (self.params.DomAlt_Decel_rad))
-        self.log.log(INFOX, "configure: DomAz_MaxSpeed_rad=%.3f" % (self.params.DomAz_MaxSpeed_rad))
-        self.log.log(INFOX, "configure: DomAz_Accel_rad=%.3f" % (self.params.DomAz_Accel_rad))
-        self.log.log(INFOX, "configure: DomAz_Decel_rad=%.3f" % (self.params.DomAz_Decel_rad))
         self.log.log(INFOX, "configure: Filter_ChangeTime=%.1f" % (self.params.Filter_ChangeTime))
-        self.log.log(INFOX, "configure: Mount_SettleTime=%.1f" % (self.params.Mount_SettleTime))
-        self.log.log(INFOX, "configure: DomAz_SettleTime=%.1f" % (self.params.DomAz_SettleTime))
         self.log.log(INFOX, "configure: ReadoutTime=%.1f" % (self.params.ReadoutTime))
         self.log.log(INFOX, "configure: ShutterTime=%.1f" % (self.params.ShutterTime))
         self.log.log(INFOX, "configure: OpticsOL_Slope=%.3f" % (self.params.OpticsOL_Slope))
@@ -159,6 +163,96 @@ class ObservatoryModel(object):
         self.log.log(INFOX, "configure: park_Filter=%s" % (self.parkState.filter))
 
         self.reset()
+
+    def configure_telescope(self,
+                            altitude_minpos_rad,
+                            altitude_maxpos_rad,
+                            azimuth_minpos_rad,
+                            azimuth_maxpos_rad,
+                            altitude_maxspeed_rad,
+                            altitude_accel_rad,
+                            altitude_decel_rad,
+                            azimuth_maxspeed_rad,
+                            azimuth_accel_rad,
+                            azimuth_decel_rad,
+                            settle_time):
+
+        self.params.TelAlt_MinPos_rad = altitude_minpos_rad
+        self.params.TelAlt_MaxPos_rad = altitude_maxpos_rad
+        self.params.TelAz_MinPos_rad = azimuth_minpos_rad
+        self.params.TelAz_MaxPos_rad = azimuth_maxpos_rad
+        self.params.TelAlt_MaxSpeed_rad = altitude_maxspeed_rad
+        self.params.TelAlt_Accel_rad = altitude_accel_rad
+        self.params.TelAlt_Decel_rad = altitude_decel_rad
+        self.params.TelAz_MaxSpeed_rad = azimuth_maxspeed_rad
+        self.params.TelAz_Accel_rad = azimuth_accel_rad
+        self.params.TelAz_Decel_rad = azimuth_decel_rad
+        self.params.Mount_SettleTime = settle_time
+
+        self.log.info("configure_telescope: TelAlt_MinPos=%.3f" % (math.degrees(self.params.TelAlt_MinPos_rad)))
+        self.log.info("configure_telescope: TelAlt_MaxPos=%.3f" % (math.degrees(self.params.TelAlt_MaxPos_rad)))
+        self.log.info("configure_telescope: TelAz_MinPos=%.3f" % (math.degrees(self.params.TelAz_MinPos_rad)))
+        self.log.info("configure_telescope: TelAz_MaxPos=%.3f" % (math.degrees(self.params.TelAz_MaxPos_rad)))
+        self.log.info("configure_telescope: TelAlt_MaxSpeed=%.3f" % (math.degrees(self.params.TelAlt_MaxSpeed_rad)))
+        self.log.info("configure_telescope: TelAlt_Accel=%.3f" % (math.degrees(self.params.TelAlt_Accel_rad)))
+        self.log.info("configure_telescope: TelAlt_Decel=%.3f" % (math.degrees(self.params.TelAlt_Decel_rad)))
+        self.log.info("configure_telescope: TelAz_MaxSpeed=%.3f" % (math.degrees(self.params.TelAz_MaxSpeed_rad)))
+        self.log.info("configure_telescope: TelAz_Accel=%.3f" % (math.degrees(self.params.TelAz_Accel_rad)))
+        self.log.info("configure_telescope: TelAz_Decel=%.3f" % (math.degrees(self.params.TelAz_Decel_rad)))
+        self.log.info("configure_telescope: Mount_SettleTime=%.3f" % (self.params.Mount_SettleTime))
+
+    def configure_rotator(self,
+                          minpos_rad,
+                          maxpos_rad,
+                          maxspeed_rad,
+                          accel_rad,
+                          decel_rad,
+                          filterpos_rad,
+                          follow_sky,
+                          resume_angle):
+
+        self.params.TelRot_MinPos_rad = minpos_rad
+        self.params.TelRot_MaxPos_rad = maxpos_rad
+        self.params.TelRot_MaxSpeed_rad = maxspeed_rad
+        self.params.TelRot_Accel_rad = accel_rad
+        self.params.TelRot_Decel_rad = decel_rad
+        self.params.TelRot_FilterPos_rad = filterpos_rad
+        self.params.Rotator_FollowSky = follow_sky
+        self.params.Rotator_ResumeAngle = resume_angle
+
+        self.log.info("configure_rotator: TelRot_MinPos=%.3f" % (math.degrees(self.params.TelRot_MinPos_rad)))
+        self.log.info("configure_rotator: TelRot_MaxPos=%.3f" % (math.degrees(self.params.TelRot_MaxPos_rad)))
+        self.log.info("configure_rotator: TelRot_MaxSpeed=%.3f" % (math.degrees(self.params.TelRot_MaxSpeed_rad)))
+        self.log.info("configure_rotator: TelRot_Accel=%.3f" % (math.degrees(self.params.TelRot_Accel_rad)))
+        self.log.info("configure_rotator: TelRot_Decel=%.3f" % (math.degrees(self.params.TelRot_Decel_rad)))
+        self.log.info("configure_rotator: TelRot_FilterPos=%.3f" % (math.degrees(self.params.TelRot_FilterPos_rad)))
+        self.log.info("configure_rotator: Rotator_FollowSky=%s" % (self.params.Rotator_FollowSky))
+        self.log.info("configure_rotator: Rotator_ResumeAngle=%s" % (self.params.Rotator_ResumeAngle))
+
+    def configure_dome(self,
+                       altitude_maxspeed_rad,
+                       altitude_accel_rad,
+                       altitude_decel_rad,
+                       azimuth_maxspeed_rad,
+                       azimuth_accel_rad,
+                       azimuth_decel_rad,
+                       settle_time):
+
+        self.params.DomAlt_MaxSpeed_rad = altitude_maxspeed_rad
+        self.params.DomAlt_Accel_rad = altitude_accel_rad
+        self.params.DomAlt_Decel_rad = altitude_decel_rad
+        self.params.DomAz_MaxSpeed_rad = azimuth_maxspeed_rad
+        self.params.DomAz_Accel_rad = azimuth_accel_rad
+        self.params.DomAz_Decel_rad = azimuth_decel_rad
+        self.params.DomAz_SettleTime = settle_time
+
+        self.log.info("configure_telescope: DomAlt_MaxSpeed=%.3f" % (math.degrees(self.params.DomAlt_MaxSpeed_rad)))
+        self.log.info("configure_telescope: DomAlt_Accel=%.3f" % (math.degrees(self.params.DomAlt_Accel_rad)))
+        self.log.info("configure_telescope: DomAlt_Decel=%.3f" % (math.degrees(self.params.DomAlt_Decel_rad)))
+        self.log.info("configure_telescope: DomAz_MaxSpeed=%.3f" % (math.degrees(self.params.DomAz_MaxSpeed_rad)))
+        self.log.info("configure_telescope: DomAz_Accel=%.3f" % (math.degrees(self.params.DomAz_Accel_rad)))
+        self.log.info("configure_telescope: DomAz_Decel=%.3f" % (math.degrees(self.params.DomAz_Decel_rad)))
+        self.log.info("configure_telescope: DomAz_SettleTime=%.3f" % (self.params.DomAz_SettleTime))
 
     def set_state(self, new_state):
 

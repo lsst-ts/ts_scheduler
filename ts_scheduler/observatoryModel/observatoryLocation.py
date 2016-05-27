@@ -26,3 +26,11 @@ class ObservatoryLocation(object):
         self.latitude_rad = math.radians(location_confdict["obs_site"]["latitude"])
         self.longitude_rad = math.radians(location_confdict["obs_site"]["longitude"])
         self.height = location_confdict["obs_site"]["height"]
+
+    def reconfigure(self, latitude_rad, longitude_rad, height):
+
+        self.latitude_rad = latitude_rad
+        self.longitude_rad = longitude_rad
+        self.height = height
+
+

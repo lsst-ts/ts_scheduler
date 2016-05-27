@@ -107,6 +107,73 @@ class Driver(object):
         self.sunset_timestamp = 0.0
         self.sunrise_timestamp = 0.0
 
+    def configure_location(self, latitude_rad, longitude_rad, height):
+
+        self.location.reconfigure(latitude_rad, longitude_rad, height)
+        self.observatoryModel.location.reconfigure(latitude_rad, longitude_rad, height)
+        self.sky.__init__(self.location)
+
+    def configure_telescope(self,
+                            altitude_minpos_rad,
+                            altitude_maxpos_rad,
+                            azimuth_minpos_rad,
+                            azimuth_maxpos_rad,
+                            altitude_maxspeed_rad,
+                            altitude_accel_rad,
+                            altitude_decel_rad,
+                            azimuth_maxspeed_rad,
+                            azimuth_accel_rad,
+                            azimuth_decel_rad,
+                            settle_time):
+
+        self.observatoryModel.configure_telescope(altitude_minpos_rad,
+                                                  altitude_maxpos_rad,
+                                                  azimuth_minpos_rad,
+                                                  azimuth_maxpos_rad,
+                                                  altitude_maxspeed_rad,
+                                                  altitude_accel_rad,
+                                                  altitude_decel_rad,
+                                                  azimuth_maxspeed_rad,
+                                                  azimuth_accel_rad,
+                                                  azimuth_decel_rad,
+                                                  settle_time)
+
+    def configure_rotator(self,
+                          minpos_rad,
+                          maxpos_rad,
+                          maxspeed_rad,
+                          accel_rad,
+                          decel_rad,
+                          filterpos_rad,
+                          follow_sky,
+                          resume_angle):
+
+        self.observatoryModel.configure_rotator(minpos_rad,
+                                                maxpos_rad,
+                                                maxspeed_rad,
+                                                accel_rad,
+                                                decel_rad,
+                                                filterpos_rad,
+                                                follow_sky,
+                                                resume_angle)
+
+    def configure_dome(self,
+                       altitude_maxspeed_rad,
+                       altitude_accel_rad,
+                       altitude_decel_rad,
+                       azimuth_maxspeed_rad,
+                       azimuth_accel_rad,
+                       azimuth_decel_rad,
+                       settle_time):
+
+        self.observatoryModel.configure_dome(altitude_maxspeed_rad,
+                                             altitude_accel_rad,
+                                             altitude_decel_rad,
+                                             azimuth_maxspeed_rad,
+                                             azimuth_accel_rad,
+                                             azimuth_decel_rad,
+                                             settle_time)
+
     def build_fields_dict(self):
 
         sql = "select * from Field"
