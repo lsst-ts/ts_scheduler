@@ -7,7 +7,7 @@ test_schedulerDriver
 
 Tests for `schedulerDriver` module.
 """
-
+import logging
 import unittest
 
 from ts_scheduler.schedulerDriver import Driver
@@ -15,6 +15,7 @@ from ts_scheduler.schedulerDriver import Driver
 class TestSchedulerDriver(unittest.TestCase):
 
     def setUp(self):
+        logging.getLogger().setLevel(logging.WARN)
         self.driver = Driver()
 
     def test_init(self):

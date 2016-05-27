@@ -1,3 +1,4 @@
+import logging
 import unittest
 
 from ts_scheduler.schedulerDefinitions import read_conf_file, conf_file_path
@@ -15,6 +16,7 @@ class ScriptedProposalTest(unittest.TestCase):
         cls.skyModel = AstronomicalSkyModel(location)
 
     def setUp(self):
+        logging.getLogger().setLevel(logging.WARN)
         self.scriptedprop = ScriptedProposal(1, conf_file_path(__name__, "../../conf", "survey",
                                              "scriptedProp1.conf"), self.skyModel)
 
