@@ -32,5 +32,3 @@ class ObservatoryLocation(object):
         self.latitude_rad = latitude_rad
         self.longitude_rad = longitude_rad
         self.height = height
-
-

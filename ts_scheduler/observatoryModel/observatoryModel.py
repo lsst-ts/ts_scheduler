@@ -51,7 +51,6 @@ class ObservatoryModelParameters(object):
         for index, alt in enumerate(self.OpticsCL_AltLimit):
             self.OpticsCL_AltLimit[index] = math.radians(self.OpticsCL_AltLimit[index])
 
-
         self.Filter_RemovableList = confdict["camera"]["filter_removable"]
 
         self.prerequisites = {}
@@ -246,13 +245,13 @@ class ObservatoryModel(object):
         self.params.DomAz_Decel_rad = azimuth_decel_rad
         self.params.DomAz_SettleTime = settle_time
 
-        self.log.info("configure_telescope: DomAlt_MaxSpeed=%.3f" % (math.degrees(self.params.DomAlt_MaxSpeed_rad)))
-        self.log.info("configure_telescope: DomAlt_Accel=%.3f" % (math.degrees(self.params.DomAlt_Accel_rad)))
-        self.log.info("configure_telescope: DomAlt_Decel=%.3f" % (math.degrees(self.params.DomAlt_Decel_rad)))
-        self.log.info("configure_telescope: DomAz_MaxSpeed=%.3f" % (math.degrees(self.params.DomAz_MaxSpeed_rad)))
-        self.log.info("configure_telescope: DomAz_Accel=%.3f" % (math.degrees(self.params.DomAz_Accel_rad)))
-        self.log.info("configure_telescope: DomAz_Decel=%.3f" % (math.degrees(self.params.DomAz_Decel_rad)))
-        self.log.info("configure_telescope: DomAz_SettleTime=%.3f" % (self.params.DomAz_SettleTime))
+        self.log.info("configure_dome: DomAlt_MaxSpeed=%.3f" % (math.degrees(self.params.DomAlt_MaxSpeed_rad)))
+        self.log.info("configure_dome: DomAlt_Accel=%.3f" % (math.degrees(self.params.DomAlt_Accel_rad)))
+        self.log.info("configure_dome: DomAlt_Decel=%.3f" % (math.degrees(self.params.DomAlt_Decel_rad)))
+        self.log.info("configure_dome: DomAz_MaxSpeed=%.3f" % (math.degrees(self.params.DomAz_MaxSpeed_rad)))
+        self.log.info("configure_dome: DomAz_Accel=%.3f" % (math.degrees(self.params.DomAz_Accel_rad)))
+        self.log.info("configure_dome: DomAz_Decel=%.3f" % (math.degrees(self.params.DomAz_Decel_rad)))
+        self.log.info("configure_dome: DomAz_SettleTime=%.3f" % (self.params.DomAz_SettleTime))
 
     def set_state(self, new_state):
 

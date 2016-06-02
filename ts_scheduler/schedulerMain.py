@@ -103,8 +103,11 @@ class Main(object):
                     latitude = self.topic_obsSiteConfig.latitude
                     longitude = self.topic_obsSiteConfig.longitude
                     height = self.topic_obsSiteConfig.height
-                    self.log.info("run: rx site config latitude=%.3f longitude=%.3f height=%.0f" % (latitude, longitude, height))
-                    self.schedulerDriver.configure_location(math.radians(latitude), math.radians(longitude), height)
+                    self.log.info("run: rx site config latitude=%.3f longitude=%.3f height=%.0f" %
+                                  (latitude, longitude, height))
+                    self.schedulerDriver.configure_location(math.radians(latitude),
+                                                            math.radians(longitude),
+                                                            height)
                     waitconfig = False
 
                 else:
@@ -190,7 +193,7 @@ class Main(object):
             lastconfigtime = time.time()
             while waitconfig:
                 scode = self.sal.getNextSample_rotatorConfig(self.topic_rotatorConfig)
-                if (scode == 0 and self.topic_rotatorConfig.minpos >= 0):
+                if (scode == 0 and self.topic_rotatorConfig.maxspeed >= 0):
                     lastconfigtime = time.time()
 
                     minpos = self.topic_rotatorConfig.minpos
@@ -204,7 +207,7 @@ class Main(object):
 
                     self.log.info("run: rx rotator config minpos=%.3f maxpos=%.3f "
                                   "followsky=%s resume_angle=%s" %
-                                  (minpos, maxpos, followsky, resume_angle))
+                                  (minpos, maxpos, follow_sky, resume_angle))
                     self.schedulerDriver.configure_rotator(math.radians(minpos),
                                                            math.radians(maxpos),
                                                            math.radians(maxspeed),
@@ -219,7 +222,7 @@ class Main(object):
                     tf = time.time()
                     if (tf - lastconfigtime > 10.0):
                         waitconfig = False
-                        self.log.info("run: telescope config timeout")
+                        self.log.info("run: rotator config timeout")
 
             field_dict = self.schedulerDriver.get_fields_dict()
             if len(field_dict) > 0:
