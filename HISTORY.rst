@@ -4,6 +4,20 @@ History
 -------
 
 ====================
+0.3 (2016-05-27)
+--------------------
+
+Area Distribution Proposal
+Configuration from SOCS
+New cost functions
+New value functions
+New flexible serendipity
+Repeatable code
+New sky brightness
+Observatory Model constantly updated from telemetry
+Several unit tests
+
+====================
 0.2   (2015-12-23)
 --------------------
 
