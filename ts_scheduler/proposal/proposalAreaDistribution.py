@@ -3,7 +3,7 @@ import math
 
 from operator import itemgetter
 
-from ts_scheduler.schedulerDefinitions import INFOX, RAD2DEG, DEG2RAD
+from ts_scheduler.schedulerDefinitions import RAD2DEG, DEG2RAD
 from ts_scheduler.proposal import Proposal
 from ts_scheduler.schedulerField import Field
 from ts_scheduler.schedulerTarget import Target
@@ -298,12 +298,10 @@ class AreaDistributionProposal(Proposal):
                 evaluated_targets += 1
             evaluated_fields += 1
 
-        self.log.log(INFOX,
-                     "suggest_targets: fields=%d, evaluated=%d, discarded airmass=%d" %
-                     (len(id_list), evaluated_fields, discarded_fields_airmass))
-        self.log.log(INFOX,
-                     "suggest_targets: evaluated targets=%d, discarded lowbright=%d highbright=%d" %
-                     (evaluated_targets, discarded_targets_lowbrightness, discarded_targets_highbrightness))
+        self.log.debug("suggest_targets: fields=%d, evaluated=%d, discarded airmass=%d" %
+                       (len(id_list), evaluated_fields, discarded_fields_airmass))
+        self.log.debug("suggest_targets: evaluated targets=%d, discarded lowbright=%d highbright=%d" %
+                       (evaluated_targets, discarded_targets_lowbrightness, discarded_targets_highbrightness))
 
         return self.get_evaluated_target_list()
 
