@@ -39,15 +39,15 @@ class Proposal(object):
     def suggest_targets(self, time):
         return []
 
-    def select_fields(self, timestamp, sky_region, sky_exclusions, nightly_sky_bounds):
+    def select_fields(self, timestamp, sky_region, sky_exclusions, sky_nightly_bounds):
         query_list = []
 
-        delta_lst = nightly_sky_bounds["delta_lst"]
+        delta_lst = sky_nightly_bounds["delta_lst"]
         max_reach = sky_exclusions["max_reach"]
 
         self.sky.update(timestamp)
         (sunset_timestamp, sunrise_timestamp) = \
-            self.sky.get_night_boundaries(self.params.nightly_sky_bounds["twilight_boundary"])
+            self.sky.get_night_boundaries(self.params.sky_nightly_bounds["twilight_boundary"])
 
         self.sky.update(sunset_timestamp)
         sunset_lst_rad = self.sky.date_profile.lst_rad

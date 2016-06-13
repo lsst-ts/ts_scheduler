@@ -14,7 +14,7 @@ class AreaDistributionProposalParameters(object):
 
         self.sky_region = confdict["sky_region"]
         self.sky_exclusions = confdict["sky_exclusions"]
-        self.nightly_sky_bounds = confdict["nightly_sky_bounds"]
+        self.sky_nightly_bounds = confdict["sky_nightly_bounds"]
 
         self.max_airmass = confdict["constraints"]["max_airmass"]
         max_zd_rad = math.acos(1 / self.max_airmass)
@@ -126,7 +126,7 @@ class AreaDistributionProposal(Proposal):
         self.fields_tonight_list = []
 
         sql = self.select_fields(timestamp, self.params.sky_region, self.params.sky_exclusions,
-                                 self.params.nightly_sky_bounds)
+                                 self.params.sky_nightly_bounds)
 
         res = self.db.query(sql)
 
