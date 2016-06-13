@@ -3,6 +3,17 @@ try:
 except ImportError:
     from itertools import izip_longest as zip_longest
 
+__all__ = ["CUT_TYPEMAP", "FieldSelection"]
+
+CUT_TYPEMAP = {
+    "ra": "fieldRA",
+    "dec": "fieldDec",
+    "gl": "fieldGL",
+    "gb": "fieldGB",
+    "el": "fieldEL",
+    "eb": "fieldEB"
+}
+
 class FieldSelection(object):
     """Class for constructing SQL queries on the survey fields database.
 

@@ -3,7 +3,7 @@ import math
 
 from operator import itemgetter
 
-from ts_scheduler.schedulerDefinitions import INFOX, RAD2DEG, DEG2RAD
+from ts_scheduler.schedulerDefinitions import INFOX
 from ts_scheduler.proposal import Proposal
 from ts_scheduler.schedulerField import Field
 from ts_scheduler.schedulerTarget import Target
@@ -12,17 +12,9 @@ class AreaDistributionProposalParameters(object):
 
     def __init__(self, confdict):
 
-        self.delta_lst = confdict["sky_region"]["delta_lst"]
-        self.min_abs_ra = confdict["sky_region"]["min_abs_ra"]
-        self.max_abs_ra = confdict["sky_region"]["max_abs_ra"]
-        self.min_abs_dec = confdict["sky_region"]["min_abs_dec"]
-        self.max_abs_dec = confdict["sky_region"]["max_abs_dec"]
-        self.use_gal_exclusion = confdict["sky_region"]["use_gal_exclusion"]
-        self.taperB = confdict["sky_region"]["taper_b"]
-        self.taperL = confdict["sky_region"]["taper_l"]
-        self.peakL = confdict["sky_region"]["peak_l"]
-        self.maxReach = confdict["sky_region"]["max_reach"]
-        self.twilight_boundary = confdict["sky_region"]["twilight_boundary"]
+        self.sky_region = confdict["sky_region"]
+        self.sky_exclusions = confdict["sky_exclusions"]
+        self.nightly_sky_bounds = confdict["nightly_sky_bounds"]
 
         self.max_airmass = confdict["constraints"]["max_airmass"]
         max_zd_rad = math.acos(1 / self.max_airmass)
@@ -133,84 +125,13 @@ class AreaDistributionProposal(Proposal):
 
         self.fields_tonight_list = []
 
-        self.sky.update(timestamp)
-        (sunset_timestamp, sunrise_timestamp) = self.sky.get_night_boundaries(self.params.twilight_boundary)
-
-        self.sky.update(sunset_timestamp)
-        sunset_lst_rad = self.sky.date_profile.lst_rad
-
-        self.sky.update(sunrise_timestamp)
-        sunrise_lst_rad = self.sky.date_profile.lst_rad
-
-        # normalize RA absolute limits to the [0; 360] range
-        min_abs_ra = self.sky.sun.normalize(self.params.min_abs_ra)
-        max_abs_ra = self.sky.sun.normalize(self.params.max_abs_ra)
-
-        # compute RA relative min at sunset twilight
-        min_rel_ra = sunset_lst_rad * RAD2DEG - self.params.delta_lst
-
-        # compute RA relative max at sunrise twilight
-        max_rel_ra = sunrise_lst_rad * RAD2DEG + self.params.delta_lst
-
-        # normalize RA relative limits to the [0; 360] range
-        min_rel_ra = self.sky.sun.normalize(min_rel_ra)
-        max_rel_ra = self.sky.sun.normalize(max_rel_ra)
-
-        # DEC absolute limits
-        min_abs_dec = self.params.min_abs_dec
-        max_abs_dec = self.params.max_abs_dec
-
-        # compute DEC relative min
-        min_rel_dec = self.sky.date_profile.location.latitude - self.params.maxReach
-
-        # compute DEC relative max
-        max_rel_dec = self.sky.date_profile.location.latitude + self.params.maxReach
-
-        sql = 'SELECT * from Field WHERE '
-
-        # filter by absolute RA limits
-        if max_abs_ra > min_abs_ra:
-            sql += 'fieldRA BETWEEN %f AND %f AND ' % (min_abs_ra, max_abs_ra)
-        else:
-            sql += '(fieldRA BETWEEN %f AND 360 OR ' % (min_abs_ra)
-            sql += 'fieldRA BETWEEN 0 AND %f) AND ' % (max_abs_ra)
-
-        # filter by relative RA limits
-        if max_rel_ra > min_rel_ra:
-            sql += 'fieldRA BETWEEN %f AND %f AND ' % (min_rel_ra, max_rel_ra)
-        else:
-            sql += '(fieldRA BETWEEN %f AND 360 OR ' % (min_rel_ra)
-            sql += 'fieldRA BETWEEN 0 AND %f) AND ' % (max_rel_ra)
-
-        # filter by absolute DEC limits
-        sql += 'fieldDec BETWEEN %f AND %f AND ' % (min_abs_dec, max_abs_dec)
-
-        # filter by relative DEC limits
-        sql += 'fieldDec BETWEEN %f AND %f ' % (min_rel_dec, max_rel_dec)
-
-        # subtract galactic exclusion zone
-        if self.params.use_gal_exclusion:
-            if (self.params.taperB != 0) & (self.params.taperL != 0):
-                band = self.params.peakL - self.params.taperL
-                sql += 'AND ((fieldGL < 180 AND abs(fieldGB) > (%f - (%f * abs(fieldGL)) / %f)) OR ' % \
-                       (self.params.peakL, band, self.params.taperB)
-                sql += '(fieldGL > 180 AND abs(fieldGB) > (%f - (%f * abs(fieldGL - 360)) / %f))) ' % \
-                       (self.params.peakL, band, self.params.taperB)
-
-        sql += 'order by fieldId'
+        sql = self.select_fields(timestamp, self.params.sky_region, self.params.sky_exclusions,
+                                 self.params.nightly_sky_bounds)
 
         res = self.db.query(sql)
 
         for row in res:
-            field = Field()
-            field.fieldid = row[0]
-            field.fov_rad = row[1] * DEG2RAD
-            field.ra_rad = row[2] * DEG2RAD
-            field.dec_rad = row[3] * DEG2RAD
-            field.gl_rad = row[4] * DEG2RAD
-            field.gb_rad = row[5] * DEG2RAD
-            field.el_rad = row[6] * DEG2RAD
-            field.eb_rad = row[7] * DEG2RAD
+            field = Field.from_db_row(row)
             self.fields_tonight_list.append(field)
 
         return

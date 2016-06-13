@@ -29,5 +29,17 @@ class Field(object):
 
     @classmethod
     def from_db_row(cls, row):
+        """Create instance from a database table row.
+
+        Parameters
+        ----------
+        row : list[str]
+            The database row information to create the instance from.
+
+        Returns
+        -------
+        :class:`.Field`
+            The instance containing the database row information.
+        """
         return cls(row[0], math.radians(row[2]), math.radians(row[3]), math.radians(row[4]),
                    math.radians(row[5]), math.radians(row[6]), math.radians(row[7]), math.radians(row[1]))
