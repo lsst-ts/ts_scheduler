@@ -4,8 +4,9 @@ import logging
 
 from operator import itemgetter
 
+from ts_scheduler.setup import WORDY, EXTENSIVE
 from ts_scheduler.sky_model import AstronomicalSkyModel
-from ts_scheduler.schedulerDefinitions import INFOX, DEG2RAD, read_conf_file, conf_file_path
+from ts_scheduler.schedulerDefinitions import DEG2RAD, read_conf_file, conf_file_path
 from ts_scheduler.schedulerField import Field
 from ts_scheduler.schedulerTarget import Target
 from ts_scheduler.observatoryModel import ObservatoryModel
@@ -174,6 +175,17 @@ class Driver(object):
                                              azimuth_decel_rad,
                                              settle_time)
 
+    def configure_camera(self,
+                         readout_time,
+                         shutter_time,
+                         filter_change_time,
+                         filter_removable):
+
+        self.observatoryModel.configure_camera(readout_time,
+                                               shutter_time,
+                                               filter_change_time,
+                                               filter_removable)
+
     def build_fields_dict(self):
 
         sql = "select * from Field"
@@ -192,7 +204,7 @@ class Driver(object):
             field.el_rad = row[6] * DEG2RAD
             field.eb_rad = row[7] * DEG2RAD
             self.fields_dict[fieldid] = field
-            self.log.debug("buildFieldsTable: %s" % (self.fields_dict[fieldid]))
+            self.log.log(EXTENSIVE, "buildFieldsTable: %s" % (self.fields_dict[fieldid]))
         self.log.info("buildFieldsTable: %d fields" % (len(self.fields_dict)))
 
     def get_fields_dict(self):
@@ -209,7 +221,7 @@ class Driver(object):
 
         self.sky.update(timestamp)
         (sunset, sunrise) = self.sky.get_night_boundaries(self.params.night_boundary)
-        self.log.info("start_survey sunset=%.1f sunrise=%.1f" % (sunset, sunrise))
+        self.log.debug("start_survey sunset=%.1f sunrise=%.1f" % (sunset, sunrise))
         if sunset <= timestamp < sunrise:
             self.start_night(timestamp)
 
@@ -225,7 +237,7 @@ class Driver(object):
 
     def start_night(self, timestamp):
 
-        self.log.info("start_night t=%.1f" % timestamp)
+        self.log.log(WORDY, "start_night t=%.1f" % timestamp)
 
         self.isnight = True
 
@@ -234,7 +246,7 @@ class Driver(object):
 
     def end_night(self, timestamp):
 
-        self.log.info("end_night t=%.1f" % timestamp)
+        self.log.log(WORDY, "end_night t=%.1f" % timestamp)
 
         self.isnight = False
 
@@ -243,7 +255,7 @@ class Driver(object):
 
         self.sky.update(timestamp)
         (sunset, sunrise) = self.sky.get_night_boundaries(self.params.night_boundary)
-        self.log.info("end_night sunset=%.1f sunrise=%.1f" % (sunset, sunrise))
+        self.log.debug("end_night sunset=%.1f sunrise=%.1f" % (sunset, sunrise))
 
         self.sunset_timestamp = sunset
         self.sunrise_timestamp = sunrise
@@ -283,8 +295,8 @@ class Driver(object):
 
         for prop in self.science_proposal_list:
             proptarget_list = prop.suggest_targets(self.time)
-            self.log.log(INFOX, "select_next_target propid=%d name=%s targets=%d" %
-                         (prop.propid, prop.name, len(proptarget_list)))
+            self.log.debug("select_next_target propid=%d name=%s targets=%d" %
+                           (prop.propid, prop.name, len(proptarget_list)))
 
             for target in proptarget_list:
                 target.num_props = 1

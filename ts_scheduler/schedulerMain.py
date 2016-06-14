@@ -19,7 +19,8 @@ from SALPY_scheduler import scheduler_cameraConfigC
 from SALPY_scheduler import scheduler_slewConfigC
 from SALPY_scheduler import scheduler_parkConfigC
 
-from ts_scheduler.schedulerDefinitions import INFOX, RAD2DEG, DEG2RAD, read_conf_file, conf_file_path
+from ts_scheduler.setup import TRACE
+from ts_scheduler.schedulerDefinitions import RAD2DEG, DEG2RAD, read_conf_file, conf_file_path
 from ts_scheduler.schedulerDriver import Driver
 from ts_scheduler.schedulerTarget import Target
 from ts_scheduler.observatoryModel import ObservatoryState
@@ -224,6 +225,33 @@ class Main(object):
                         waitconfig = False
                         self.log.info("run: rotator config timeout")
 
+            waitconfig = True
+            lastconfigtime = time.time()
+            while waitconfig:
+                scode = self.sal.getNextSample_cameraConfig(self.topic_cameraConfig)
+                if (scode == 0 and self.topic_cameraConfig.readout_time > 0):
+                    lastconfigtime = time.time()
+
+                    readout_time = self.topic_cameraConfig.readout_time
+                    shutter_time = self.topic_cameraConfig.shutter_time
+                    filter_change_time = self.topic_cameraConfig.filter_change_time
+                    filter_removable = self.topic_cameraConfig.filter_removable
+
+                    self.log.info("run: rx camera config readout_time=%.3f shutter_time=%.3f "
+                                  "filter_change_time=%.3f filter_removable=%s" %
+                                  (readout_time, shutter_time, filter_change_time, filter_removable))
+                    self.schedulerDriver.configure_camera(readout_time,
+                                                          shutter_time,
+                                                          filter_change_time,
+                                                          filter_removable)
+                    waitconfig = False
+
+                else:
+                    tf = time.time()
+                    if (tf - lastconfigtime > 10.0):
+                        waitconfig = False
+                        self.log.info("run: camera config timeout")
+
             field_dict = self.schedulerDriver.get_fields_dict()
             if len(field_dict) > 0:
                 self.topicField.ID = -1
@@ -238,7 +266,7 @@ class Main(object):
                     self.topicField.eb = field_dict[fieldid].eb_rad * RAD2DEG
                     self.topicField.fov = field_dict[fieldid].fov_rad * RAD2DEG
                     self.sal.putSample_field(self.topicField)
-                    self.log.log(INFOX, "run: tx field %s" % (field_dict[fieldid]))
+                    self.log.debug("run: tx field %s" % (field_dict[fieldid]))
                 self.topicField.ID = -1
                 self.sal.putSample_field(self.topicField)
 
@@ -251,7 +279,7 @@ class Main(object):
                         lasttimetime = time.time()
                         timestamp = self.topicTime.timestamp
 
-                        self.log.log(INFOX, "run: rx time=%.1f" % (timestamp))
+                        self.log.debug("run: rx time=%.1f" % (timestamp))
 
                         self.schedulerDriver.update_time(self.topicTime.timestamp)
 
@@ -264,7 +292,7 @@ class Main(object):
                                 waitstate = False
                                 observatory_state = self.create_observatory_state(self.topicObservatoryState)
 
-                                self.log.log(INFOX, "run: rx state %s" % str(observatory_state))
+                                self.log.debug("run: rx state %s" % str(observatory_state))
 
                                 self.schedulerDriver.update_internal_conditions(observatory_state)
                                 target = self.schedulerDriver.select_next_target()
@@ -280,7 +308,7 @@ class Main(object):
                                     self.topicTarget.exposure_times[i] = int(exptime)
                                 self.sal.putSample_targetTest(self.topicTarget)
 
-                                self.log.log(INFOX, "run: tx target %s", str(target))
+                                self.log.debug("run: tx target %s", str(target))
 
                                 waitobservation = True
                                 lastobstime = time.time()
@@ -294,7 +322,7 @@ class Main(object):
                                             synccount += 1
 
                                             observation = self.create_observation(self.topicObservation)
-                                            self.log.log(INFOX, "run: rx observation %s", str(observation))
+                                            self.log.debug("run: rx observation %s", str(observation))
                                             self.schedulerDriver.register_observation(observation)
 
                                             waitobservation = False
@@ -307,7 +335,7 @@ class Main(object):
                                         to = time.time()
                                         if (to - lastobstime > 10.0):
                                             waitobservation = False
-                                        self.log.debug("run: t=%f lastobstime=%f" % (to, lastobstime))
+                                        self.log.log(TRACE, "run: t=%f lastobstime=%f" % (to, lastobstime))
 
                                     newtime = time.time()
                                     deltatime = newtime - meastime
@@ -321,7 +349,7 @@ class Main(object):
                                 ts = time.time()
                                 if (ts - laststatetime > 10.0):
                                     waitstate = False
-                                    self.log.debug("run: t=%f laststatetime=%f" % (ts, laststatetime))
+                                    self.log.log(TRACE, "run: t=%f laststatetime=%f" % (ts, laststatetime))
 
                     else:
                         self.log.warning("run: rx backward time previous=%f new=%f" %
