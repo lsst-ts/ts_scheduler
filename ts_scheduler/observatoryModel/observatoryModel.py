@@ -46,9 +46,9 @@ class ObservatoryModelParameters(object):
         self.ReadoutTime = confdict["camera"]["readout_time"]
         self.ShutterTime = confdict["camera"]["shutter_time"]
 
-        self.OpticsOL_Slope = confdict["slew"]["tel_optics_ol_slope"] / math.radians(1)
-        self.OpticsCL_Delay = confdict["slew"]["tel_optics_cl_delay"]
-        self.OpticsCL_AltLimit = confdict["slew"]["tel_optics_cl_alt_limit"]
+        self.OpticsOL_Slope = confdict["optics_loop_corr"]["tel_optics_ol_slope"] / math.radians(1)
+        self.OpticsCL_Delay = confdict["optics_loop_corr"]["tel_optics_cl_delay"]
+        self.OpticsCL_AltLimit = confdict["optics_loop_corr"]["tel_optics_cl_alt_limit"]
         for index, alt in enumerate(self.OpticsCL_AltLimit):
             self.OpticsCL_AltLimit[index] = math.radians(self.OpticsCL_AltLimit[index])
 
