@@ -22,7 +22,7 @@ class TestSchedulerDriver(unittest.TestCase):
 
         self.assertEqual(len(self.driver.fields_dict), 5292)
         self.assertEqual(len(self.driver.science_proposal_list), 1)
-        self.assertEqual(self.driver.science_proposal_list[0].name, "universal_weak")
+        self.assertEqual(self.driver.science_proposal_list[0].name, "weak_lensing")
 
     def test_compute_slewtime_bonus(self):
 

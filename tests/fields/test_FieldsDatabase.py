@@ -19,3 +19,7 @@ class FieldsDatabaseTest(unittest.TestCase):
                          "(5, 252.001105, -87.568547), (6, 107.998895, -87.568547), "
                          "(7, 215.999822, -85.272913), (8, 144.000178, -85.272913), "
                          "(9, 0.0, -85.272892), (10, 288.000508, -85.272852)]")
+
+    def test_get_all_fields(self):
+        field_set = self.db.get_all_fields()
+        self.assertEqual(len(field_set), 5292)

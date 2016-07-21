@@ -67,7 +67,7 @@ class AreaDistributionProposalTest(unittest.TestCase):
                          "2762, 2769, 2770, 2783, 2784, 2787, 2788, 2802]")
 
         self.areaweak = AreaDistributionProposal(2, conf_file_path(__name__, "../../conf", "survey",
-                                                 "universal_weak.conf"), self.skyModel)
+                                                 "weak_lensing.conf"), self.skyModel)
         self.areaweak.build_fields_tonight_list(lsst_start_timestamp)
         field_list = self.areaweak.fields_tonight_list
         fieldid_list = []

@@ -25,8 +25,10 @@ def read_conf_file(filename):
     var4 = [1, 2, 4]
     # Boolean parameter
     var5 = True
-    # Floating point math epxression parameter
+    # Floating point math expression parameter
     var6 = 375. / 30.
+    # Set of tuples
+    var7 = (test1, 1.0, 30.0), (test2, 4.0, 50.0)
 
     Parameters
     ----------
@@ -45,6 +47,8 @@ def read_conf_file(filename):
     from collections import defaultdict
     config_dict = defaultdict(dict)
     math_ops = "+,-,*,/".split(',')
+    import re
+    paren_match = re.compile(r'\(([^\)]+)\)')
 
     for section in config.sections():
         for key, _ in config.items(section):
@@ -59,7 +63,10 @@ def read_conf_file(filename):
                     # Handle parameters with math operations
                     check_math = [op for op in math_ops if op in value]
                     if len(check_math):
-                        value = eval(value)
+                        try:
+                            value = eval(value)
+                        except NameError:
+                            pass
 
                     try:
                         # Handle lists from the configuration
@@ -72,6 +79,19 @@ def read_conf_file(filename):
                             if len(value) == 1:
                                 if value[0] == '':
                                     value = []
+                        if value.startswith('('):
+                            val_parts = []
+                            matches = paren_match.findall(value)
+                            for match in matches:
+                                parts_list = []
+                                parts = match.split(',')
+                                for part in parts:
+                                    try:
+                                        parts_list.append(float(part))
+                                    except ValueError:
+                                        parts_list.append(part.strip())
+                                val_parts.append(tuple(parts_list))
+                            value = val_parts
                     except AttributeError:
                         # Above was a float
                         pass

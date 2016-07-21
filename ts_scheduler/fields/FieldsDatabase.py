@@ -1,8 +1,9 @@
-FIELDSDB_FILENAME = "Fields.db"
-
 import sqlite3
 
+from ts_scheduler.schedulerField import Field
 from ts_scheduler.schedulerDefinitions import conf_file_path
+
+FIELDSDB_FILENAME = "Fields.db"
 
 class FieldsDatabase(object):
 
@@ -17,3 +18,15 @@ class FieldsDatabase(object):
         res = cursor.fetchall()
 
         return res
+
+    def get_all_fields(self):
+        return self.get_field_set("select * from Field;")
+
+    def get_field_set(self, query):
+        field_set = set()
+        field_rows = self.query(query)
+        for field_row in field_rows:
+            field = Field.from_db_row(field_row)
+            field_set.add(field)
+
+        return field_set

@@ -9,3 +9,4 @@ from .createFieldsTable import *
 from .createFieldsData import *
 from .ingestFieldsData import *
 from .FieldsDatabase import *
+from .field_selection import *
