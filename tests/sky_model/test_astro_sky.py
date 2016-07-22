@@ -39,7 +39,8 @@ class AstronomicalSkyTest(unittest.TestCase):
         self.create_ra_dec()
         self.astro_sky.update(LSST_START_TIMESTAMP)
         sky_mags = self.astro_sky.get_sky_brightness(self.ra_rads, self.dec_rads)
-        self.assertEqual(sky_mags.size, self.ra_rads.size)
+        self.assertEqual(len(sky_mags), 6)
+        self.assertEqual(sky_mags['g'].size, self.ra_rads.size)
 
     def test_sky_brightness_retrieval_from_timestamp_set_and_array_of_positions(self):
         initial_timestamp = 1641081600.
@@ -49,14 +50,14 @@ class AstronomicalSkyTest(unittest.TestCase):
         sky_mags = self.astro_sky.get_sky_brightness_timeblock(initial_timestamp, time_step,
                                                                number_of_steps,
                                                                self.ra_rads, self.dec_rads)
-        self.assertEquals(sky_mags.size, number_of_steps * self.ra_rads.size)
-        self.assertEquals(sky_mags[0].size, self.ra_rads.size)
-        self.assertAlmostEquals(sky_mags[0][0].u, 22.62361215, delta=1e-7)
-        self.assertAlmostEquals(sky_mags[0][0].g, 21.92863773, delta=1e-7)
-        self.assertAlmostEquals(sky_mags[0][0].r, 20.80615409, delta=1e-7)
-        self.assertAlmostEquals(sky_mags[0][0].i, 19.79378908, delta=1e-7)
-        self.assertAlmostEquals(sky_mags[0][0].z, 18.78361422, delta=1e-7)
-        self.assertAlmostEquals(sky_mags[0][0].y, 17.56788428, delta=1e-7)
+        self.assertEqual(len(sky_mags), number_of_steps)
+        self.assertEqual(sky_mags[0]['g'].size, self.ra_rads.size)
+        self.assertAlmostEqual(sky_mags[0]['u'][0], 22.62361215, delta=1e-7)
+        self.assertAlmostEqual(sky_mags[0]['g'][0], 21.92863773, delta=1e-7)
+        self.assertAlmostEqual(sky_mags[0]['r'][0], 20.80615409, delta=1e-7)
+        self.assertAlmostEqual(sky_mags[0]['i'][0], 19.79378908, delta=1e-7)
+        self.assertAlmostEqual(sky_mags[0]['z'][0], 18.78361422, delta=1e-7)
+        self.assertAlmostEqual(sky_mags[0]['y'][0], 17.56788428, delta=1e-7)
 
     def test_get_night_boundaries(self):
         # 2022/01/01

@@ -67,21 +67,7 @@ class ScriptedProposal(Proposal):
             filter_list.append(target.filter)
         sky_mags = self.sky.get_sky_brightness_timeblock(time, 1, 1, ra_list, dec_list)
 
-        for ix, filter in enumerate(filter_list):
-            if filter == "u":
-                target_list[ix].sky_brightness = sky_mags[0][ix].u
-            elif filter == "g":
-                target_list[ix].sky_brightness = sky_mags[0][ix].g
-            elif filter == "r":
-                target_list[ix].sky_brightness = sky_mags[0][ix].r
-            elif filter == "i":
-                target_list[ix].sky_brightness = sky_mags[0][ix].i
-            elif filter == "z":
-                target_list[ix].sky_brightness = sky_mags[0][ix].z
-            elif filter == "y":
-                target_list[ix].sky_brightness = sky_mags[0][ix].y
-            else:
-                target_list[ix].sky_brightness = 0.0
+        target_list[0].sky_brightness = sky_mags[0][target.filter][0]
 
         self.targetid += 1
 
