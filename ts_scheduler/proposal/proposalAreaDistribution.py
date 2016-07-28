@@ -159,7 +159,7 @@ class AreaDistributionProposal(Proposal):
             sky_mags = self.sky.get_sky_brightness(ra_rad_list, dec_rad_list)
             attrs = self.sky.sky_brightness.getComputedVals()
             for ix, fieldid in enumerate(id_list):
-                mags_dict[fieldid] = sky_mags[ix]
+                mags_dict[fieldid] = {k: v[ix] for k, v in sky_mags.items()}
                 airmass_dict[fieldid] = attrs["airmass"][ix]
 
         evaluated_fields = 0

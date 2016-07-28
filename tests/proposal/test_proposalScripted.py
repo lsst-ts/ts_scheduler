@@ -1,5 +1,6 @@
 import logging
 import unittest
+import warnings
 
 from ts_scheduler.schedulerDefinitions import read_conf_file, conf_file_path
 from ts_scheduler.proposal import ScriptedProposal
@@ -10,6 +11,7 @@ class ScriptedProposalTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        warnings.filterwarnings('ignore', category=FutureWarning, append=True)
         site_confdict = read_conf_file(conf_file_path(__name__, "../../conf", "system", "site.conf"))
         location = ObservatoryLocation()
         location.configure(site_confdict)

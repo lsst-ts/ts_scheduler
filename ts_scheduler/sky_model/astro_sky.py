@@ -170,4 +170,4 @@ class AstronomicalSkyModel(object):
             self.sky_brightness.setRaDecMjd(ra, dec, mjd)
             mags.append(self.sky_brightness.returnMags())
 
-        return numpy.stack(mags)
+        return mags
