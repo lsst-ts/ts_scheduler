@@ -26,10 +26,6 @@ class Target(object):
         self.airmass = 0.0
         self.sky_brightness = 0.0
 
-        self.goal = 0
-        self.visits = 0
-        self.progress = 0.0
-
         self.value = 0.0
 
         self.slewtime = 0.0
@@ -39,6 +35,12 @@ class Target(object):
         self.num_props = 0
         self.propid_list = []
         self.propvalue_list = []
+
+        #internal book-keeping
+        self.goal = 0
+        self.visits = 0
+        self.progress = 0.0
+
 
     def __str__(self):
         return ("targetid=%d field=%d filter=%s exp_times=%s ra=%.3f dec=%.3f "
