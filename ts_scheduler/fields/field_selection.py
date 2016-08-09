@@ -6,12 +6,12 @@ except ImportError:
 __all__ = ["CUT_TYPEMAP", "FieldSelection"]
 
 CUT_TYPEMAP = {
-    "ra": "fieldRA",
-    "dec": "fieldDec",
-    "gl": "fieldGL",
-    "gb": "fieldGB",
-    "el": "fieldEL",
-    "eb": "fieldEB"
+    "RA": "fieldRA",
+    "Dec": "fieldDec",
+    "GL": "fieldGL",
+    "GB": "fieldGB",
+    "EL": "fieldEL",
+    "EB": "fieldEB"
 }
 
 class FieldSelection(object):

@@ -43,7 +43,7 @@ class Proposal(object):
         query_list = []
 
         delta_lst = sky_nightly_bounds["delta_lst"]
-        max_reach = sky_exclusions["max_reach"]
+        dec_window = sky_exclusions["dec_window"]
 
         self.sky.update(timestamp)
         (sunset_timestamp, sunrise_timestamp) = \
@@ -66,10 +66,10 @@ class Proposal(object):
         max_rel_ra = self.sky.sun.normalize(max_rel_ra)
 
         # compute DEC relative min
-        min_rel_dec = self.sky.date_profile.location.latitude - max_reach
+        min_rel_dec = self.sky.date_profile.location.latitude - dec_window
 
         # compute DEC relative max
-        max_rel_dec = self.sky.date_profile.location.latitude + max_reach
+        max_rel_dec = self.sky.date_profile.location.latitude + dec_window
 
         # Handle delta LST and max reach
         query_list.append(self.field_select.select_region("fieldRA", min_rel_ra, max_rel_ra))
@@ -79,8 +79,9 @@ class Proposal(object):
 
         # Handle the sky region selections
         for cut in sky_region["cuts"]:
+            print("A:", cut)
             cut_type = cut[0]
-            if cut_type != "gp":
+            if cut_type != "GP":
                 query_list.append(self.field_select.select_region(CUT_TYPEMAP[cut_type], cut[1], cut[2]))
             else:
                 query_list.append(self.field_select.galactic_region(cut[1], cut[2], cut[3], exclusion=False))
@@ -97,7 +98,7 @@ class Proposal(object):
         try:
             for cut in sky_exclusions["cuts"]:
                 cut_type = cut[0]
-                if cut_type == "gp":
+                if cut_type == "GP":
                     query_list.append(self.field_select.galactic_region(cut[1], cut[2], cut[3]))
                 else:
                     self.log.warn("Do not know how to handle cuts for {}".format(cut_type))

@@ -16,7 +16,7 @@ class DefinitionsTest(unittest.TestCase):
         self.assertEquals(len(conf_dict), 11)
         sky_region_cuts = conf_dict["sky_region"]["cuts"]
         self.assertEqual(len(sky_region_cuts), 2)
-        self.assertEqual(sky_region_cuts[0][0], 'ra')
+        self.assertEqual(sky_region_cuts[0][0], 'RA')
 
 if __name__ == "__main__":
     unittest.main()
