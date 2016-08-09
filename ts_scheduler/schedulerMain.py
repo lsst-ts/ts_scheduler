@@ -17,7 +17,9 @@ from SALPY_scheduler import scheduler_domeConfigC
 from SALPY_scheduler import scheduler_rotatorConfigC
 from SALPY_scheduler import scheduler_cameraConfigC
 from SALPY_scheduler import scheduler_slewConfigC
+from SALPY_scheduler import scheduler_opticsLoopCorrConfigC
 from SALPY_scheduler import scheduler_parkConfigC
+from SALPY_scheduler import scheduler_areaDistPropConfigC
 
 from ts_scheduler.setup import TRACE
 from ts_scheduler.schedulerDefinitions import RAD2DEG, DEG2RAD, read_conf_file, conf_file_path
@@ -45,7 +47,9 @@ class Main(object):
         self.topic_rotatorConfig = scheduler_rotatorConfigC()
         self.topic_cameraConfig = scheduler_cameraConfigC()
         self.topic_slewConfig = scheduler_slewConfigC()
+        self.topic_opticsConfig = scheduler_opticsLoopCorrConfigC()
         self.topic_parkConfig = scheduler_parkConfigC()
+        self.topic_areaDistPropConfig = scheduler_areaDistPropConfigC()
         self.topicTime = scheduler_timeHandlerC()
         self.topicObservatoryState = scheduler_observatoryStateC()
         self.topicObservation = scheduler_observationTestC()
@@ -63,7 +67,9 @@ class Main(object):
         self.sal.salTelemetrySub("scheduler_rotatorConfig")
         self.sal.salTelemetrySub("scheduler_cameraConfig")
         self.sal.salTelemetrySub("scheduler_slewConfig")
+        self.sal.salTelemetrySub("scheduler_opticsLoopCorrConfig")
         self.sal.salTelemetrySub("scheduler_parkConfig")
+        self.sal.salTelemetrySub("scheduler_areaDistPropConfig")
         self.sal.salTelemetrySub("scheduler_timeHandler")
         self.sal.salTelemetrySub("scheduler_observatoryState")
         self.sal.salTelemetrySub("scheduler_observationTest")
@@ -251,6 +257,286 @@ class Main(object):
                     if (tf - lastconfigtime > 10.0):
                         waitconfig = False
                         self.log.info("run: camera config timeout")
+
+            waitconfig = True
+            lastconfigtime = time.time()
+            while waitconfig:
+                scode = self.sal.getNextSample_slewConfig(self.topic_slewConfig)
+                if (scode == 0 and self.topic_slewConfig.prereq_exposures != ""):
+                    lastconfigtime = time.time()
+
+                    prereq_dict = {}
+
+                    prereq_str = self.topic_slewConfig.prereq_domalt
+                    if prereq_str != "":
+                        prereq_dict["domalt"] = prereq_str.split(",")
+                    else:
+                        prereq_dict["domalt"] = []
+
+                    prereq_str = self.topic_slewConfig.prereq_domaz
+                    if prereq_str != "":
+                        prereq_dict["domaz"] = prereq_str.split(",")
+                    else:
+                        prereq_dict["domaz"] = []
+
+                    prereq_str = self.topic_slewConfig.prereq_domazsettle
+                    if prereq_str != "":
+                        prereq_dict["domazsettle"] = prereq_str.split(",")
+                    else:
+                        prereq_dict["domazsettle"] = []
+
+                    prereq_str = self.topic_slewConfig.prereq_telalt
+                    if prereq_str != "":
+                        prereq_dict["telalt"] = prereq_str.split(",")
+                    else:
+                        prereq_dict["telalt"] = []
+
+                    prereq_str = self.topic_slewConfig.prereq_telaz
+                    if prereq_str != "":
+                        prereq_dict["telaz"] = prereq_str.split(",")
+                    else:
+                        prereq_dict["telaz"] = []
+
+                    prereq_str = self.topic_slewConfig.prereq_telopticsopenloop
+                    if prereq_str != "":
+                        prereq_dict["telopticsopenloop"] = prereq_str.split(",")
+                    else:
+                        prereq_dict["telopticsopenloop"] = []
+
+                    prereq_str = self.topic_slewConfig.prereq_telopticsclosedloop
+                    if prereq_str != "":
+                        prereq_dict["telopticsclosedloop"] = prereq_str.split(",")
+                    else:
+                        prereq_dict["telopticsclosedloop"] = []
+
+                    prereq_str = self.topic_slewConfig.prereq_telsettle
+                    if prereq_str != "":
+                        prereq_dict["telsettle"] = prereq_str.split(",")
+                    else:
+                        prereq_dict["telsettle"] = []
+
+                    prereq_str = self.topic_slewConfig.prereq_telrot
+                    if prereq_str != "":
+                        prereq_dict["telrot"] = prereq_str.split(",")
+                    else:
+                        prereq_dict["telrot"] = []
+
+                    prereq_str = self.topic_slewConfig.prereq_filter
+                    if prereq_str != "":
+                        prereq_dict["filter"] = prereq_str.split(",")
+                    else:
+                        prereq_dict["filter"] = []
+
+                    prereq_str = self.topic_slewConfig.prereq_exposures
+                    if prereq_str != "":
+                        prereq_dict["exposures"] = prereq_str.split(",")
+                    else:
+                        prereq_dict["exposures"] = []
+
+                    prereq_str = self.topic_slewConfig.prereq_readout
+                    if prereq_str != "":
+                        prereq_dict["readout"] = prereq_str.split(",")
+                    else:
+                        prereq_dict["readout"] = []
+
+                    self.log.info("run: rx slew config prereq_dict=%s" %
+                                  (prereq_dict))
+                    self.schedulerDriver.configure_slew(prereq_dict)
+                    waitconfig = False
+
+                else:
+                    tf = time.time()
+                    if (tf - lastconfigtime > 10.0):
+                        waitconfig = False
+                        self.log.info("run: slew config timeout")
+
+            waitconfig = True
+            lastconfigtime = time.time()
+            while waitconfig:
+                scode = self.sal.getNextSample_opticsLoopCorrConfig(self.topic_opticsConfig)
+                if (scode == 0 and self.topic_opticsConfig.tel_optics_ol_slope > 0):
+                    lastconfigtime = time.time()
+
+                    tel_optics_ol_slope = self.topic_opticsConfig.tel_optics_ol_slope
+                    tel_optics_cl_alt_limit = []
+                    for k in range(3):
+                        tel_optics_cl_alt_limit.append(self.topic_opticsConfig.tel_optics_cl_alt_limit[k])
+
+                    tel_optics_cl_delay = []
+                    for k in range(2):
+                        tel_optics_cl_delay.append(self.topic_opticsConfig.tel_optics_cl_delay[k])
+
+                    self.log.info("run: rx optics config tel_optics_ol_slope=%.3f "
+                                  "tel_optics_cl_alt_limit=%s "
+                                  "tel_optics_cl_delay=%s" %
+                                  (tel_optics_ol_slope, tel_optics_cl_alt_limit, tel_optics_cl_delay))
+                    self.schedulerDriver.configure_optics(tel_optics_ol_slope,
+                                                          tel_optics_cl_alt_limit,
+                                                          tel_optics_cl_delay)
+                    waitconfig = False
+
+                else:
+                    tf = time.time()
+                    if (tf - lastconfigtime > 10.0):
+                        waitconfig = False
+                        self.log.info("run: optics config timeout")
+
+            waitconfig = True
+            lastconfigtime = time.time()
+            while waitconfig:
+                scode = self.sal.getNextSample_parkConfig(self.topic_parkConfig)
+                if (scode == 0 and self.topic_parkConfig.telescope_altitude > 0):
+                    lastconfigtime = time.time()
+
+                    telescope_altitude = self.topic_parkConfig.telescope_altitude
+                    telescope_azimuth = self.topic_parkConfig.telescope_azimuth
+                    telescope_rotator = self.topic_parkConfig.telescope_rotator
+                    dome_altitude = self.topic_parkConfig.dome_altitude
+                    dome_azimuth = self.topic_parkConfig.dome_azimuth
+                    filter_position = self.topic_parkConfig.filter_position
+
+                    self.log.info("run: rx park config "
+                                  "telescope_altitude=%.3f "
+                                  "telescope_azimuth=%.3f "
+                                  "telescope_rotator=%.3f"
+                                  "dome_altitude=%.3f" 
+                                  "dome_azimuth=%.3f"
+                                  "filter_position=%s" %
+                                  (telescope_altitude,
+                                   telescope_azimuth,
+                                   telescope_rotator,
+                                   dome_altitude,
+                                   dome_azimuth,
+                                   filter_position))
+                    self.schedulerDriver.configure_park(telescope_altitude,
+                                                        telescope_azimuth,
+                                                        telescope_rotator,
+                                                        dome_altitude,
+                                                        dome_azimuth,
+                                                        filter_position)
+                    waitconfig = False
+
+                else:
+                    tf = time.time()
+                    if (tf - lastconfigtime > 10.0):
+                        waitconfig = False
+                        self.log.info("run: optics config timeout")
+
+            waitconfig = True
+            lastconfigtime = time.time()
+            while waitconfig:
+                scode = self.sal.getNextSample_areaDistPropConfig(self.topic_areaDistPropConfig)
+                if (scode == 0 and self.topic_areaDistPropConfig.name != ""):
+                    lastconfigtime = time.time()
+
+                    config_dict = {}
+
+                    name = self.topic_areaDistPropConfig.name
+                    prop_id = self.topic_areaDistPropConfig.prop_id
+
+                    config_dict["sky_nightly_bounds"] = {}
+                    twilight_boundary = self.topic_areaDistPropConfig.twilight_boundary
+                    delta_lst = self.topic_areaDistPropConfig.delta_lst
+                    config_dict["sky_nightly_bounds"]["twilight_boundary"] = twilight_boundary
+                    config_dict["sky_nightly_bounds"]["delta_lst"] = delta_lst
+
+                    config_dict["constraints"] = {}
+                    config_dict["constraints"]["max_airmass"] = 999
+
+                    config_dict["sky_region"] = {}
+                    num_region_selections = self.topic_areaDistPropConfig.num_region_selections
+                    region_types = self.topic_areaDistPropConfig.region_types
+                    if region_types == "":
+                        region_types_list = []
+                    else:
+                        region_types_list = region_types.split(",")
+                    region_list = []
+                    for k in range(num_region_selections):
+                        region_minimum = self.topic_areaDistPropConfig.region_minimums[k]
+                        region_maximum = self.topic_areaDistPropConfig.region_maximums[k]
+                        region_bound = self.topic_areaDistPropConfig.region_bounds[k]
+
+                        region = (region_types_list[k], region_minimum, region_maximum, region_bound)
+                        region_list.append(region)
+                    region_combiners = self.topic_areaDistPropConfig.region_combiners
+                    if region_combiners == "":
+                        region_combiners_list = []
+                    else:
+                        region_combiners_list = region_combiners.split(",")
+                    config_dict["sky_region"]["cuts"] = region_list
+                    config_dict["sky_region"]["combiners"] = region_combiners
+
+                    config_dict["sky_exclusions"] = {}
+                    num_exclusion_selections = self.topic_areaDistPropConfig.num_exclusion_selections
+                    exclusion_types = self.topic_areaDistPropConfig.exclusion_types
+                    if exclusion_types == "":
+                        exclusion_types_list = []
+                    else:
+                        exclusion_types_list = exclusion_types.split(",")
+                    exclusion_list = []
+                    for k in range(num_exclusion_selections):
+                        exclusion_minimum = self.topic_areaDistPropConfig.exclusion_minimums[k]
+                        exclusion_maximum = self.topic_areaDistPropConfig.exclusion_maximums[k]
+                        exclusion_bound = self.topic_areaDistPropConfig.exclusion_bounds[k]
+
+                        exclusion = (exclusion_types_list[k], exclusion_minimum, exclusion_maximum, exclusion_bound)
+                        exclusion_list.append(exclusion)
+                    config_dict["sky_exclusions"]["cuts"] = exclusion_list
+                    dec_window = self.topic_areaDistPropConfig.dec_window
+                    config_dict["sky_exclusions"]["dec_window"] = dec_window
+
+                    num_filters = self.topic_areaDistPropConfig.num_filters
+                    filter_names = self.topic_areaDistPropConfig.filter_names
+                    filter_list = filter_names.split(",")
+                    filter_visits_dict = {}
+                    filter_min_brig_dict = {}
+                    filter_max_brig_dict = {}
+                    filter_max_seeing_dict = {}
+                    filter_num_exp_dict = {}
+                    filter_exp_times_dict = {}
+                    exp_index = 0
+                    for k, filter in enumerate(filter_list):
+                        filter_section = "filter_%s" % filter
+                        config_dict[filter_section] = {}
+                        config_dict[filter_section]["visits"] = self.topic_areaDistPropConfig.num_visits[k]
+                        config_dict[filter_section]["min_brig"] = self.topic_areaDistPropConfig.bright_limit[k]
+                        config_dict[filter_section]["max_brig"] = self.topic_areaDistPropConfig.dark_limit[k]
+                        config_dict[filter_section]["max_seeing"] = self.topic_areaDistPropConfig.max_seeing[k]
+                        num_exp = self.topic_areaDistPropConfig.num_filter_exposures[k]
+                        exp_times_list = []
+                        for n in range(num_exp):
+                            exp_times_list.append(self.topic_areaDistPropConfig.exposures[exp_index])
+                            exp_index += 1
+                        config_dict[filter_section]["exp_times"] = exp_times_list
+
+                    config_dict["scheduling"] = {}
+                    max_num_targets = self.topic_areaDistPropConfig.max_num_targets
+                    accept_serendipity = self.topic_areaDistPropConfig.accept_serendipity
+                    accept_consecutive_visits = self.topic_areaDistPropConfig.accept_consecutive_visits
+                    config_dict["scheduling"]["max_num_targets"] = max_num_targets
+                    config_dict["scheduling"]["accept_serendipity"] = accept_serendipity
+                    config_dict["scheduling"]["accept_consecutive_visits"] = accept_consecutive_visits
+
+                    self.log.info("run: rx areaprop config "
+                                  "prop_id=%i "
+                                  "name=%s "
+                                  "config_dict=%s " %
+                                  (prop_id, name, config_dict))
+
+                    self.schedulerDriver.configure_area_proposal(prop_id,
+                                                                 name,
+                                                                 config_dict)
+
+                    waitconfig = True
+                else:
+                    tf = time.time()
+                    if self.topic_areaDistPropConfig.name == "":
+                        waitconfig = False
+                        self.log.info("run: area prop config end")
+
+                    if tf - lastconfigtime > 10.0:
+                        waitconfig = False
+                        self.log.info("run: area prop config timeout")
 
             field_dict = self.schedulerDriver.get_fields_dict()
             if len(field_dict) > 0:

@@ -364,6 +364,63 @@ class ObservatoryModel(object):
                      "configure_camera: Filter_RemovableList=%s" %
                      (self.params.Filter_RemovableList))
 
+    def configure_slew(self, prereq_dict):
+
+        for activity in self.activities:
+            self.params.prerequisites[activity] = prereq_dict[activity]
+            self.log.log(WORDY, "configure: prerequisites[%s]=%s" %
+                         (activity, self.params.prerequisites[activity]))
+
+    def configure_optics(self,
+                         tel_optics_ol_slope,
+                         tel_optics_cl_alt_limit,
+                         tel_optics_cl_delay):
+
+        self.params.OpticsOL_Slope = tel_optics_ol_slope / math.radians(1)
+        self.params.OpticsCL_Delay = tel_optics_cl_delay
+        self.params.OpticsCL_AltLimit = tel_optics_cl_alt_limit
+        for index, alt in enumerate(self.params.OpticsCL_AltLimit):
+            self.params.OpticsCL_AltLimit[index] = math.radians(self.params.OpticsCL_AltLimit[index])
+        self.log.log(WORDY,
+                     "configure_optics: OpticsOL_Slope=%.3f "
+                     "OpticsCL_Delay=%s OpticsCL_AltLimit=%s" %
+                     (self.params.OpticsOL_Slope,
+                      self.params.OpticsCL_Delay,
+                      self.params.OpticsCL_AltLimit))
+
+    def configure_park(self,
+                       telescope_altitude,
+                       telescope_azimuth,
+                       telescope_rotator,
+                       dome_altitude,
+                       dome_azimuth,
+                       filter_position):
+
+        self.parkState.alt_rad = math.radians(telescope_altitude)
+        self.parkState.az_rad = math.radians(telescope_azimuth)
+        self.parkState.rot_rad = math.radians(telescope_rotator)
+        self.parkState.telalt_rad = math.radians(telescope_altitude)
+        self.parkState.telaz_rad = math.radians(telescope_azimuth)
+        self.parkState.telrot_rad = math.radians(telescope_rotator)
+        self.parkState.domalt_rad = math.radians(dome_altitude)
+        self.parkState.domaz_rad = math.radians(dome_azimuth)
+        self.parkState.filter = filter_position
+
+        self.log.log(WORDY,
+                     "configure park: "
+                     "telescope_altitude=%.3f "
+                     "telescope_azimuth=%.3f "
+                     "telescope_rotator=%.3f "
+                     "dome_altitude=%.3f "
+                     "dome_azimuth=%.3f "
+                     "filter_position=%s" %
+                     (telescope_altitude,
+                      telescope_azimuth,
+                      telescope_rotator,
+                      dome_altitude,
+                      dome_azimuth,
+                      filter_position))
+
     def set_state(self, new_state):
 
         self.currentState.set(new_state)

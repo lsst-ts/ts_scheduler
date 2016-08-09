@@ -1,11 +1,13 @@
 import copy
 import math
+import logging
 
 from operator import itemgetter
 
 from ts_scheduler.proposal import Proposal
 from ts_scheduler.schedulerField import Field
 from ts_scheduler.schedulerTarget import Target
+from ts_scheduler.fields import CUT_TYPEMAP, FieldsDatabase, FieldSelection
 
 class AreaDistributionProposalParameters(object):
 
@@ -44,9 +46,22 @@ class AreaDistributionProposalParameters(object):
 
 class AreaDistributionProposal(Proposal):
 
-    def __init__(self, propid, configfilepath, skymodel):
+    def __init__(self, propid, name, config_dict, skymodel):
 
-        super(AreaDistributionProposal, self).__init__(propid, configfilepath, skymodel)
+        #super(AreaDistributionProposal, self).__init__(propid, configfilepath, skymodel)
+        self.propid = propid
+
+        self.name = name
+
+        self.log = logging.getLogger("scheduler.proposal.%s" % self.name)
+
+        self.proposal_confdict = config_dict
+
+        self.sky = skymodel
+
+        self.db = FieldsDatabase()
+
+        self.field_select = FieldSelection()
 
         self.params = AreaDistributionProposalParameters(self.proposal_confdict)
 

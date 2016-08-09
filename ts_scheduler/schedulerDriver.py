@@ -1,3 +1,4 @@
+import os
 import math
 import copy
 import logging
@@ -32,7 +33,7 @@ class DriverParameters(object):
         self.night_boundary = confdict["survey"]["night_boundary"]
 
 class Driver(object):
-    def __init__(self):
+    def __init__(self, survey_conf_file="survey.conf"):
 
         self.log = logging.getLogger("schedulerDriver")
 
@@ -54,7 +55,7 @@ class Driver(object):
 
         self.build_fields_dict()
 
-        survey_confdict = read_conf_file(conf_file_path(__name__, "../conf", "survey", "survey.conf"))
+        survey_confdict = read_conf_file(conf_file_path(__name__, "../conf", "survey", survey_conf_file))
 
         self.propid_counter = 0
         self.science_proposal_list = []
@@ -91,15 +92,14 @@ class Driver(object):
         self.log.info("init: areadistribution proposals %s" % (areadistribution_propconflist))
 
         for k in range(len(areadistribution_propconflist)):
-            self.propid_counter += 1
             configfilepath = conf_file_path(__name__,
                                             "../conf",
                                             "survey",
                                             "{}".format(areadistribution_propconflist[k]))
-            area_prop = AreaDistributionProposal(self.propid_counter,
-                                                 configfilepath,
-                                                 self.sky)
-            self.science_proposal_list.append(area_prop)
+            (path, name_ext) = os.path.split(configfilepath)
+            (name, ext) = os.path.splitext(name_ext)
+            proposal_confdict = read_conf_file(configfilepath)
+            self.create_area_proposal(name, proposal_confdict)
 
         self.time = 0.0
         self.targetid = 0
@@ -107,6 +107,12 @@ class Driver(object):
         self.isnight = False
         self.sunset_timestamp = 0.0
         self.sunrise_timestamp = 0.0
+
+    def create_area_proposal(self, name, config_dict):
+
+        self.propid_counter += 1
+        area_prop = AreaDistributionProposal(self.propid_counter, name, config_dict, self.sky)
+        self.science_proposal_list.append(area_prop)
 
     def configure_location(self, latitude_rad, longitude_rad, height):
 
@@ -185,6 +191,43 @@ class Driver(object):
                                                shutter_time,
                                                filter_change_time,
                                                filter_removable)
+
+    def configure_slew(self, prereq_dict):
+
+        self.observatoryModel.configure_slew(prereq_dict)
+
+    def configure_optics(self,
+                         tel_optics_ol_slope,
+                         tel_optics_cl_alt_limit,
+                         tel_optics_cl_delay):
+
+        self.observatoryModel.configure_optics(tel_optics_ol_slope,
+                                               tel_optics_cl_alt_limit,
+                                               tel_optics_cl_delay)
+
+    def configure_park(self,
+                       telescope_altitude,
+                       telescope_azimuth,
+                       telescope_rotator,
+                       dome_altitude,
+                       dome_azimuth,
+                       filter_position):
+
+        self.observatoryModel.configure_park(telescope_altitude,
+                                             telescope_azimuth,
+                                             telescope_rotator,
+                                             dome_altitude,
+                                             dome_azimuth,
+                                             filter_position)
+
+    def configure_area_proposal(self,
+                                prop_id,
+                                name,
+                                config_dict):
+
+        self.propid_counter += 1
+        area_prop = AreaDistributionProposal(self.propid_counter, name, config_dict, self.sky)
+        self.science_proposal_list.append(area_prop)
 
     def build_fields_dict(self):
 
