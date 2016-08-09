@@ -1,3 +1,4 @@
+import os
 import logging
 import unittest
 
@@ -17,8 +18,12 @@ class AreaDistributionProposalTest(unittest.TestCase):
 
     def setUp(self):
         logging.getLogger().setLevel(logging.WARN)
-        self.areaprop = AreaDistributionProposal(1, conf_file_path(__name__, "../../conf", "survey",
-                                                 "areaProp1.conf"), self.skyModel)
+        configfilepath = conf_file_path(__name__, "../../conf", "survey", "areaProp1.conf")
+        (path, name_ext) = os.path.split(configfilepath)
+        (name, ext) = os.path.splitext(name_ext)
+        proposal_confdict = read_conf_file(configfilepath)
+
+        self.areaprop = AreaDistributionProposal(1, name, proposal_confdict, self.skyModel)
 
     def test_init(self):
         self.assertEqual(self.areaprop.name, "areaProp1")
@@ -66,8 +71,11 @@ class AreaDistributionProposalTest(unittest.TestCase):
                          "2555, 2556, 2563, 2564, 2572, 2655, 2656, 2657, 2658, 2669, 2670, 2682, 2692, "
                          "2762, 2769, 2770, 2783, 2784, 2787, 2788, 2802]")
 
-        self.areaweak = AreaDistributionProposal(2, conf_file_path(__name__, "../../conf", "survey",
-                                                 "weak_lensing.conf"), self.skyModel)
+        configfilepath = conf_file_path(__name__, "../../conf", "survey", "weak_lensing.conf")
+        (path, name_ext) = os.path.split(configfilepath)
+        (name, ext) = os.path.splitext(name_ext)
+        proposal_confdict = read_conf_file(configfilepath)
+        self.areaweak = AreaDistributionProposal(2, name, proposal_confdict, self.skyModel)
         self.areaweak.build_fields_tonight_list(lsst_start_timestamp)
         field_list = self.areaweak.fields_tonight_list
         fieldid_list = []

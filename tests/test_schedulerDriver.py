@@ -16,7 +16,7 @@ class TestSchedulerDriver(unittest.TestCase):
 
     def setUp(self):
         logging.getLogger().setLevel(logging.WARN)
-        self.driver = Driver()
+        self.driver = Driver("test_survey.conf")
 
     def test_init(self):
 
