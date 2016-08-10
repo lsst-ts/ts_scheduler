@@ -477,7 +477,8 @@ class Main(object):
                     config_dict["sky_nightly_bounds"]["delta_lst"] = delta_lst
 
                     config_dict["constraints"] = {}
-                    config_dict["constraints"]["max_airmass"] = 999
+                    max_airmass = self.topic_areaDistPropConfig.max_airmass
+                    config_dict["constraints"]["max_airmass"] = max_airmass
 
                     config_dict["sky_region"] = {}
                     num_region_selections = self.topic_areaDistPropConfig.num_region_selections
