@@ -79,7 +79,6 @@ class Proposal(object):
 
         # Handle the sky region selections
         for cut in sky_region["cuts"]:
-            print("A:", cut)
             cut_type = cut[0]
             if cut_type != "GP":
                 query_list.append(self.field_select.select_region(CUT_TYPEMAP[cut_type], cut[1], cut[2]))
