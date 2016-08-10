@@ -78,7 +78,7 @@ class FieldSelection(object):
 
         return self.finish_query(" ".join(final_query))
 
-    def galactic_region(self, maxB, minB, endL, exclusion=True):
+    def galactic_region(self, maxb, minb, endl, exclusion=True):
         """Create a galactic region.
 
         This function creates a sloping region around the galactic plane to either include or
@@ -99,9 +99,9 @@ class FieldSelection(object):
             The appropriate query.
         """
         region_select = ">" if exclusion else "<="
-        band = maxB - minB
+        band = maxb - minb
         sql = '(abs(fieldGB) {0} ({1} - ({2} * abs(fieldGL)) / {3}))'.format(region_select,
-                                                                             maxB, band, endL)
+                                                                             maxb, band, endl)
 
         return sql
 

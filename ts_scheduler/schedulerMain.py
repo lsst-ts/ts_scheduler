@@ -435,7 +435,7 @@ class Main(object):
                                   "telescope_altitude=%.3f "
                                   "telescope_azimuth=%.3f "
                                   "telescope_rotator=%.3f"
-                                  "dome_altitude=%.3f" 
+                                  "dome_altitude=%.3f"
                                   "dome_azimuth=%.3f"
                                   "filter_position=%s" %
                                   (telescope_altitude,
@@ -500,7 +500,7 @@ class Main(object):
                     else:
                         region_combiners_list = region_combiners.split(",")
                     config_dict["sky_region"]["cuts"] = region_list
-                    config_dict["sky_region"]["combiners"] = region_combiners
+                    config_dict["sky_region"]["combiners"] = region_combiners_list
 
                     config_dict["sky_exclusions"] = {}
                     num_exclusion_selections = self.topic_areaDistPropConfig.num_exclusion_selections
@@ -515,21 +515,16 @@ class Main(object):
                         exclusion_maximum = self.topic_areaDistPropConfig.exclusion_maximums[k]
                         exclusion_bound = self.topic_areaDistPropConfig.exclusion_bounds[k]
 
-                        exclusion = (exclusion_types_list[k], exclusion_minimum, exclusion_maximum, exclusion_bound)
+                        exclusion = (exclusion_types_list[k], exclusion_minimum,
+                                     exclusion_maximum, exclusion_bound)
                         exclusion_list.append(exclusion)
                     config_dict["sky_exclusions"]["cuts"] = exclusion_list
                     dec_window = self.topic_areaDistPropConfig.dec_window
                     config_dict["sky_exclusions"]["dec_window"] = dec_window
 
-                    num_filters = self.topic_areaDistPropConfig.num_filters
+                    #num_filters = self.topic_areaDistPropConfig.num_filters
                     filter_names = self.topic_areaDistPropConfig.filter_names
                     filter_list = filter_names.split(",")
-                    filter_visits_dict = {}
-                    filter_min_brig_dict = {}
-                    filter_max_brig_dict = {}
-                    filter_max_seeing_dict = {}
-                    filter_num_exp_dict = {}
-                    filter_exp_times_dict = {}
                     exp_index = 0
                     for k, filter in enumerate(filter_list):
                         filter_section = "filter_%s" % filter

@@ -41,7 +41,6 @@ class Target(object):
         self.visits = 0
         self.progress = 0.0
 
-
     def __str__(self):
         return ("targetid=%d field=%d filter=%s exp_times=%s ra=%.3f dec=%.3f "
                 "time=%.1f airmass=%.3f brightness=%.3f "

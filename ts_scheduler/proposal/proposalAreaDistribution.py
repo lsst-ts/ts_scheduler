@@ -7,7 +7,7 @@ from operator import itemgetter
 from ts_scheduler.proposal import Proposal
 from ts_scheduler.schedulerField import Field
 from ts_scheduler.schedulerTarget import Target
-from ts_scheduler.fields import CUT_TYPEMAP, FieldsDatabase, FieldSelection
+from ts_scheduler.fields import FieldsDatabase, FieldSelection
 
 class AreaDistributionProposalParameters(object):
 
