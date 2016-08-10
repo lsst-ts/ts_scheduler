@@ -108,6 +108,10 @@ class Driver(object):
         self.sunset_timestamp = 0.0
         self.sunrise_timestamp = 0.0
 
+    def configure(self, driver_confdict):
+
+        self.params = DriverParameters(driver_confdict)
+
     def create_area_proposal(self, name, config_dict):
 
         self.propid_counter += 1

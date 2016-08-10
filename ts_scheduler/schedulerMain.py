@@ -11,6 +11,7 @@ from SALPY_scheduler import scheduler_observationTestC
 from SALPY_scheduler import scheduler_targetTestC
 from SALPY_scheduler import scheduler_fieldC
 from SALPY_scheduler import scheduler_schedulerConfigC
+from SALPY_scheduler import scheduler_driverConfigC
 from SALPY_scheduler import scheduler_obsSiteConfigC
 from SALPY_scheduler import scheduler_telescopeConfigC
 from SALPY_scheduler import scheduler_domeConfigC
@@ -41,6 +42,7 @@ class Main(object):
         self.sal.setDebugLevel(0)
 
         self.topic_schedulerConfig = scheduler_schedulerConfigC()
+        self.topic_driverConfig = scheduler_driverConfigC()
         self.topic_obsSiteConfig = scheduler_obsSiteConfigC()
         self.topic_telescopeConfig = scheduler_telescopeConfigC()
         self.topic_domeConfig = scheduler_domeConfigC()
@@ -61,6 +63,7 @@ class Main(object):
         self.log.info("run")
 
         self.sal.salTelemetrySub("scheduler_schedulerConfig")
+        self.sal.salTelemetrySub("scheduler_driverConfig")
         self.sal.salTelemetrySub("scheduler_obsSiteConfig")
         self.sal.salTelemetrySub("scheduler_telescopeConfig")
         self.sal.salTelemetrySub("scheduler_domeConfig")
@@ -100,6 +103,39 @@ class Main(object):
                     if (tf - lastconfigtime > 10.0):
                         waitconfig = False
                         self.log.info("run: scheduler config timeout")
+
+            waitconfig = True
+            lastconfigtime = time.time()
+            while waitconfig:
+                scode = self.sal.getNextSample_driverConfig(self.topic_driverConfig)
+                if (scode == 0 and self.topic_driverConfig.timebonus_tmax > 0):
+                    lastconfigtime = time.time()
+
+                    coadd_values = self.topic_driverConfig.coadd_values
+                    timebonus_tmax = self.topic_driverConfig.timebonus_tmax
+                    timebonus_bmax = self.topic_driverConfig.timebonus_bmax
+                    timebonus_slope = self.topic_driverConfig.timebonus_slope
+                    night_boundary = self.topic_driverConfig.night_boundary
+
+                    config_dict = {}
+                    config_dict["ranking"] = {}
+                    config_dict["ranking"]["coadd_values"] = coadd_values
+                    config_dict["ranking"]["timebonus_tmax"] = timebonus_tmax
+                    config_dict["ranking"]["timebonus_bmax"] = timebonus_bmax
+                    config_dict["ranking"]["timebonus_slope"] = timebonus_slope
+                    config_dict["survey"] = {}
+                    config_dict["survey"]["night_boundary"] = night_boundary
+
+                    self.log.info("run: rx driver config=%s" % (config_dict))
+                    self.schedulerDriver.configure(config_dict)
+
+                    waitconfig = False
+
+                else:
+                    tf = time.time()
+                    if (tf - lastconfigtime > 10.0):
+                        waitconfig = False
+                        self.log.info("run: driver config timeout")
 
             waitconfig = True
             lastconfigtime = time.time()
