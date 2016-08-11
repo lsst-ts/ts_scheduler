@@ -620,12 +620,24 @@ class Main(object):
                                 self.topicTarget.targetId = target.targetid
                                 self.topicTarget.fieldId = target.fieldid
                                 self.topicTarget.filter = target.filter
-                                self.topicTarget.ra = target.ra_rad * RAD2DEG
-                                self.topicTarget.dec = target.dec_rad * RAD2DEG
-                                self.topicTarget.angle = target.ang_rad * RAD2DEG
+                                self.topicTarget.ra = target.ra
+                                self.topicTarget.dec = target.dec
+                                self.topicTarget.angle = target.ang
                                 self.topicTarget.num_exposures = target.num_exp
                                 for i, exptime in enumerate(target.exp_times):
                                     self.topicTarget.exposure_times[i] = int(exptime)
+                                self.topicTarget.request_time = target.time
+                                self.topicTarget.airmass = target.airmass
+                                self.topicTarget.sky_brightness = target.sky_brightness
+                                self.topicTarget.need = target.value
+                                self.topicTarget.slew_time = target.slewtime
+                                self.topicTarget.cost_bonus = target.cost_bonus
+                                self.topicTarget.rank = target.rank
+                                self.topicTarget.num_proposals = target.num_props
+                                for i, prop_id in enumerate(target.propid_list):
+                                    self.topicTarget.proposal_Ids[i] = prop_id
+                                for i, prop_value in enumerate(target.propvalue_list):
+                                    self.topicTarget.proposal_values[i] = prop_value
                                 self.sal.putSample_targetTest(self.topicTarget)
 
                                 self.log.debug("run: tx target %s", str(target))
