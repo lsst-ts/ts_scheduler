@@ -496,6 +496,8 @@ class ObservatoryModel(object):
         time = self.currentState.time
 
         targetposition = self.radecang2position(time, ra_rad, dec_rad, ang_rad, filter)
+        if not self.params.Rotator_FollowSky:
+            targetposition.rot_rad = self.currentState.telrot_rad
 
         self.slew_to_position(targetposition)
 
@@ -515,6 +517,8 @@ class ObservatoryModel(object):
                                                 target.dec_rad,
                                                 target.ang_rad,
                                                 target.filter)
+        if not self.params.Rotator_FollowSky:
+            targetposition.rot_rad = self.currentState.telrot_rad
 
         # check if altitude is possible
         if targetposition.alt_rad < self.params.TelAlt_MinPos_rad:

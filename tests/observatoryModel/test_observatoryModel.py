@@ -201,6 +201,7 @@ class ObservatoryModelTest(unittest.TestCase):
 
     def test_get_slew_delay(self):
         self.model.update_state(0)
+        self.model.params.Rotator_FollowSky = True
         self.assertEqual(str(self.model.currentState), "t=0.0 ra=29.342 dec=-26.744 ang=180.000 "
                          "filter=r track=False alt=86.500 az=0.000 pa=-180.000 rot=0.000 "
                          "telaz=0.000 telrot=0.000")
@@ -235,6 +236,54 @@ class ObservatoryModelTest(unittest.TestCase):
         self.assertAlmostEquals(delay, 22.487, delta=1e-3)
 
         self.model.slew(target)
+        delay = self.model.get_slew_delay(target)
+        self.assertAlmostEquals(delay, 2.0, delta=1e-3)
+
+        target.ang_rad = math.radians(15)
+        delay = self.model.get_slew_delay(target)
+        self.assertAlmostEquals(delay, 4.472, delta=1e-3)
+
+    def test_get_slew_delay_followsky_false(self):
+        self.model.update_state(0)
+        self.model.params.Rotator_FollowSky = False
+        self.assertEqual(str(self.model.currentState), "t=0.0 ra=29.342 dec=-26.744 ang=180.000 "
+                         "filter=r track=False alt=86.500 az=0.000 pa=-180.000 rot=0.000 "
+                         "telaz=0.000 telrot=0.000")
+
+        target = Target()
+        target.ra_rad = math.radians(60)
+        target.dec_rad = math.radians(-20)
+        target.ang_rad = math.radians(0)
+        target.filter = "r"
+
+        delay = self.model.get_slew_delay(target)
+        self.assertAlmostEquals(delay, 74.253, delta=1e-3)
+
+        self.model.slew(target)
+
+        target = Target()
+        target.ra_rad = math.radians(60)
+        target.dec_rad = math.radians(-20)
+        target.ang_rad = math.radians(0)
+        target.filter = "g"
+
+        delay = self.model.get_slew_delay(target)
+        self.assertAlmostEquals(delay, 120, delta=1e-3)
+
+        target = Target()
+        target.ra_rad = math.radians(50)
+        target.dec_rad = math.radians(-10)
+        target.ang_rad = math.radians(10)
+        target.filter = "r"
+
+        delay = self.model.get_slew_delay(target)
+        self.assertAlmostEquals(delay, 22.487, delta=1e-3)
+
+        self.model.slew(target)
+        delay = self.model.get_slew_delay(target)
+        self.assertAlmostEquals(delay, 2.0, delta=1e-3)
+
+        target.ang_rad = math.radians(15)
         delay = self.model.get_slew_delay(target)
         self.assertAlmostEquals(delay, 2.0, delta=1e-3)
 
@@ -363,3 +412,34 @@ class ObservatoryModelTest(unittest.TestCase):
                                 -0.598, delta=1e-3)
         self.assertAlmostEquals(math.degrees(self.model.currentState.domaz_peakspeed_rad),
                                 1.423, delta=1e-3)
+
+    def test_rotator_followsky_true(self):
+        self.model.update_state(0)
+        self.model.params.Rotator_FollowSky = True
+        self.assertEqual(str(self.model.currentState), "t=0.0 ra=29.342 dec=-26.744 ang=180.000 "
+                         "filter=r track=False alt=86.500 az=0.000 pa=-180.000 rot=0.000 "
+                         "telaz=0.000 telrot=0.000")
+        self.model.slew_radec(0, math.radians(80), math.radians(0), math.radians(0), "r")
+        self.assertEqual(str(self.model.currentState), "t=68.0 ra=80.000 dec=0.000 ang=-180.000 "
+                         "filter=r track=True alt=33.433 az=67.360 pa=-127.125 rot=52.875 "
+                         "telaz=67.360 telrot=52.875")
+        self.model.slew_radec(0, math.radians(83.5), math.radians(0), math.radians(0), "r")
+        self.assertEqual(str(self.model.currentState), "t=72.8 ra=83.500 dec=0.000 ang=-180.000 "
+                         "filter=r track=True alt=30.634 az=69.801 pa=-125.830 rot=54.170 "
+                         "telaz=69.801 telrot=54.170")
+
+    def test_rotator_followsky_false(self):
+        self.model.update_state(0)
+        self.model.params.Rotator_FollowSky = False
+        self.assertEqual(str(self.model.currentState), "t=0.0 ra=29.342 dec=-26.744 ang=180.000 "
+                         "filter=r track=False alt=86.500 az=0.000 pa=-180.000 rot=0.000 "
+                         "telaz=0.000 telrot=0.000")
+        self.model.slew_radec(0, math.radians(80), math.radians(0), math.radians(0), "r")
+        self.assertEqual(str(self.model.currentState), "t=68.0 ra=80.000 dec=0.000 ang=-127.013 "
+                         "filter=r track=True alt=33.433 az=67.360 pa=-127.125 rot=359.887 "
+                         "telaz=67.360 telrot=-0.113")
+        self.model.slew_radec(0, math.radians(83.5), math.radians(0), math.radians(0), "r")
+        self.assertEqual(str(self.model.currentState), "t=72.8 ra=83.500 dec=0.000 ang=-125.711 "
+                         "filter=r track=True alt=30.634 az=69.801 pa=-125.830 rot=359.880 "
+                         "telaz=69.801 telrot=-0.120")
+        self.model.params.Rotator_FollowSky = True
