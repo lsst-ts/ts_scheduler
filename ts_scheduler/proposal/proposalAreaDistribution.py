@@ -118,6 +118,7 @@ class AreaDistributionProposal(Proposal):
                     target.exp_times = self.params.filter_exp_times_dict[filter]
                     target.ra_rad = field.ra_rad
                     target.dec_rad = field.dec_rad
+                    target.propid = self.propid
                     target.goal = self.params.filter_visits_dict[filter]
                     target.visits = 0
                     target.progress = 0.0
@@ -227,7 +228,9 @@ class AreaDistributionProposal(Proposal):
 #                airmass_bonus = self.params.ka / airmass
 #                brightness_bonus = self.params.kb / sky_brightness
 
-                target.value = need_ratio
+                target.need = need_ratio
+                target.bonus = 0.0
+                target.value = target.need + target.bonus
 
                 self.add_evaluated_target(target)
                 evaluated_targets += 1

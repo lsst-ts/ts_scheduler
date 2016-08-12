@@ -347,14 +347,19 @@ class Driver(object):
             for target in proptarget_list:
                 target.num_props = 1
                 target.propid_list = [prop.propid]
-                target.value_list = [target.value]
+                target.need_list = [target.need]
+                target.bonus_list = [target.bonus]
                 fieldfilter = (target.fieldid, target.filter)
                 if fieldfilter in targets_dict:
                     if self.params.coadd_values:
+                        targets_dict[fieldfilter][0].need += target.need
+                        targets_dict[fieldfilter][0].bonus += target.bonus
                         targets_dict[fieldfilter][0].value += target.value
                         targets_dict[fieldfilter][0].num_props += 1
                         targets_dict[fieldfilter][0].propid_list.append(prop.propid)
-                        targets_dict[fieldfilter][0].propvalue_list.append(target.value)
+                        targets_dict[fieldfilter][0].need_list.append(target.need)
+                        targets_dict[fieldfilter][0].bonus_list.append(target.bonus)
+                        targets_dict[fieldfilter][0].value_list.append(target.value)
                     else:
                         targets_dict[fieldfilter].append(copy.deepcopy(target))
                 else:

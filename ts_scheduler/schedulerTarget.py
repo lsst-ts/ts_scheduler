@@ -22,24 +22,31 @@ class Target(object):
         self.num_exp = num_exp
         self.exp_times = list(exp_times)
 
+        #conditions
         self.time = 0.0
         self.airmass = 0.0
         self.sky_brightness = 0.0
 
+        #computed at proposal
+        self.propid = 0
+        self.need = 0.0
+        self.bonus = 0.0
         self.value = 0.0
-
-        self.slewtime = 0.0
-        self.cost_bonus = 0.0
-        self.rank = 0.0
-
-        self.num_props = 0
-        self.propid_list = []
-        self.propvalue_list = []
-
-        #internal book-keeping
+        #internal proposal book-keeping
         self.goal = 0
         self.visits = 0
         self.progress = 0.0
+
+        #computed at driver
+        self.slewtime = 0.0
+        self.cost_bonus = 0.0
+        self.rank = 0.0
+        #assembled at driver
+        self.num_props = 0
+        self.propid_list = []
+        self.need_list = []
+        self.bonus_list = []
+        self.value_list = []
 
     def __str__(self):
         return ("targetid=%d field=%d filter=%s exp_times=%s ra=%.3f dec=%.3f "
