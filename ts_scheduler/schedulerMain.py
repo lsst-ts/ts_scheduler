@@ -639,6 +639,20 @@ class Main(object):
                                 for i, prop_value in enumerate(target.propvalue_list):
                                     self.topicTarget.proposal_values[i] = prop_value
                                 self.sal.putSample_targetTest(self.topicTarget)
+                                prop = self.schedulerDriver.science_proposal_list[0]
+                                moon_sun = prop.sky.get_moon_sun_info(target.ra_rad, target.dec_rad)
+                                if moon_sun["moonRA"] is not None:
+                                    self.topicTarget.moon_ra = math.degrees(moon_sun["moonRA"])
+                                    self.topicTarget.moon_dec = math.degrees(moon_sun["moonDec"])
+                                    self.topicTarget.moon_alt = math.degrees(moon_sun["moonAlt"])
+                                    self.topicTarget.moon_az = math.degrees(moon_sun["moonAz"])
+                                    self.topicTarget.moon_distance = math.degrees(moon_sun["moonDist"])
+                                    self.topicTarget.moon_phase = moon_sun["moonPhase"]
+                                    self.topicTarget.sun_ra = math.degrees(moon_sun["sunRA"])
+                                    self.topicTarget.sun_dec = math.degrees(moon_sun["sunDec"])
+                                    self.topicTarget.sun_alt = math.degrees(moon_sun["sunAlt"])
+                                    self.topicTarget.sun_az = math.degrees(moon_sun["sunAz"])
+                                    self.topicTarget.sun_elong = math.degrees(moon_sun["sunEclipLon"])
 
                                 self.log.debug("run: tx target %s", str(target))
 

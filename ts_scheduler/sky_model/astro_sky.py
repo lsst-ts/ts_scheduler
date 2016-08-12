@@ -71,6 +71,40 @@ class AstronomicalSkyModel(object):
         return palpy.dsepVector(field_ra, field_dec, numpy.full_like(field_ra, attrs["moonRA"]),
                                 numpy.full_like(field_dec, attrs["moonDec"]))
 
+    def get_moon_sun_info(self, field_ra, field_dec):
+        """Return the current moon and sun information.
+
+        This function gets the right-ascension, declination, altitude, azimuth, phase and
+        angular distance from target (by given ra and dec) for the moon and the altitude,
+        azimuth ans elongation for the sun.
+
+        Parameters
+        ----------
+        field_ra : float
+            The target right-ascension (radians) for the moon distance.
+        field_dec : float
+            The target declination (radians) for the moon distance.
+
+        Returns
+        -------
+        dict
+            The set of information pertaining to the moon and sun. All angles are in radians.
+        """
+        nra = numpy.array([field_ra])
+        ndec = numpy.array([field_dec])
+        attrs = self.sky_brightness.getComputedVals()
+        distance = palpy.dsepVector(nra, ndec,
+                                    numpy.full_like(nra, attrs["moonRA"]),
+                                    numpy.full_like(ndec, attrs["moonDec"]))
+
+        keys = ["moonAlt", "moonAz", "moonRA", "moonDec", "moonPhase",
+                "sunAlt", "sunAz", "sunRA", "sunDec", "sunEclipLon"]
+        info_dict = {}
+        for key in keys:
+            info_dict[key] = attrs[key]
+        info_dict["moonDist"] = distance[0]
+        return info_dict
+
     def get_night_boundaries(self, sun_altitude, upper_limb_correction=False):
         """Return the set/rise times of the sun for the given altitude.
 
