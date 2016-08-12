@@ -636,8 +636,13 @@ class Main(object):
                                 self.topicTarget.num_proposals = target.num_props
                                 for i, prop_id in enumerate(target.propid_list):
                                     self.topicTarget.proposal_Ids[i] = prop_id
-                                for i, prop_value in enumerate(target.propvalue_list):
+                                for i, prop_value in enumerate(target.value_list):
                                     self.topicTarget.proposal_values[i] = prop_value
+                                for i, prop_need in enumerate(target.need_list):
+                                    self.topicTarget.proposal_needs[i] = prop_need
+                                for i, prop_bonus in enumerate(target.bonus_list):
+                                    self.topicTarget.proposal_bonuses[i] = prop_bonus
+
                                 self.sal.putSample_targetTest(self.topicTarget)
                                 prop = self.schedulerDriver.science_proposal_list[0]
                                 moon_sun = prop.sky.get_moon_sun_info(target.ra_rad, target.dec_rad)
