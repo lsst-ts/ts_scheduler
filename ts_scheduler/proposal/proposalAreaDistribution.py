@@ -223,7 +223,7 @@ class AreaDistributionProposal(Proposal):
                 # compute value for available targets
                 target.sky_brightness = sky_brightness
 
-                need_ratio = (1 - target.progress) / (1 - self.total_progress)
+                need_ratio = (1.0 - target.progress) / (1.0 - self.total_progress)
 
 #                airmass_bonus = self.params.ka / airmass
 #                brightness_bonus = self.params.kb / sky_brightness
@@ -282,10 +282,11 @@ class AreaDistributionProposal(Proposal):
         if tfound is not None:
             target = self.targets_dict[observation.fieldid][observation.filter]
             target.visits += 1
-            target.progress = target.visits / target.goal
+            target.progress = float(target.visits) / target.goal
             self.total_visits += 1
-            self.total_progress = self.total_visits / self.total_goal
+            self.total_progress = float(self.total_visits) / self.total_goal
             self.last_observation_was_for_this_proposal = True
+            self.log.debug("register_observation: %s" % (target))
         else:
             self.last_observation_was_for_this_proposal = False
 

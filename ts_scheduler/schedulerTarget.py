@@ -51,10 +51,12 @@ class Target(object):
     def __str__(self):
         return ("targetid=%d field=%d filter=%s exp_times=%s ra=%.3f dec=%.3f "
                 "time=%.1f airmass=%.3f brightness=%.3f "
+                "visits=%i "
                 "progress=%.3f value=%.3f slewtime=%.3f cost=%.3f rank=%.3f propid=%s" %
                 (self.targetid, self.fieldid, self.filter, str(self.exp_times),
                  self.ra_rad * RAD2DEG, self.dec_rad * RAD2DEG,
                  self.time, self.airmass, self.sky_brightness,
+                 self.visits,
                  self.progress, self.value, self.slewtime, self.cost_bonus, self.rank, self.propid_list))
 
     @classmethod
