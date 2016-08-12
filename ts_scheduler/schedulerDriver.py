@@ -229,8 +229,7 @@ class Driver(object):
                                 name,
                                 config_dict):
 
-        self.propid_counter += 1
-        area_prop = AreaDistributionProposal(self.propid_counter, name, config_dict, self.sky)
+        area_prop = AreaDistributionProposal(prop_id, name, config_dict, self.sky)
         self.science_proposal_list.append(area_prop)
 
     def build_fields_dict(self):

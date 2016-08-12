@@ -88,6 +88,7 @@ class Main(object):
         timestamp = 0.0
 
         try:
+            """
             waitconfig = True
             lastconfigtime = time.time()
             while waitconfig:
@@ -104,6 +105,7 @@ class Main(object):
                         waitconfig = False
                         self.log.info("run: scheduler config timeout")
 
+            """
             waitconfig = True
             lastconfigtime = time.time()
             while waitconfig:
