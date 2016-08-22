@@ -29,3 +29,5 @@ htmlcov
 *.out
 *.dif
 
+#PyTest
+.cache

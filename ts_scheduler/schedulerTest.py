@@ -3,19 +3,19 @@ import time
 
 from SALPY_scheduler import SAL_scheduler
 from SALPY_scheduler import scheduler_timeHandlerC
-from SALPY_scheduler import scheduler_observationTestC
-from SALPY_scheduler import scheduler_targetTestC
+from SALPY_scheduler import scheduler_observationC
+from SALPY_scheduler import scheduler_targetC
 
 sal = SAL_scheduler()
 sal.setDebugLevel(0)
 
 topicTime = scheduler_timeHandlerC()
-topicObservation = scheduler_observationTestC()
-topicTarget = scheduler_targetTestC()
+topicObservation = scheduler_observationC()
+topicTarget = scheduler_targetC()
 
 sal.salTelemetryPub("scheduler_timeHandler")
-sal.salTelemetryPub("scheduler_observationTest")
-sal.salTelemetrySub("scheduler_targetTest")
+sal.salTelemetryPub("scheduler_observation")
+sal.salTelemetrySub("scheduler_target")
 
 start_date = "2010-10-01 16:28:00"
 start_seconds = time.mktime(time.strptime(start_date, "%Y-%m-%d %H:%M:%S"))
@@ -34,7 +34,7 @@ try:
         sal.putSample_timeHandler(topicTime)
 
         while True:
-            scode = sal.getNextSample_targetTest(topicTarget)
+            scode = sal.getNextSample_target(topicTarget)
             if scode == 0 and topicTarget.targetId != 0:
                 observationId += 1
                 topicObservation.observationId = observationId
@@ -43,7 +43,7 @@ try:
 #                topicTime.timestamp += delta_seconds
                 topicTime.timestamp = time.time()
 
-                sal.putSample_observationTest(topicObservation)
+                sal.putSample_observation(topicObservation)
 
                 break
 

@@ -59,13 +59,25 @@ class Target(object):
                  self.visits,
                  self.progress, self.value, self.slewtime, self.cost_bonus, self.rank, self.propid_list))
 
+    @property
+    def ra(self):
+        return math.degrees(self.ra_rad)
+
+    @property
+    def dec(self):
+        return math.degrees(self.dec_rad)
+
+    @property
+    def ang(self):
+        return math.degrees(self.ang_rad)
+
     @classmethod
     def from_topic(cls, topic):
         """Alternate initializer.
 
         Parameters
         ----------
-        topic : SALPY_scheduler.targetTestC
+        topic : SALPY_scheduler.targetC
             The target topic instance.
 
         Returns

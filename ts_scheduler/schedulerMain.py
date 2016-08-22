@@ -7,8 +7,8 @@ import math
 from SALPY_scheduler import SAL_scheduler
 from SALPY_scheduler import scheduler_timeHandlerC
 from SALPY_scheduler import scheduler_observatoryStateC
-from SALPY_scheduler import scheduler_observationTestC
-from SALPY_scheduler import scheduler_targetTestC
+from SALPY_scheduler import scheduler_observationC
+from SALPY_scheduler import scheduler_targetC
 from SALPY_scheduler import scheduler_fieldC
 from SALPY_scheduler import scheduler_schedulerConfigC
 from SALPY_scheduler import scheduler_driverConfigC
@@ -54,9 +54,9 @@ class Main(object):
         self.topic_areaDistPropConfig = scheduler_areaDistPropConfigC()
         self.topicTime = scheduler_timeHandlerC()
         self.topicObservatoryState = scheduler_observatoryStateC()
-        self.topicObservation = scheduler_observationTestC()
+        self.topicObservation = scheduler_observationC()
         self.topicField = scheduler_fieldC()
-        self.topicTarget = scheduler_targetTestC()
+        self.topicTarget = scheduler_targetC()
 
     def run(self):
 
@@ -75,9 +75,9 @@ class Main(object):
         self.sal.salTelemetrySub("scheduler_areaDistPropConfig")
         self.sal.salTelemetrySub("scheduler_timeHandler")
         self.sal.salTelemetrySub("scheduler_observatoryState")
-        self.sal.salTelemetrySub("scheduler_observationTest")
+        self.sal.salTelemetrySub("scheduler_observation")
         self.sal.salTelemetryPub("scheduler_field")
-        self.sal.salTelemetryPub("scheduler_targetTest")
+        self.sal.salTelemetryPub("scheduler_target")
 
         meascount = 0
         visitcount = 0
@@ -620,20 +620,51 @@ class Main(object):
                                 self.topicTarget.targetId = target.targetid
                                 self.topicTarget.fieldId = target.fieldid
                                 self.topicTarget.filter = target.filter
-                                self.topicTarget.ra = target.ra_rad * RAD2DEG
-                                self.topicTarget.dec = target.dec_rad * RAD2DEG
-                                self.topicTarget.angle = target.ang_rad * RAD2DEG
+                                self.topicTarget.ra = target.ra
+                                self.topicTarget.dec = target.dec
+                                self.topicTarget.angle = target.ang
                                 self.topicTarget.num_exposures = target.num_exp
                                 for i, exptime in enumerate(target.exp_times):
                                     self.topicTarget.exposure_times[i] = int(exptime)
-                                self.sal.putSample_targetTest(self.topicTarget)
+                                self.topicTarget.request_time = target.time
+                                self.topicTarget.airmass = target.airmass
+                                self.topicTarget.sky_brightness = target.sky_brightness
+                                self.topicTarget.need = target.value
+                                self.topicTarget.slew_time = target.slewtime
+                                self.topicTarget.cost_bonus = target.cost_bonus
+                                self.topicTarget.rank = target.rank
+                                self.topicTarget.num_proposals = target.num_props
+                                for i, prop_id in enumerate(target.propid_list):
+                                    self.topicTarget.proposal_Ids[i] = prop_id
+                                for i, prop_value in enumerate(target.value_list):
+                                    self.topicTarget.proposal_values[i] = prop_value
+                                for i, prop_need in enumerate(target.need_list):
+                                    self.topicTarget.proposal_needs[i] = prop_need
+                                for i, prop_bonus in enumerate(target.bonus_list):
+                                    self.topicTarget.proposal_bonuses[i] = prop_bonus
 
+                                prop = self.schedulerDriver.science_proposal_list[0]
+                                moon_sun = prop.sky.get_moon_sun_info(target.ra_rad, target.dec_rad)
+                                if moon_sun["moonRA"] is not None:
+                                    self.topicTarget.moon_ra = math.degrees(moon_sun["moonRA"])
+                                    self.topicTarget.moon_dec = math.degrees(moon_sun["moonDec"])
+                                    self.topicTarget.moon_alt = math.degrees(moon_sun["moonAlt"])
+                                    self.topicTarget.moon_az = math.degrees(moon_sun["moonAz"])
+                                    self.topicTarget.moon_distance = math.degrees(moon_sun["moonDist"])
+                                    self.topicTarget.moon_phase = moon_sun["moonPhase"]
+                                    self.topicTarget.sun_ra = math.degrees(moon_sun["sunRA"])
+                                    self.topicTarget.sun_dec = math.degrees(moon_sun["sunDec"])
+                                    self.topicTarget.sun_alt = math.degrees(moon_sun["sunAlt"])
+                                    self.topicTarget.sun_az = math.degrees(moon_sun["sunAz"])
+                                    self.topicTarget.sun_elong = math.degrees(moon_sun["sunEclipLon"])
+
+                                self.sal.putSample_target(self.topicTarget)
                                 self.log.debug("run: tx target %s", str(target))
 
                                 waitobservation = True
                                 lastobstime = time.time()
                                 while waitobservation:
-                                    scode = self.sal.getNextSample_observationTest(self.topicObservation)
+                                    scode = self.sal.getNextSample_observation(self.topicObservation)
                                     if scode == 0 and self.topicObservation.targetId != 0:
                                         lastobstime = time.time()
                                         meascount += 1

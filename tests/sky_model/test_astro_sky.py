@@ -112,3 +112,15 @@ class AstronomicalSkyTest(unittest.TestCase):
         field_moon_sep = self.astro_sky.get_moon_separation(self.ra_rads, self.dec_rads)
         self.assertEqual(field_moon_sep.size, 19)
         self.assertAlmostEqual(field_moon_sep[0], numpy.radians(64.69897587))
+
+    def test_moon_sun_information(self):
+        initial_timestamp = 1641081600 + (.04166666666 * 3600 * 24)
+        self.create_ra_dec()
+        self.astro_sky.update(initial_timestamp)
+        self.astro_sky.get_sky_brightness(self.ra_rads, self.dec_rads)
+        info = self.astro_sky.get_moon_sun_info(0.61086524, -0.78539816)
+        self.assertEqual(len(info), 11)
+        self.assertAlmostEqual(info["moonPhase"], 0.8692556023597717, delta=1e-7)
+        self.assertAlmostEqual(info["moonDist"], 1.6289850022, delta=1e-7)
+        self.assertAlmostEqual(info["moonDec"], -0.4415861752238436, delta=1e-7)
+        self.assertAlmostEqual(info["moonRA"], 4.72440671517994, delta=1e-7)
