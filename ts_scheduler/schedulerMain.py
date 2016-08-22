@@ -643,7 +643,6 @@ class Main(object):
                                 for i, prop_bonus in enumerate(target.bonus_list):
                                     self.topicTarget.proposal_bonuses[i] = prop_bonus
 
-                                self.sal.putSample_target(self.topicTarget)
                                 prop = self.schedulerDriver.science_proposal_list[0]
                                 moon_sun = prop.sky.get_moon_sun_info(target.ra_rad, target.dec_rad)
                                 if moon_sun["moonRA"] is not None:
@@ -659,6 +658,7 @@ class Main(object):
                                     self.topicTarget.sun_az = math.degrees(moon_sun["sunAz"])
                                     self.topicTarget.sun_elong = math.degrees(moon_sun["sunEclipLon"])
 
+                                self.sal.putSample_target(self.topicTarget)
                                 self.log.debug("run: tx target %s", str(target))
 
                                 waitobservation = True
