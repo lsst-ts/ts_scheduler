@@ -77,7 +77,7 @@ class Target(object):
 
         Parameters
         ----------
-        topic : SALPY_scheduler.targetTestC
+        topic : SALPY_scheduler.targetC
             The target topic instance.
 
         Returns

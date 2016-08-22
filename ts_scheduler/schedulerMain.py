@@ -7,8 +7,8 @@ import math
 from SALPY_scheduler import SAL_scheduler
 from SALPY_scheduler import scheduler_timeHandlerC
 from SALPY_scheduler import scheduler_observatoryStateC
-from SALPY_scheduler import scheduler_observationTestC
-from SALPY_scheduler import scheduler_targetTestC
+from SALPY_scheduler import scheduler_observationC
+from SALPY_scheduler import scheduler_targetC
 from SALPY_scheduler import scheduler_fieldC
 from SALPY_scheduler import scheduler_schedulerConfigC
 from SALPY_scheduler import scheduler_driverConfigC
@@ -54,9 +54,9 @@ class Main(object):
         self.topic_areaDistPropConfig = scheduler_areaDistPropConfigC()
         self.topicTime = scheduler_timeHandlerC()
         self.topicObservatoryState = scheduler_observatoryStateC()
-        self.topicObservation = scheduler_observationTestC()
+        self.topicObservation = scheduler_observationC()
         self.topicField = scheduler_fieldC()
-        self.topicTarget = scheduler_targetTestC()
+        self.topicTarget = scheduler_targetC()
 
     def run(self):
 
@@ -75,9 +75,9 @@ class Main(object):
         self.sal.salTelemetrySub("scheduler_areaDistPropConfig")
         self.sal.salTelemetrySub("scheduler_timeHandler")
         self.sal.salTelemetrySub("scheduler_observatoryState")
-        self.sal.salTelemetrySub("scheduler_observationTest")
+        self.sal.salTelemetrySub("scheduler_observation")
         self.sal.salTelemetryPub("scheduler_field")
-        self.sal.salTelemetryPub("scheduler_targetTest")
+        self.sal.salTelemetryPub("scheduler_target")
 
         meascount = 0
         visitcount = 0
@@ -643,7 +643,7 @@ class Main(object):
                                 for i, prop_bonus in enumerate(target.bonus_list):
                                     self.topicTarget.proposal_bonuses[i] = prop_bonus
 
-                                self.sal.putSample_targetTest(self.topicTarget)
+                                self.sal.putSample_target(self.topicTarget)
                                 prop = self.schedulerDriver.science_proposal_list[0]
                                 moon_sun = prop.sky.get_moon_sun_info(target.ra_rad, target.dec_rad)
                                 if moon_sun["moonRA"] is not None:
@@ -664,7 +664,7 @@ class Main(object):
                                 waitobservation = True
                                 lastobstime = time.time()
                                 while waitobservation:
-                                    scode = self.sal.getNextSample_observationTest(self.topicObservation)
+                                    scode = self.sal.getNextSample_observation(self.topicObservation)
                                     if scode == 0 and self.topicObservation.targetId != 0:
                                         lastobstime = time.time()
                                         meascount += 1
