@@ -36,6 +36,7 @@ class Target(object):
         self.progress = 0.0
 
         #computed at driver
+        self.propboost = 1.0
         self.slewtime = 0.0
         self.cost_bonus = 0.0
         self.rank = 0.0
@@ -45,6 +46,7 @@ class Target(object):
         self.need_list = []
         self.bonus_list = []
         self.value_list = []
+        self.propboost_list = []
 
     def __str__(self):
         return ("targetid=%d field=%d filter=%s exp_times=%s ra=%.3f dec=%.3f "

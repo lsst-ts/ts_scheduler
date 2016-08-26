@@ -93,6 +93,7 @@ class AreaDistributionProposal(Proposal):
         self.build_fields_tonight_list(timestamp)
 
         # compute at start night
+        self.total_targets = 0
         self.total_goal = 0
         self.total_visits = 0
         for field in self.fields_tonight_list:
@@ -128,10 +129,13 @@ class AreaDistributionProposal(Proposal):
             for filter in self.filters_tonight_list:
                 if filter in self.targets_dict[fieldid]:
                     target = self.targets_dict[fieldid][filter]
+                    self.total_targets += 1
                     self.total_goal += target.goal
                     self.total_visits += target.visits
 
-        self.total_progress = self.total_visits / self.total_goal
+        self.total_progress = float(self.total_visits) / self.total_goal
+        self.log.info("start_night targets=%i goal=%i visits=%i progress=%.6f" %
+                      (self.total_targets, self.total_goal, self.total_visits, self.total_progress))
 
         self.last_observation = None
         self.last_observation_was_for_this_proposal = False
@@ -150,6 +154,10 @@ class AreaDistributionProposal(Proposal):
             self.fields_tonight_list.append(field)
 
         return
+
+    def get_progress(self):
+
+        return self.total_progress
 
     def suggest_targets(self, timestamp):
 

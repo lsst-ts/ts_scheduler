@@ -101,6 +101,7 @@ class Driver(object):
             proposal_confdict = read_conf_file(configfilepath)
             self.create_area_proposal(name, proposal_confdict)
 
+        self.start_time = 0.0
         self.time = 0.0
         self.targetid = 0
         self.survey_started = False
@@ -259,6 +260,7 @@ class Driver(object):
 
     def start_survey(self, timestamp):
 
+        self.start_time = timestamp
         self.log.info("start_survey t=%.1f" % timestamp)
 
         self.survey_started = True
@@ -283,7 +285,7 @@ class Driver(object):
 
     def start_night(self, timestamp):
 
-        self.log.log(WORDY, "start_night t=%.1f" % timestamp)
+        self.log.info("start_night t=%.1f" % timestamp)
 
         self.isnight = True
 
@@ -292,7 +294,7 @@ class Driver(object):
 
     def end_night(self, timestamp):
 
-        self.log.log(WORDY, "end_night t=%.1f" % timestamp)
+        self.log.info("end_night t=%.1f" % timestamp)
 
         self.isnight = False
 
@@ -338,29 +340,50 @@ class Driver(object):
 
         targets_dict = {}
         ranked_targets_list = []
+        propboost_dict = {}
 
+        timeprogress = (self.time - self.start_time) / 315576000.0
         for prop in self.science_proposal_list:
+
+            progress = prop.get_progress()
+            if progress > 0.0:
+                if timeprogress < 1.0:
+                    needindex = (1.0 - progress) / (1.0 - timeprogress)
+                else:
+                    needindex = 0.0
+                if timeprogress > 0.0:
+                    progressindex = progress / timeprogress
+                else:
+                    progressindex = 1.0
+                propboost_dict[prop.propid] = needindex / progressindex
+            else:
+                propboost_dict[prop.propid] = 1.0
+
             proptarget_list = prop.suggest_targets(self.time)
-            self.log.debug("select_next_target propid=%d name=%s targets=%d" %
-                           (prop.propid, prop.name, len(proptarget_list)))
+            self.log.debug("select_next_target propid=%d name=%s targets=%d progress=%.6f propboost=%.3f" %
+                           (prop.propid, prop.name, len(proptarget_list), progress, propboost_dict[prop.propid]))
 
             for target in proptarget_list:
                 target.num_props = 1
+                target.propboost = propboost_dict[prop.propid]
                 target.propid_list = [prop.propid]
                 target.need_list = [target.need]
                 target.bonus_list = [target.bonus]
                 target.value_list = [target.value]
+                target.propboost_list = [target.propboost]
                 fieldfilter = (target.fieldid, target.filter)
                 if fieldfilter in targets_dict:
                     if self.params.coadd_values:
                         targets_dict[fieldfilter][0].need += target.need
                         targets_dict[fieldfilter][0].bonus += target.bonus
                         targets_dict[fieldfilter][0].value += target.value
+                        targets_dict[fieldfilter][0].propboost *= target.propboost
                         targets_dict[fieldfilter][0].num_props += 1
                         targets_dict[fieldfilter][0].propid_list.append(prop.propid)
                         targets_dict[fieldfilter][0].need_list.append(target.need)
                         targets_dict[fieldfilter][0].bonus_list.append(target.bonus)
                         targets_dict[fieldfilter][0].value_list.append(target.value)
+                        targets_dict[fieldfilter][0].propboost_list.append(target.propboost)
                     else:
                         targets_dict[fieldfilter].append(copy.deepcopy(target))
                 else:
@@ -373,7 +396,7 @@ class Driver(object):
                 for target in targets_dict[fieldfilter]:
                     target.slewtime = slewtime
                     target.cost_bonus = cost_bonus
-                    target.rank = target.value + cost_bonus
+                    target.rank = (target.value + cost_bonus) * target.propboost
                     ranked_targets_list.append((-target.rank, target))
 
         sorted_list = sorted(ranked_targets_list, key=itemgetter(0))

@@ -529,11 +529,12 @@ class Main(object):
                     dec_window = self.topic_areaDistPropConfig.dec_window
                     config_dict["sky_exclusions"]["dec_window"] = dec_window
 
-                    #num_filters = self.topic_areaDistPropConfig.num_filters
+                    num_filters = self.topic_areaDistPropConfig.num_filters
                     filter_names = self.topic_areaDistPropConfig.filter_names
                     filter_list = filter_names.split(",")
                     exp_index = 0
-                    for k, filter in enumerate(filter_list):
+                    for k in range(num_filters):
+                        filter = filter_list[k]
                         filter_section = "filter_%s" % filter
                         config_dict[filter_section] = {}
                         config_dict[filter_section]["visits"] = self.topic_areaDistPropConfig.num_visits[k]
