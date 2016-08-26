@@ -349,6 +349,7 @@ class Driver(object):
                 target.propid_list = [prop.propid]
                 target.need_list = [target.need]
                 target.bonus_list = [target.bonus]
+                target.value_list = [target.value]
                 fieldfilter = (target.fieldid, target.filter)
                 if fieldfilter in targets_dict:
                     if self.params.coadd_values:

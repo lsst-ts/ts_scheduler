@@ -1,7 +1,5 @@
 import math
 
-from ts_scheduler.schedulerDefinitions import RAD2DEG
-
 class Target(object):
     def __init__(self,
                  targetid=0,
@@ -51,13 +49,17 @@ class Target(object):
     def __str__(self):
         return ("targetid=%d field=%d filter=%s exp_times=%s ra=%.3f dec=%.3f "
                 "time=%.1f airmass=%.3f brightness=%.3f "
-                "visits=%i "
-                "progress=%.3f value=%.3f slewtime=%.3f cost=%.3f rank=%.3f propid=%s" %
+                "visits=%i progress=%.3f "
+                "need=%.3f bonus=%.3f value=%.3f "
+                "propid=%s need=%s bonus=%s value=%s "
+                "slewtime=%.3f costbonus=%.3f rank=%.3f" %
                 (self.targetid, self.fieldid, self.filter, str(self.exp_times),
-                 self.ra_rad * RAD2DEG, self.dec_rad * RAD2DEG,
+                 self.ra, self.dec,
                  self.time, self.airmass, self.sky_brightness,
-                 self.visits,
-                 self.progress, self.value, self.slewtime, self.cost_bonus, self.rank, self.propid_list))
+                 self.visits, self.progress,
+                 self.need, self.bonus, self.value,
+                 self.propid_list, self.need_list, self.bonus_list, self.value_list,
+                 self.slewtime, self.cost_bonus, self.rank))
 
     @property
     def ra(self):

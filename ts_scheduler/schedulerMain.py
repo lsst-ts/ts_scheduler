@@ -22,6 +22,8 @@ from SALPY_scheduler import scheduler_opticsLoopCorrConfigC
 from SALPY_scheduler import scheduler_parkConfigC
 from SALPY_scheduler import scheduler_areaDistPropConfigC
 
+#from SALPY_scheduler import flushSamples_schedulerConfig
+
 from ts_scheduler.setup import TRACE
 from ts_scheduler.schedulerDefinitions import RAD2DEG, DEG2RAD, read_conf_file, conf_file_path
 from ts_scheduler.schedulerDriver import Driver
@@ -78,6 +80,8 @@ class Main(object):
         self.sal.salTelemetrySub("scheduler_observation")
         self.sal.salTelemetryPub("scheduler_field")
         self.sal.salTelemetryPub("scheduler_target")
+
+        #self.sal.flushSamples_schedulerConfig(self.topic_schedulerConfig)
 
         meascount = 0
         visitcount = 0
@@ -620,16 +624,15 @@ class Main(object):
                                 self.topicTarget.targetId = target.targetid
                                 self.topicTarget.fieldId = target.fieldid
                                 self.topicTarget.filter = target.filter
+                                self.topicTarget.request_time = target.time
                                 self.topicTarget.ra = target.ra
                                 self.topicTarget.dec = target.dec
                                 self.topicTarget.angle = target.ang
                                 self.topicTarget.num_exposures = target.num_exp
                                 for i, exptime in enumerate(target.exp_times):
                                     self.topicTarget.exposure_times[i] = int(exptime)
-                                self.topicTarget.request_time = target.time
                                 self.topicTarget.airmass = target.airmass
                                 self.topicTarget.sky_brightness = target.sky_brightness
-                                self.topicTarget.need = target.value
                                 self.topicTarget.slew_time = target.slewtime
                                 self.topicTarget.cost_bonus = target.cost_bonus
                                 self.topicTarget.rank = target.rank
@@ -650,12 +653,12 @@ class Main(object):
                                     self.topicTarget.moon_dec = math.degrees(moon_sun["moonDec"])
                                     self.topicTarget.moon_alt = math.degrees(moon_sun["moonAlt"])
                                     self.topicTarget.moon_az = math.degrees(moon_sun["moonAz"])
-                                    self.topicTarget.moon_distance = math.degrees(moon_sun["moonDist"])
                                     self.topicTarget.moon_phase = moon_sun["moonPhase"]
-                                    self.topicTarget.sun_ra = math.degrees(moon_sun["sunRA"])
-                                    self.topicTarget.sun_dec = math.degrees(moon_sun["sunDec"])
+                                    self.topicTarget.moon_distance = math.degrees(moon_sun["moonDist"])
                                     self.topicTarget.sun_alt = math.degrees(moon_sun["sunAlt"])
                                     self.topicTarget.sun_az = math.degrees(moon_sun["sunAz"])
+                                    self.topicTarget.sun_ra = math.degrees(moon_sun["sunRA"])
+                                    self.topicTarget.sun_dec = math.degrees(moon_sun["sunDec"])
                                     self.topicTarget.sun_elong = math.degrees(moon_sun["sunEclipLon"])
 
                                 self.sal.putSample_target(self.topicTarget)
