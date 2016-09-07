@@ -124,3 +124,17 @@ class AstronomicalSkyTest(unittest.TestCase):
         self.assertAlmostEqual(info["moonDist"], 1.6289850022, delta=1e-7)
         self.assertAlmostEqual(info["moonDec"], -0.4415861752238436, delta=1e-7)
         self.assertAlmostEqual(info["moonRA"], 4.72440671517994, delta=1e-7)
+
+    def test_target_information(self):
+        initial_timestamp = 1641081600 + (.04166666666 * 3600 * 24)
+        self.create_ra_dec()
+        self.astro_sky.update(initial_timestamp)
+        self.astro_sky.get_sky_brightness(self.ra_rads, self.dec_rads)
+        info = self.astro_sky.get_target_information()
+        self.assertEqual(len(info), 3)
+        self.assertEqual(info['airmass'].size, self.ra_rads.size)
+        self.assertEqual(info['alts'].size, self.ra_rads.size)
+        self.assertEqual(info['azs'].size, self.ra_rads.size)
+        self.assertAlmostEqual(info['airmass'][0], 1.9853499253850075, delta=1e-7)
+        self.assertAlmostEqual(info['alts'][0], 0.52786436029017303, delta=1e-7)
+        self.assertTrue(numpy.isnan(info['azs'][0]))
