@@ -5,7 +5,7 @@ import logging
 
 from operator import itemgetter
 
-from ts_scheduler.setup import WORDY, EXTENSIVE
+from ts_scheduler.setup import EXTENSIVE
 from ts_scheduler.sky_model import AstronomicalSkyModel
 from ts_scheduler.schedulerDefinitions import DEG2RAD, read_conf_file, conf_file_path
 from ts_scheduler.schedulerField import Field
@@ -372,7 +372,8 @@ class Driver(object):
 
             proptarget_list = prop.suggest_targets(self.time)
             self.log.debug("select_next_target propid=%d name=%s targets=%d progress=%.6f propboost=%.3f" %
-                           (prop.propid, prop.name, len(proptarget_list), progress, propboost_dict[prop.propid]))
+                           (prop.propid, prop.name, len(proptarget_list), progress,
+                            propboost_dict[prop.propid]))
 
             for target in proptarget_list:
                 target.num_props = 1

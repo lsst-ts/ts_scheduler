@@ -531,9 +531,11 @@ class Main(object):
                         filter_section = "filter_%s" % filter
                         config_dict[filter_section] = {}
                         config_dict[filter_section]["visits"] = self.topic_areaDistPropConfig.num_visits[k]
-                        config_dict[filter_section]["min_brig"] = self.topic_areaDistPropConfig.bright_limit[k]
+                        config_dict[filter_section]["min_brig"] = \
+                            self.topic_areaDistPropConfig.bright_limit[k]
                         config_dict[filter_section]["max_brig"] = self.topic_areaDistPropConfig.dark_limit[k]
-                        config_dict[filter_section]["max_seeing"] = self.topic_areaDistPropConfig.max_seeing[k]
+                        config_dict[filter_section]["max_seeing"] = \
+                            self.topic_areaDistPropConfig.max_seeing[k]
                         num_exp = self.topic_areaDistPropConfig.num_filter_exposures[k]
                         exp_times_list = []
                         for n in range(num_exp):
