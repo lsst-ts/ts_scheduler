@@ -8,15 +8,21 @@ test_schedulerDriver
 Tests for `schedulerDriver` module.
 """
 import logging
+import os
 import unittest
 
+from ts_scheduler.schedulerDefinitions import conf_file_path
 from ts_scheduler.schedulerDriver import Driver
 
 class TestSchedulerDriver(unittest.TestCase):
 
     def setUp(self):
         logging.getLogger().setLevel(logging.WARN)
-        self.driver = Driver("test_survey.conf")
+        conf_path = conf_file_path(__name__, "conf")
+        self.driver = Driver(driver_conf_file=os.path.join(conf_path, "scheduler", "driver.conf"),
+                             obs_site_conf_file=os.path.join(conf_path, "system", "site.conf"),
+                             obs_model_conf_file=os.path.join(conf_path, "system", "observatoryModel.conf"),
+                             survey_conf_file=os.path.join(conf_path, "survey", "test_survey.conf"))
 
     def test_init(self):
 
