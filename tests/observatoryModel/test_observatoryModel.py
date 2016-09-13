@@ -14,7 +14,7 @@ class ObservatoryModelTest(unittest.TestCase):
         cls.location.configure(siteconf)
 
         observatoryconf = read_conf_file(conf_file_path(__name__, "../conf", "system",
-                                                        "observatoryModel.conf"))
+                                                        "observatory_model.conf"))
         cls.model = ObservatoryModel(cls.location)
         cls.model.configure(observatoryconf)
 
@@ -29,7 +29,7 @@ class ObservatoryModelTest(unittest.TestCase):
 
     def test_configure(self):
         observatoryconf = read_conf_file(conf_file_path(__name__, "../conf", "system",
-                                                        "observatoryModel.conf"))
+                                                        "observatory_model.conf"))
         temp_model = ObservatoryModel(self.location)
         temp_model.configure(observatoryconf)
 

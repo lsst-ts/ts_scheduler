@@ -50,7 +50,7 @@ class Driver(object):
         self.location.configure(site_confdict)
 
         if obs_model_conf_file is None:
-            obs_model_conf_file = conf_file_path(__name__, "conf", "system", "observatoryModel.conf")
+            obs_model_conf_file = conf_file_path(__name__, "conf", "system", "observatory_model.conf")
         observatory_confdict = read_conf_file(obs_model_conf_file)
         self.observatoryModel = ObservatoryModel(self.location)
         self.observatoryModel.configure(observatory_confdict)

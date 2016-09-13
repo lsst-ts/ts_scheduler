@@ -21,7 +21,7 @@ class TestSchedulerDriver(unittest.TestCase):
         conf_path = conf_file_path(__name__, "conf")
         self.driver = Driver(driver_conf_file=os.path.join(conf_path, "scheduler", "driver.conf"),
                              obs_site_conf_file=os.path.join(conf_path, "system", "site.conf"),
-                             obs_model_conf_file=os.path.join(conf_path, "system", "observatoryModel.conf"),
+                             obs_model_conf_file=os.path.join(conf_path, "system", "observatory_model.conf"),
                              survey_conf_file=os.path.join(conf_path, "survey", "test_survey.conf"))
 
     def test_init(self):
