@@ -81,11 +81,16 @@ class Driver(object):
             scripted_propconflist.append(propconf)
         self.log.info("init: scripted proposals %s" % (scripted_propconflist))
 
+        if survey_conf_file is None:
+            prop_conf_path = conf_file_path(__name__, "conf", "survey")
+        else:
+            prop_conf_path = os.path.dirname(survey_conf_file)
+
         for k in range(len(scripted_propconflist)):
             self.propid_counter += 1
             scripted_prop = ScriptedProposal(self.propid_counter,
-                                             conf_file_path(__name__, "conf", "survey",
-                                                            "{}".format(scripted_propconflist[k])),
+                                             os.path.join(prop_conf_path,
+                                                          "{}".format(scripted_propconflist[k])),
                                              self.sky)
             self.science_proposal_list.append(scripted_prop)
 
@@ -102,10 +107,7 @@ class Driver(object):
         self.log.info("init: areadistribution proposals %s" % (areadistribution_propconflist))
 
         for k in range(len(areadistribution_propconflist)):
-            configfilepath = conf_file_path(__name__,
-                                            "conf",
-                                            "survey",
-                                            "{}".format(areadistribution_propconflist[k]))
+            configfilepath = os.path.join(prop_conf_path, "{}".format(areadistribution_propconflist[k]))
             (path, name_ext) = os.path.split(configfilepath)
             (name, ext) = os.path.splitext(name_ext)
             proposal_confdict = read_conf_file(configfilepath)
