@@ -12,6 +12,8 @@ class ObservatoryModelParameters(object):
 
     def __init__(self, confdict):
 
+        self.log = logging.getLogger("observatoryModelParameters")
+
         self.TelAlt_MinPos_rad = math.radians(confdict["telescope"]["altitude_minpos"])
         self.TelAlt_MaxPos_rad = math.radians(confdict["telescope"]["altitude_maxpos"])
         self.TelAz_MinPos_rad = math.radians(confdict["telescope"]["azimuth_minpos"])
@@ -42,9 +44,7 @@ class ObservatoryModelParameters(object):
         self.DomAz_Decel_rad = math.radians(confdict["dome"]["azimuth_decel"])
         self.DomAz_SettleTime = confdict["dome"]["settle_time"]
 
-        self.Filter_ChangeTime = confdict["camera"]["filter_change_time"]
-        self.ReadoutTime = confdict["camera"]["readout_time"]
-        self.ShutterTime = confdict["camera"]["shutter_time"]
+        self.configure_camera(confdict["camera"])
 
         self.OpticsOL_Slope = confdict["optics_loop_corr"]["tel_optics_ol_slope"] / math.radians(1)
         self.OpticsCL_Delay = confdict["optics_loop_corr"]["tel_optics_cl_delay"]
@@ -55,6 +55,42 @@ class ObservatoryModelParameters(object):
         self.Filter_RemovableList = confdict["camera"]["filter_removable"]
 
         self.prerequisites = {}
+
+    def configure_camera(self, config_camera_dict):
+
+        self.ReadoutTime = config_camera_dict["readout_time"]
+        self.ShutterTime = config_camera_dict["shutter_time"]
+        self.Filter_ChangeTime = config_camera_dict["filter_change_time"]
+        self.Filter_RemovableList = config_camera_dict["filter_removable"]
+        self.filter_max_changes_burst_num = config_camera_dict["filter_max_changes_burst_num"]
+        self.filter_max_changes_burst_time = config_camera_dict["filter_max_changes_burst_time"]
+        self.filter_max_changes_avg_num = config_camera_dict["filter_max_changes_avg_num"]
+        self.filter_max_changes_avg_time = config_camera_dict["filter_max_changes_avg_time"]
+
+        self.log.log(WORDY,
+                     "configure_camera: ReadoutTime=%.3f" %
+                     (self.ReadoutTime))
+        self.log.log(WORDY,
+                     "configure_camera: ShutterTime=%.3f" %
+                     (self.ShutterTime))
+        self.log.log(WORDY,
+                     "configure_camera: Filter_ChangeTime=%.3f" %
+                     (self.Filter_ChangeTime))
+        self.log.log(WORDY,
+                     "configure_camera: Filter_RemovableList=%s" %
+                     (self.Filter_RemovableList))
+        self.log.log(WORDY,
+                     "configure_camera: filter_max_changes_burst_num=%i" %
+                     (self.filter_max_changes_burst_num))
+        self.log.log(WORDY,
+                     "configure_camera: filter_max_changes_burst_time=%.3f" %
+                     (self.filter_max_changes_burst_time))
+        self.log.log(WORDY,
+                     "configure_camera: filter_max_changes_avg_num=%i" %
+                     (self.filter_max_changes_avg_num))
+        self.log.log(WORDY,
+                     "configure_camera: filter_max_changes_avg_time=%.3f" %
+                     (self.filter_max_changes_avg_time))
 
 class ObservatoryModel(object):
 
@@ -89,6 +125,7 @@ class ObservatoryModel(object):
             self.longest_prereq_for[activity] = ""
         self.lastslew_delays_dict = {}
         self.lastslew_criticalpath = []
+        self.filter_changes_list = []
 
     def __str__(self):
         return self.currentState.__str__()
@@ -340,29 +377,9 @@ class ObservatoryModel(object):
         self.log.log(WORDY,
                      "configure_dome: DomAz_SettleTime=%.3f" % (self.params.DomAz_SettleTime))
 
-    def configure_camera(self,
-                         readout_time,
-                         shutter_time,
-                         filter_change_time,
-                         filter_removable):
+    def configure_camera(self, config_camera_dict):
 
-        self.params.ReadoutTime = readout_time
-        self.params.ShutterTime = shutter_time
-        self.params.Filter_ChangeTime = filter_change_time
-        self.params.Filter_RemovableList = filter_removable
-
-        self.log.log(WORDY,
-                     "configure_camera: ReadoutTime=%.3f" %
-                     (self.params.ReadoutTime))
-        self.log.log(WORDY,
-                     "configure_camera: ShutterTime=%.3f" %
-                     (self.params.ShutterTime))
-        self.log.log(WORDY,
-                     "configure_camera: Filter_ChangeTime=%.3f" %
-                     (self.params.Filter_ChangeTime))
-        self.log.log(WORDY,
-                     "configure_camera: Filter_RemovableList=%s" %
-                     (self.params.Filter_RemovableList))
+        self.params.configure_camera(config_camera_dict)
 
     def configure_slew(self, prereq_dict):
 
@@ -540,6 +557,8 @@ class ObservatoryModel(object):
 
         targetstate = self.get_closest_state(targetposition)
         slew_delay = self.get_slew_delay_for_state(targetstate, self.currentState, True)
+        if targetposition.filter != self.currentState.filter:
+            self.filter_changes_list.append(targetstate.time)
         targetstate.time = targetstate.time + slew_delay
         self.currentState.set(targetstate)
         self.update_state(targetstate.time)
@@ -809,7 +828,26 @@ class ObservatoryModel(object):
     def get_delay_for_filter(self, targetstate, initstate):
 
         if targetstate.filter != initstate.filter:
-            delay = self.params.Filter_ChangeTime
+            if targetstate.filter in initstate.mountedfilters:
+                burst_num = self.params.filter_max_changes_burst_num
+                if len(self.filter_changes_list) >= burst_num:
+                    deltatime = initstate.time - self.filter_changes_list[-burst_num]
+                    if deltatime >= self.params.filter_max_changes_burst_time:
+                        avg_num = self.params.filter_max_changes_avg_num
+                        if len(self.filter_changes_list) >= avg_num:
+                            deltatime = initstate.time - self.filter_changes_list[-avg_num]
+                            if deltatime >= self.params.filter_max_changes_avg_time:
+                                delay = self.params.Filter_ChangeTime
+                            else:
+                                delay = -1.0
+                        else:
+                            delay = self.params.Filter_ChangeTime
+                    else:
+                        delay = -1.0
+                else:
+                    delay = self.params.Filter_ChangeTime
+            else:
+                delay = -1.0
         else:
             delay = 0.0
 

@@ -60,6 +60,8 @@ class Driver(object):
         self.propid_counter = 0
         self.science_proposal_list = []
 
+        self.survey_duration_DAYS = survey_confdict["survey"]["survey_duration"]
+
         if 'scripted_propconf' in survey_confdict["proposals"]:
             scripted_propconflist = survey_confdict["proposals"]["scripted_propconf"]
         else:
@@ -108,6 +110,12 @@ class Driver(object):
         self.isnight = False
         self.sunset_timestamp = 0.0
         self.sunrise_timestamp = 0.0
+        self.survey_duration_SECS = self.survey_duration_DAYS * 24 * 60 * 60.0
+
+    def configure_duration(self, survey_duration):
+
+        self.survey_duration_DAYS = survey_duration
+        self.survey_duration_SECS = survey_duration * 24 * 60 * 60.0
 
     def configure(self, driver_confdict):
 
@@ -186,16 +194,9 @@ class Driver(object):
                                              azimuth_decel_rad,
                                              settle_time)
 
-    def configure_camera(self,
-                         readout_time,
-                         shutter_time,
-                         filter_change_time,
-                         filter_removable):
+    def configure_camera(self, config_camera_dict):
 
-        self.observatoryModel.configure_camera(readout_time,
-                                               shutter_time,
-                                               filter_change_time,
-                                               filter_removable)
+        self.observatoryModel.configure_camera(config_camera_dict)
 
     def configure_slew(self, prereq_dict):
 
@@ -342,7 +343,7 @@ class Driver(object):
         ranked_targets_list = []
         propboost_dict = {}
 
-        timeprogress = (self.time - self.start_time) / 315576000.0
+        timeprogress = (self.time - self.start_time) / self.survey_duration_SECS
         for prop in self.science_proposal_list:
 
             progress = prop.get_progress()

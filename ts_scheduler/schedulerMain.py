@@ -92,15 +92,15 @@ class Main(object):
         timestamp = 0.0
 
         try:
-            """
             waitconfig = True
             lastconfigtime = time.time()
             while waitconfig:
                 scode = self.sal.getNextSample_schedulerConfig(self.topic_schedulerConfig)
-                if (scode == 0 and self.topic_schedulerConfig.log_file != ""):
+                if (scode == 0 and self.topic_schedulerConfig.survey_duration > 0.0):
                     lastconfigtime = time.time()
-                    logfilename = self.topic_schedulerConfig.log_file
-                    self.log.info("run: rx scheduler config logfile=%s" % (logfilename))
+                    survey_duration = self.topic_schedulerConfig.survey_duration
+                    self.log.info("run: rx scheduler config survey_duration=%.1f" % (survey_duration))
+                    self.schedulerDriver.configure_duration(survey_duration)
                     waitconfig = False
 
                 else:
@@ -109,7 +109,6 @@ class Main(object):
                         waitconfig = False
                         self.log.info("run: scheduler config timeout")
 
-            """
             waitconfig = True
             lastconfigtime = time.time()
             while waitconfig:
@@ -118,6 +117,7 @@ class Main(object):
                     lastconfigtime = time.time()
 
                     coadd_values = self.topic_driverConfig.coadd_values
+                    time_balancing = self.topic_driverConfig.time_balancing
                     timebonus_tmax = self.topic_driverConfig.timebonus_tmax
                     timebonus_bmax = self.topic_driverConfig.timebonus_bmax
                     timebonus_slope = self.topic_driverConfig.timebonus_slope
@@ -126,6 +126,7 @@ class Main(object):
                     config_dict = {}
                     config_dict["ranking"] = {}
                     config_dict["ranking"]["coadd_values"] = coadd_values
+                    config_dict["ranking"]["time_balancing"] = time_balancing
                     config_dict["ranking"]["timebonus_tmax"] = timebonus_tmax
                     config_dict["ranking"]["timebonus_bmax"] = timebonus_bmax
                     config_dict["ranking"]["timebonus_slope"] = timebonus_slope
@@ -280,18 +281,10 @@ class Main(object):
                 if (scode == 0 and self.topic_cameraConfig.readout_time > 0):
                     lastconfigtime = time.time()
 
-                    readout_time = self.topic_cameraConfig.readout_time
-                    shutter_time = self.topic_cameraConfig.shutter_time
-                    filter_change_time = self.topic_cameraConfig.filter_change_time
-                    filter_removable = self.topic_cameraConfig.filter_removable
+                    config_camera_dict = self.read_topic_cameraConfig(self.topic_cameraConfig)
 
-                    self.log.info("run: rx camera config readout_time=%.3f shutter_time=%.3f "
-                                  "filter_change_time=%.3f filter_removable=%s" %
-                                  (readout_time, shutter_time, filter_change_time, filter_removable))
-                    self.schedulerDriver.configure_camera(readout_time,
-                                                          shutter_time,
-                                                          filter_change_time,
-                                                          filter_removable)
+                    self.log.info("run: rx camera config=%s" % (config_camera_dict))
+                    self.schedulerDriver.configure_camera(config_camera_dict)
                     waitconfig = False
 
                 else:
@@ -603,8 +596,8 @@ class Main(object):
                     if self.topicTime.timestamp > timestamp:
                         lasttimetime = time.time()
                         timestamp = self.topicTime.timestamp
-
-                        self.log.debug("run: rx time=%.1f" % (timestamp))
+                        nightstamp = self.topicTime.night
+                        self.log.debug("run: rx time=%.1f night=%i" % (timestamp, nightstamp))
 
                         self.schedulerDriver.update_time(self.topicTime.timestamp)
 
@@ -732,6 +725,21 @@ class Main(object):
         self.log.info("exit")
         self.sal.salShutdown()
         sys.exit(0)
+
+    def read_topic_cameraConfig(self, topic_cameraConfig):
+
+        config_camera_dict = {}
+
+        config_camera_dict["readout_time"] = topic_cameraConfig.readout_time
+        config_camera_dict["shutter_time"] = topic_cameraConfig.shutter_time
+        config_camera_dict["filter_change_time"] = topic_cameraConfig.filter_change_time
+        config_camera_dict["filter_max_changes_burst_num"] = topic_cameraConfig.filter_max_changes_burst_num
+        config_camera_dict["filter_max_changes_burst_time"] = topic_cameraConfig.filter_max_changes_burst_time
+        config_camera_dict["filter_max_changes_avg_num"] = topic_cameraConfig.filter_max_changes_avg_num
+        config_camera_dict["filter_max_changes_avg_time"] = topic_cameraConfig.filter_max_changes_avg_time
+        config_camera_dict["filter_removable"] = topic_cameraConfig.filter_removable
+
+        return config_camera_dict
 
     def create_observation(self, topic_observation):
 
