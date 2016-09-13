@@ -1,7 +1,7 @@
 import unittest
 import math
 
-from ts_scheduler.schedulerDefinitions import read_conf_file
+from ts_scheduler.schedulerDefinitions import conf_file_path, read_conf_file
 from ts_scheduler.schedulerTarget import Target
 from ts_scheduler.observatoryModel import ObservatoryLocation, ObservatoryModel
 
@@ -9,11 +9,12 @@ class ObservatoryModelTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        siteconf = read_conf_file("conf/system/site.conf")
+        siteconf = read_conf_file(conf_file_path(__name__, "../conf", "system", "site.conf"))
         cls.location = ObservatoryLocation()
         cls.location.configure(siteconf)
 
-        observatoryconf = read_conf_file("conf/system/observatoryModel.conf")
+        observatoryconf = read_conf_file(conf_file_path(__name__, "../conf", "system",
+                                                        "observatory_model.conf"))
         cls.model = ObservatoryModel(cls.location)
         cls.model.configure(observatoryconf)
 
@@ -27,7 +28,8 @@ class ObservatoryModelTest(unittest.TestCase):
         self.assertEqual(temp_model.currentState.telalt_rad, 1.5)
 
     def test_configure(self):
-        observatoryconf = read_conf_file("conf/system/observatoryModel.conf")
+        observatoryconf = read_conf_file(conf_file_path(__name__, "../conf", "system",
+                                                        "observatory_model.conf"))
         temp_model = ObservatoryModel(self.location)
         temp_model.configure(observatoryconf)
 

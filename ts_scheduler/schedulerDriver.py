@@ -5,7 +5,7 @@ import logging
 
 from operator import itemgetter
 
-from ts_scheduler.setup import WORDY, EXTENSIVE
+from ts_scheduler.setup import EXTENSIVE
 from ts_scheduler.sky_model import AstronomicalSkyModel
 from ts_scheduler.schedulerDefinitions import DEG2RAD, read_conf_file, conf_file_path
 from ts_scheduler.schedulerField import Field
@@ -33,19 +33,25 @@ class DriverParameters(object):
         self.night_boundary = confdict["survey"]["night_boundary"]
 
 class Driver(object):
-    def __init__(self, survey_conf_file="survey.conf"):
+    def __init__(self, driver_conf_file=None, obs_site_conf_file=None, obs_model_conf_file=None,
+                 survey_conf_file=None):
 
         self.log = logging.getLogger("schedulerDriver")
 
-        driver_confdict = read_conf_file(conf_file_path(__name__, "../conf", "scheduler", "driver.conf"))
+        if driver_conf_file is None:
+            driver_conf_file = conf_file_path(__name__, "conf", "scheduler", "driver.conf")
+        driver_confdict = read_conf_file(driver_conf_file)
         self.params = DriverParameters(driver_confdict)
 
-        site_confdict = read_conf_file(conf_file_path(__name__, "../conf", "system", "site.conf"))
+        if obs_site_conf_file is None:
+            obs_site_conf_file = conf_file_path(__name__, "conf", "system", "site.conf")
+        site_confdict = read_conf_file(obs_site_conf_file)
         self.location = ObservatoryLocation()
         self.location.configure(site_confdict)
 
-        observatory_confdict = read_conf_file(conf_file_path(__name__, "../conf", "system",
-                                                             "observatoryModel.conf"))
+        if obs_model_conf_file is None:
+            obs_model_conf_file = conf_file_path(__name__, "conf", "system", "observatory_model.conf")
+        observatory_confdict = read_conf_file(obs_model_conf_file)
         self.observatoryModel = ObservatoryModel(self.location)
         self.observatoryModel.configure(observatory_confdict)
 
@@ -55,7 +61,9 @@ class Driver(object):
 
         self.build_fields_dict()
 
-        survey_confdict = read_conf_file(conf_file_path(__name__, "../conf", "survey", survey_conf_file))
+        if survey_conf_file is None:
+            survey_conf_file = conf_file_path(__name__, "conf", "survey", survey_conf_file)
+        survey_confdict = read_conf_file(survey_conf_file)
 
         self.propid_counter = 0
         self.science_proposal_list = []
@@ -73,11 +81,16 @@ class Driver(object):
             scripted_propconflist.append(propconf)
         self.log.info("init: scripted proposals %s" % (scripted_propconflist))
 
+        if survey_conf_file is None:
+            prop_conf_path = conf_file_path(__name__, "conf", "survey")
+        else:
+            prop_conf_path = os.path.dirname(survey_conf_file)
+
         for k in range(len(scripted_propconflist)):
             self.propid_counter += 1
             scripted_prop = ScriptedProposal(self.propid_counter,
-                                             conf_file_path(__name__, "../conf", "survey",
-                                                            "{}".format(scripted_propconflist[k])),
+                                             os.path.join(prop_conf_path,
+                                                          "{}".format(scripted_propconflist[k])),
                                              self.sky)
             self.science_proposal_list.append(scripted_prop)
 
@@ -94,10 +107,7 @@ class Driver(object):
         self.log.info("init: areadistribution proposals %s" % (areadistribution_propconflist))
 
         for k in range(len(areadistribution_propconflist)):
-            configfilepath = conf_file_path(__name__,
-                                            "../conf",
-                                            "survey",
-                                            "{}".format(areadistribution_propconflist[k]))
+            configfilepath = os.path.join(prop_conf_path, "{}".format(areadistribution_propconflist[k]))
             (path, name_ext) = os.path.split(configfilepath)
             (name, ext) = os.path.splitext(name_ext)
             proposal_confdict = read_conf_file(configfilepath)
@@ -362,7 +372,8 @@ class Driver(object):
 
             proptarget_list = prop.suggest_targets(self.time)
             self.log.debug("select_next_target propid=%d name=%s targets=%d progress=%.6f propboost=%.3f" %
-                           (prop.propid, prop.name, len(proptarget_list), progress, propboost_dict[prop.propid]))
+                           (prop.propid, prop.name, len(proptarget_list), progress,
+                            propboost_dict[prop.propid]))
 
             for target in proptarget_list:
                 target.num_props = 1

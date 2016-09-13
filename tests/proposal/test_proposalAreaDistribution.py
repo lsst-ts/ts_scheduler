@@ -11,14 +11,14 @@ class AreaDistributionProposalTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        site_confdict = read_conf_file(conf_file_path(__name__, "../../conf", "system", "site.conf"))
+        site_confdict = read_conf_file(conf_file_path(__name__, "../conf", "system", "site.conf"))
         location = ObservatoryLocation()
         location.configure(site_confdict)
         cls.skyModel = AstronomicalSkyModel(location)
 
     def setUp(self):
         logging.getLogger().setLevel(logging.WARN)
-        configfilepath = conf_file_path(__name__, "../../conf", "survey", "areaProp1.conf")
+        configfilepath = conf_file_path(__name__, "../conf", "survey", "areaProp1.conf")
         (path, name_ext) = os.path.split(configfilepath)
         (name, ext) = os.path.splitext(name_ext)
         proposal_confdict = read_conf_file(configfilepath)
@@ -71,7 +71,7 @@ class AreaDistributionProposalTest(unittest.TestCase):
                          "2555, 2556, 2563, 2564, 2572, 2655, 2656, 2657, 2658, 2669, 2670, 2682, 2692, "
                          "2762, 2769, 2770, 2783, 2784, 2787, 2788, 2802]")
 
-        configfilepath = conf_file_path(__name__, "../../conf", "survey", "weak_lensing.conf")
+        configfilepath = conf_file_path(__name__, "../conf", "survey", "weak_lensing.conf")
         (path, name_ext) = os.path.split(configfilepath)
         (name, ext) = os.path.splitext(name_ext)
         proposal_confdict = read_conf_file(configfilepath)
