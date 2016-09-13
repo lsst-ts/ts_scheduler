@@ -35,7 +35,7 @@ class Main(object):
     def __init__(self, options):
         self.log = logging.getLogger("schedulerMain")
 
-        main_confdict = read_conf_file(conf_file_path(__name__, "../conf", "scheduler", "main.conf"))
+        main_confdict = read_conf_file(conf_file_path(__name__, "conf", "scheduler", "main.conf"))
         self.measinterval = main_confdict['log']['rate_meas_interval']
 
         self.schedulerDriver = Driver()

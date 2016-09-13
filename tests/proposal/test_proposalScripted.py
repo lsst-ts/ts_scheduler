@@ -12,14 +12,14 @@ class ScriptedProposalTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         warnings.filterwarnings('ignore', category=FutureWarning, append=True)
-        site_confdict = read_conf_file(conf_file_path(__name__, "../../conf", "system", "site.conf"))
+        site_confdict = read_conf_file(conf_file_path(__name__, "../conf", "system", "site.conf"))
         location = ObservatoryLocation()
         location.configure(site_confdict)
         cls.skyModel = AstronomicalSkyModel(location)
 
     def setUp(self):
         logging.getLogger().setLevel(logging.WARN)
-        self.scriptedprop = ScriptedProposal(1, conf_file_path(__name__, "../../conf", "survey",
+        self.scriptedprop = ScriptedProposal(1, conf_file_path(__name__, "../conf", "survey",
                                              "scriptedProp1.conf"), self.skyModel)
 
     def test_init(self):

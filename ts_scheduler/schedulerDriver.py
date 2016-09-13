@@ -37,14 +37,14 @@ class Driver(object):
 
         self.log = logging.getLogger("schedulerDriver")
 
-        driver_confdict = read_conf_file(conf_file_path(__name__, "../conf", "scheduler", "driver.conf"))
+        driver_confdict = read_conf_file(conf_file_path(__name__, "conf", "scheduler", "driver.conf"))
         self.params = DriverParameters(driver_confdict)
 
-        site_confdict = read_conf_file(conf_file_path(__name__, "../conf", "system", "site.conf"))
+        site_confdict = read_conf_file(conf_file_path(__name__, "conf", "system", "site.conf"))
         self.location = ObservatoryLocation()
         self.location.configure(site_confdict)
 
-        observatory_confdict = read_conf_file(conf_file_path(__name__, "../conf", "system",
+        observatory_confdict = read_conf_file(conf_file_path(__name__, "conf", "system",
                                                              "observatoryModel.conf"))
         self.observatoryModel = ObservatoryModel(self.location)
         self.observatoryModel.configure(observatory_confdict)
@@ -55,7 +55,7 @@ class Driver(object):
 
         self.build_fields_dict()
 
-        survey_confdict = read_conf_file(conf_file_path(__name__, "../conf", "survey", survey_conf_file))
+        survey_confdict = read_conf_file(conf_file_path(__name__, "conf", "survey", survey_conf_file))
 
         self.propid_counter = 0
         self.science_proposal_list = []
@@ -76,7 +76,7 @@ class Driver(object):
         for k in range(len(scripted_propconflist)):
             self.propid_counter += 1
             scripted_prop = ScriptedProposal(self.propid_counter,
-                                             conf_file_path(__name__, "../conf", "survey",
+                                             conf_file_path(__name__, "conf", "survey",
                                                             "{}".format(scripted_propconflist[k])),
                                              self.sky)
             self.science_proposal_list.append(scripted_prop)
@@ -95,7 +95,7 @@ class Driver(object):
 
         for k in range(len(areadistribution_propconflist)):
             configfilepath = conf_file_path(__name__,
-                                            "../conf",
+                                            "conf",
                                             "survey",
                                             "{}".format(areadistribution_propconflist[k]))
             (path, name_ext) = os.path.split(configfilepath)
