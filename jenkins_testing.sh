@@ -13,7 +13,7 @@ export PYTHONPATH=${PYTHONPATH}:${WORKSPACE}/lib
 
 if [ ! -e ${WORKSPACE}/miniconda ]; then
 	echo "Setting up Miniconda distribution"    
-	curl -O ${remote_url}/Miniconda-latest-Linux-x86_64.sh
+	curl -O ${remote_url}/Miniconda2-latest-Linux-x86_64.sh
 	bash Miniconda-latest-Linux-x86_64.sh -b -p miniconda
 fi
 
