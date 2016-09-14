@@ -246,7 +246,8 @@ class AreaDistributionProposal(Proposal):
             dec_rad_list.append(field.dec_rad)
         if (len(id_list) > 0) and (not self.ignore_sky_brightness or not self.ignore_airmass):
             self.sky.update(timestamp)
-            sky_mags = self.sky.get_sky_brightness(ra_rad_list, dec_rad_list)
+            #sky_mags = self.sky.get_sky_brightness(ra_rad_list, dec_rad_list)
+            sky_mags = self.sky.get_sky_brightness(id_list)
             attrs = self.sky.sky_brightness.getComputedVals()
             for ix, fieldid in enumerate(id_list):
                 mags_dict[fieldid] = {k: v[ix] for k, v in sky_mags.items()}

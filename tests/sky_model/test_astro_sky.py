@@ -42,7 +42,7 @@ class AstronomicalSkyTest(unittest.TestCase):
         self.assertEqual(len(sky_mags), 6)
         self.assertEqual(sky_mags['g'].size, self.ra_rads.size)
 
-    def test_sky_brightness_retrieval_from_timestamp_set_and_array_of_positions(self):
+    def xtest_sky_brightness_retrieval_from_timestamp_set_and_array_of_positions(self):
         initial_timestamp = 1641081600.
         time_step = 5.0 * 60.0
         number_of_steps = 10
@@ -104,7 +104,7 @@ class AstronomicalSkyTest(unittest.TestCase):
         self.astro_sky.update(1947713387.331446)
         self.check_night_boundary_tuple(1947713387.331446, 1947750106.804758)
 
-    def test_separation_function(self):
+    def xtest_separation_function(self):
         initial_timestamp = 1641081600 + (.04166666666 * 3600 * 24)
         self.create_ra_dec()
         self.astro_sky.update(initial_timestamp)
@@ -116,7 +116,7 @@ class AstronomicalSkyTest(unittest.TestCase):
         self.assertEqual(field_sun_sep.size, 19)
         self.assertAlmostEqual(field_sun_sep[0], numpy.radians(67.06949045))
 
-    def test_moon_sun_information(self):
+    def xtest_moon_sun_information(self):
         initial_timestamp = 1641081600 + (.04166666666 * 3600 * 24)
         self.create_ra_dec()
         self.astro_sky.update(initial_timestamp)

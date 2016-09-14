@@ -3,7 +3,8 @@ import logging
 import numpy
 import palpy
 
-from lsst.sims.skybrightness import SkyModel
+#from lsst.sims.skybrightness import SkyModel
+from lsst.sims.skybrightness_pre import SkyModelPre
 
 from .date_profile import DateProfile
 from .sun import Sun
@@ -36,7 +37,8 @@ class AstronomicalSkyModel(object):
         """
         self.log = logging.getLogger("sky_model.AstronomicalSkyModel")
         self.date_profile = DateProfile(0, location)
-        self.sky_brightness = SkyModel(mags=True)
+        #self.sky_brightness = SkyModel(mags=True)
+        self.sky_brightness = SkyModelPre(opsimFields=True)
         self.sun = Sun()
 
     def update(self, timestamp):
@@ -160,7 +162,7 @@ class AstronomicalSkyModel(object):
         return palpy.dsepVector(field_ra, field_dec, numpy.full_like(field_ra, attrs["{}RA".format(body)]),
                                 numpy.full_like(field_dec, attrs["{}Dec".format(body)]))
 
-    def get_sky_brightness(self, ra, dec):
+    def get_sky_brightness(self, ids):#ra, dec):
         """Get the LSST 6 filter sky brightness for a set of positions at a single time.
 
         This function retrieves the LSST 6 filter sky brightness magnitudes for a given set
@@ -178,8 +180,8 @@ class AstronomicalSkyModel(object):
         numpy.ndarray
             The LSST 6 filter sky brightness magnitudes.
         """
-        self.sky_brightness.setRaDecMjd(ra, dec, self.date_profile.mjd)
-        return self.sky_brightness.returnMags()
+        #self.sky_brightness.setRaDecMjd(ra, dec, self.date_profile.mjd)
+        return self.sky_brightness.returnMags(self.date_profile.mjd, indx=ids)
 
     def get_sky_brightness_timeblock(self, timestamp, timestep, num_steps, ra, dec):
         """Get LSST 6 filter sky brightness for a set of positions for a range of times.
