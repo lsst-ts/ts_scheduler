@@ -23,9 +23,11 @@ conda config --add channels http://conda.lsst.codes/sims
 source_eups="source eups-setups.sh"
 find_eups=$(${source_eups} 2>&1)
 if [ $? != 0 ]; then
+	echo "Installing necessary packages"
 	conda install -y lsst-sims-skybrightness
 	pip install -r requirements.txt
 else
+	echo "Updating packages"
 	conda update lsst-sims-skybrightness
 fi
 ${source_eups}
