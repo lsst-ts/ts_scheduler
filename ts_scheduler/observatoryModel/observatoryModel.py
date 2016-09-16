@@ -5,20 +5,64 @@ import palpy as pal
 
 from ts_scheduler.setup import WORDY, EXTENSIVE
 from ts_scheduler.schedulerDefinitions import TWOPI
+from ts_scheduler.observatoryModel import ObservatoryLocation
 from ts_scheduler.observatoryModel import ObservatoryPosition
 from ts_scheduler.observatoryModel import ObservatoryState
 
 class ObservatoryModelParameters(object):
 
-    def __init__(self, confdict):
+    def __init__(self):
 
-        self.log = logging.getLogger("observatoryModelParameters")
+        self.TelAlt_MinPos_rad = 0.0
+        self.TelAlt_MaxPos_rad = 0.0
+        self.TelAz_MinPos_rad = 0.0
+        self.TelAz_MaxPos_rad = 0.0
+        self.TelAlt_MaxSpeed_rad = 0.0
+        self.TelAlt_Accel_rad = 0.0
+        self.TelAlt_Decel_rad = 0.0
+        self.TelAz_MaxSpeed_rad = 0.0
+        self.TelAz_Accel_rad = 0.0
+        self.TelAz_Decel_rad = 0.0
+        self.Mount_SettleTime = 0.0
+
+        self.TelRot_MinPos_rad = 0.0
+        self.TelRot_MaxPos_rad = 0.0
+        self.TelRot_MaxSpeed_rad = 0.0
+        self.TelRot_Accel_rad = 0.0
+        self.TelRot_Decel_rad = 0.0
+        self.TelRot_FilterChangePos_rad = 0.0
+        self.Rotator_FollowSky = False
+        self.Rotator_ResumeAngle = False
+
+        self.DomAlt_MaxSpeed_rad = 0.0
+        self.DomAlt_Accel_rad = 0.0
+        self.DomAlt_Decel_rad = 0.0
+        self.DomAz_MaxSpeed_rad = 0.0
+        self.DomAz_Accel_rad = 0.0
+        self.DomAz_Decel_rad = 0.0
+        self.DomAz_SettleTime = 0.0
+
+        self.OpticsOL_Slope = 0.0
+        self.OpticsCL_Delay = []
+        self.OpticsCL_AltLimit = []
+
+        self.ReadoutTime = 0.0
+        self.ShutterTime = 0.0
+        self.Filter_ChangeTime = 0.0
+        self.Filter_RemovableList = []
+        self.filter_max_changes_burst_num = 0
+        self.filter_max_changes_burst_time = 0.0
+        self.filter_max_changes_avg_num = 0
+        self.filter_max_changes_avg_time = 0.0
+
+        self.prerequisites = {}
+
+    def configure_telescope(self, confdict):
 
         self.TelAlt_MinPos_rad = math.radians(confdict["telescope"]["altitude_minpos"])
         self.TelAlt_MaxPos_rad = math.radians(confdict["telescope"]["altitude_maxpos"])
         self.TelAz_MinPos_rad = math.radians(confdict["telescope"]["azimuth_minpos"])
         self.TelAz_MaxPos_rad = math.radians(confdict["telescope"]["azimuth_maxpos"])
-
         self.TelAlt_MaxSpeed_rad = math.radians(confdict["telescope"]["altitude_maxspeed"])
         self.TelAlt_Accel_rad = math.radians(confdict["telescope"]["altitude_accel"])
         self.TelAlt_Decel_rad = math.radians(confdict["telescope"]["altitude_decel"])
@@ -26,6 +70,8 @@ class ObservatoryModelParameters(object):
         self.TelAz_Accel_rad = math.radians(confdict["telescope"]["azimuth_accel"])
         self.TelAz_Decel_rad = math.radians(confdict["telescope"]["azimuth_decel"])
         self.Mount_SettleTime = confdict["telescope"]["settle_time"]
+
+    def configure_rotator(self, confdict):
 
         self.TelRot_MinPos_rad = math.radians(confdict["rotator"]["minpos"])
         self.TelRot_MaxPos_rad = math.radians(confdict["rotator"]["maxpos"])
@@ -36,6 +82,8 @@ class ObservatoryModelParameters(object):
         self.Rotator_FollowSky = confdict["rotator"]["follow_sky"]
         self.Rotator_ResumeAngle = confdict["rotator"]["resume_angle"]
 
+    def configure_dome(self, confdict):
+
         self.DomAlt_MaxSpeed_rad = math.radians(confdict["dome"]["altitude_maxspeed"])
         self.DomAlt_Accel_rad = math.radians(confdict["dome"]["altitude_accel"])
         self.DomAlt_Decel_rad = math.radians(confdict["dome"]["altitude_decel"])
@@ -44,7 +92,7 @@ class ObservatoryModelParameters(object):
         self.DomAz_Decel_rad = math.radians(confdict["dome"]["azimuth_decel"])
         self.DomAz_SettleTime = confdict["dome"]["settle_time"]
 
-        self.configure_camera(confdict["camera"])
+    def configure_optics(self, confdict):
 
         self.OpticsOL_Slope = confdict["optics_loop_corr"]["tel_optics_ol_slope"] / math.radians(1)
         self.OpticsCL_Delay = confdict["optics_loop_corr"]["tel_optics_cl_delay"]
@@ -52,56 +100,39 @@ class ObservatoryModelParameters(object):
         for index, alt in enumerate(self.OpticsCL_AltLimit):
             self.OpticsCL_AltLimit[index] = math.radians(self.OpticsCL_AltLimit[index])
 
+    def configure_camera(self, confdict):
+
+        self.ReadoutTime = confdict["camera"]["readout_time"]
+        self.ShutterTime = confdict["camera"]["shutter_time"]
+        self.Filter_ChangeTime = confdict["camera"]["filter_change_time"]
         self.Filter_RemovableList = confdict["camera"]["filter_removable"]
+        self.filter_max_changes_burst_num = confdict["camera"]["filter_max_changes_burst_num"]
+        self.filter_max_changes_burst_time = confdict["camera"]["filter_max_changes_burst_time"]
+        self.filter_max_changes_avg_num = confdict["camera"]["filter_max_changes_avg_num"]
+        self.filter_max_changes_avg_time = confdict["camera"]["filter_max_changes_avg_time"]
 
-        self.prerequisites = {}
+    def configure_slew(self, confdict, activities):
 
-    def configure_camera(self, config_camera_dict):
-
-        self.ReadoutTime = config_camera_dict["readout_time"]
-        self.ShutterTime = config_camera_dict["shutter_time"]
-        self.Filter_ChangeTime = config_camera_dict["filter_change_time"]
-        self.Filter_RemovableList = config_camera_dict["filter_removable"]
-        self.filter_max_changes_burst_num = config_camera_dict["filter_max_changes_burst_num"]
-        self.filter_max_changes_burst_time = config_camera_dict["filter_max_changes_burst_time"]
-        self.filter_max_changes_avg_num = config_camera_dict["filter_max_changes_avg_num"]
-        self.filter_max_changes_avg_time = config_camera_dict["filter_max_changes_avg_time"]
-
-        self.log.log(WORDY,
-                     "configure_camera: ReadoutTime=%.3f" %
-                     (self.ReadoutTime))
-        self.log.log(WORDY,
-                     "configure_camera: ShutterTime=%.3f" %
-                     (self.ShutterTime))
-        self.log.log(WORDY,
-                     "configure_camera: Filter_ChangeTime=%.3f" %
-                     (self.Filter_ChangeTime))
-        self.log.log(WORDY,
-                     "configure_camera: Filter_RemovableList=%s" %
-                     (self.Filter_RemovableList))
-        self.log.log(WORDY,
-                     "configure_camera: filter_max_changes_burst_num=%i" %
-                     (self.filter_max_changes_burst_num))
-        self.log.log(WORDY,
-                     "configure_camera: filter_max_changes_burst_time=%.3f" %
-                     (self.filter_max_changes_burst_time))
-        self.log.log(WORDY,
-                     "configure_camera: filter_max_changes_avg_num=%i" %
-                     (self.filter_max_changes_avg_num))
-        self.log.log(WORDY,
-                     "configure_camera: filter_max_changes_avg_time=%.3f" %
-                     (self.filter_max_changes_avg_time))
+        for activity in activities:
+            key = "prereq_" + activity
+            self.prerequisites[activity] = confdict["slew"][key]
 
 class ObservatoryModel(object):
 
-    def __init__(self, location):
+    def __init__(self, location=None):
 
         self.log = logging.getLogger("observatoryModel")
 
-        self.location = location
+        self.params = ObservatoryModelParameters()
+        if location is None:
+            self.location = ObservatoryLocation()
+        else:
+            self.location = location
         self.parkState = ObservatoryState()
         self.currentState = ObservatoryState()
         self.targetPosition = ObservatoryPosition()
+        self.Filter_MountedList = []
+        self.Filter_UnmountedList = []
 
         self.activities = ["telalt",
                            "telaz",
@@ -130,142 +161,30 @@ class ObservatoryModel(object):
     def __str__(self):
         return self.currentState.__str__()
 
-    def configure(self, observatory_confdict):
+    def configure(self, confdict):
 
-        self.params = ObservatoryModelParameters(observatory_confdict)
-        for activity in self.activities:
-            key = "prereq_" + activity
-            self.params.prerequisites[activity] = observatory_confdict["slew"][key]
-            self.log.log(EXTENSIVE, "configure: prerequisites[%s]=%s" %
-                         (activity, self.params.prerequisites[activity]))
+        self.configure_telescope(confdict)
+        self.configure_rotator(confdict)
+        self.configure_dome(confdict)
+        self.configure_optics(confdict)
+        self.configure_camera(confdict)
+        self.configure_slew(confdict)
 
-        self.Filter_MountedList = observatory_confdict["camera"]["filter_mounted"]
-        self.Filter_UnmountedList = observatory_confdict["camera"]["filter_unmounted"]
+        self.Filter_MountedList = confdict["camera"]["filter_mounted"]
+        self.Filter_UnmountedList = confdict["camera"]["filter_unmounted"]
 
-        self.parkState.alt_rad = math.radians(observatory_confdict["park"]["telescope_altitude"])
-        self.parkState.az_rad = math.radians(observatory_confdict["park"]["telescope_azimuth"])
-        self.parkState.rot_rad = math.radians(observatory_confdict["park"]["telescope_rotator"])
-        self.parkState.telalt_rad = math.radians(observatory_confdict["park"]["telescope_altitude"])
-        self.parkState.telaz_rad = math.radians(observatory_confdict["park"]["telescope_azimuth"])
-        self.parkState.telrot_rad = math.radians(observatory_confdict["park"]["telescope_rotator"])
-        self.parkState.domalt_rad = math.radians(observatory_confdict["park"]["dome_altitude"])
-        self.parkState.domaz_rad = math.radians(observatory_confdict["park"]["dome_azimuth"])
-        self.parkState.filter = observatory_confdict["park"]["filter_position"]
-        self.parkState.mountedfilters = self.Filter_MountedList
-        self.parkState.unmountedfilters = self.Filter_UnmountedList
-        self.parkState.tracking = False
+        self.configure_park(confdict)
 
-        self.log.log(EXTENSIVE,
-                     "configure: TelAlt_MinPos=%.3f" % (math.degrees(self.params.TelAlt_MinPos_rad)))
-        self.log.log(EXTENSIVE,
-                     "configure: TelAlt_MaxPos=%.3f" % (math.degrees(self.params.TelAlt_MaxPos_rad)))
-        self.log.log(EXTENSIVE,
-                     "configure: TelAz_MinPos=%.3f" % (math.degrees(self.params.TelAz_MinPos_rad)))
-        self.log.log(EXTENSIVE,
-                     "configure: TelAz_MaxPos=%.3f" % (math.degrees(self.params.TelAz_MaxPos_rad)))
-        self.log.log(EXTENSIVE,
-                     "configure: TelAlt_MaxSpeed=%.3f" % (math.degrees(self.params.TelAlt_MaxSpeed_rad)))
-        self.log.log(EXTENSIVE,
-                     "configure: TelAlt_Accel=%.3f" % (math.degrees(self.params.TelAlt_Accel_rad)))
-        self.log.log(EXTENSIVE,
-                     "configure: TelAlt_Decel=%.3f" % (math.degrees(self.params.TelAlt_Decel_rad)))
-        self.log.log(EXTENSIVE,
-                     "configure: TelAz_MaxSpeed=%.3f" % (math.degrees(self.params.TelAz_MaxSpeed_rad)))
-        self.log.log(EXTENSIVE,
-                     "configure: TelAz_Accel=%.3f" % (math.degrees(self.params.TelAz_Accel_rad)))
-        self.log.log(EXTENSIVE,
-                     "configure: TelAz_Decel=%.3f" % (math.degrees(self.params.TelAz_Decel_rad)))
-        self.log.log(EXTENSIVE,
-                     "configure: Mount_SettleTime=%.1f" % (self.params.Mount_SettleTime))
-
-        self.log.log(EXTENSIVE,
-                     "configure: DomAlt_MaxSpeed=%.3f" % (math.degrees(self.params.DomAlt_MaxSpeed_rad)))
-        self.log.log(EXTENSIVE,
-                     "configure: DomAlt_Accel=%.3f" % (math.degrees(self.params.DomAlt_Accel_rad)))
-        self.log.log(EXTENSIVE,
-                     "configure: DomAlt_Decel=%.3f" % (math.degrees(self.params.DomAlt_Decel_rad)))
-        self.log.log(EXTENSIVE,
-                     "configure: DomAz_MaxSpeed=%.3f" % (math.degrees(self.params.DomAz_MaxSpeed_rad)))
-        self.log.log(EXTENSIVE,
-                     "configure: DomAz_Accel=%.3f" % (math.degrees(self.params.DomAz_Accel_rad)))
-        self.log.log(EXTENSIVE,
-                     "configure: DomAz_Decel=%.3f" % (math.degrees(self.params.DomAz_Decel_rad)))
-        self.log.log(EXTENSIVE,
-                     "configure: DomAz_SettleTime=%.1f" % (self.params.DomAz_SettleTime))
-
-        self.log.log(EXTENSIVE,
-                     "configure: TelRot_MinPos_rad=%.3f" % (self.params.TelRot_MinPos_rad))
-        self.log.log(EXTENSIVE,
-                     "configure: TelRot_MaxPos_rad=%.3f" % (self.params.TelRot_MaxPos_rad))
-        self.log.log(EXTENSIVE,
-                     "configure: TelRot_FilterChangePos_rad=%.3f" % (self.params.TelRot_FilterChangePos_rad))
-        self.log.log(EXTENSIVE,
-                     "configure: Rotator_FollowSky=%s" % (self.params.Rotator_FollowSky))
-        self.log.log(EXTENSIVE,
-                     "configure: Rotator_ResumeAngle=%s" % (self.params.Rotator_ResumeAngle))
-        self.log.log(EXTENSIVE,
-                     "configure: Filter_RemovableList=%s" % (self.params.Filter_RemovableList))
-        self.log.log(EXTENSIVE,
-                     "configure: TelRot_MaxSpeed_rad=%.3f" % (self.params.TelRot_MaxSpeed_rad))
-        self.log.log(EXTENSIVE,
-                     "configure: TelRot_Accel_rad=%.3f" % (self.params.TelRot_Accel_rad))
-        self.log.log(EXTENSIVE,
-                     "configure: TelRot_Decel_rad=%.3f" % (self.params.TelRot_Decel_rad))
-        self.log.log(EXTENSIVE,
-                     "configure: Filter_ChangeTime=%.1f" % (self.params.Filter_ChangeTime))
-        self.log.log(EXTENSIVE,
-                     "configure: ReadoutTime=%.1f" % (self.params.ReadoutTime))
-        self.log.log(EXTENSIVE,
-                     "configure: ShutterTime=%.1f" % (self.params.ShutterTime))
-        self.log.log(EXTENSIVE,
-                     "configure: OpticsOL_Slope=%.3f" % (self.params.OpticsOL_Slope))
-        self.log.log(EXTENSIVE,
-                     "configure: OpticsCL_Delay=%s" % (self.params.OpticsCL_Delay))
-        self.log.log(EXTENSIVE,
-                     "configure: OpticsCL_AltLimit=%s" % (self.params.OpticsCL_AltLimit))
-        self.log.log(EXTENSIVE,
+        self.log.log(WORDY,
                      "configure: Filter_MountedList=%s" % (self.Filter_MountedList))
-        self.log.log(EXTENSIVE,
+        self.log.log(WORDY,
                      "configure: Filter_UnmountedList=%s" % (self.Filter_UnmountedList))
-        self.log.log(EXTENSIVE,
-                     "configure: park_Telalt_rad=%.3f" % (self.parkState.telalt_rad))
-        self.log.log(EXTENSIVE,
-                     "configure: park_Telaz_rad=%.3f" % (self.parkState.telaz_rad))
-        self.log.log(EXTENSIVE,
-                     "configure: park_Telrot_rad=%.3f" % (self.parkState.telrot_rad))
-        self.log.log(EXTENSIVE,
-                     "configure: park_Domalt_rad=%.3f" % (self.parkState.domalt_rad))
-        self.log.log(EXTENSIVE,
-                     "configure: park_Domaz_rad=%.3f" % (self.parkState.domaz_rad))
-        self.log.log(EXTENSIVE,
-                     "configure: park_Filter=%s" % (self.parkState.filter))
 
         self.reset()
 
-    def configure_telescope(self,
-                            altitude_minpos_rad,
-                            altitude_maxpos_rad,
-                            azimuth_minpos_rad,
-                            azimuth_maxpos_rad,
-                            altitude_maxspeed_rad,
-                            altitude_accel_rad,
-                            altitude_decel_rad,
-                            azimuth_maxspeed_rad,
-                            azimuth_accel_rad,
-                            azimuth_decel_rad,
-                            settle_time):
+    def configure_telescope(self, confdict):
 
-        self.params.TelAlt_MinPos_rad = altitude_minpos_rad
-        self.params.TelAlt_MaxPos_rad = altitude_maxpos_rad
-        self.params.TelAz_MinPos_rad = azimuth_minpos_rad
-        self.params.TelAz_MaxPos_rad = azimuth_maxpos_rad
-        self.params.TelAlt_MaxSpeed_rad = altitude_maxspeed_rad
-        self.params.TelAlt_Accel_rad = altitude_accel_rad
-        self.params.TelAlt_Decel_rad = altitude_decel_rad
-        self.params.TelAz_MaxSpeed_rad = azimuth_maxspeed_rad
-        self.params.TelAz_Accel_rad = azimuth_accel_rad
-        self.params.TelAz_Decel_rad = azimuth_decel_rad
-        self.params.Mount_SettleTime = settle_time
+        self.params.configure_telescope(confdict)
 
         self.log.log(WORDY,
                      "configure_telescope: TelAlt_MinPos=%.3f" %
@@ -301,24 +220,9 @@ class ObservatoryModel(object):
                      "configure_telescope: Mount_SettleTime=%.3f" %
                      (self.params.Mount_SettleTime))
 
-    def configure_rotator(self,
-                          minpos_rad,
-                          maxpos_rad,
-                          maxspeed_rad,
-                          accel_rad,
-                          decel_rad,
-                          filterchangepos_rad,
-                          follow_sky,
-                          resume_angle):
+    def configure_rotator(self, confdict):
 
-        self.params.TelRot_MinPos_rad = minpos_rad
-        self.params.TelRot_MaxPos_rad = maxpos_rad
-        self.params.TelRot_MaxSpeed_rad = maxspeed_rad
-        self.params.TelRot_Accel_rad = accel_rad
-        self.params.TelRot_Decel_rad = decel_rad
-        self.params.TelRot_FilterChangePos_rad = filterchangepos_rad
-        self.params.Rotator_FollowSky = follow_sky
-        self.params.Rotator_ResumeAngle = resume_angle
+        self.params.configure_rotator(confdict)
 
         self.log.log(WORDY,
                      "configure_rotator: TelRot_MinPos=%.3f" %
@@ -345,22 +249,9 @@ class ObservatoryModel(object):
                      "configure_rotator: Rotator_ResumeAngle=%s" %
                      (self.params.Rotator_ResumeAngle))
 
-    def configure_dome(self,
-                       altitude_maxspeed_rad,
-                       altitude_accel_rad,
-                       altitude_decel_rad,
-                       azimuth_maxspeed_rad,
-                       azimuth_accel_rad,
-                       azimuth_decel_rad,
-                       settle_time):
+    def configure_dome(self, confdict):
 
-        self.params.DomAlt_MaxSpeed_rad = altitude_maxspeed_rad
-        self.params.DomAlt_Accel_rad = altitude_accel_rad
-        self.params.DomAlt_Decel_rad = altitude_decel_rad
-        self.params.DomAz_MaxSpeed_rad = azimuth_maxspeed_rad
-        self.params.DomAz_Accel_rad = azimuth_accel_rad
-        self.params.DomAz_Decel_rad = azimuth_decel_rad
-        self.params.DomAz_SettleTime = settle_time
+        self.params.configure_dome(confdict)
 
         self.log.log(WORDY,
                      "configure_dome: DomAlt_MaxSpeed=%.3f" % (math.degrees(self.params.DomAlt_MaxSpeed_rad)))
@@ -377,66 +268,63 @@ class ObservatoryModel(object):
         self.log.log(WORDY,
                      "configure_dome: DomAz_SettleTime=%.3f" % (self.params.DomAz_SettleTime))
 
-    def configure_camera(self, config_camera_dict):
+    def configure_optics(self, confdict):
 
-        self.params.configure_camera(config_camera_dict)
+        self.params.configure_optics(confdict)
 
-    def configure_slew(self, prereq_dict):
+        self.log.log(WORDY,
+                     "configure: OpticsOL_Slope=%.3f" % (self.params.OpticsOL_Slope))
+        self.log.log(WORDY,
+                     "configure: OpticsCL_Delay=%s" % (self.params.OpticsCL_Delay))
+        self.log.log(WORDY,
+                     "configure: OpticsCL_AltLimit=%s" % (self.params.OpticsCL_AltLimit))
+
+    def configure_camera(self, confdict):
+
+        self.params.configure_camera(confdict)
+
+        self.log.log(WORDY,
+                     "configure: Filter_ChangeTime=%.1f" % (self.params.Filter_ChangeTime))
+        self.log.log(WORDY,
+                     "configure: ReadoutTime=%.1f" % (self.params.ReadoutTime))
+        self.log.log(WORDY,
+                     "configure: ShutterTime=%.1f" % (self.params.ShutterTime))
+
+    def configure_slew(self, confdict):
+
+        self.params.configure_slew(confdict, self.activities)
 
         for activity in self.activities:
-            self.params.prerequisites[activity] = prereq_dict[activity]
             self.log.log(WORDY, "configure: prerequisites[%s]=%s" %
                          (activity, self.params.prerequisites[activity]))
 
-    def configure_optics(self,
-                         tel_optics_ol_slope,
-                         tel_optics_cl_alt_limit,
-                         tel_optics_cl_delay):
+    def configure_park(self, confdict):
 
-        self.params.OpticsOL_Slope = tel_optics_ol_slope / math.radians(1)
-        self.params.OpticsCL_Delay = tel_optics_cl_delay
-        self.params.OpticsCL_AltLimit = tel_optics_cl_alt_limit
-        for index, alt in enumerate(self.params.OpticsCL_AltLimit):
-            self.params.OpticsCL_AltLimit[index] = math.radians(self.params.OpticsCL_AltLimit[index])
-        self.log.log(WORDY,
-                     "configure_optics: OpticsOL_Slope=%.3f "
-                     "OpticsCL_Delay=%s OpticsCL_AltLimit=%s" %
-                     (self.params.OpticsOL_Slope,
-                      self.params.OpticsCL_Delay,
-                      self.params.OpticsCL_AltLimit))
-
-    def configure_park(self,
-                       telescope_altitude,
-                       telescope_azimuth,
-                       telescope_rotator,
-                       dome_altitude,
-                       dome_azimuth,
-                       filter_position):
-
-        self.parkState.alt_rad = math.radians(telescope_altitude)
-        self.parkState.az_rad = math.radians(telescope_azimuth)
-        self.parkState.rot_rad = math.radians(telescope_rotator)
-        self.parkState.telalt_rad = math.radians(telescope_altitude)
-        self.parkState.telaz_rad = math.radians(telescope_azimuth)
-        self.parkState.telrot_rad = math.radians(telescope_rotator)
-        self.parkState.domalt_rad = math.radians(dome_altitude)
-        self.parkState.domaz_rad = math.radians(dome_azimuth)
-        self.parkState.filter = filter_position
+        self.parkState.alt_rad = math.radians(confdict["park"]["telescope_altitude"])
+        self.parkState.az_rad = math.radians(confdict["park"]["telescope_azimuth"])
+        self.parkState.rot_rad = math.radians(confdict["park"]["telescope_rotator"])
+        self.parkState.telalt_rad = math.radians(confdict["park"]["telescope_altitude"])
+        self.parkState.telaz_rad = math.radians(confdict["park"]["telescope_azimuth"])
+        self.parkState.telrot_rad = math.radians(confdict["park"]["telescope_rotator"])
+        self.parkState.domalt_rad = math.radians(confdict["park"]["dome_altitude"])
+        self.parkState.domaz_rad = math.radians(confdict["park"]["dome_azimuth"])
+        self.parkState.filter = confdict["park"]["filter_position"]
+        self.parkState.mountedfilters = self.Filter_MountedList
+        self.parkState.unmountedfilters = self.Filter_UnmountedList
+        self.parkState.tracking = False
 
         self.log.log(WORDY,
-                     "configure park: "
-                     "telescope_altitude=%.3f "
-                     "telescope_azimuth=%.3f "
-                     "telescope_rotator=%.3f "
-                     "dome_altitude=%.3f "
-                     "dome_azimuth=%.3f "
-                     "filter_position=%s" %
-                     (telescope_altitude,
-                      telescope_azimuth,
-                      telescope_rotator,
-                      dome_altitude,
-                      dome_azimuth,
-                      filter_position))
+                     "configure: park_Telalt_rad=%.3f" % (self.parkState.telalt_rad))
+        self.log.log(WORDY,
+                     "configure: park_Telaz_rad=%.3f" % (self.parkState.telaz_rad))
+        self.log.log(WORDY,
+                     "configure: park_Telrot_rad=%.3f" % (self.parkState.telrot_rad))
+        self.log.log(WORDY,
+                     "configure: park_Domalt_rad=%.3f" % (self.parkState.domalt_rad))
+        self.log.log(WORDY,
+                     "configure: park_Domaz_rad=%.3f" % (self.parkState.domaz_rad))
+        self.log.log(WORDY,
+                     "configure: park_Filter=%s" % (self.parkState.filter))
 
     def set_state(self, new_state):
 

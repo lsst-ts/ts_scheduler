@@ -38,8 +38,6 @@ class Main(object):
         main_confdict = read_conf_file(conf_file_path(__name__, "conf", "scheduler", "main.conf"))
         self.measinterval = main_confdict['log']['rate_meas_interval']
 
-        self.schedulerDriver = Driver()
-
         self.sal = SAL_scheduler()
         self.sal.setDebugLevel(0)
 
@@ -59,6 +57,8 @@ class Main(object):
         self.topicObservation = scheduler_observationC()
         self.topicField = scheduler_fieldC()
         self.topicTarget = scheduler_targetC()
+
+        self.schedulerDriver = Driver()
 
     def run(self):
 
@@ -100,14 +100,16 @@ class Main(object):
                     lastconfigtime = time.time()
                     survey_duration = self.topic_schedulerConfig.survey_duration
                     self.log.info("run: rx scheduler config survey_duration=%.1f" % (survey_duration))
-                    self.schedulerDriver.configure_duration(survey_duration)
                     waitconfig = False
-
                 else:
                     tf = time.time()
                     if (tf - lastconfigtime > 10.0):
-                        waitconfig = False
                         self.log.info("run: scheduler config timeout")
+                        config_file = conf_file_path(__name__, "conf", "survey", "survey.conf")
+                        config_dict = read_conf_file(config_file)
+                        survey_duration = config_dict["survey"]["survey_duration"]
+                        waitconfig = False
+            self.schedulerDriver.configure_duration(survey_duration)
 
             waitconfig = True
             lastconfigtime = time.time()
@@ -115,34 +117,17 @@ class Main(object):
                 scode = self.sal.getNextSample_driverConfig(self.topic_driverConfig)
                 if (scode == 0 and self.topic_driverConfig.timebonus_tmax > 0):
                     lastconfigtime = time.time()
-
-                    coadd_values = self.topic_driverConfig.coadd_values
-                    time_balancing = self.topic_driverConfig.time_balancing
-                    timebonus_tmax = self.topic_driverConfig.timebonus_tmax
-                    timebonus_bmax = self.topic_driverConfig.timebonus_bmax
-                    timebonus_slope = self.topic_driverConfig.timebonus_slope
-                    night_boundary = self.topic_driverConfig.night_boundary
-
-                    config_dict = {}
-                    config_dict["ranking"] = {}
-                    config_dict["ranking"]["coadd_values"] = coadd_values
-                    config_dict["ranking"]["time_balancing"] = time_balancing
-                    config_dict["ranking"]["timebonus_tmax"] = timebonus_tmax
-                    config_dict["ranking"]["timebonus_bmax"] = timebonus_bmax
-                    config_dict["ranking"]["timebonus_slope"] = timebonus_slope
-                    config_dict["survey"] = {}
-                    config_dict["survey"]["night_boundary"] = night_boundary
-
+                    config_dict = self.read_topic_driver_config(self.topic_driverConfig)
                     self.log.info("run: rx driver config=%s" % (config_dict))
-                    self.schedulerDriver.configure(config_dict)
-
                     waitconfig = False
-
                 else:
                     tf = time.time()
                     if (tf - lastconfigtime > 10.0):
-                        waitconfig = False
                         self.log.info("run: driver config timeout")
+                        config_file = conf_file_path(__name__, "conf", "scheduler", "driver.conf")
+                        config_dict = read_conf_file(config_file)
+                        waitconfig = False
+            self.schedulerDriver.configure(config_dict)
 
             waitconfig = True
             lastconfigtime = time.time()
@@ -150,21 +135,17 @@ class Main(object):
                 scode = self.sal.getNextSample_obsSiteConfig(self.topic_obsSiteConfig)
                 if (scode == 0 and self.topic_obsSiteConfig.name != ""):
                     lastconfigtime = time.time()
-                    latitude = self.topic_obsSiteConfig.latitude
-                    longitude = self.topic_obsSiteConfig.longitude
-                    height = self.topic_obsSiteConfig.height
-                    self.log.info("run: rx site config latitude=%.3f longitude=%.3f height=%.0f" %
-                                  (latitude, longitude, height))
-                    self.schedulerDriver.configure_location(math.radians(latitude),
-                                                            math.radians(longitude),
-                                                            height)
+                    config_dict = self.read_topic_location_config(self.topic_obsSiteConfig)
+                    self.log.info("run: rx site config=%s" % (config_dict))
                     waitconfig = False
-
                 else:
                     tf = time.time()
                     if (tf - lastconfigtime > 10.0):
-                        waitconfig = False
                         self.log.info("run: site config timeout")
+                        config_file = conf_file_path(__name__, "conf", "system", "site.conf")
+                        config_dict = read_conf_file(config_file)
+                        waitconfig = False
+            self.schedulerDriver.configure_location(config_dict)
 
             waitconfig = True
             lastconfigtime = time.time()
@@ -172,40 +153,17 @@ class Main(object):
                 scode = self.sal.getNextSample_telescopeConfig(self.topic_telescopeConfig)
                 if (scode == 0 and self.topic_telescopeConfig.altitude_minpos >= 0):
                     lastconfigtime = time.time()
-
-                    altitude_minpos = self.topic_telescopeConfig.altitude_minpos
-                    altitude_maxpos = self.topic_telescopeConfig.altitude_maxpos
-                    azimuth_minpos = self.topic_telescopeConfig.azimuth_minpos
-                    azimuth_maxpos = self.topic_telescopeConfig.azimuth_maxpos
-                    altitude_maxspeed = self.topic_telescopeConfig.altitude_maxspeed
-                    altitude_accel = self.topic_telescopeConfig.altitude_accel
-                    altitude_decel = self.topic_telescopeConfig.altitude_decel
-                    azimuth_maxspeed = self.topic_telescopeConfig.azimuth_maxspeed
-                    azimuth_accel = self.topic_telescopeConfig.azimuth_accel
-                    azimuth_decel = self.topic_telescopeConfig.azimuth_decel
-                    settle_time = self.topic_telescopeConfig.settle_time
-
-                    self.log.info("run: rx telescope config altitude_minpos=%.3f altitude_maxpos=%.3f "
-                                  "azimuth_minpos=%.3f azimuth_maxpos=%.3f" %
-                                  (altitude_minpos, altitude_maxpos, azimuth_minpos, azimuth_maxpos))
-                    self.schedulerDriver.configure_telescope(math.radians(altitude_minpos),
-                                                             math.radians(altitude_maxpos),
-                                                             math.radians(azimuth_minpos),
-                                                             math.radians(azimuth_maxpos),
-                                                             math.radians(altitude_maxspeed),
-                                                             math.radians(altitude_accel),
-                                                             math.radians(altitude_decel),
-                                                             math.radians(azimuth_maxspeed),
-                                                             math.radians(azimuth_accel),
-                                                             math.radians(azimuth_decel),
-                                                             settle_time)
+                    config_dict = self.read_topic_telescope_config(self.topic_telescopeConfig)
+                    self.log.info("run: rx telescope config=%s" % (config_dict))
                     waitconfig = False
-
                 else:
                     tf = time.time()
                     if (tf - lastconfigtime > 10.0):
-                        waitconfig = False
                         self.log.info("run: telescope config timeout")
+                        config_file = conf_file_path(__name__, "conf", "system", "observatory_model.conf")
+                        config_dict = read_conf_file(config_file)
+                        waitconfig = False
+            self.schedulerDriver.configure_telescope(config_dict)
 
             waitconfig = True
             lastconfigtime = time.time()
@@ -213,31 +171,17 @@ class Main(object):
                 scode = self.sal.getNextSample_domeConfig(self.topic_domeConfig)
                 if (scode == 0 and self.topic_domeConfig.altitude_maxspeed >= 0):
                     lastconfigtime = time.time()
-
-                    altitude_maxspeed = self.topic_domeConfig.altitude_maxspeed
-                    altitude_accel = self.topic_domeConfig.altitude_accel
-                    altitude_decel = self.topic_domeConfig.altitude_decel
-                    azimuth_maxspeed = self.topic_domeConfig.azimuth_maxspeed
-                    azimuth_accel = self.topic_domeConfig.azimuth_accel
-                    azimuth_decel = self.topic_domeConfig.azimuth_decel
-                    settle_time = self.topic_domeConfig.settle_time
-
-                    self.log.info("run: rx dome config altitude_maxspeed=%.3f azimuth_maxspeed=%.3f" %
-                                  (altitude_maxspeed, azimuth_maxspeed))
-                    self.schedulerDriver.configure_dome(math.radians(altitude_maxspeed),
-                                                        math.radians(altitude_accel),
-                                                        math.radians(altitude_decel),
-                                                        math.radians(azimuth_maxspeed),
-                                                        math.radians(azimuth_accel),
-                                                        math.radians(azimuth_decel),
-                                                        settle_time)
+                    config_dict = self.read_topic_dome_config(self.topic_domeConfig)
+                    self.log.info("run: rx dome config=%s" % (config_dict))
                     waitconfig = False
-
                 else:
                     tf = time.time()
                     if (tf - lastconfigtime > 10.0):
-                        waitconfig = False
                         self.log.info("run: dome config timeout")
+                        config_file = conf_file_path(__name__, "conf", "system", "observatory_model.conf")
+                        config_dict = read_conf_file(config_file)
+                        waitconfig = False
+            self.schedulerDriver.configure_dome(config_dict)
 
             waitconfig = True
             lastconfigtime = time.time()
@@ -245,34 +189,17 @@ class Main(object):
                 scode = self.sal.getNextSample_rotatorConfig(self.topic_rotatorConfig)
                 if (scode == 0 and self.topic_rotatorConfig.maxspeed >= 0):
                     lastconfigtime = time.time()
-
-                    minpos = self.topic_rotatorConfig.minpos
-                    maxpos = self.topic_rotatorConfig.maxpos
-                    maxspeed = self.topic_rotatorConfig.maxspeed
-                    accel = self.topic_rotatorConfig.accel
-                    decel = self.topic_rotatorConfig.decel
-                    filterchangepos = self.topic_rotatorConfig.filter_change_pos
-                    follow_sky = self.topic_rotatorConfig.followsky
-                    resume_angle = self.topic_rotatorConfig.resume_angle
-
-                    self.log.info("run: rx rotator config minpos=%.3f maxpos=%.3f "
-                                  "followsky=%s resume_angle=%s" %
-                                  (minpos, maxpos, follow_sky, resume_angle))
-                    self.schedulerDriver.configure_rotator(math.radians(minpos),
-                                                           math.radians(maxpos),
-                                                           math.radians(maxspeed),
-                                                           math.radians(accel),
-                                                           math.radians(decel),
-                                                           math.radians(filterchangepos),
-                                                           follow_sky,
-                                                           resume_angle)
+                    config_dict = self.read_topic_rotator_config(self.topic_rotatorConfig)
+                    self.log.info("run: rx rotator config=%s" % (config_dict))
                     waitconfig = False
-
                 else:
                     tf = time.time()
                     if (tf - lastconfigtime > 10.0):
-                        waitconfig = False
                         self.log.info("run: rotator config timeout")
+                        config_file = conf_file_path(__name__, "conf", "system", "observatory_model.conf")
+                        config_dict = read_conf_file(config_file)
+                        waitconfig = False
+            self.schedulerDriver.configure_rotator(config_dict)
 
             waitconfig = True
             lastconfigtime = time.time()
@@ -280,18 +207,18 @@ class Main(object):
                 scode = self.sal.getNextSample_cameraConfig(self.topic_cameraConfig)
                 if (scode == 0 and self.topic_cameraConfig.readout_time > 0):
                     lastconfigtime = time.time()
-
-                    config_camera_dict = self.read_topic_cameraConfig(self.topic_cameraConfig)
-
-                    self.log.info("run: rx camera config=%s" % (config_camera_dict))
-                    self.schedulerDriver.configure_camera(config_camera_dict)
+                    config_dict = self.read_topic_camera_config(self.topic_cameraConfig)
+                    self.log.info("run: rx camera config=%s" % (config_dict))
                     waitconfig = False
-
                 else:
                     tf = time.time()
                     if (tf - lastconfigtime > 10.0):
                         waitconfig = False
                         self.log.info("run: camera config timeout")
+                        config_file = conf_file_path(__name__, "conf", "system", "observatory_model.conf")
+                        config_dict = read_conf_file(config_file)
+                        waitconfig = False
+            self.schedulerDriver.configure_camera(config_dict)
 
             waitconfig = True
             lastconfigtime = time.time()
@@ -299,91 +226,18 @@ class Main(object):
                 scode = self.sal.getNextSample_slewConfig(self.topic_slewConfig)
                 if (scode == 0 and self.topic_slewConfig.prereq_exposures != ""):
                     lastconfigtime = time.time()
-
-                    prereq_dict = {}
-
-                    prereq_str = self.topic_slewConfig.prereq_domalt
-                    if prereq_str != "":
-                        prereq_dict["domalt"] = prereq_str.split(",")
-                    else:
-                        prereq_dict["domalt"] = []
-
-                    prereq_str = self.topic_slewConfig.prereq_domaz
-                    if prereq_str != "":
-                        prereq_dict["domaz"] = prereq_str.split(",")
-                    else:
-                        prereq_dict["domaz"] = []
-
-                    prereq_str = self.topic_slewConfig.prereq_domazsettle
-                    if prereq_str != "":
-                        prereq_dict["domazsettle"] = prereq_str.split(",")
-                    else:
-                        prereq_dict["domazsettle"] = []
-
-                    prereq_str = self.topic_slewConfig.prereq_telalt
-                    if prereq_str != "":
-                        prereq_dict["telalt"] = prereq_str.split(",")
-                    else:
-                        prereq_dict["telalt"] = []
-
-                    prereq_str = self.topic_slewConfig.prereq_telaz
-                    if prereq_str != "":
-                        prereq_dict["telaz"] = prereq_str.split(",")
-                    else:
-                        prereq_dict["telaz"] = []
-
-                    prereq_str = self.topic_slewConfig.prereq_telopticsopenloop
-                    if prereq_str != "":
-                        prereq_dict["telopticsopenloop"] = prereq_str.split(",")
-                    else:
-                        prereq_dict["telopticsopenloop"] = []
-
-                    prereq_str = self.topic_slewConfig.prereq_telopticsclosedloop
-                    if prereq_str != "":
-                        prereq_dict["telopticsclosedloop"] = prereq_str.split(",")
-                    else:
-                        prereq_dict["telopticsclosedloop"] = []
-
-                    prereq_str = self.topic_slewConfig.prereq_telsettle
-                    if prereq_str != "":
-                        prereq_dict["telsettle"] = prereq_str.split(",")
-                    else:
-                        prereq_dict["telsettle"] = []
-
-                    prereq_str = self.topic_slewConfig.prereq_telrot
-                    if prereq_str != "":
-                        prereq_dict["telrot"] = prereq_str.split(",")
-                    else:
-                        prereq_dict["telrot"] = []
-
-                    prereq_str = self.topic_slewConfig.prereq_filter
-                    if prereq_str != "":
-                        prereq_dict["filter"] = prereq_str.split(",")
-                    else:
-                        prereq_dict["filter"] = []
-
-                    prereq_str = self.topic_slewConfig.prereq_exposures
-                    if prereq_str != "":
-                        prereq_dict["exposures"] = prereq_str.split(",")
-                    else:
-                        prereq_dict["exposures"] = []
-
-                    prereq_str = self.topic_slewConfig.prereq_readout
-                    if prereq_str != "":
-                        prereq_dict["readout"] = prereq_str.split(",")
-                    else:
-                        prereq_dict["readout"] = []
-
-                    self.log.info("run: rx slew config prereq_dict=%s" %
-                                  (prereq_dict))
-                    self.schedulerDriver.configure_slew(prereq_dict)
+                    config_dict = self.read_topic_slew_config(self.topic_slewConfig)
+                    self.log.info("run: rx slew config=%s" % (config_dict))
                     waitconfig = False
-
                 else:
                     tf = time.time()
                     if (tf - lastconfigtime > 10.0):
                         waitconfig = False
                         self.log.info("run: slew config timeout")
+                        config_file = conf_file_path(__name__, "conf", "system", "observatory_model.conf")
+                        config_dict = read_conf_file(config_file)
+                        waitconfig = False
+            self.schedulerDriver.configure_slew(config_dict)
 
             waitconfig = True
             lastconfigtime = time.time()
@@ -391,30 +245,17 @@ class Main(object):
                 scode = self.sal.getNextSample_opticsLoopCorrConfig(self.topic_opticsConfig)
                 if (scode == 0 and self.topic_opticsConfig.tel_optics_ol_slope > 0):
                     lastconfigtime = time.time()
-
-                    tel_optics_ol_slope = self.topic_opticsConfig.tel_optics_ol_slope
-                    tel_optics_cl_alt_limit = []
-                    for k in range(3):
-                        tel_optics_cl_alt_limit.append(self.topic_opticsConfig.tel_optics_cl_alt_limit[k])
-
-                    tel_optics_cl_delay = []
-                    for k in range(2):
-                        tel_optics_cl_delay.append(self.topic_opticsConfig.tel_optics_cl_delay[k])
-
-                    self.log.info("run: rx optics config tel_optics_ol_slope=%.3f "
-                                  "tel_optics_cl_alt_limit=%s "
-                                  "tel_optics_cl_delay=%s" %
-                                  (tel_optics_ol_slope, tel_optics_cl_alt_limit, tel_optics_cl_delay))
-                    self.schedulerDriver.configure_optics(tel_optics_ol_slope,
-                                                          tel_optics_cl_alt_limit,
-                                                          tel_optics_cl_delay)
+                    config_dict = self.read_topic_optics_config(self.topic_opticsConfig)
+                    self.log.info("run: rx optics config=%s" % (config_dict))
                     waitconfig = False
-
                 else:
                     tf = time.time()
                     if (tf - lastconfigtime > 10.0):
-                        waitconfig = False
                         self.log.info("run: optics config timeout")
+                        config_file = conf_file_path(__name__, "conf", "system", "observatory_model.conf")
+                        config_dict = read_conf_file(config_file)
+                        waitconfig = False
+            self.schedulerDriver.configure_optics(config_dict)
 
             waitconfig = True
             lastconfigtime = time.time()
@@ -422,40 +263,17 @@ class Main(object):
                 scode = self.sal.getNextSample_parkConfig(self.topic_parkConfig)
                 if (scode == 0 and self.topic_parkConfig.telescope_altitude > 0):
                     lastconfigtime = time.time()
-
-                    telescope_altitude = self.topic_parkConfig.telescope_altitude
-                    telescope_azimuth = self.topic_parkConfig.telescope_azimuth
-                    telescope_rotator = self.topic_parkConfig.telescope_rotator
-                    dome_altitude = self.topic_parkConfig.dome_altitude
-                    dome_azimuth = self.topic_parkConfig.dome_azimuth
-                    filter_position = self.topic_parkConfig.filter_position
-
-                    self.log.info("run: rx park config "
-                                  "telescope_altitude=%.3f "
-                                  "telescope_azimuth=%.3f "
-                                  "telescope_rotator=%.3f"
-                                  "dome_altitude=%.3f"
-                                  "dome_azimuth=%.3f"
-                                  "filter_position=%s" %
-                                  (telescope_altitude,
-                                   telescope_azimuth,
-                                   telescope_rotator,
-                                   dome_altitude,
-                                   dome_azimuth,
-                                   filter_position))
-                    self.schedulerDriver.configure_park(telescope_altitude,
-                                                        telescope_azimuth,
-                                                        telescope_rotator,
-                                                        dome_altitude,
-                                                        dome_azimuth,
-                                                        filter_position)
+                    config_dict = self.read_topic_park_config(self.topic_parkConfig)
+                    self.log.info("run: rx park config=%s" % (config_dict))
                     waitconfig = False
-
                 else:
                     tf = time.time()
                     if (tf - lastconfigtime > 10.0):
-                        waitconfig = False
                         self.log.info("run: optics config timeout")
+                        config_file = conf_file_path(__name__, "conf", "system", "observatory_model.conf")
+                        config_dict = read_conf_file(config_file)
+                        waitconfig = False
+            self.schedulerDriver.configure_park(config_dict)
 
             waitconfig = True
             lastconfigtime = time.time()
@@ -728,20 +546,204 @@ class Main(object):
         self.sal.salShutdown()
         sys.exit(0)
 
-    def read_topic_cameraConfig(self, topic_cameraConfig):
+    def read_topic_driver_config(self, topic_driver_config):
 
-        config_camera_dict = {}
+        confdict = {}
+        confdict["ranking"] = {}
+        confdict["ranking"]["coadd_values"] = topic_driver_config.coadd_values
+        confdict["ranking"]["time_balancing"] = topic_driver_config.time_balancing
+        confdict["ranking"]["timebonus_tmax"] = topic_driver_config.timebonus_tmax
+        confdict["ranking"]["timebonus_bmax"] = topic_driver_config.timebonus_bmax
+        confdict["ranking"]["timebonus_slope"] = topic_driver_config.timebonus_slope
+        confdict["survey"] = {}
+        confdict["survey"]["night_boundary"] = topic_driver_config.night_boundary
 
-        config_camera_dict["readout_time"] = topic_cameraConfig.readout_time
-        config_camera_dict["shutter_time"] = topic_cameraConfig.shutter_time
-        config_camera_dict["filter_change_time"] = topic_cameraConfig.filter_change_time
-        config_camera_dict["filter_max_changes_burst_num"] = topic_cameraConfig.filter_max_changes_burst_num
-        config_camera_dict["filter_max_changes_burst_time"] = topic_cameraConfig.filter_max_changes_burst_time
-        config_camera_dict["filter_max_changes_avg_num"] = topic_cameraConfig.filter_max_changes_avg_num
-        config_camera_dict["filter_max_changes_avg_time"] = topic_cameraConfig.filter_max_changes_avg_time
-        config_camera_dict["filter_removable"] = topic_cameraConfig.filter_removable
+        return confdict
 
-        return config_camera_dict
+    def read_topic_location_config(self, topic_location_config):
+
+        confdict = {}
+        confdict["obs_site"] = {}
+        confdict["obs_site"]["name"] = topic_location_config.name
+        confdict["obs_site"]["latitude"] = topic_location_config.latitude
+        confdict["obs_site"]["longitude"] = topic_location_config.longitude
+        confdict["obs_site"]["height"] = topic_location_config.height
+
+        return confdict
+
+    def read_topic_telescope_config(self, topic_telescope_config):
+
+        confdict = {}
+        confdict["telescope"] = {}
+        confdict["telescope"]["altitude_minpos"] = topic_telescope_config.altitude_minpos
+        confdict["telescope"]["altitude_maxpos"] = topic_telescope_config.altitude_maxpos
+        confdict["telescope"]["azimuth_minpos"] = topic_telescope_config.azimuth_minpos
+        confdict["telescope"]["azimuth_maxpos"] = topic_telescope_config.azimuth_maxpos
+        confdict["telescope"]["altitude_maxspeed"] = topic_telescope_config.altitude_maxspeed
+        confdict["telescope"]["altitude_accel"] = topic_telescope_config.altitude_accel
+        confdict["telescope"]["altitude_decel"] = topic_telescope_config.altitude_decel
+        confdict["telescope"]["azimuth_maxspeed"] = topic_telescope_config.azimuth_maxspeed
+        confdict["telescope"]["azimuth_accel"] = topic_telescope_config.azimuth_accel
+        confdict["telescope"]["azimuth_decel"] = topic_telescope_config.azimuth_decel
+        confdict["telescope"]["altitude_minpos"] = topic_telescope_config.altitude_minpos
+        confdict["telescope"]["altitude_minpos"] = topic_telescope_config.altitude_minpos
+        confdict["telescope"]["altitude_minpos"] = topic_telescope_config.altitude_minpos
+        confdict["telescope"]["settle_time"] = topic_telescope_config.settle_time
+
+        return confdict
+
+    def read_topic_dome_config(self, topic_dome_config):
+
+        confdict = {}
+        confdict["dome"] = {}
+        confdict["dome"]["altitude_maxspeed"] = topic_dome_config.altitude_maxspeed
+        confdict["dome"]["altitude_accel"] = topic_dome_config.altitude_accel
+        confdict["dome"]["altitude_decel"] = topic_dome_config.altitude_decel
+        confdict["dome"]["azimuth_maxspeed"] = topic_dome_config.azimuth_maxspeed
+        confdict["dome"]["azimuth_accel"] = topic_dome_config.azimuth_accel
+        confdict["dome"]["azimuth_decel"] = topic_dome_config.azimuth_decel
+        confdict["dome"]["settle_time"] = topic_dome_config.settle_time
+
+        return confdict
+
+    def read_topic_rotator_config(self, topic_rotator_config):
+
+        confdict = {}
+        confdict["rotator"] = {}
+        confdict["rotator"]["minpos"] = topic_rotator_config.minpos
+        confdict["rotator"]["maxpos"] = topic_rotator_config.maxpos
+        confdict["rotator"]["maxspeed"] = topic_rotator_config.maxspeed
+        confdict["rotator"]["accel"] = topic_rotator_config.accel
+        confdict["rotator"]["decel"] = topic_rotator_config.decel
+        confdict["rotator"]["filter_change_pos"] = topic_rotator_config.filter_change_pos
+        confdict["rotator"]["follow_sky"] = topic_rotator_config.followsky
+        confdict["rotator"]["resume_angle"] = topic_rotator_config.resume_angle
+
+        return confdict
+
+    def read_topic_optics_config(self, topic_optics_config):
+
+        tel_optics_cl_alt_limit = []
+        for k in range(3):
+            tel_optics_cl_alt_limit.append(topic_optics_config.tel_optics_cl_alt_limit[k])
+        tel_optics_cl_delay = []
+        for k in range(2):
+            tel_optics_cl_delay.append(topic_optics_config.tel_optics_cl_delay[k])
+
+        confdict = {}
+        confdict["optics_loop_corr"] = {}
+        confdict["optics_loop_corr"]["tel_optics_ol_slope"] = topic_optics_config.tel_optics_ol_slope
+        confdict["optics_loop_corr"]["tel_optics_cl_alt_limit"] = tel_optics_cl_alt_limit
+        confdict["optics_loop_corr"]["tel_optics_cl_delay"] = tel_optics_cl_delay
+
+        return confdict
+
+    def read_topic_camera_config(self, topic_camera_config):
+
+        confdict = {}
+        confdict["camera"] = {}
+        confdict["camera"]["readout_time"] = topic_camera_config.readout_time
+        confdict["camera"]["shutter_time"] = topic_camera_config.shutter_time
+        confdict["camera"]["filter_change_time"] = topic_camera_config.filter_change_time
+        confdict["camera"]["filter_max_changes_burst_num"] = topic_camera_config.filter_max_changes_burst_num
+        confdict["camera"]["filter_max_changes_burst_time"] = topic_camera_config.filter_max_changes_burst_time
+        confdict["camera"]["filter_max_changes_avg_num"] = topic_camera_config.filter_max_changes_avg_num
+        confdict["camera"]["filter_max_changes_avg_time"] = topic_camera_config.filter_max_changes_avg_time
+        confdict["camera"]["filter_removable"] = topic_camera_config.filter_removable
+
+        return confdict
+
+    def read_topic_slew_config(self, topic_slew_config):
+
+        confdict = {}
+        confdict["slew"] = {}
+
+        prereq_str = topic_slew_config.prereq_domalt
+        if prereq_str != "":
+            confdict["slew"]["prereq_domalt"] = prereq_str.split(",")
+        else:
+            confdict["slew"]["prereq_domalt"] = []
+
+        prereq_str = topic_slew_config.prereq_domaz
+        if prereq_str != "":
+            confdict["slew"]["prereq_domaz"] = prereq_str.split(",")
+        else:
+            confdict["slew"]["prereq_domaz"] = []
+
+        prereq_str = topic_slew_config.prereq_domazsettle
+        if prereq_str != "":
+            confdict["slew"]["prereq_domazsettle"] = prereq_str.split(",")
+        else:
+            confdict["slew"]["prereq_domazsettle"] = []
+
+        prereq_str = topic_slew_config.prereq_telalt
+        if prereq_str != "":
+            confdict["slew"]["prereq_telalt"] = prereq_str.split(",")
+        else:
+            confdict["slew"]["prereq_telalt"] = []
+
+        prereq_str = topic_slew_config.prereq_telaz
+        if prereq_str != "":
+            confdict["slew"]["prereq_telaz"] = prereq_str.split(",")
+        else:
+            confdict["slew"]["prereq_telaz"] = []
+
+        prereq_str = topic_slew_config.prereq_telopticsopenloop
+        if prereq_str != "":
+            confdict["slew"]["prereq_telopticsopenloop"] = prereq_str.split(",")
+        else:
+            confdict["slew"]["prereq_telopticsopenloop"] = []
+
+        prereq_str = topic_slew_config.prereq_telopticsclosedloop
+        if prereq_str != "":
+            confdict["slew"]["prereq_telopticsclosedloop"] = prereq_str.split(",")
+        else:
+            confdict["slew"]["prereq_telopticsclosedloop"] = []
+
+        prereq_str = topic_slew_config.prereq_telsettle
+        if prereq_str != "":
+            confdict["slew"]["prereq_telsettle"] = prereq_str.split(",")
+        else:
+            confdict["slew"]["prereq_telsettle"] = []
+
+        prereq_str = topic_slew_config.prereq_telrot
+        if prereq_str != "":
+            confdict["slew"]["prereq_telrot"] = prereq_str.split(",")
+        else:
+            confdict["slew"]["prereq_telrot"] = []
+
+        prereq_str = topic_slew_config.prereq_filter
+        if prereq_str != "":
+            confdict["slew"]["prereq_filter"] = prereq_str.split(",")
+        else:
+            confdict["slew"]["prereq_filter"] = []
+
+        prereq_str = topic_slew_config.prereq_exposures
+        if prereq_str != "":
+            confdict["slew"]["prereq_exposures"] = prereq_str.split(",")
+        else:
+            confdict["slew"]["prereq_exposures"] = []
+
+        prereq_str = topic_slew_config.prereq_readout
+        if prereq_str != "":
+            confdict["slew"]["prereq_readout"] = prereq_str.split(",")
+        else:
+            confdict["slew"]["prereq_readout"] = []
+
+        return confdict
+
+    def read_topic_park_config(self, topic_park_config):
+
+        confdict = {}
+        confdict["park"] = {}
+        confdict["park"]["telescope_altitude"] = topic_park_config.telescope_altitude
+        confdict["park"]["telescope_azimuth"] = topic_park_config.telescope_azimuth
+        confdict["park"]["telescope_rotator"] = topic_park_config.telescope_rotator
+        confdict["park"]["dome_altitude"] = topic_park_config.dome_altitude
+        confdict["park"]["dome_azimuth"] = topic_park_config.dome_azimuth
+        confdict["park"]["filter_position"] = topic_park_config.filter_position
+
+        return confdict
 
     def create_observation(self, topic_observation):
 

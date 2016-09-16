@@ -11,7 +11,7 @@ import logging
 import os
 import unittest
 
-from ts_scheduler.schedulerDefinitions import conf_file_path
+from ts_scheduler.schedulerDefinitions import conf_file_path, read_conf_file
 from ts_scheduler.schedulerDriver import Driver
 
 class TestSchedulerDriver(unittest.TestCase):
@@ -19,10 +19,22 @@ class TestSchedulerDriver(unittest.TestCase):
     def setUp(self):
         logging.getLogger().setLevel(logging.WARN)
         conf_path = conf_file_path(__name__, "conf")
-        self.driver = Driver(driver_conf_file=os.path.join(conf_path, "scheduler", "driver.conf"),
-                             obs_site_conf_file=os.path.join(conf_path, "system", "site.conf"),
-                             obs_model_conf_file=os.path.join(conf_path, "system", "observatory_model.conf"),
-                             survey_conf_file=os.path.join(conf_path, "survey", "test_survey.conf"))
+        self.driver = Driver()
+
+        driver_conf_file = os.path.join(conf_path, "scheduler", "driver.conf")
+        obs_site_conf_file = os.path.join(conf_path, "system", "site.conf")
+        obs_model_conf_file = os.path.join(conf_path, "system", "observatory_model.conf")
+        survey_conf_file = os.path.join(conf_path, "survey", "test_survey.conf")
+
+        driver_confdict = read_conf_file(driver_conf_file)
+        obs_site_confdict = read_conf_file(obs_site_conf_file)
+        obs_model_confdict = read_conf_file(obs_model_conf_file)
+
+        self.driver.configure(driver_confdict)
+        self.driver.configure_location(obs_site_confdict)
+        self.driver.configure_observatory(obs_model_confdict)
+
+        self.driver.configure_survey(survey_conf_file)
 
     def test_init(self):
 

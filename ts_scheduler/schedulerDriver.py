@@ -7,7 +7,7 @@ from operator import itemgetter
 
 from ts_scheduler.setup import EXTENSIVE
 from ts_scheduler.sky_model import AstronomicalSkyModel
-from ts_scheduler.schedulerDefinitions import DEG2RAD, read_conf_file, conf_file_path
+from ts_scheduler.schedulerDefinitions import DEG2RAD, read_conf_file
 from ts_scheduler.schedulerField import Field
 from ts_scheduler.schedulerTarget import Target
 from ts_scheduler.observatoryModel import ObservatoryModel
@@ -18,42 +18,35 @@ from ts_scheduler.fields import FieldsDatabase
 
 class DriverParameters(object):
 
-    def __init__(self, confdict):
+    def __init__(self, confdict=None):
 
-        self.coadd_values = confdict["ranking"]["coadd_values"]
+        if confdict is None:
+            self.coadd_values = False
+            self.timebonus_dt = 0.0
+            self.timebonus_db = 0.0
+            self.timebonus_slope = 0.0
+            self.night_boundary = 0.0
+        else:
+            self.coadd_values = confdict["ranking"]["coadd_values"]
 
-        tmax = confdict["ranking"]["timebonus_tmax"]
-        bmax = confdict["ranking"]["timebonus_bmax"]
-        slope = confdict["ranking"]["timebonus_slope"]
+            tmax = confdict["ranking"]["timebonus_tmax"]
+            bmax = confdict["ranking"]["timebonus_bmax"]
+            slope = confdict["ranking"]["timebonus_slope"]
+            self.timebonus_dt = (math.sqrt(tmax * tmax + 4 * slope * tmax / bmax) - tmax) / 2
+            self.timebonus_db = slope / (tmax + self.timebonus_dt)
+            self.timebonus_slope = slope
 
-        self.timebonus_dt = (math.sqrt(tmax * tmax + 4 * slope * tmax / bmax) - tmax) / 2
-        self.timebonus_db = slope / (tmax + self.timebonus_dt)
-        self.timebonus_slope = slope
-
-        self.night_boundary = confdict["survey"]["night_boundary"]
+            self.night_boundary = confdict["survey"]["night_boundary"]
 
 class Driver(object):
-    def __init__(self, driver_conf_file=None, obs_site_conf_file=None, obs_model_conf_file=None,
-                 survey_conf_file=None):
+    def __init__(self):
 
         self.log = logging.getLogger("schedulerDriver")
 
-        if driver_conf_file is None:
-            driver_conf_file = conf_file_path(__name__, "conf", "scheduler", "driver.conf")
-        driver_confdict = read_conf_file(driver_conf_file)
-        self.params = DriverParameters(driver_confdict)
-
-        if obs_site_conf_file is None:
-            obs_site_conf_file = conf_file_path(__name__, "conf", "system", "site.conf")
-        site_confdict = read_conf_file(obs_site_conf_file)
+        self.params = DriverParameters()
         self.location = ObservatoryLocation()
-        self.location.configure(site_confdict)
 
-        if obs_model_conf_file is None:
-            obs_model_conf_file = conf_file_path(__name__, "conf", "system", "observatory_model.conf")
-        observatory_confdict = read_conf_file(obs_model_conf_file)
         self.observatoryModel = ObservatoryModel(self.location)
-        self.observatoryModel.configure(observatory_confdict)
 
         self.sky = AstronomicalSkyModel(self.location)
 
@@ -61,17 +54,32 @@ class Driver(object):
 
         self.build_fields_dict()
 
-        if survey_conf_file is None:
-            survey_conf_file = conf_file_path(__name__, "conf", "survey", survey_conf_file)
-        survey_confdict = read_conf_file(survey_conf_file)
+        self.propid_counter = 0
+        self.science_proposal_list = []
+
+        self.start_time = 0.0
+        self.time = 0.0
+        self.targetid = 0
+        self.survey_started = False
+        self.isnight = False
+        self.sunset_timestamp = 0.0
+        self.sunrise_timestamp = 0.0
+        self.survey_duration_DAYS = 0.0
+        self.survey_duration_SECS = self.survey_duration_DAYS * 24 * 60 * 60.0
+
+    def configure_survey(self, survey_conf_file):
+
+        prop_conf_path = os.path.dirname(survey_conf_file)
+        confdict = read_conf_file(survey_conf_file)
+
+        self.survey_duration_DAYS = confdict["survey"]["survey_duration"]
+        self.survey_duration_SECS = self.survey_duration_DAYS * 24 * 60 * 60.0
 
         self.propid_counter = 0
         self.science_proposal_list = []
 
-        self.survey_duration_DAYS = survey_confdict["survey"]["survey_duration"]
-
-        if 'scripted_propconf' in survey_confdict["proposals"]:
-            scripted_propconflist = survey_confdict["proposals"]["scripted_propconf"]
+        if 'scripted_propconf' in confdict["proposals"]:
+            scripted_propconflist = confdict["proposals"]["scripted_propconf"]
         else:
             scripted_propconflist = []
         if not isinstance(scripted_propconflist, list):
@@ -79,13 +87,7 @@ class Driver(object):
             propconf = scripted_propconflist
             scripted_propconflist = []
             scripted_propconflist.append(propconf)
-        self.log.info("init: scripted proposals %s" % (scripted_propconflist))
-
-        if survey_conf_file is None:
-            prop_conf_path = conf_file_path(__name__, "conf", "survey")
-        else:
-            prop_conf_path = os.path.dirname(survey_conf_file)
-
+        self.log.info("configure_survey: scripted proposals %s" % (scripted_propconflist))
         for k in range(len(scripted_propconflist)):
             self.propid_counter += 1
             scripted_prop = ScriptedProposal(self.propid_counter,
@@ -94,8 +96,8 @@ class Driver(object):
                                              self.sky)
             self.science_proposal_list.append(scripted_prop)
 
-        if 'areadistribution_propconf' in survey_confdict["proposals"]:
-            areadistribution_propconflist = survey_confdict["proposals"]["areadistribution_propconf"]
+        if 'areadistribution_propconf' in confdict["proposals"]:
+            areadistribution_propconflist = confdict["proposals"]["areadistribution_propconf"]
         else:
             areadistribution_propconflist = []
             self.log.info("areadistributionPropConf:%s default" % (areadistribution_propconflist))
@@ -105,7 +107,6 @@ class Driver(object):
             areadistribution_propconflist = []
             areadistribution_propconflist.append(propconf)
         self.log.info("init: areadistribution proposals %s" % (areadistribution_propconflist))
-
         for k in range(len(areadistribution_propconflist)):
             configfilepath = os.path.join(prop_conf_path, "{}".format(areadistribution_propconflist[k]))
             (path, name_ext) = os.path.split(configfilepath)
@@ -113,128 +114,58 @@ class Driver(object):
             proposal_confdict = read_conf_file(configfilepath)
             self.create_area_proposal(name, proposal_confdict)
 
-        self.start_time = 0.0
-        self.time = 0.0
-        self.targetid = 0
-        self.survey_started = False
-        self.isnight = False
-        self.sunset_timestamp = 0.0
-        self.sunrise_timestamp = 0.0
-        self.survey_duration_SECS = self.survey_duration_DAYS * 24 * 60 * 60.0
-
     def configure_duration(self, survey_duration):
 
         self.survey_duration_DAYS = survey_duration
         self.survey_duration_SECS = survey_duration * 24 * 60 * 60.0
 
-    def configure(self, driver_confdict):
+    def configure(self, confdict):
 
-        self.params = DriverParameters(driver_confdict)
+        self.params = DriverParameters(confdict)
+
+    def configure_location(self, confdict):
+
+        self.location.configure(confdict)
+        self.observatoryModel.location.configure(confdict)
+        self.sky.__init__(self.location)
+
+    def configure_observatory(self, confdict):
+
+        self.observatoryModel.configure(confdict)
+
+    def configure_telescope(self, confdict):
+
+        self.observatoryModel.configure_telescope(confdict)
+
+    def configure_rotator(self, confdict):
+
+        self.observatoryModel.configure_rotator(confdict)
+
+    def configure_dome(self, confdict):
+
+        self.observatoryModel.configure_dome(confdict)
+
+    def configure_optics(self, confdict):
+
+        self.observatoryModel.configure_optics(confdict)
+
+    def configure_camera(self, confdict):
+
+        self.observatoryModel.configure_camera(confdict)
+
+    def configure_slew(self, confdict):
+
+        self.observatoryModel.configure_slew(confdict)
+
+    def configure_park(self, confdict):
+
+        self.observatoryModel.configure_park(confdict)
 
     def create_area_proposal(self, name, config_dict):
 
         self.propid_counter += 1
         area_prop = AreaDistributionProposal(self.propid_counter, name, config_dict, self.sky)
         self.science_proposal_list.append(area_prop)
-
-    def configure_location(self, latitude_rad, longitude_rad, height):
-
-        self.location.reconfigure(latitude_rad, longitude_rad, height)
-        self.observatoryModel.location.reconfigure(latitude_rad, longitude_rad, height)
-        self.sky.__init__(self.location)
-
-    def configure_telescope(self,
-                            altitude_minpos_rad,
-                            altitude_maxpos_rad,
-                            azimuth_minpos_rad,
-                            azimuth_maxpos_rad,
-                            altitude_maxspeed_rad,
-                            altitude_accel_rad,
-                            altitude_decel_rad,
-                            azimuth_maxspeed_rad,
-                            azimuth_accel_rad,
-                            azimuth_decel_rad,
-                            settle_time):
-
-        self.observatoryModel.configure_telescope(altitude_minpos_rad,
-                                                  altitude_maxpos_rad,
-                                                  azimuth_minpos_rad,
-                                                  azimuth_maxpos_rad,
-                                                  altitude_maxspeed_rad,
-                                                  altitude_accel_rad,
-                                                  altitude_decel_rad,
-                                                  azimuth_maxspeed_rad,
-                                                  azimuth_accel_rad,
-                                                  azimuth_decel_rad,
-                                                  settle_time)
-
-    def configure_rotator(self,
-                          minpos_rad,
-                          maxpos_rad,
-                          maxspeed_rad,
-                          accel_rad,
-                          decel_rad,
-                          filterchangepos_rad,
-                          follow_sky,
-                          resume_angle):
-
-        self.observatoryModel.configure_rotator(minpos_rad,
-                                                maxpos_rad,
-                                                maxspeed_rad,
-                                                accel_rad,
-                                                decel_rad,
-                                                filterchangepos_rad,
-                                                follow_sky,
-                                                resume_angle)
-
-    def configure_dome(self,
-                       altitude_maxspeed_rad,
-                       altitude_accel_rad,
-                       altitude_decel_rad,
-                       azimuth_maxspeed_rad,
-                       azimuth_accel_rad,
-                       azimuth_decel_rad,
-                       settle_time):
-
-        self.observatoryModel.configure_dome(altitude_maxspeed_rad,
-                                             altitude_accel_rad,
-                                             altitude_decel_rad,
-                                             azimuth_maxspeed_rad,
-                                             azimuth_accel_rad,
-                                             azimuth_decel_rad,
-                                             settle_time)
-
-    def configure_camera(self, config_camera_dict):
-
-        self.observatoryModel.configure_camera(config_camera_dict)
-
-    def configure_slew(self, prereq_dict):
-
-        self.observatoryModel.configure_slew(prereq_dict)
-
-    def configure_optics(self,
-                         tel_optics_ol_slope,
-                         tel_optics_cl_alt_limit,
-                         tel_optics_cl_delay):
-
-        self.observatoryModel.configure_optics(tel_optics_ol_slope,
-                                               tel_optics_cl_alt_limit,
-                                               tel_optics_cl_delay)
-
-    def configure_park(self,
-                       telescope_altitude,
-                       telescope_azimuth,
-                       telescope_rotator,
-                       dome_altitude,
-                       dome_azimuth,
-                       filter_position):
-
-        self.observatoryModel.configure_park(telescope_altitude,
-                                             telescope_azimuth,
-                                             telescope_rotator,
-                                             dome_altitude,
-                                             dome_azimuth,
-                                             filter_position)
 
     def configure_area_proposal(self,
                                 prop_id,
