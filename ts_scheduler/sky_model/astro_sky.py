@@ -205,3 +205,21 @@ class AstronomicalSkyModel(object):
             mags.append(self.sky_brightness.returnMags())
 
         return mags
+
+    def get_target_information(self):
+        """Get information about target(s).
+
+        This function gathers airmass, altitude and azimuth information for the targets
+        that were last computed.
+
+        Returns
+        -------
+        dict
+            Set of information about the target(s).
+        """
+        attrs = self.sky_brightness.getComputedVals()
+        keys = ["airmass", "alts", "azs"]
+        info_dict = {}
+        for key in keys:
+            info_dict[key] = attrs[key]
+        return info_dict
