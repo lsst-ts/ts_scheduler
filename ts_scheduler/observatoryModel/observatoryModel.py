@@ -49,7 +49,7 @@ class ObservatoryModelParameters(object):
         self.ReadoutTime = 0.0
         self.ShutterTime = 0.0
         self.Filter_ChangeTime = 0.0
-        self.Filter_RemovableList = []
+        self.filter_removable_list = []
         self.filter_max_changes_burst_num = 0
         self.filter_max_changes_burst_time = 0.0
         self.filter_max_changes_avg_num = 0
@@ -105,7 +105,7 @@ class ObservatoryModelParameters(object):
         self.ReadoutTime = confdict["camera"]["readout_time"]
         self.ShutterTime = confdict["camera"]["shutter_time"]
         self.Filter_ChangeTime = confdict["camera"]["filter_change_time"]
-        self.Filter_RemovableList = confdict["camera"]["filter_removable"]
+        self.filter_removable_list = confdict["camera"]["filter_removable"]
         self.filter_max_changes_burst_num = confdict["camera"]["filter_max_changes_burst_num"]
         self.filter_max_changes_burst_time = confdict["camera"]["filter_max_changes_burst_time"]
         self.filter_max_changes_avg_num = confdict["camera"]["filter_max_changes_avg_num"]
@@ -273,29 +273,39 @@ class ObservatoryModel(object):
         self.params.configure_optics(confdict)
 
         self.log.log(WORDY,
-                     "configure: OpticsOL_Slope=%.3f" % (self.params.OpticsOL_Slope))
+                     "configure_optics: OpticsOL_Slope=%.3f" % (self.params.OpticsOL_Slope))
         self.log.log(WORDY,
-                     "configure: OpticsCL_Delay=%s" % (self.params.OpticsCL_Delay))
+                     "configure_optics: OpticsCL_Delay=%s" % (self.params.OpticsCL_Delay))
         self.log.log(WORDY,
-                     "configure: OpticsCL_AltLimit=%s" % (self.params.OpticsCL_AltLimit))
+                     "configure_optics: OpticsCL_AltLimit=%s" % (self.params.OpticsCL_AltLimit))
 
     def configure_camera(self, confdict):
 
         self.params.configure_camera(confdict)
 
         self.log.log(WORDY,
-                     "configure: Filter_ChangeTime=%.1f" % (self.params.Filter_ChangeTime))
+                     "configure_camera: Filter_ChangeTime=%.1f" % (self.params.Filter_ChangeTime))
         self.log.log(WORDY,
-                     "configure: ReadoutTime=%.1f" % (self.params.ReadoutTime))
+                     "configure_camera: ReadoutTime=%.1f" % (self.params.ReadoutTime))
         self.log.log(WORDY,
-                     "configure: ShutterTime=%.1f" % (self.params.ShutterTime))
+                     "configure_camera: ShutterTime=%.1f" % (self.params.ShutterTime))
+        self.log.log(WORDY,
+                     "configure_camera: filter_removable=%s" % (self.params.filter_removable_list))
+        self.log.log(WORDY,
+                     "configure_camera: filter_max_changes_burst_num=%i" % (self.params.filter_max_changes_burst_num))
+        self.log.log(WORDY,
+                     "configure_camera: filter_max_changes_burst_time=%.1f" % (self.params.filter_max_changes_burst_time))
+        self.log.log(WORDY,
+                     "configure_camera: filter_max_changes_avg_num=%i" % (self.params.filter_max_changes_avg_num))
+        self.log.log(WORDY,
+                     "configure_camera: filter_max_changes_avg_time=%.1f" % (self.params.filter_max_changes_avg_time))
 
     def configure_slew(self, confdict):
 
         self.params.configure_slew(confdict, self.activities)
 
         for activity in self.activities:
-            self.log.log(WORDY, "configure: prerequisites[%s]=%s" %
+            self.log.log(WORDY, "configure_slew: prerequisites[%s]=%s" %
                          (activity, self.params.prerequisites[activity]))
 
     def configure_park(self, confdict):
@@ -314,17 +324,17 @@ class ObservatoryModel(object):
         self.parkState.tracking = False
 
         self.log.log(WORDY,
-                     "configure: park_Telalt_rad=%.3f" % (self.parkState.telalt_rad))
+                     "configure_park: park_Telalt_rad=%.3f" % (self.parkState.telalt_rad))
         self.log.log(WORDY,
-                     "configure: park_Telaz_rad=%.3f" % (self.parkState.telaz_rad))
+                     "configure_park: park_Telaz_rad=%.3f" % (self.parkState.telaz_rad))
         self.log.log(WORDY,
-                     "configure: park_Telrot_rad=%.3f" % (self.parkState.telrot_rad))
+                     "configure_park: park_Telrot_rad=%.3f" % (self.parkState.telrot_rad))
         self.log.log(WORDY,
-                     "configure: park_Domalt_rad=%.3f" % (self.parkState.domalt_rad))
+                     "configure_park: park_Domalt_rad=%.3f" % (self.parkState.domalt_rad))
         self.log.log(WORDY,
-                     "configure: park_Domaz_rad=%.3f" % (self.parkState.domaz_rad))
+                     "configure_park: park_Domaz_rad=%.3f" % (self.parkState.domaz_rad))
         self.log.log(WORDY,
-                     "configure: park_Filter=%s" % (self.parkState.filter))
+                     "configure_park: park_Filter=%s" % (self.parkState.filter))
 
     def set_state(self, new_state):
 
