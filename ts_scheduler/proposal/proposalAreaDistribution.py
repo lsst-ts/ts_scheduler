@@ -248,10 +248,12 @@ class AreaDistributionProposal(Proposal):
             self.sky.update(timestamp)
             #sky_mags = self.sky.get_sky_brightness(ra_rad_list, dec_rad_list)
             sky_mags = self.sky.get_sky_brightness(id_list)
-            attrs = self.sky.sky_brightness.getComputedVals()
+            #attrs = self.sky.sky_brightness.getComputedVals()
+            airmass = self.sky.get_airmass(id_list)
             for ix, fieldid in enumerate(id_list):
                 mags_dict[fieldid] = {k: v[ix] for k, v in sky_mags.items()}
-                airmass_dict[fieldid] = attrs["airmass"][ix]
+                #airmass_dict[fieldid] = attrs["airmass"][ix]
+                airmass[fieldid] = airmass[ix]
 
         evaluated_fields = 0
         discarded_fields_airmass = 0

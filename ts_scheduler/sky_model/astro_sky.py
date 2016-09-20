@@ -137,6 +137,9 @@ class AstronomicalSkyModel(object):
 
         return (round(set_timestamp, precision), round(rise_timestamp, precision))
 
+    def get_airmass(self, ids):
+        return self.sky_brightness.returnAirmass(self.date_profile.mjd, indx=ids)
+
     def get_separation(self, body, field_ra, field_dec):
         """Return the separation between a body and a set of field coordinates.
 
