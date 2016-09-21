@@ -26,7 +26,7 @@ find_eups=$(${source_eups} 2>&1)
 if [ $? != 0 ]; then
 	echo "Installing necessary packages"
 	need_install=1
-	conda install -y lsst-sims-skybrightness enum
+	conda install -y lsst-sims-skybrightness enum34
 	git clone https://github.com/lsst/sims_skybrightness.git
 else
 	echo "Updating packages"
