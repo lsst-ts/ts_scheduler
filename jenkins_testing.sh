@@ -22,15 +22,23 @@ export PATH=${WORKSPACE}/miniconda/bin:${PATH}
 conda config --add channels http://conda.lsst.codes/sims
 source_eups="source eups-setups.sh"
 find_eups=$(${source_eups} 2>&1)
+need_install=0
 if [ $? != 0 ]; then
 	echo "Installing necessary packages"
+	need_install=1
 	conda install -y lsst-sims-skybrightness
-	pip install -r requirements.txt
+	git clone https://github.com/lsst/sims_skybrightness.git
 else
 	echo "Updating packages"
-	conda update lsst-sims-skybrightness
+	cd ${WORKSPACE}/sims_skybrightness
+	git rebase -v
+	git fetch -p -t
+	cd ${WORKSPACE}
 fi
 ${source_eups}
+if [ ${need_install} -eq 1 ]; then
+	eups declare sims_skybrightness git -r ${WORKSPACE}/sims_skybrightness -c
+fi
 setup sims_skybrightness
 
 python -m unittest discover tests
