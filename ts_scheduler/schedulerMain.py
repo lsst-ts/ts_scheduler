@@ -277,118 +277,24 @@ class Main(object):
 
             waitconfig = True
             lastconfigtime = time.time()
+            config_dict = None
             while waitconfig:
                 scode = self.sal.getNextSample_areaDistPropConfig(self.topic_areaDistPropConfig)
                 if (scode == 0 and self.topic_areaDistPropConfig.name != ""):
                     lastconfigtime = time.time()
-
-                    config_dict = {}
-
                     name = self.topic_areaDistPropConfig.name
-                    prop_id = self.topic_areaDistPropConfig.prop_id
-
-                    config_dict["sky_nightly_bounds"] = {}
-                    twilight_boundary = self.topic_areaDistPropConfig.twilight_boundary
-                    delta_lst = self.topic_areaDistPropConfig.delta_lst
-                    config_dict["sky_nightly_bounds"]["twilight_boundary"] = twilight_boundary
-                    config_dict["sky_nightly_bounds"]["delta_lst"] = delta_lst
-
-                    config_dict["constraints"] = {}
-                    max_airmass = self.topic_areaDistPropConfig.max_airmass
-                    config_dict["constraints"]["max_airmass"] = max_airmass
-
-                    config_dict["sky_region"] = {}
-                    num_region_selections = self.topic_areaDistPropConfig.num_region_selections
-                    region_types = self.topic_areaDistPropConfig.region_types
-                    if region_types == "":
-                        region_types_list = []
-                    else:
-                        region_types_list = region_types.split(",")
-                    region_list = []
-                    for k in range(num_region_selections):
-                        region_minimum = self.topic_areaDistPropConfig.region_minimums[k]
-                        region_maximum = self.topic_areaDistPropConfig.region_maximums[k]
-                        region_bound = self.topic_areaDistPropConfig.region_bounds[k]
-
-                        region = (region_types_list[k], region_minimum, region_maximum, region_bound)
-                        region_list.append(region)
-                    region_combiners = self.topic_areaDistPropConfig.region_combiners
-                    if region_combiners == "":
-                        region_combiners_list = []
-                    else:
-                        region_combiners_list = region_combiners.split(",")
-                    config_dict["sky_region"]["cuts"] = region_list
-                    config_dict["sky_region"]["combiners"] = region_combiners_list
-
-                    config_dict["sky_exclusions"] = {}
-                    num_exclusion_selections = self.topic_areaDistPropConfig.num_exclusion_selections
-                    exclusion_types = self.topic_areaDistPropConfig.exclusion_types
-                    if exclusion_types == "":
-                        exclusion_types_list = []
-                    else:
-                        exclusion_types_list = exclusion_types.split(",")
-                    exclusion_list = []
-                    for k in range(num_exclusion_selections):
-                        exclusion_minimum = self.topic_areaDistPropConfig.exclusion_minimums[k]
-                        exclusion_maximum = self.topic_areaDistPropConfig.exclusion_maximums[k]
-                        exclusion_bound = self.topic_areaDistPropConfig.exclusion_bounds[k]
-
-                        exclusion = (exclusion_types_list[k], exclusion_minimum,
-                                     exclusion_maximum, exclusion_bound)
-                        exclusion_list.append(exclusion)
-                    config_dict["sky_exclusions"]["cuts"] = exclusion_list
-                    dec_window = self.topic_areaDistPropConfig.dec_window
-                    config_dict["sky_exclusions"]["dec_window"] = dec_window
-
-                    num_filters = self.topic_areaDistPropConfig.num_filters
-                    filter_names = self.topic_areaDistPropConfig.filter_names
-                    filter_list = filter_names.split(",")
-                    exp_index = 0
-                    for k in range(num_filters):
-                        filter = filter_list[k]
-                        filter_section = "filter_%s" % filter
-                        config_dict[filter_section] = {}
-                        config_dict[filter_section]["visits"] = self.topic_areaDistPropConfig.num_visits[k]
-                        config_dict[filter_section]["min_brig"] = \
-                            self.topic_areaDistPropConfig.bright_limit[k]
-                        config_dict[filter_section]["max_brig"] = self.topic_areaDistPropConfig.dark_limit[k]
-                        config_dict[filter_section]["max_seeing"] = \
-                            self.topic_areaDistPropConfig.max_seeing[k]
-                        num_exp = self.topic_areaDistPropConfig.num_filter_exposures[k]
-                        exp_times_list = []
-                        for n in range(num_exp):
-                            exp_times_list.append(self.topic_areaDistPropConfig.exposures[exp_index])
-                            exp_index += 1
-                        config_dict[filter_section]["exp_times"] = exp_times_list
-
-                    config_dict["scheduling"] = {}
-                    max_num_targets = self.topic_areaDistPropConfig.max_num_targets
-                    accept_serendipity = self.topic_areaDistPropConfig.accept_serendipity
-                    accept_consecutive_visits = self.topic_areaDistPropConfig.accept_consecutive_visits
-                    config_dict["scheduling"]["max_num_targets"] = max_num_targets
-                    config_dict["scheduling"]["accept_serendipity"] = accept_serendipity
-                    config_dict["scheduling"]["accept_consecutive_visits"] = accept_consecutive_visits
-
-                    self.log.info("run: rx areaprop config "
-                                  "prop_id=%i "
-                                  "name=%s "
-                                  "config_dict=%s " %
-                                  (prop_id, name, config_dict))
-
-                    self.schedulerDriver.configure_area_proposal(prop_id,
-                                                                 name,
-                                                                 config_dict)
-
+                    config_dict = self.read_topic_area_prop_config(self.topic_areaDistPropConfig)
+                    self.log.info("run: rx area prop config=%s" % (config_dict))
+                    self.schedulerDriver.create_area_proposal(name, config_dict)
                     waitconfig = True
                 else:
                     tf = time.time()
                     if self.topic_areaDistPropConfig.name == "":
-                        waitconfig = False
                         self.log.info("run: area prop config end")
-
-                    if tf - lastconfigtime > 10.0:
                         waitconfig = False
+                    if tf - lastconfigtime > 10.0:
                         self.log.info("run: area prop config timeout")
+                        waitconfig = False
 
             field_dict = self.schedulerDriver.get_fields_dict()
             if len(field_dict) > 0:
@@ -555,8 +461,12 @@ class Main(object):
         confdict["ranking"]["timebonus_tmax"] = topic_driver_config.timebonus_tmax
         confdict["ranking"]["timebonus_bmax"] = topic_driver_config.timebonus_bmax
         confdict["ranking"]["timebonus_slope"] = topic_driver_config.timebonus_slope
-        confdict["survey"] = {}
-        confdict["survey"]["night_boundary"] = topic_driver_config.night_boundary
+        confdict["constraints"] = {}
+        confdict["constraints"]["night_boundary"] = topic_driver_config.night_boundary
+        confdict["constraints"]["ignore_sky_brightness"] = topic_driver_config.ignore_sky_brightness
+        confdict["constraints"]["ignore_airmass"] = topic_driver_config.ignore_airmass
+        confdict["constraints"]["ignore_clouds"] = topic_driver_config.ignore_clouds
+        confdict["constraints"]["ignore_seeing"] = topic_driver_config.ignore_seeing
 
         return confdict
 
@@ -742,6 +652,95 @@ class Main(object):
         confdict["park"]["dome_altitude"] = topic_park_config.dome_altitude
         confdict["park"]["dome_azimuth"] = topic_park_config.dome_azimuth
         confdict["park"]["filter_position"] = topic_park_config.filter_position
+
+        return confdict
+
+    def read_topic_area_prop_config(self, topic_areapropconf):
+
+        confdict = {}
+
+        name = topic_areapropconf.name
+        prop_id = topic_areapropconf.prop_id
+
+        confdict["sky_nightly_bounds"] = {}
+        confdict["sky_nightly_bounds"]["twilight_boundary"] = topic_areapropconf.twilight_boundary
+        confdict["sky_nightly_bounds"]["delta_lst"] = topic_areapropconf.delta_lst
+
+        confdict["constraints"] = {}
+        confdict["constraints"]["max_airmass"] = topic_areapropconf.max_airmass
+
+        confdict["sky_region"] = {}
+        num_region_selections = topic_areapropconf.num_region_selections
+        region_types = topic_areapropconf.region_types
+        if region_types == "":
+            region_types_list = []
+        else:
+            region_types_list = region_types.split(",")
+
+        region_list = []
+        for k in range(num_region_selections):
+            region_minimum = topic_areapropconf.region_minimums[k]
+            region_maximum = topic_areapropconf.region_maximums[k]
+            region_bound = topic_areapropconf.region_bounds[k]
+
+            region = (region_types_list[k], region_minimum, region_maximum, region_bound)
+            region_list.append(region)
+        region_combiners = topic_areapropconf.region_combiners
+        if region_combiners == "":
+            region_combiners_list = []
+        else:
+            region_combiners_list = region_combiners.split(",")
+        confdict["sky_region"]["cuts"] = region_list
+        confdict["sky_region"]["combiners"] = region_combiners_list
+
+        confdict["sky_exclusions"] = {}
+        num_exclusion_selections = topic_areapropconf.num_exclusion_selections
+        exclusion_types = topic_areapropconf.exclusion_types
+        if exclusion_types == "":
+            exclusion_types_list = []
+        else:
+            exclusion_types_list = exclusion_types.split(",")
+        exclusion_list = []
+        for k in range(num_exclusion_selections):
+            exclusion_minimum = topic_areapropconf.exclusion_minimums[k]
+            exclusion_maximum = topic_areapropconf.exclusion_maximums[k]
+            exclusion_bound = topic_areapropconf.exclusion_bounds[k]
+
+            exclusion = (exclusion_types_list[k], exclusion_minimum,
+                         exclusion_maximum, exclusion_bound)
+            exclusion_list.append(exclusion)
+
+        confdict["sky_exclusions"]["cuts"] = exclusion_list
+        dec_window = topic_areapropconf.dec_window
+        confdict["sky_exclusions"]["dec_window"] = dec_window
+
+        num_filters = topic_areapropconf.num_filters
+        filter_names = topic_areapropconf.filter_names
+        filter_list = filter_names.split(",")
+        exp_index = 0
+        for k in range(num_filters):
+            filter = filter_list[k]
+            filter_section = "filter_%s" % filter
+            confdict[filter_section] = {}
+            confdict[filter_section]["visits"] = topic_areapropconf.num_visits[k]
+            confdict[filter_section]["min_brig"] = \
+                topic_areapropconf.bright_limit[k]
+            confdict[filter_section]["max_brig"] = topic_areapropconf.dark_limit[k]
+            confdict[filter_section]["max_seeing"] = topic_areapropconf.max_seeing[k]
+            num_exp = topic_areapropconf.num_filter_exposures[k]
+            exp_times_list = []
+            for n in range(num_exp):
+                exp_times_list.append(topic_areapropconf.exposures[exp_index])
+                exp_index += 1
+            confdict[filter_section]["exp_times"] = exp_times_list
+
+        confdict["scheduling"] = {}
+        max_num_targets = topic_areapropconf.max_num_targets
+        accept_serendipity = topic_areapropconf.accept_serendipity
+        accept_consecutive_visits = topic_areapropconf.accept_consecutive_visits
+        confdict["scheduling"]["max_num_targets"] = max_num_targets
+        confdict["scheduling"]["accept_serendipity"] = accept_serendipity
+        confdict["scheduling"]["accept_consecutive_visits"] = accept_consecutive_visits
 
         return confdict
 

@@ -6,23 +6,29 @@ from ts_scheduler.schedulerDefinitions import read_conf_file
 from ts_scheduler.fields import CUT_TYPEMAP, FieldsDatabase, FieldSelection
 
 class Proposal(object):
-    def __init__(self, propid, configfilepath, skymodel):
+    def __init__(self, propid, name, confdict, skymodel):
 
         self.propid = propid
-
-        (path, name_ext) = os.path.split(configfilepath)
-        (name, ext) = os.path.splitext(name_ext)
         self.name = name
-
         self.log = logging.getLogger("scheduler.proposal.%s" % self.name)
-
-        self.proposal_confdict = read_conf_file(configfilepath)
-
+        self.proposal_confdict = confdict
         self.sky = skymodel
-
         self.db = FieldsDatabase()
-
         self.field_select = FieldSelection()
+
+        self.night_boundary = 0.0
+        self.ignore_sky_brightness = False
+        self.ignore_airmass = False
+        self.ignore_clouds = False
+        self.ignore_seeing = False
+
+    def configure_constraints(self, params):
+
+        self.night_boundary = params.night_boundary
+        self.ignore_sky_brightness = params.ignore_sky_brightness
+        self.ignore_airmass = params.ignore_airmass
+        self.ignore_clouds = params.ignore_clouds
+        self.ignore_seeing = params.ignore_seeing
 
     def start_survey(self):
         return

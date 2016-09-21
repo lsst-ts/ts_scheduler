@@ -46,22 +46,9 @@ class AreaDistributionProposalParameters(object):
 
 class AreaDistributionProposal(Proposal):
 
-    def __init__(self, propid, name, config_dict, skymodel):
+    def __init__(self, propid, name, confdict, skymodel):
 
-        #super(AreaDistributionProposal, self).__init__(propid, configfilepath, skymodel)
-        self.propid = propid
-
-        self.name = name
-
-        self.log = logging.getLogger("scheduler.proposal.%s" % self.name)
-
-        self.proposal_confdict = config_dict
-
-        self.sky = skymodel
-
-        self.db = FieldsDatabase()
-
-        self.field_select = FieldSelection()
+        super(AreaDistributionProposal, self).__init__(propid, name, confdict, skymodel)
 
         self.params = AreaDistributionProposalParameters(self.proposal_confdict)
 
@@ -178,7 +165,7 @@ class AreaDistributionProposal(Proposal):
             id_list.append(field.fieldid)
             ra_rad_list.append(field.ra_rad)
             dec_rad_list.append(field.dec_rad)
-        if len(id_list) > 0:
+        if (len(id_list) > 0) and (not self.ignore_sky_brightness or not self.ignore_airmass):
             self.sky.update(timestamp)
             sky_mags = self.sky.get_sky_brightness(ra_rad_list, dec_rad_list)
             attrs = self.sky.sky_brightness.getComputedVals()
@@ -197,10 +184,13 @@ class AreaDistributionProposal(Proposal):
             fieldid = field.fieldid
 
             # discard fields beyond airmass limit
-            airmass = airmass_dict[fieldid]
-            if airmass > self.params.max_airmass:
-                discarded_fields_airmass += 1
-                continue
+            if self.ignore_airmass:
+                airmass = 0.0
+            else:
+                airmass = airmass_dict[fieldid]
+                if airmass > self.params.max_airmass:
+                    discarded_fields_airmass += 1
+                    continue
 
             for filter in self.filters_tonight_list:
                 target = self.targets_dict[fieldid][filter]
@@ -217,15 +207,18 @@ class AreaDistributionProposal(Proposal):
 #                if seeing(filter) > self.params.max_seeing[filter]:
 #                    continue
 
-                # discard target beyond sky brightness limits
-                sky_brightness = mags_dict[fieldid][filter]
-                if sky_brightness < self.params.filter_min_brig_dict[filter]:
-                    discarded_targets_lowbrightness += 1
-                    continue
+                if self.ignore_sky_brightness:
+                    sky_brightness = 0.0
+                else:
+                    # discard target beyond sky brightness limits
+                    sky_brightness = mags_dict[fieldid][filter]
+                    if sky_brightness < self.params.filter_min_brig_dict[filter]:
+                        discarded_targets_lowbrightness += 1
+                        continue
 
-                if sky_brightness > self.params.filter_max_brig_dict[filter]:
-                    discarded_targets_highbrightness += 1
-                    continue
+                    if sky_brightness > self.params.filter_max_brig_dict[filter]:
+                        discarded_targets_highbrightness += 1
+                        continue
 
                 # target is accepted
                 # compute value for available targets
@@ -246,8 +239,10 @@ class AreaDistributionProposal(Proposal):
 
         self.log.debug("suggest_targets: fields=%d, evaluated=%d, discarded airmass=%d" %
                        (len(id_list), evaluated_fields, discarded_fields_airmass))
-        self.log.debug("suggest_targets: evaluated targets=%d, discarded lowbright=%d highbright=%d" %
-                       (evaluated_targets, discarded_targets_lowbrightness, discarded_targets_highbrightness))
+        self.log.debug("suggest_targets: evaluated targets=%d, discarded consecutive=%d "
+                       "lowbright=%d highbright=%d" %
+                       (evaluated_targets, discarded_targets_consecutive,
+                        discarded_targets_lowbrightness, discarded_targets_highbrightness))
 
         return self.get_evaluated_target_list()
 

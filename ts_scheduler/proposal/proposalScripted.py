@@ -6,14 +6,11 @@ from ts_scheduler.schedulerTarget import Target
 from ts_scheduler.proposal import Proposal
 
 class ScriptedProposal(Proposal):
-    def __init__(self, propid, configfilepath, skymodel):
+    def __init__(self, propid, name, confdict, scriptfile, skymodel):
 
-        super(ScriptedProposal, self).__init__(propid, configfilepath, skymodel)
-        self.log = logging.getLogger("proposalScripted.ScriptedProposal")
+        super(ScriptedProposal, self).__init__(propid, name, confdict, skymodel)
 
-        resource_path = os.path.dirname(configfilepath)
-        self.script_file = os.path.join(resource_path, self.proposal_confdict["script"]["scriptfile"])
-
+        self.script_file = scriptfile
         self.read_script()
 
         self.targetid = 0

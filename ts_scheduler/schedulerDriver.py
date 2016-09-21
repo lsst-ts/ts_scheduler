@@ -5,7 +5,7 @@ import logging
 
 from operator import itemgetter
 
-from ts_scheduler.setup import EXTENSIVE
+from ts_scheduler.setup import EXTENSIVE, WORDY
 from ts_scheduler.sky_model import AstronomicalSkyModel
 from ts_scheduler.schedulerDefinitions import DEG2RAD, read_conf_file
 from ts_scheduler.schedulerField import Field
@@ -18,25 +18,34 @@ from ts_scheduler.fields import FieldsDatabase
 
 class DriverParameters(object):
 
-    def __init__(self, confdict=None):
+    def __init__(self):
 
-        if confdict is None:
-            self.coadd_values = False
-            self.timebonus_dt = 0.0
-            self.timebonus_db = 0.0
-            self.timebonus_slope = 0.0
-            self.night_boundary = 0.0
-        else:
-            self.coadd_values = confdict["ranking"]["coadd_values"]
+        self.coadd_values = False
+        self.timebonus_dt = 0.0
+        self.timebonus_db = 0.0
+        self.timebonus_slope = 0.0
+        self.night_boundary = 0.0
+        self.ignore_sky_brightness = False
+        self.ignore_airmass = False
+        self.ignore_clouds = False
+        self.ignore_seeing = False
 
-            tmax = confdict["ranking"]["timebonus_tmax"]
-            bmax = confdict["ranking"]["timebonus_bmax"]
-            slope = confdict["ranking"]["timebonus_slope"]
-            self.timebonus_dt = (math.sqrt(tmax * tmax + 4 * slope * tmax / bmax) - tmax) / 2
-            self.timebonus_db = slope / (tmax + self.timebonus_dt)
-            self.timebonus_slope = slope
+    def configure(self, confdict):
 
-            self.night_boundary = confdict["survey"]["night_boundary"]
+        self.coadd_values = confdict["ranking"]["coadd_values"]
+
+        tmax = confdict["ranking"]["timebonus_tmax"]
+        bmax = confdict["ranking"]["timebonus_bmax"]
+        slope = confdict["ranking"]["timebonus_slope"]
+        self.timebonus_dt = (math.sqrt(tmax * tmax + 4 * slope * tmax / bmax) - tmax) / 2
+        self.timebonus_db = slope / (tmax + self.timebonus_dt)
+        self.timebonus_slope = slope
+
+        self.night_boundary = confdict["constraints"]["night_boundary"]
+        self.ignore_sky_brightness = confdict["constraints"]["ignore_sky_brightness"]
+        self.ignore_airmass = confdict["constraints"]["ignore_airmass"]
+        self.ignore_clouds = confdict["constraints"]["ignore_clouds"]
+        self.ignore_seeing = confdict["constraints"]["ignore_seeing"]
 
 class Driver(object):
     def __init__(self):
@@ -114,6 +123,9 @@ class Driver(object):
             proposal_confdict = read_conf_file(configfilepath)
             self.create_area_proposal(name, proposal_confdict)
 
+        for prop in self.science_proposal_list:
+            prop.configure_constraints(self.params)
+
     def configure_duration(self, survey_duration):
 
         self.survey_duration_DAYS = survey_duration
@@ -121,7 +133,28 @@ class Driver(object):
 
     def configure(self, confdict):
 
-        self.params = DriverParameters(confdict)
+        self.params.configure(confdict)
+        self.log.log(WORDY,
+                     "configure: coadd_values=%s" % (self.params.coadd_values))
+        self.log.log(WORDY,
+                     "configure: timebonus_dt=%.3f" % (self.params.timebonus_dt))
+        self.log.log(WORDY,
+                     "configure: timebonus_db=%.3f" % (self.params.timebonus_db))
+        self.log.log(WORDY,
+                     "configure: timebonus_slope=%.3f" % (self.params.timebonus_slope))
+        self.log.log(WORDY,
+                     "configure: night_boundary=%.1f" % (self.params.night_boundary))
+        self.log.log(WORDY,
+                     "configure: ignore_sky_brightness=%s" % (self.params.ignore_sky_brightness))
+        self.log.log(WORDY,
+                     "configure: ignore_airmass=%s" % (self.params.ignore_airmass))
+        self.log.log(WORDY,
+                     "configure: ignore_clouds=%s" % (self.params.ignore_clouds))
+        self.log.log(WORDY,
+                     "configure: ignore_seeing=%s" % (self.params.ignore_seeing))
+
+        for prop in self.science_proposal_list:
+            prop.configure_constraints(self.params)
 
     def configure_location(self, confdict):
 
@@ -165,15 +198,16 @@ class Driver(object):
 
         self.propid_counter += 1
         area_prop = AreaDistributionProposal(self.propid_counter, name, config_dict, self.sky)
+        area_prop.configure_constraints(self.params)
         self.science_proposal_list.append(area_prop)
 
-    def configure_area_proposal(self,
-                                prop_id,
-                                name,
-                                config_dict):
+    #def configure_area_proposal(self,
+    #                            prop_id,
+    #                            name,
+    #                            config_dict):
 
-        area_prop = AreaDistributionProposal(prop_id, name, config_dict, self.sky)
-        self.science_proposal_list.append(area_prop)
+    #    area_prop = AreaDistributionProposal(prop_id, name, config_dict, self.sky)
+    #    self.science_proposal_list.append(area_prop)
 
     def build_fields_dict(self):
 
