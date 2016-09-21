@@ -37,11 +37,13 @@ else
 fi
 ${source_eups}
 if [ ${need_install} -eq 1 ]; then
-	cd ${WORKSPACE}/sims_skybrightness
 	eups declare sims_skybrightness git -r ${WORKSPACE}/sims_skybrightness -c
+fi
+setup sims_skybrightness
+if [ ${need_install} -eq 1 ]; then
+	cd ${WORKSPACE}/sims_skybrightness
 	scons
 	cd ${WORKSPACE}
 fi
-setup sims_skybrightness
 
 python -m unittest discover tests
