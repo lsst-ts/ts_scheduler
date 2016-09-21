@@ -37,7 +37,10 @@ else
 fi
 ${source_eups}
 if [ ${need_install} -eq 1 ]; then
+	cd ${WORKSPACE}/sims_skybrightness
 	eups declare sims_skybrightness git -r ${WORKSPACE}/sims_skybrightness -c
+	scons
+	cd ${WORKSPACE}
 fi
 setup sims_skybrightness
 
