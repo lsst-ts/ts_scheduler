@@ -19,10 +19,10 @@ fi
 
 export PATH=${WORKSPACE}/miniconda/bin:${PATH}
 
+need_install=0
 conda config --add channels http://conda.lsst.codes/sims
 source_eups="source eups-setups.sh"
 find_eups=$(${source_eups} 2>&1)
-need_install=0
 if [ $? != 0 ]; then
 	echo "Installing necessary packages"
 	need_install=1
