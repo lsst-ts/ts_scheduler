@@ -253,7 +253,7 @@ class AreaDistributionProposal(Proposal):
             for ix, fieldid in enumerate(id_list):
                 mags_dict[fieldid] = {k: v[ix] for k, v in sky_mags.items()}
                 #airmass_dict[fieldid] = attrs["airmass"][ix]
-                airmass[fieldid] = airmass[ix]
+                airmass_dict[fieldid] = airmass[ix]
 
         evaluated_fields = 0
         discarded_fields_airmass = 0
