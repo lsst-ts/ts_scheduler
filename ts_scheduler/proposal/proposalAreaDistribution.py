@@ -176,6 +176,7 @@ class AreaDistributionProposal(Proposal):
         evaluated_fields = 0
         discarded_fields_airmass = 0
         discarded_targets_consecutive = 0
+        discarded_targets_nanbrightness = 0
         discarded_targets_lowbrightness = 0
         discarded_targets_highbrightness = 0
         evaluated_targets = 0
@@ -185,7 +186,7 @@ class AreaDistributionProposal(Proposal):
 
             # discard fields beyond airmass limit
             if self.ignore_airmass:
-                airmass = 0.0
+                airmass = 1.0
             else:
                 airmass = airmass_dict[fieldid]
                 if airmass > self.params.max_airmass:
@@ -212,6 +213,10 @@ class AreaDistributionProposal(Proposal):
                 else:
                     # discard target beyond sky brightness limits
                     sky_brightness = mags_dict[fieldid][filter]
+                    if math.isnan(sky_brightness):
+                        discarded_targets_nanbrightness += 1
+                        continue
+
                     if sky_brightness < self.params.filter_min_brig_dict[filter]:
                         discarded_targets_lowbrightness += 1
                         continue
@@ -240,9 +245,10 @@ class AreaDistributionProposal(Proposal):
         self.log.debug("suggest_targets: fields=%d, evaluated=%d, discarded airmass=%d" %
                        (len(id_list), evaluated_fields, discarded_fields_airmass))
         self.log.debug("suggest_targets: evaluated targets=%d, discarded consecutive=%d "
-                       "lowbright=%d highbright=%d" %
+                       "lowbright=%d highbright=%d nanbright=%d" %
                        (evaluated_targets, discarded_targets_consecutive,
-                        discarded_targets_lowbrightness, discarded_targets_highbrightness))
+                        discarded_targets_lowbrightness, discarded_targets_highbrightness,
+                        discarded_targets_nanbrightness))
 
         return self.get_evaluated_target_list()
 
