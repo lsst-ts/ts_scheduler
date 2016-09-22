@@ -26,7 +26,7 @@ find_eups=$(${source_eups} 2>&1)
 if [ $? != 0 ]; then
 	echo "Installing necessary packages"
 	need_install=1
-	conda install -y lsst-sims-skybrightness enum34
+	conda install -y lsst-sims-skybrightness enum34 mock pytest
 	git clone https://github.com/lsst/sims_skybrightness.git
 else
 	echo "Updating packages"
@@ -40,10 +40,8 @@ if [ ${need_install} -eq 1 ]; then
 	eups declare sims_skybrightness git -r ${WORKSPACE}/sims_skybrightness -c
 fi
 setup sims_skybrightness
-if [ ${need_install} -eq 1 ]; then
-	cd ${WORKSPACE}/sims_skybrightness
-	scons
-	cd ${WORKSPACE}
-fi
+cd ${WORKSPACE}/sims_skybrightness
+scons
+cd ${WORKSPACE}
 
-python -m unittest discover tests
+py.test
