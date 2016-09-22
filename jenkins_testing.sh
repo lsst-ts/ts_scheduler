@@ -27,6 +27,7 @@ if [ $? != 0 ]; then
 	echo "Installing necessary packages"
 	need_install=1
 	conda install -y lsst-sims-skybrightness enum34 mock pytest
+	conda update astropy
 	git clone https://github.com/lsst/sims_skybrightness.git
 else
 	echo "Updating packages"
