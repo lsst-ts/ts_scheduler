@@ -29,6 +29,7 @@ class DriverParameters(object):
         self.ignore_airmass = False
         self.ignore_clouds = False
         self.ignore_seeing = False
+        self.new_moon_phase_threshold = 20.0
 
     def configure(self, confdict):
 
@@ -75,6 +76,10 @@ class Driver(object):
         self.sunrise_timestamp = 0.0
         self.survey_duration_DAYS = 0.0
         self.survey_duration_SECS = self.survey_duration_DAYS * 24 * 60 * 60.0
+        self.darktime = False
+        self.mounted_filter = ""
+        self.unmounted_filter = ""
+        self.midnight_moonphase = 0.0
 
     def configure_survey(self, survey_conf_file):
 
@@ -201,14 +206,6 @@ class Driver(object):
         area_prop.configure_constraints(self.params)
         self.science_proposal_list.append(area_prop)
 
-    #def configure_area_proposal(self,
-    #                            prop_id,
-    #                            name,
-    #                            config_dict):
-
-    #    area_prop = AreaDistributionProposal(prop_id, name, config_dict, self.sky)
-    #    self.science_proposal_list.append(area_prop)
-
     def build_fields_dict(self):
 
         sql = "select * from Field"
@@ -274,20 +271,86 @@ class Driver(object):
 
         self.isnight = False
 
+        total_filter_visits_dict = {}
+        total_filter_goal_dict = {}
+        total_filter_progress_dict = {}
         for prop in self.science_proposal_list:
             prop.end_night()
+            filter_visits_dict = {}
+            filter_goal_dict = {}
+            filter_progress_dict = {}
+            for filter in self.observatoryModel.filters:
+                if filter not in total_filter_visits_dict:
+                    total_filter_visits_dict[filter] = 0
+                    total_filter_goal_dict[filter] = 0
+                filter_visits_dict[filter] = prop.get_filter_visits(filter)
+                filter_goal_dict[filter] = prop.get_filter_goal(filter)
+                filter_progress_dict[filter] = prop.get_filter_progress(filter)
+                total_filter_visits_dict[filter] += filter_visits_dict[filter]
+                total_filter_goal_dict[filter] += filter_goal_dict[filter]
+            self.log.debug("end_night propid=%d name=%s filter_progress=%s" %
+                           (prop.propid, prop.name, str(filter_progress_dict)))
+        for filter in self.observatoryModel.filters:
+            if total_filter_goal_dict[filter] > 0:
+                total_filter_progress_dict[filter] = float(total_filter_visits_dict[filter]) / total_filter_goal_dict[filter]
+            else:
+                total_filter_progress_dict[filter] = 1.0
+        self.log.debug("end_night total_filter_progress=%s" %
+                           (str(total_filter_progress_dict)))
 
+        previous_midnight_moonphase = self.midnight_moonphase
         self.sky.update(timestamp)
         (sunset, sunrise) = self.sky.get_night_boundaries(self.params.night_boundary)
         self.log.debug("end_night sunset=%.1f sunrise=%.1f" % (sunset, sunrise))
 
         self.sunset_timestamp = sunset
         self.sunrise_timestamp = sunrise
+        next_midnight = (sunset + sunrise) / 2
+        self.sky.update(next_midnight)
+        info = self.sky.get_moon_sun_info(0.0, 0.0)
+        self.midnight_moonphase = info["moonPhase"]
+        self.log.info("end_night next moonphase=%.2f" % (self.midnight_moonphase))
 
-    def swap_filter_in(self):
-        return
+        need_filter_swap = False
+        filter_to_mount = ""
+        filter_to_unmount = ""
+        if self.darktime:
+            if self.midnight_moonphase > previous_midnight_moonphase:
+                self.log.info("end_night dark time waxing")
+                if self.midnight_moonphase > self.params.new_moon_phase_threshold:
+                    need_filter_swap = True
+                    filter_to_mount = self.unmounted_filter
+                    filter_to_unmount = self.mounted_filter
+                    self.darktime = False
+            else:
+                self.log.info("end_night dark time waning")
+        else:
+            if self.midnight_moonphase < previous_midnight_moonphase:
+                self.log.info("end_night bright time waning")
+                if self.midnight_moonphase < self.params.new_moon_phase_threshold:
+                    need_filter_swap = True
+                    filter_to_mount = self.observatoryModel.params.filter_darktime
+                    max_progress = -1.0
+                    for filter in self.observatoryModel.params.filter_removable_list:
+                        if total_filter_progress_dict[filter] > max_progress:
+                            filter_to_unmount = filter
+                            max_progress = total_filter_progress_dict[filter]
+                    self.darktime = True
+            else:
+                self.log.info("end_night bright time waxing")
 
-    def swap_filter_out(self):
+        if need_filter_swap:
+            self.log.debug("end_night filter swap %s=>cam=>%s" % (filter_to_mount, filter_to_unmount))
+
+        return (need_filter_swap, filter_to_unmount, filter_to_mount)
+
+    def swap_filter(self, filter_to_unmount, filter_to_mount):
+
+        self.log.info("swap_filter swap %s=>cam=>%s" % (filter_to_mount, filter_to_unmount))
+
+        self.unmounted_filter = filter_to_unmount
+        self.mounted_filter = filter_to_mount
+
         return
 
     def update_time(self, timestamp):
@@ -297,14 +360,24 @@ class Driver(object):
         if not self.survey_started:
             self.start_survey(timestamp)
 
+        needswap = False
+        filter2unmount = ""
+        filter2mount = ""
         if self.isnight:
             if timestamp >= self.sunrise_timestamp:
-                self.end_night(timestamp)
+                (needswap, filter2unmount, filter2mount) = self.end_night(timestamp)
         else:
             if timestamp >= self.sunset_timestamp:
                 self.start_night(timestamp)
 
+        return (needswap, filter2unmount, filter2mount)
+
     def update_internal_conditions(self, observatory_state):
+
+        if observatory_state.unmountedfilters != self.observatoryModel.currentState.unmountedfilters:
+            unmount = observatory_state.unmountedfilters[0]
+            mount = self.observatoryModel.currentState.unmountedfilters[0]
+            self.swap_filter(unmount, mount)
 
         self.time = observatory_state.time
         self.observatoryModel.set_state(observatory_state)

@@ -36,10 +36,17 @@ class Target(object):
         self.progress = 0.0
 
         #computed at driver
+        self.alt_rad = 0.0
+        self.az_rad = 0.0
+        self.rot_rad = 0.0
+        self.telalt_rad = 0.0
+        self.telaz_rad = 0.0
+        self.telrot_rad = 0.0
         self.propboost = 1.0
         self.slewtime = 0.0
         self.cost_bonus = 0.0
         self.rank = 0.0
+
         #assembled at driver
         self.num_props = 0
         self.propid_list = []
@@ -49,14 +56,18 @@ class Target(object):
         self.propboost_list = []
 
     def __str__(self):
-        return ("targetid=%d field=%d filter=%s exp_times=%s ra=%.3f dec=%.3f "
+        return ("targetid=%d field=%d filter=%s exp_times=%s ra=%.3f dec=%.3f ang=%.3f "
+                "alt=%.3f az=%.3f rot=%.3f "
+                "telalt=%.3f telaz=%.3f telrot=%.3f "
                 "time=%.1f airmass=%.3f brightness=%.3f "
                 "visits=%i progress=%.3f "
                 "need=%.3f bonus=%.3f value=%.3f "
                 "propid=%s need=%s bonus=%s value=%s "
                 "slewtime=%.3f costbonus=%.3f rank=%.3f" %
                 (self.targetid, self.fieldid, self.filter, str(self.exp_times),
-                 self.ra, self.dec,
+                 self.ra, self.dec, self.ang,
+                 self.alt, self.az, self.rot,
+                 self.telalt, self.telaz, self.telrot,
                  self.time, self.airmass, self.sky_brightness,
                  self.visits, self.progress,
                  self.need, self.bonus, self.value,
@@ -74,6 +85,30 @@ class Target(object):
     @property
     def ang(self):
         return math.degrees(self.ang_rad)
+
+    @property
+    def alt(self):
+        return math.degrees(self.alt_rad)
+
+    @property
+    def az(self):
+        return math.degrees(self.az_rad)
+
+    @property
+    def rot(self):
+        return math.degrees(self.rot_rad)
+
+    @property
+    def telalt(self):
+        return math.degrees(self.telalt_rad)
+
+    @property
+    def telaz(self):
+        return math.degrees(self.telaz_rad)
+
+    @property
+    def telrot(self):
+        return math.degrees(self.telrot_rad)
 
     @classmethod
     def from_topic(cls, topic):

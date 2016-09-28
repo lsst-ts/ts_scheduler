@@ -32,8 +32,8 @@ class AreaDistributionProposalParameters(object):
         self.filter_max_seeing_dict = {}
         self.filter_num_exp_dict = {}
         self.filter_exp_times_dict = {}
-        filters = ["u", "g", "r", "i", "z", "y"]
-        for filter in filters:
+        self.filters = ["u", "g", "r", "i", "z", "y"]
+        for filter in self.filters:
             filter_section = "filter_%s" % filter
             if filter_section in confdict:
                 self.filter_list.append(filter)
@@ -60,6 +60,9 @@ class AreaDistributionProposal(Proposal):
         self.total_goal = 0
         self.total_visits = 0
         self.total_progress = 0.0
+        self.filter_goal_dict = {}
+        self.filter_visits_dict = {}
+        self.filter_progress_dict = {}
         self.valued_targets_list = []
 
         self.last_observation = None
@@ -74,9 +77,15 @@ class AreaDistributionProposal(Proposal):
         super(AreaDistributionProposal, self).start_night(timestamp, filters_mounted_tonight_list)
 
         self.filters_tonight_list = []
+        self.filter_goal_dict = {}
+        self.filter_visits_dict = {}
+        self.filter_progress_dict = {}
         for filter in self.params.filter_list:
             if filter in filters_mounted_tonight_list:
                 self.filters_tonight_list.append(filter)
+                self.filter_goal_dict[filter] = 0
+                self.filter_visits_dict[filter] = 0
+                self.filter_progress_dict[filter] = 0.0
         self.build_fields_tonight_list(timestamp)
 
         # compute at start night
@@ -119,6 +128,11 @@ class AreaDistributionProposal(Proposal):
                     self.total_targets += 1
                     self.total_goal += target.goal
                     self.total_visits += target.visits
+                    self.filter_goal_dict[filter] += target.goal
+                    self.filter_visits_dict[filter] += target.visits
+            for filter in self.filters_tonight_list:
+                if filter in self.targets_dict[fieldid]:
+                    self.filter_progress_dict[filter] = float(self.filter_visits_dict[filter]) / self.filter_goal_dict[filter]
 
         self.total_progress = float(self.total_visits) / self.total_goal
         self.log.info("start_night targets=%i goal=%i visits=%i progress=%.6f" %
@@ -145,6 +159,27 @@ class AreaDistributionProposal(Proposal):
     def get_progress(self):
 
         return self.total_progress
+
+    def get_filter_visits(self, filter):
+
+        if filter in self.filter_visits_dict:
+            return self.filter_visits_dict[filter]
+        else:
+            return 0
+
+    def get_filter_goal(self, filter):
+
+        if filter in self.filter_goal_dict:
+            return self.filter_goal_dict[filter]
+        else:
+            return 0
+
+    def get_filter_progress(self, filter):
+
+        if filter in self.filter_progress_dict:
+            return self.filter_progress_dict[filter]
+        else:
+            return 1.0
 
     def suggest_targets(self, timestamp):
 
@@ -276,6 +311,8 @@ class AreaDistributionProposal(Proposal):
 
     def register_observation(self, observation):
 
+        fieldid = observation.fieldid
+        filter = observation.filter
         self.last_observation = observation
         tfound = None
         for target in self.winners_list:
@@ -289,11 +326,13 @@ class AreaDistributionProposal(Proposal):
                     break
 
         if tfound is not None:
-            target = self.targets_dict[observation.fieldid][observation.filter]
+            target = self.targets_dict[fieldid][filter]
             target.visits += 1
             target.progress = float(target.visits) / target.goal
             self.total_visits += 1
             self.total_progress = float(self.total_visits) / self.total_goal
+            self.filter_visits_dict[filter] += 1
+            self.filter_progress_dict[filter] = float(self.filter_visits_dict[filter]) / self.filter_goal_dict[filter]
             self.last_observation_was_for_this_proposal = True
             self.log.debug("register_observation: %s" % (target))
         else:

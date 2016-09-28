@@ -21,6 +21,7 @@ from SALPY_scheduler import scheduler_slewConfigC
 from SALPY_scheduler import scheduler_opticsLoopCorrConfigC
 from SALPY_scheduler import scheduler_parkConfigC
 from SALPY_scheduler import scheduler_areaDistPropConfigC
+from SALPY_scheduler import scheduler_filterSwapC
 
 #from SALPY_scheduler import flushSamples_schedulerConfig
 
@@ -57,6 +58,7 @@ class Main(object):
         self.topicObservation = scheduler_observationC()
         self.topicField = scheduler_fieldC()
         self.topicTarget = scheduler_targetC()
+        self.topicFilterSwap = scheduler_filterSwapC()
 
         self.schedulerDriver = Driver()
 
@@ -80,6 +82,7 @@ class Main(object):
         self.sal.salTelemetrySub("scheduler_observation")
         self.sal.salTelemetryPub("scheduler_field")
         self.sal.salTelemetryPub("scheduler_target")
+        self.sal.salTelemetryPub("scheduler_filterSwap")
 
         #self.sal.flushSamples_schedulerConfig(self.topic_schedulerConfig)
 
@@ -302,13 +305,13 @@ class Main(object):
                 self.sal.putSample_field(self.topicField)
                 for fieldid in field_dict:
                     self.topicField.ID = field_dict[fieldid].fieldid
-                    self.topicField.ra = field_dict[fieldid].ra_rad * RAD2DEG
-                    self.topicField.dec = field_dict[fieldid].dec_rad * RAD2DEG
-                    self.topicField.gl = field_dict[fieldid].gl_rad * RAD2DEG
-                    self.topicField.gb = field_dict[fieldid].gb_rad * RAD2DEG
-                    self.topicField.el = field_dict[fieldid].el_rad * RAD2DEG
-                    self.topicField.eb = field_dict[fieldid].eb_rad * RAD2DEG
-                    self.topicField.fov = field_dict[fieldid].fov_rad * RAD2DEG
+                    self.topicField.ra = math.degrees(field_dict[fieldid].ra_rad)
+                    self.topicField.dec = math.degrees(field_dict[fieldid].dec_rad)
+                    self.topicField.gl = math.degrees(field_dict[fieldid].gl_rad)
+                    self.topicField.gb = math.degrees(field_dict[fieldid].gb_rad)
+                    self.topicField.el = math.degrees(field_dict[fieldid].el_rad)
+                    self.topicField.eb = math.degrees(field_dict[fieldid].eb_rad)
+                    self.topicField.fov = math.degrees(field_dict[fieldid].fov_rad)
                     self.sal.putSample_field(self.topicField)
                     self.log.debug("run: tx field %s" % (field_dict[fieldid]))
                 self.topicField.ID = -1
@@ -325,7 +328,12 @@ class Main(object):
                         nightstamp = self.topicTime.night
                         self.log.debug("run: rx time=%.1f night=%i" % (timestamp, nightstamp))
 
-                        self.schedulerDriver.update_time(self.topicTime.timestamp)
+                        (needswap, filter2unmount, filter2mount) = self.schedulerDriver.update_time(timestamp)
+                        if needswap:
+                            self.topicFilterSwap.need_swap = needswap
+                            self.topicFilterSwap.filter_to_unmount = filter2unmount
+                            self.sal.putSample_filterSwap(self.topicFilterSwap)
+                            self.log.info("run: tx filter swap %s" % (filter2unmount))
 
                         waitstate = True
                         laststatetime = time.time()
@@ -559,7 +567,10 @@ class Main(object):
         confdict["camera"]["filter_max_changes_burst_time"] = topic_camera_config.filter_max_changes_burst_time
         confdict["camera"]["filter_max_changes_avg_num"] = topic_camera_config.filter_max_changes_avg_num
         confdict["camera"]["filter_max_changes_avg_time"] = topic_camera_config.filter_max_changes_avg_time
-        confdict["camera"]["filter_removable"] = topic_camera_config.filter_removable
+        if topic_camera_config.filter_removable != "":
+            confdict["camera"]["filter_removable"] = topic_camera_config.filter_removable.split(",")
+        else:
+            confdict["camera"]["filter_removable"] = []
 
         return confdict
 
@@ -766,20 +777,20 @@ class Main(object):
         state = ObservatoryState()
 
         state.time = topic_state.timestamp
-        state.ra_rad = topic_state.pointing_ra * DEG2RAD
-        state.dec_rad = topic_state.pointing_dec * DEG2RAD
-        state.ang_rad = topic_state.pointing_angle * DEG2RAD
+        state.ra_rad = math.radians(topic_state.pointing_ra)
+        state.dec_rad = math.radians(topic_state.pointing_dec)
+        state.ang_rad = math.radians(topic_state.pointing_angle)
         state.filter = topic_state.filter_position
         state.tracking = topic_state.tracking
-        state.alt_rad = topic_state.pointing_altitude * DEG2RAD
-        state.az_rad = topic_state.pointing_azimuth * DEG2RAD
-        state.pa_rad = topic_state.pointing_pa * DEG2RAD
-        state.rot_rad = topic_state.pointing_rot * DEG2RAD
-        state.telalt_rad = topic_state.telescope_altitude * DEG2RAD
-        state.telaz_rad = topic_state.telescope_azimuth * DEG2RAD
-        state.telrot_rad = topic_state.telescope_rotator * DEG2RAD
-        state.domalt_rad = topic_state.dome_altitude * DEG2RAD
-        state.domaz_rad = topic_state.dome_azimuth * DEG2RAD
+        state.alt_rad = math.radians(topic_state.pointing_altitude)
+        state.az_rad = math.radians(topic_state.pointing_azimuth)
+        state.pa_rad = math.radians(topic_state.pointing_pa)
+        state.rot_rad = math.radians(topic_state.pointing_rot)
+        state.telalt_rad = math.radians(topic_state.telescope_altitude)
+        state.telaz_rad = math.radians(topic_state.telescope_azimuth)
+        state.telrot_rad = math.radians(topic_state.telescope_rotator)
+        state.domalt_rad = math.radians(topic_state.dome_altitude)
+        state.domaz_rad = math.radians(topic_state.dome_azimuth)
         state.mountedfilters = topic_state.filter_mounted.split(",")
         state.unmountedfilters = topic_state.filter_unmounted.split(",")
 

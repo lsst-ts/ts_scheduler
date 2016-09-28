@@ -159,54 +159,64 @@ class ObservatoryModelTest(unittest.TestCase):
         self.model.reset()
         self.assertEqual(self.model.currentState.__str__(), "t=0.0 ra=0.000 dec=0.000 ang=0.000 "
                          "filter=r track=False alt=86.500 az=0.000 pa=0.000 rot=0.000 "
-                         "telaz=0.000 telrot=0.000")
+                         "telaz=0.000 telrot=0.000 "
+                         "mounted=['g', 'r', 'i', 'z', 'y'] unmounted=['u']")
 
     def test_slew_altaz(self):
         self.model.update_state(0)
         self.assertEqual(str(self.model.currentState), "t=0.0 ra=29.342 dec=-26.744 ang=180.000 "
                          "filter=r track=False alt=86.500 az=0.000 pa=-180.000 rot=0.000 "
-                         "telaz=0.000 telrot=0.000")
+                         "telaz=0.000 telrot=0.000 "
+                         "mounted=['g', 'r', 'i', 'z', 'y'] unmounted=['u']")
         self.model.slew_altaz(0, math.radians(80), math.radians(0), math.radians(0), "r")
         self.model.start_tracking(0)
         self.assertEqual(str(self.model.currentState), "t=7.7 ra=29.374 dec=-20.244 ang=180.000 "
                          "filter=r track=True alt=80.000 az=0.000 pa=-180.000 rot=0.000 "
-                         "telaz=0.000 telrot=0.000")
+                         "telaz=0.000 telrot=0.000 "
+                         "mounted=['g', 'r', 'i', 'z', 'y'] unmounted=['u']")
 
         self.model.update_state(100)
         self.assertEqual(str(self.model.currentState), "t=100.0 ra=29.374 dec=-20.244 ang=180.000 "
                          "filter=r track=True alt=79.994 az=357.918 pa=178.083 rot=358.083 "
-                         "telaz=-2.082 telrot=-1.917")
+                         "telaz=-2.082 telrot=-1.917 "
+                         "mounted=['g', 'r', 'i', 'z', 'y'] unmounted=['u']")
         self.model.slew_altaz(100, math.radians(70), math.radians(30), math.radians(15), "r")
         self.model.start_tracking(0)
         self.assertEqual(str(self.model.currentState), "t=144.4 ra=40.035 dec=-12.558 ang=191.265 "
                          "filter=r track=True alt=70.000 az=30.000 pa=-153.735 rot=15.000 "
-                         "telaz=30.000 telrot=15.000")
+                         "telaz=30.000 telrot=15.000 "
+                         "mounted=['g', 'r', 'i', 'z', 'y'] unmounted=['u']")
 
     def test_slew_radec(self):
         self.model.update_state(0)
         self.assertEqual(str(self.model.currentState), "t=0.0 ra=29.342 dec=-26.744 ang=180.000 "
                          "filter=r track=False alt=86.500 az=0.000 pa=-180.000 rot=0.000 "
-                         "telaz=0.000 telrot=0.000")
+                         "telaz=0.000 telrot=0.000 "
+                         "mounted=['g', 'r', 'i', 'z', 'y'] unmounted=['u']")
         self.model.slew_radec(0, math.radians(80), math.radians(0), math.radians(0), "r")
         self.assertEqual(str(self.model.currentState), "t=68.0 ra=80.000 dec=0.000 ang=-180.000 "
                          "filter=r track=True alt=33.433 az=67.360 pa=-127.125 rot=52.875 "
-                         "telaz=67.360 telrot=52.875")
+                         "telaz=67.360 telrot=52.875 "
+                         "mounted=['g', 'r', 'i', 'z', 'y'] unmounted=['u']")
 
         self.model.update_state(100)
         self.assertEqual(str(self.model.currentState), "t=100.0 ra=80.000 dec=0.000 ang=-180.000 "
                          "filter=r track=True alt=33.539 az=67.264 pa=-127.179 rot=52.821 "
-                         "telaz=67.264 telrot=52.821")
+                         "telaz=67.264 telrot=52.821 "
+                         "mounted=['g', 'r', 'i', 'z', 'y'] unmounted=['u']")
         self.model.slew_radec(100, math.radians(70), math.radians(-30), math.radians(15), "r")
         self.assertEqual(str(self.model.currentState), "t=144.8 ra=70.000 dec=-30.000 ang=-165.000 "
                          "filter=r track=True alt=55.539 az=99.978 pa=-100.754 rot=64.246 "
-                         "telaz=99.978 telrot=64.246")
+                         "telaz=99.978 telrot=64.246 "
+                         "mounted=['g', 'r', 'i', 'z', 'y'] unmounted=['u']")
 
     def test_get_slew_delay(self):
         self.model.update_state(0)
         self.model.params.Rotator_FollowSky = True
         self.assertEqual(str(self.model.currentState), "t=0.0 ra=29.342 dec=-26.744 ang=180.000 "
                          "filter=r track=False alt=86.500 az=0.000 pa=-180.000 rot=0.000 "
-                         "telaz=0.000 telrot=0.000")
+                         "telaz=0.000 telrot=0.000 "
+                         "mounted=['g', 'r', 'i', 'z', 'y'] unmounted=['u']")
 
         target = Target()
         target.ra_rad = math.radians(60)
@@ -250,7 +260,8 @@ class ObservatoryModelTest(unittest.TestCase):
         self.model.params.Rotator_FollowSky = False
         self.assertEqual(str(self.model.currentState), "t=0.0 ra=29.342 dec=-26.744 ang=180.000 "
                          "filter=r track=False alt=86.500 az=0.000 pa=-180.000 rot=0.000 "
-                         "telaz=0.000 telrot=0.000")
+                         "telaz=0.000 telrot=0.000 "
+                         "mounted=['g', 'r', 'i', 'z', 'y'] unmounted=['u']")
 
         target = Target()
         target.ra_rad = math.radians(60)
@@ -293,7 +304,8 @@ class ObservatoryModelTest(unittest.TestCase):
         self.model.update_state(0)
         self.assertEqual(str(self.model.currentState), "t=0.0 ra=29.342 dec=-26.744 ang=180.000 "
                          "filter=r track=False alt=86.500 az=0.000 pa=-180.000 rot=0.000 "
-                         "telaz=0.000 telrot=0.000")
+                         "telaz=0.000 telrot=0.000 "
+                         "mounted=['g', 'r', 'i', 'z', 'y'] unmounted=['u']")
 
         target = Target()
         target.ra_rad = math.radians(60)
@@ -304,7 +316,8 @@ class ObservatoryModelTest(unittest.TestCase):
         self.model.slew(target)
         self.assertEqual(str(self.model.currentState), "t=74.3 ra=60.000 dec=-20.000 ang=-180.000 "
                          "filter=r track=True alt=60.788 az=76.614 pa=-116.575 rot=63.425 "
-                         "telaz=76.614 telrot=63.425")
+                         "telaz=76.614 telrot=63.425 "
+                         "mounted=['g', 'r', 'i', 'z', 'y'] unmounted=['u']")
 
         target = Target()
         target.ra_rad = math.radians(60)
@@ -315,7 +328,8 @@ class ObservatoryModelTest(unittest.TestCase):
         self.model.slew(target)
         self.assertEqual(str(self.model.currentState), "t=194.3 ra=60.000 dec=-20.000 ang=-180.000 "
                          "filter=i track=True alt=61.209 az=76.177 pa=-116.785 rot=63.215 "
-                         "telaz=76.177 telrot=63.215")
+                         "telaz=76.177 telrot=63.215 "
+                         "mounted=['g', 'r', 'i', 'z', 'y'] unmounted=['u']")
 
     def test_slewdata(self):
         self.model.update_state(0)
@@ -329,7 +343,8 @@ class ObservatoryModelTest(unittest.TestCase):
         self.model.slew(target)
         self.assertEqual(str(self.model.currentState), "t=74.3 ra=60.000 dec=-20.000 ang=-180.000 "
                          "filter=r track=True alt=60.788 az=76.614 pa=-116.575 rot=63.425 "
-                         "telaz=76.614 telrot=63.425")
+                         "telaz=76.614 telrot=63.425 "
+                         "mounted=['g', 'r', 'i', 'z', 'y'] unmounted=['u']")
         lastslew_delays_dict = self.model.lastslew_delays_dict
         self.assertAlmostEquals(lastslew_delays_dict["telalt"], 8.421, delta=1e-3)
         self.assertAlmostEquals(lastslew_delays_dict["telaz"], 11.983, delta=1e-3)
@@ -359,7 +374,8 @@ class ObservatoryModelTest(unittest.TestCase):
         self.model.slew(target)
         self.assertEqual(str(self.model.currentState), "t=194.3 ra=60.000 dec=-20.000 ang=-180.000 "
                          "filter=i track=True alt=61.209 az=76.177 pa=-116.785 rot=63.215 "
-                         "telaz=76.177 telrot=63.215")
+                         "telaz=76.177 telrot=63.215 "
+                         "mounted=['g', 'r', 'i', 'z', 'y'] unmounted=['u']")
         lastslew_delays_dict = self.model.lastslew_delays_dict
         self.assertAlmostEquals(lastslew_delays_dict["telalt"], 0.0, delta=1e-3)
         self.assertAlmostEquals(lastslew_delays_dict["telaz"], 0.0, delta=1e-3)
@@ -389,7 +405,8 @@ class ObservatoryModelTest(unittest.TestCase):
         self.model.slew(target)
         self.assertEqual(str(self.model.currentState), "t=199.0 ra=61.000 dec=-21.000 ang=-179.000 "
                          "filter=i track=True alt=60.817 az=78.859 pa=-114.782 rot=64.218 "
-                         "telaz=78.859 telrot=64.218")
+                         "telaz=78.859 telrot=64.218 "
+                         "mounted=['g', 'r', 'i', 'z', 'y'] unmounted=['u']")
         lastslew_delays_dict = self.model.lastslew_delays_dict
         self.assertAlmostEquals(lastslew_delays_dict["telalt"], 0.683, delta=1e-3)
         self.assertAlmostEquals(lastslew_delays_dict["telaz"], 1.242, delta=1e-3)
@@ -420,28 +437,34 @@ class ObservatoryModelTest(unittest.TestCase):
         self.model.params.Rotator_FollowSky = True
         self.assertEqual(str(self.model.currentState), "t=0.0 ra=29.342 dec=-26.744 ang=180.000 "
                          "filter=r track=False alt=86.500 az=0.000 pa=-180.000 rot=0.000 "
-                         "telaz=0.000 telrot=0.000")
+                         "telaz=0.000 telrot=0.000 "
+                         "mounted=['g', 'r', 'i', 'z', 'y'] unmounted=['u']")
         self.model.slew_radec(0, math.radians(80), math.radians(0), math.radians(0), "r")
         self.assertEqual(str(self.model.currentState), "t=68.0 ra=80.000 dec=0.000 ang=-180.000 "
                          "filter=r track=True alt=33.433 az=67.360 pa=-127.125 rot=52.875 "
-                         "telaz=67.360 telrot=52.875")
+                         "telaz=67.360 telrot=52.875 "
+                         "mounted=['g', 'r', 'i', 'z', 'y'] unmounted=['u']")
         self.model.slew_radec(0, math.radians(83.5), math.radians(0), math.radians(0), "r")
         self.assertEqual(str(self.model.currentState), "t=72.8 ra=83.500 dec=0.000 ang=-180.000 "
                          "filter=r track=True alt=30.634 az=69.801 pa=-125.830 rot=54.170 "
-                         "telaz=69.801 telrot=54.170")
+                         "telaz=69.801 telrot=54.170 "
+                         "mounted=['g', 'r', 'i', 'z', 'y'] unmounted=['u']")
 
     def test_rotator_followsky_false(self):
         self.model.update_state(0)
         self.model.params.Rotator_FollowSky = False
         self.assertEqual(str(self.model.currentState), "t=0.0 ra=29.342 dec=-26.744 ang=180.000 "
                          "filter=r track=False alt=86.500 az=0.000 pa=-180.000 rot=0.000 "
-                         "telaz=0.000 telrot=0.000")
+                         "telaz=0.000 telrot=0.000 "
+                         "mounted=['g', 'r', 'i', 'z', 'y'] unmounted=['u']")
         self.model.slew_radec(0, math.radians(80), math.radians(0), math.radians(0), "r")
         self.assertEqual(str(self.model.currentState), "t=68.0 ra=80.000 dec=0.000 ang=-127.013 "
                          "filter=r track=True alt=33.433 az=67.360 pa=-127.125 rot=359.887 "
-                         "telaz=67.360 telrot=-0.113")
+                         "telaz=67.360 telrot=-0.113 "
+                         "mounted=['g', 'r', 'i', 'z', 'y'] unmounted=['u']")
         self.model.slew_radec(0, math.radians(83.5), math.radians(0), math.radians(0), "r")
         self.assertEqual(str(self.model.currentState), "t=72.8 ra=83.500 dec=0.000 ang=-125.711 "
                          "filter=r track=True alt=30.634 az=69.801 pa=-125.830 rot=359.880 "
-                         "telaz=69.801 telrot=-0.120")
+                         "telaz=69.801 telrot=-0.120 "
+                         "mounted=['g', 'r', 'i', 'z', 'y'] unmounted=['u']")
         self.model.params.Rotator_FollowSky = True

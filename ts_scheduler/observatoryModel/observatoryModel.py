@@ -49,6 +49,7 @@ class ObservatoryModelParameters(object):
         self.ReadoutTime = 0.0
         self.ShutterTime = 0.0
         self.Filter_ChangeTime = 0.0
+        self.filter_darktime = "u"
         self.filter_removable_list = []
         self.filter_max_changes_burst_num = 0
         self.filter_max_changes_burst_time = 0.0
@@ -133,6 +134,8 @@ class ObservatoryModel(object):
         self.targetPosition = ObservatoryPosition()
         self.Filter_MountedList = []
         self.Filter_UnmountedList = []
+
+        self.filters = ["u", "g", "r", "i", "z", "y"]
 
         self.activities = ["telalt",
                            "telaz",
@@ -376,51 +379,6 @@ class ObservatoryModel(object):
             self.currentState.ang_rad = divmod(pa_rad - self.currentState.rot_rad, TWOPI)[1]
             self.currentState.pa_rad = pa_rad
 
-    def start_tracking(self, time):
-        if time < self.currentState.time:
-            time = self.currentState.time
-        if not self.currentState.tracking:
-            self.update_state(time)
-            self.currentState.tracking = True
-
-    def stop_tracking(self, time):
-        if time < self.currentState.time:
-            time = self.currentState.time
-        if self.currentState.tracking:
-            self.update_state(time)
-            self.currentState.tracking = False
-
-    def slew_altaz(self, time, alt_rad, az_rad, rot_rad, filter):
-
-        self.update_state(time)
-        time = self.currentState.time
-
-        targetposition = ObservatoryPosition()
-        targetposition.time = time
-        targetposition.tracking = False
-        targetposition.alt_rad = alt_rad
-        targetposition.az_rad = az_rad
-        targetposition.rot_rad = rot_rad
-        targetposition.filter = filter
-
-        self.slew_to_position(targetposition)
-
-    def slew_radec(self, time, ra_rad, dec_rad, ang_rad, filter):
-
-        self.update_state(time)
-        time = self.currentState.time
-
-        targetposition = self.radecang2position(time, ra_rad, dec_rad, ang_rad, filter)
-        if not self.params.Rotator_FollowSky:
-            targetposition.rot_rad = self.currentState.telrot_rad
-
-        self.slew_to_position(targetposition)
-
-    def slew(self, target):
-
-        self.slew_radec(self.currentState.time,
-                        target.ra_rad, target.dec_rad, target.ang_rad, target.filter)
-
     def get_slew_delay(self, target):
 
         # check if filter is possible
@@ -433,6 +391,7 @@ class ObservatoryModel(object):
                                                 target.ang_rad,
                                                 target.filter)
         if not self.params.Rotator_FollowSky:
+            #override rotator position with current telrot
             targetposition.rot_rad = self.currentState.telrot_rad
 
         # check if altitude is possible
@@ -442,46 +401,15 @@ class ObservatoryModel(object):
             return -1.0
 
         targetstate = self.get_closest_state(targetposition)
+        target.ang_rad = targetstate.ang_rad
+        target.alt_rad = targetstate.alt_rad
+        target.az_rad = targetstate.az_rad
+        target.rot_rad = targetstate.rot_rad
+        target.telalt_rad = targetstate.telalt_rad
+        target.telaz_rad = targetstate.telaz_rad
+        target.telrot_rad = targetstate.telrot_rad
 
         return self.get_slew_delay_for_state(targetstate, self.currentState, False)
-
-    def observe(self, target):
-        return
-
-    def park(self):
-        return
-
-    def slew_to_position(self, targetposition):
-
-        targetstate = self.get_closest_state(targetposition)
-        slew_delay = self.get_slew_delay_for_state(targetstate, self.currentState, True)
-        if targetposition.filter != self.currentState.filter:
-            self.filter_changes_list.append(targetstate.time)
-        targetstate.time = targetstate.time + slew_delay
-        self.currentState.set(targetstate)
-        self.update_state(targetstate.time)
-
-    def reset(self):
-
-        self.set_state(self.parkState)
-
-    def radecang2position(self, time, ra_rad, dec_rad, ang_rad, filter):
-
-        (alt_rad, az_rad, pa_rad) = self.radec2altazpa(time, ra_rad, dec_rad)
-
-        position = ObservatoryPosition()
-        position.time = time
-        position.tracking = True
-        position.ra_rad = ra_rad
-        position.dec_rad = dec_rad
-        position.ang_rad = ang_rad
-        position.filter = filter
-        position.alt_rad = alt_rad
-        position.az_rad = az_rad
-        position.pa_rad = pa_rad
-        position.rot_rad = divmod(pa_rad - ang_rad, TWOPI)[1]
-
-        return position
 
     def get_closest_state(self, targetposition):
 
@@ -495,7 +423,7 @@ class ObservatoryModel(object):
                                                                        self.params.TelAz_MaxPos_rad)
 
         # if the target rotator angle is unreachable
-        # then sets an arbitrary value
+        # then sets an arbitrary value (oposite)
         norm_rot_rad = divmod(targetposition.rot_rad - self.params.TelRot_MinPos_rad, TWOPI)[1] \
             + self.params.TelRot_MinPos_rad
         if norm_rot_rad > self.params.TelRot_MaxPos_rad:
@@ -557,6 +485,111 @@ class ObservatoryModel(object):
         final_abs_rad = current_abs_rad + distance_rad
 
         return (final_abs_rad, distance_rad)
+
+    def radecang2position(self, time, ra_rad, dec_rad, ang_rad, filter):
+
+        (alt_rad, az_rad, pa_rad) = self.radec2altazpa(time, ra_rad, dec_rad)
+
+        position = ObservatoryPosition()
+        position.time = time
+        position.tracking = True
+        position.ra_rad = ra_rad
+        position.dec_rad = dec_rad
+        position.ang_rad = ang_rad
+        position.filter = filter
+        position.alt_rad = alt_rad
+        position.az_rad = az_rad
+        position.pa_rad = pa_rad
+        position.rot_rad = divmod(pa_rad - ang_rad, TWOPI)[1]
+
+        return position
+
+    def radec2altazpa(self, time, ra_rad, dec_rad):
+        """
+        Converts ra_rad, dec_rad coordinates into alt_rad az_rad for given DATE.
+        inputs:
+               ra_rad:  Right Ascension in radians
+               dec_rad: Declination in radians
+               DATE: Time in seconds since simulation reference (SIMEPOCH)
+        output:
+               (alt_rad, az_rad, pa_rad, HA_HOU)
+               alt_rad: Altitude in radians [-90.0  90.0] 90=>zenith
+               az_rad:  Azimuth in radians [  0.0 360.0] 0=>N 90=>E
+               pa_rad:  Parallactic Angle in radians
+               HA_HOU:  Hour Angle in hours
+        """
+        lst_rad = self.date2lst(time)
+        ha_rad = lst_rad - ra_rad
+
+        (az_rad, alt_rad) = pal.de2h(ha_rad, dec_rad, self.location.latitude_rad)
+        pa_rad = pal.pa(ha_rad, dec_rad, self.location.latitude_rad)
+
+        return (alt_rad, az_rad, pa_rad)
+
+    def start_tracking(self, time):
+        if time < self.currentState.time:
+            time = self.currentState.time
+        if not self.currentState.tracking:
+            self.update_state(time)
+            self.currentState.tracking = True
+
+    def stop_tracking(self, time):
+        if time < self.currentState.time:
+            time = self.currentState.time
+        if self.currentState.tracking:
+            self.update_state(time)
+            self.currentState.tracking = False
+
+    def slew_altaz(self, time, alt_rad, az_rad, rot_rad, filter):
+
+        self.update_state(time)
+        time = self.currentState.time
+
+        targetposition = ObservatoryPosition()
+        targetposition.time = time
+        targetposition.tracking = False
+        targetposition.alt_rad = alt_rad
+        targetposition.az_rad = az_rad
+        targetposition.rot_rad = rot_rad
+        targetposition.filter = filter
+
+        self.slew_to_position(targetposition)
+
+    def slew_radec(self, time, ra_rad, dec_rad, ang_rad, filter):
+
+        self.update_state(time)
+        time = self.currentState.time
+
+        targetposition = self.radecang2position(time, ra_rad, dec_rad, ang_rad, filter)
+        if not self.params.Rotator_FollowSky:
+            targetposition.rot_rad = self.currentState.telrot_rad
+
+        self.slew_to_position(targetposition)
+
+    def slew(self, target):
+
+        self.slew_radec(self.currentState.time,
+                        target.ra_rad, target.dec_rad, target.ang_rad, target.filter)
+
+    def observe(self, target):
+        return
+
+    def park(self):
+        return
+
+    def slew_to_position(self, targetposition):
+
+        targetstate = self.get_closest_state(targetposition)
+        slew_delay = self.get_slew_delay_for_state(targetstate, self.currentState, True)
+        if targetposition.filter != self.currentState.filter:
+            self.filter_changes_list.append(targetstate.time)
+        targetstate.time = targetstate.time + slew_delay
+        self.currentState.set(targetstate)
+        self.update_state(targetstate.time)
+
+    def reset(self):
+
+        self.set_state(self.parkState)
 
     def compute_kinematic_delay(self, distance, maxspeed, accel, decel):
 
@@ -798,25 +831,3 @@ class ObservatoryModel(object):
         ra_rad = divmod(lst_rad - ha_rad, TWOPI)[1]
 
         return (ra_rad, dec_rad, pa_rad)
-
-    def radec2altazpa(self, time, ra_rad, dec_rad):
-        """
-        Converts ra_rad, dec_rad coordinates into alt_rad az_rad for given DATE.
-        inputs:
-               ra_rad:  Right Ascension in radians
-               dec_rad: Declination in radians
-               DATE: Time in seconds since simulation reference (SIMEPOCH)
-        output:
-               (alt_rad, az_rad, pa_rad, HA_HOU)
-               alt_rad: Altitude in radians [-90.0  90.0] 90=>zenith
-               az_rad:  Azimuth in radians [  0.0 360.0] 0=>N 90=>E
-               pa_rad:  Parallactic Angle in radians
-               HA_HOU:  Hour Angle in hours
-        """
-        lst_rad = self.date2lst(time)
-        ha_rad = lst_rad - ra_rad
-
-        (az_rad, alt_rad) = pal.de2h(ha_rad, dec_rad, self.location.latitude_rad)
-        pa_rad = pal.pa(ha_rad, dec_rad, self.location.latitude_rad)
-
-        return (alt_rad, az_rad, pa_rad)

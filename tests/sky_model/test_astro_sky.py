@@ -137,4 +137,4 @@ class AstronomicalSkyTest(unittest.TestCase):
         self.assertEqual(info['azs'].size, self.ra_rads.size)
         self.assertAlmostEqual(info['airmass'][0], 1.9853499253850075, delta=1e-7)
         self.assertAlmostEqual(info['alts'][0], 0.52786436029017303, delta=1e-7)
-        self.assertTrue(numpy.isnan(info['azs'][0]))
+        self.assertFalse(numpy.isnan(info['azs'][0]))

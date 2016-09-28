@@ -88,8 +88,9 @@ class ObservatoryState(ObservatoryPosition):
         return math.degrees(self.telrot_peakspeed_rad)
 
     def __str__(self):
-        return ("%s telaz=%.3f telrot=%.3f" %
-                (super(ObservatoryState, self).__str__(), self.telaz, self.telrot))
+        return ("%s telaz=%.3f telrot=%.3f mounted=%s unmounted=%s" %
+                (super(ObservatoryState, self).__str__(),
+                 self.telaz, self.telrot, self.mountedfilters, self.unmountedfilters))
 
     def set(self, newstate):
 
@@ -140,3 +141,10 @@ class ObservatoryState(ObservatoryPosition):
         self.domalt_peakspeed_rad = 0
         self.domaz_rad = newposition.az_rad
         self.domaz_peakspeed_rad = 0
+
+    def swap_filter(self, filter_to_mount, filter_to_unmount):
+
+        self.mountedfilters.remove(filter_to_unmount)
+        self.unmountedfilters.remove(filter_to_mount)
+        self.mountedfilter.append(filter_to_mount)
+        self.unmountedfilter.append(filter_to_unmount)
