@@ -324,18 +324,23 @@ class Main(object):
                 if scode == 0 and self.topicTime.timestamp != 0:
                     if self.topicTime.timestamp > timestamp:
                         lasttimetime = time.time()
-                        timestamp = self.topicTime.timestamp
+                        timestamp = round(self.topicTime.timestamp, 6)
                         nightstamp = self.topicTime.night
-                        self.log.debug("run: rx time=%.1f night=%i" % (timestamp, nightstamp))
+                        self.log.debug("run: rx time=%.6f night=%i" % (timestamp, nightstamp))
 
-                        (needswap, filter2unmount, filter2mount) = self.schedulerDriver.update_time(timestamp)
-                        if needswap:
+                        isnight = self.schedulerDriver.update_time(timestamp)
+                        if isnight:
+                            waitstate = True
+                        else:
+                            (needswap, filter2unmount, filter2mount) = \
+                                self.schedulerDriver.get_need_filter_swap()
+
                             self.topicFilterSwap.need_swap = needswap
                             self.topicFilterSwap.filter_to_unmount = filter2unmount
                             self.sal.putSample_filterSwap(self.topicFilterSwap)
-                            self.log.info("run: tx filter swap %s" % (filter2unmount))
+                            self.log.info("run: tx filter swap %s %s" % (needswap, filter2unmount))
+                            waitstate = False
 
-                        waitstate = True
                         laststatetime = time.time()
                         while waitstate:
                             scode = self.sal.getNextSample_observatoryState(self.topicObservatoryState)
@@ -783,7 +788,7 @@ class Main(object):
 
         state = ObservatoryState()
 
-        state.time = topic_state.timestamp
+        state.time = round(topic_state.timestamp, 6)
         state.ra_rad = math.radians(topic_state.pointing_ra)
         state.dec_rad = math.radians(topic_state.pointing_dec)
         state.ang_rad = math.radians(topic_state.pointing_angle)
