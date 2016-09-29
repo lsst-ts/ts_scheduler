@@ -3,7 +3,7 @@ import logging
 
 import palpy as pal
 
-from ts_scheduler.setup import WORDY, EXTENSIVE
+from ts_scheduler.setup import WORDY
 from ts_scheduler.schedulerDefinitions import TWOPI
 from ts_scheduler.observatoryModel import ObservatoryLocation
 from ts_scheduler.observatoryModel import ObservatoryPosition
@@ -287,21 +287,29 @@ class ObservatoryModel(object):
         self.params.configure_camera(confdict)
 
         self.log.log(WORDY,
-                     "configure_camera: Filter_ChangeTime=%.1f" % (self.params.Filter_ChangeTime))
+                     "configure_camera: Filter_ChangeTime=%.1f" %
+                     (self.params.Filter_ChangeTime))
         self.log.log(WORDY,
-                     "configure_camera: ReadoutTime=%.1f" % (self.params.ReadoutTime))
+                     "configure_camera: ReadoutTime=%.1f" %
+                     (self.params.ReadoutTime))
         self.log.log(WORDY,
-                     "configure_camera: ShutterTime=%.1f" % (self.params.ShutterTime))
+                     "configure_camera: ShutterTime=%.1f" %
+                     (self.params.ShutterTime))
         self.log.log(WORDY,
-                     "configure_camera: filter_removable=%s" % (self.params.filter_removable_list))
+                     "configure_camera: filter_removable=%s" %
+                     (self.params.filter_removable_list))
         self.log.log(WORDY,
-                     "configure_camera: filter_max_changes_burst_num=%i" % (self.params.filter_max_changes_burst_num))
+                     "configure_camera: filter_max_changes_burst_num=%i" %
+                     (self.params.filter_max_changes_burst_num))
         self.log.log(WORDY,
-                     "configure_camera: filter_max_changes_burst_time=%.1f" % (self.params.filter_max_changes_burst_time))
+                     "configure_camera: filter_max_changes_burst_time=%.1f" %
+                     (self.params.filter_max_changes_burst_time))
         self.log.log(WORDY,
-                     "configure_camera: filter_max_changes_avg_num=%i" % (self.params.filter_max_changes_avg_num))
+                     "configure_camera: filter_max_changes_avg_num=%i" %
+                     (self.params.filter_max_changes_avg_num))
         self.log.log(WORDY,
-                     "configure_camera: filter_max_changes_avg_time=%.1f" % (self.params.filter_max_changes_avg_time))
+                     "configure_camera: filter_max_changes_avg_time=%.1f" %
+                     (self.params.filter_max_changes_avg_time))
 
     def configure_slew(self, confdict):
 

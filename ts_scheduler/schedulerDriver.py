@@ -29,7 +29,7 @@ class DriverParameters(object):
         self.ignore_airmass = False
         self.ignore_clouds = False
         self.ignore_seeing = False
-        self.new_moon_phase_threshold = 20.0
+        self.new_moon_phase_threshold = 0.0
 
     def configure(self, confdict):
 
@@ -47,6 +47,7 @@ class DriverParameters(object):
         self.ignore_airmass = confdict["constraints"]["ignore_airmass"]
         self.ignore_clouds = confdict["constraints"]["ignore_clouds"]
         self.ignore_seeing = confdict["constraints"]["ignore_seeing"]
+        self.new_moon_phase_threshold = confdict["darktime"]["new_moon_phase_threshold"]
 
 class Driver(object):
     def __init__(self):
@@ -80,6 +81,10 @@ class Driver(object):
         self.mounted_filter = ""
         self.unmounted_filter = ""
         self.midnight_moonphase = 0.0
+
+        self.nulltarget = Target()
+        self.nulltarget.num_exp = 2
+        self.nulltarget.targetid = -1
 
     def configure_survey(self, survey_conf_file):
 
@@ -157,6 +162,8 @@ class Driver(object):
                      "configure: ignore_clouds=%s" % (self.params.ignore_clouds))
         self.log.log(WORDY,
                      "configure: ignore_seeing=%s" % (self.params.ignore_seeing))
+        self.log.log(WORDY,
+                     "configure: new_moon_phase_threshold=%.2f" % (self.params.new_moon_phase_threshold))
 
         for prop in self.science_proposal_list:
             prop.configure_constraints(self.params)
@@ -292,11 +299,12 @@ class Driver(object):
                            (prop.propid, prop.name, str(filter_progress_dict)))
         for filter in self.observatoryModel.filters:
             if total_filter_goal_dict[filter] > 0:
-                total_filter_progress_dict[filter] = float(total_filter_visits_dict[filter]) / total_filter_goal_dict[filter]
+                total_filter_progress_dict[filter] = \
+                    float(total_filter_visits_dict[filter]) / total_filter_goal_dict[filter]
             else:
                 total_filter_progress_dict[filter] = 1.0
         self.log.debug("end_night total_filter_progress=%s" %
-                           (str(total_filter_progress_dict)))
+                       (str(total_filter_progress_dict)))
 
         previous_midnight_moonphase = self.midnight_moonphase
         self.sky.update(timestamp)
@@ -387,6 +395,9 @@ class Driver(object):
 
     def select_next_target(self):
 
+        if not self.isnight:
+            return self.nulltarget
+
         targets_dict = {}
         ranked_targets_list = []
         propboost_dict = {}
@@ -457,9 +468,7 @@ class Driver(object):
             winner_target.time = self.time
         except:
             # if no target to suggest
-            winner_target = Target()
-            winner_target.num_exp = 2
-            winner_target.targetid = -1
+            winner_target = self.nulltarget
 
         return winner_target
 

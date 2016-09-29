@@ -1,13 +1,11 @@
 import copy
 import math
-import logging
 
 from operator import itemgetter
 
 from ts_scheduler.proposal import Proposal
 from ts_scheduler.schedulerField import Field
 from ts_scheduler.schedulerTarget import Target
-from ts_scheduler.fields import FieldsDatabase, FieldSelection
 
 class AreaDistributionProposalParameters(object):
 
@@ -132,7 +130,8 @@ class AreaDistributionProposal(Proposal):
                     self.filter_visits_dict[filter] += target.visits
             for filter in self.filters_tonight_list:
                 if filter in self.targets_dict[fieldid]:
-                    self.filter_progress_dict[filter] = float(self.filter_visits_dict[filter]) / self.filter_goal_dict[filter]
+                    self.filter_progress_dict[filter] = \
+                        float(self.filter_visits_dict[filter]) / self.filter_goal_dict[filter]
 
         self.total_progress = float(self.total_visits) / self.total_goal
         self.log.info("start_night targets=%i goal=%i visits=%i progress=%.6f" %
@@ -332,7 +331,8 @@ class AreaDistributionProposal(Proposal):
             self.total_visits += 1
             self.total_progress = float(self.total_visits) / self.total_goal
             self.filter_visits_dict[filter] += 1
-            self.filter_progress_dict[filter] = float(self.filter_visits_dict[filter]) / self.filter_goal_dict[filter]
+            self.filter_progress_dict[filter] = \
+                float(self.filter_visits_dict[filter]) / self.filter_goal_dict[filter]
             self.last_observation_was_for_this_proposal = True
             self.log.debug("register_observation: %s" % (target))
         else:

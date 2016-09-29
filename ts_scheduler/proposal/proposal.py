@@ -1,8 +1,6 @@
 import logging
 import math
-import os
 
-from ts_scheduler.schedulerDefinitions import read_conf_file
 from ts_scheduler.fields import CUT_TYPEMAP, FieldsDatabase, FieldSelection
 
 class Proposal(object):

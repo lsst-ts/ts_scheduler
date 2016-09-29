@@ -1,7 +1,5 @@
-import logging
-import os
+import math
 
-from ts_scheduler.schedulerDefinitions import DEG2RAD
 from ts_scheduler.schedulerTarget import Target
 from ts_scheduler.proposal import Proposal
 
@@ -32,9 +30,9 @@ class ScriptedProposal(Proposal):
             target = Target()
             target.fieldid = eval(values[0])
             target.filter = values[1]
-            target.ra_rad = eval(values[2]) * DEG2RAD
-            target.dec_rad = eval(values[3]) * DEG2RAD
-            target.ang_rad = eval(values[4]) * DEG2RAD
+            target.ra_rad = math.radians(eval(values[2]))
+            target.dec_rad = math.radians(eval(values[3]))
+            target.ang_rad = math.radians(eval(values[4]))
             target.num_exp = eval(values[5])
             target.exp_times = [int(x) for x in values[6].split(',')]
 

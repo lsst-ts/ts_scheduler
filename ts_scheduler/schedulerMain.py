@@ -26,7 +26,7 @@ from SALPY_scheduler import scheduler_filterSwapC
 #from SALPY_scheduler import flushSamples_schedulerConfig
 
 from ts_scheduler.setup import TRACE
-from ts_scheduler.schedulerDefinitions import RAD2DEG, DEG2RAD, read_conf_file, conf_file_path
+from ts_scheduler.schedulerDefinitions import read_conf_file, conf_file_path
 from ts_scheduler.schedulerDriver import Driver
 from ts_scheduler.schedulerTarget import Target
 from ts_scheduler.observatoryModel import ObservatoryState
@@ -475,6 +475,9 @@ class Main(object):
         confdict["constraints"]["ignore_airmass"] = topic_driver_config.ignore_airmass
         confdict["constraints"]["ignore_clouds"] = topic_driver_config.ignore_clouds
         confdict["constraints"]["ignore_seeing"] = topic_driver_config.ignore_seeing
+        confdict["darktime"] = {}
+        confdict["darktime"]["new_moon_phase_threshold"] = 20
+        # topic_driver_config.new_moon_phase_threshold
 
         return confdict
 
@@ -563,10 +566,14 @@ class Main(object):
         confdict["camera"]["readout_time"] = topic_camera_config.readout_time
         confdict["camera"]["shutter_time"] = topic_camera_config.shutter_time
         confdict["camera"]["filter_change_time"] = topic_camera_config.filter_change_time
-        confdict["camera"]["filter_max_changes_burst_num"] = topic_camera_config.filter_max_changes_burst_num
-        confdict["camera"]["filter_max_changes_burst_time"] = topic_camera_config.filter_max_changes_burst_time
-        confdict["camera"]["filter_max_changes_avg_num"] = topic_camera_config.filter_max_changes_avg_num
-        confdict["camera"]["filter_max_changes_avg_time"] = topic_camera_config.filter_max_changes_avg_time
+        confdict["camera"]["filter_max_changes_burst_num"] = \
+            topic_camera_config.filter_max_changes_burst_num
+        confdict["camera"]["filter_max_changes_burst_time"] = \
+            topic_camera_config.filter_max_changes_burst_time
+        confdict["camera"]["filter_max_changes_avg_num"] = \
+            topic_camera_config.filter_max_changes_avg_num
+        confdict["camera"]["filter_max_changes_avg_time"] = \
+            topic_camera_config.filter_max_changes_avg_time
         if topic_camera_config.filter_removable != "":
             confdict["camera"]["filter_removable"] = topic_camera_config.filter_removable.split(",")
         else:
@@ -670,8 +677,8 @@ class Main(object):
 
         confdict = {}
 
-        name = topic_areapropconf.name
-        prop_id = topic_areapropconf.prop_id
+        # name = topic_areapropconf.name
+        # prop_id = topic_areapropconf.prop_id
 
         confdict["sky_nightly_bounds"] = {}
         confdict["sky_nightly_bounds"]["twilight_boundary"] = topic_areapropconf.twilight_boundary
@@ -762,9 +769,9 @@ class Main(object):
         observation.targetid = topic_observation.targetId
         observation.fieldid = topic_observation.fieldId
         observation.filter = topic_observation.filter
-        observation.ra_rad = topic_observation.ra * DEG2RAD
-        observation.dec_rad = topic_observation.dec * DEG2RAD
-        observation.ang_rad = topic_observation.angle * DEG2RAD
+        observation.ra_rad = math.radians(topic_observation.ra)
+        observation.dec_rad = math.radians(topic_observation.dec)
+        observation.ang_rad = math.radians(topic_observation.angle)
         observation.num_exp = topic_observation.num_exposures
         observation.exp_times = []
         for i in range(topic_observation.num_exposures):
