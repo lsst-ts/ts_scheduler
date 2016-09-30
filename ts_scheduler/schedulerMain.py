@@ -324,9 +324,9 @@ class Main(object):
                 if scode == 0 and self.topicTime.timestamp != 0:
                     if self.topicTime.timestamp > timestamp:
                         lasttimetime = time.time()
-                        timestamp = round(self.topicTime.timestamp, 6)
+                        timestamp = round(self.topicTime.timestamp, 3)
                         nightstamp = self.topicTime.night
-                        self.log.debug("run: rx time=%.6f night=%i" % (timestamp, nightstamp))
+                        self.log.debug("run: rx time=%.3f night=%i" % (timestamp, nightstamp))
 
                         isnight = self.schedulerDriver.update_time(timestamp)
                         if isnight:
@@ -584,6 +584,16 @@ class Main(object):
         else:
             confdict["camera"]["filter_removable"] = []
 
+        if topic_camera_config.filter_mounted != "":
+            confdict["camera"]["filter_mounted"] = topic_camera_config.filter_mounted.split(",")
+        else:
+            confdict["camera"]["filter_mounted"] = []
+
+        if topic_camera_config.filter_unmounted != "":
+            confdict["camera"]["filter_unmounted"] = topic_camera_config.filter_unmounted.split(",")
+        else:
+            confdict["camera"]["filter_unmounted"] = []
+
         return confdict
 
     def read_topic_slew_config(self, topic_slew_config):
@@ -788,7 +798,7 @@ class Main(object):
 
         state = ObservatoryState()
 
-        state.time = round(topic_state.timestamp, 6)
+        state.time = round(topic_state.timestamp, 3)
         state.ra_rad = math.radians(topic_state.pointing_ra)
         state.dec_rad = math.radians(topic_state.pointing_dec)
         state.ang_rad = math.radians(topic_state.pointing_angle)

@@ -55,6 +55,8 @@ class ObservatoryModelParameters(object):
         self.filter_max_changes_burst_time = 0.0
         self.filter_max_changes_avg_num = 0
         self.filter_max_changes_avg_time = 0.0
+        self.filter_init_mounted_list = []
+        self.filter_init_unmounted_list = []
 
         self.prerequisites = {}
 
@@ -112,6 +114,9 @@ class ObservatoryModelParameters(object):
         self.filter_max_changes_avg_num = confdict["camera"]["filter_max_changes_avg_num"]
         self.filter_max_changes_avg_time = confdict["camera"]["filter_max_changes_avg_time"]
 
+        self.filter_init_mounted_list = confdict["camera"]["filter_mounted"]
+        self.filter_init_unmounted_list = confdict["camera"]["filter_unmounted"]
+
     def configure_slew(self, confdict, activities):
 
         for activity in activities:
@@ -132,8 +137,6 @@ class ObservatoryModel(object):
         self.parkState = ObservatoryState()
         self.currentState = ObservatoryState()
         self.targetPosition = ObservatoryPosition()
-        self.Filter_MountedList = []
-        self.Filter_UnmountedList = []
 
         self.filters = ["u", "g", "r", "i", "z", "y"]
 
@@ -172,16 +175,12 @@ class ObservatoryModel(object):
         self.configure_optics(confdict)
         self.configure_camera(confdict)
         self.configure_slew(confdict)
-
-        self.Filter_MountedList = confdict["camera"]["filter_mounted"]
-        self.Filter_UnmountedList = confdict["camera"]["filter_unmounted"]
-
         self.configure_park(confdict)
 
-        self.log.log(WORDY,
-                     "configure: Filter_MountedList=%s" % (self.Filter_MountedList))
-        self.log.log(WORDY,
-                     "configure: Filter_UnmountedList=%s" % (self.Filter_UnmountedList))
+        self.currentState.mountedfilters = self.params.filter_init_mounted_list
+        self.currentState.unmountedfilters = self.params.filter_init_unmounted_list
+        self.parkState.mountedfilters = self.currentState.mountedfilters
+        self.parkState.unmountedfilters = self.currentState.unmountedfilters
 
         self.reset()
 
@@ -310,6 +309,12 @@ class ObservatoryModel(object):
         self.log.log(WORDY,
                      "configure_camera: filter_max_changes_avg_time=%.1f" %
                      (self.params.filter_max_changes_avg_time))
+        self.log.log(WORDY,
+                     "configure_camera: filter_init_mounted=%s" %
+                     (self.params.filter_init_mounted_list))
+        self.log.log(WORDY,
+                     "configure_camera: filter_init_unmounted=%s" %
+                     (self.params.filter_init_unmounted_list))
 
     def configure_slew(self, confdict):
 
@@ -330,8 +335,8 @@ class ObservatoryModel(object):
         self.parkState.domalt_rad = math.radians(confdict["park"]["dome_altitude"])
         self.parkState.domaz_rad = math.radians(confdict["park"]["dome_azimuth"])
         self.parkState.filter = confdict["park"]["filter_position"]
-        self.parkState.mountedfilters = self.Filter_MountedList
-        self.parkState.unmountedfilters = self.Filter_UnmountedList
+        self.parkState.mountedfilters = self.currentState.mountedfilters
+        self.parkState.unmountedfilters = self.currentState.unmountedfilters
         self.parkState.tracking = False
 
         self.log.log(WORDY,
@@ -585,9 +590,21 @@ class ObservatoryModel(object):
     def park(self):
         return
 
+    def swap_filter(self, filter_to_unmount):
+
+        self.currentState.mountedfilters.remove(filter_to_unmount)
+        filter_to_mount = self.currentState.unmountedfilters.pop()
+        self.currentState.mountedfilters.append(filter_to_mount)
+        self.currentState.unmountedfilters.append(filter_to_unmount)
+
+        self.parkState.mountedfilters = self.currentState.mountedfilters
+        self.parkState.unmountedfilters = self.currentState.unmountedfilters
+
     def slew_to_position(self, targetposition):
 
         targetstate = self.get_closest_state(targetposition)
+        targetstate.mountedfilters = self.currentState.mountedfilters
+        targetstate.unmountedfilters = self.currentState.unmountedfilters
         slew_delay = self.get_slew_delay_for_state(targetstate, self.currentState, True)
         if targetposition.filter != self.currentState.filter:
             self.filter_changes_list.append(targetstate.time)

@@ -468,3 +468,32 @@ class ObservatoryModelTest(unittest.TestCase):
                          "telaz=69.801 telrot=-0.120 "
                          "mounted=['g', 'r', 'i', 'z', 'y'] unmounted=['u']")
         self.model.params.Rotator_FollowSky = True
+
+    def test_swap_filter(self):
+        self.model.update_state(0)
+        self.assertEqual(str(self.model.currentState), "t=0.0 ra=29.342 dec=-26.744 ang=180.000 "
+                         "filter=r track=False alt=86.500 az=0.000 pa=-180.000 rot=0.000 "
+                         "telaz=0.000 telrot=0.000 "
+                         "mounted=['g', 'r', 'i', 'z', 'y'] unmounted=['u']")
+        self.assertEqual(str(self.model.parkState), "t=0.0 ra=0.000 dec=0.000 ang=0.000 "
+                         "filter=r track=False alt=86.500 az=0.000 pa=0.000 rot=0.000 "
+                         "telaz=0.000 telrot=0.000 "
+                         "mounted=['g', 'r', 'i', 'z', 'y'] unmounted=['u']")
+        self.model.swap_filter("z")
+        self.assertEqual(str(self.model.currentState), "t=0.0 ra=29.342 dec=-26.744 ang=180.000 "
+                         "filter=r track=False alt=86.500 az=0.000 pa=-180.000 rot=0.000 "
+                         "telaz=0.000 telrot=0.000 "
+                         "mounted=['g', 'r', 'i', 'y', 'u'] unmounted=['z']")
+        self.assertEqual(str(self.model.parkState), "t=0.0 ra=0.000 dec=0.000 ang=0.000 "
+                         "filter=r track=False alt=86.500 az=0.000 pa=0.000 rot=0.000 "
+                         "telaz=0.000 telrot=0.000 "
+                         "mounted=['g', 'r', 'i', 'y', 'u'] unmounted=['z']")
+        self.model.swap_filter("u")
+        self.assertEqual(str(self.model.currentState), "t=0.0 ra=29.342 dec=-26.744 ang=180.000 "
+                         "filter=r track=False alt=86.500 az=0.000 pa=-180.000 rot=0.000 "
+                         "telaz=0.000 telrot=0.000 "
+                         "mounted=['g', 'r', 'i', 'y', 'z'] unmounted=['u']")
+        self.assertEqual(str(self.model.parkState), "t=0.0 ra=0.000 dec=0.000 ang=0.000 "
+                         "filter=r track=False alt=86.500 az=0.000 pa=0.000 rot=0.000 "
+                         "telaz=0.000 telrot=0.000 "
+                         "mounted=['g', 'r', 'i', 'y', 'z'] unmounted=['u']")

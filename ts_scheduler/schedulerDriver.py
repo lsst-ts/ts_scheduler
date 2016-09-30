@@ -7,7 +7,7 @@ from operator import itemgetter
 
 from ts_scheduler.setup import EXTENSIVE, WORDY
 from ts_scheduler.sky_model import AstronomicalSkyModel
-from ts_scheduler.schedulerDefinitions import DEG2RAD, read_conf_file
+from ts_scheduler.schedulerDefinitions import read_conf_file
 from ts_scheduler.schedulerField import Field
 from ts_scheduler.schedulerTarget import Target
 from ts_scheduler.observatoryModel import ObservatoryModel
@@ -227,13 +227,13 @@ class Driver(object):
             field = Field()
             fieldid = row[0]
             field.fieldid = fieldid
-            field.fov_rad = row[1] * DEG2RAD
-            field.ra_rad = row[2] * DEG2RAD
-            field.dec_rad = row[3] * DEG2RAD
-            field.gl_rad = row[4] * DEG2RAD
-            field.gb_rad = row[5] * DEG2RAD
-            field.el_rad = row[6] * DEG2RAD
-            field.eb_rad = row[7] * DEG2RAD
+            field.fov_rad = math.radians(row[1])
+            field.ra_rad = math.radians(row[2])
+            field.dec_rad = math.radians(row[3])
+            field.gl_rad = math.radians(row[4])
+            field.gb_rad = math.radians(row[5])
+            field.el_rad = math.radians(row[6])
+            field.eb_rad = math.radians(row[7])
             self.fields_dict[fieldid] = field
             self.log.log(EXTENSIVE, "buildFieldsTable: %s" % (self.fields_dict[fieldid]))
         self.log.info("buildFieldsTable: %d fields" % (len(self.fields_dict)))
@@ -245,7 +245,7 @@ class Driver(object):
     def start_survey(self, timestamp):
 
         self.start_time = timestamp
-        self.log.info("start_survey t=%.6f" % timestamp)
+        self.log.info("start_survey t=%.3f" % timestamp)
 
         self.survey_started = True
         for prop in self.science_proposal_list:
@@ -253,9 +253,9 @@ class Driver(object):
 
         self.sky.update(timestamp)
         (sunset, sunrise) = self.sky.get_night_boundaries(self.params.night_boundary)
-        sunset = round(sunset, 6)
-        sunrise = round(sunrise, 6)
-        self.log.debug("start_survey sunset=%.6f sunrise=%.6f" % (sunset, sunrise))
+        sunset = round(sunset, 3)
+        sunrise = round(sunrise, 3)
+        self.log.debug("start_survey sunset=%.3f sunrise=%.3f" % (sunset, sunrise))
         if sunset <= timestamp < sunrise:
             self.start_night(timestamp)
 
@@ -271,7 +271,7 @@ class Driver(object):
 
     def start_night(self, timestamp):
 
-        self.log.info("start_night t=%.6f" % timestamp)
+        self.log.info("start_night t=%.3f" % timestamp)
 
         self.isnight = True
 
@@ -280,7 +280,7 @@ class Driver(object):
 
     def end_night(self, timestamp):
 
-        self.log.info("end_night t=%.6f" % timestamp)
+        self.log.info("end_night t=%.3f" % timestamp)
 
         self.isnight = False
 
@@ -315,9 +315,9 @@ class Driver(object):
         previous_midnight_moonphase = self.midnight_moonphase
         self.sky.update(timestamp)
         (sunset, sunrise) = self.sky.get_night_boundaries(self.params.night_boundary)
-        sunset = round(sunset, 6)
-        sunrise = round(sunrise, 6)
-        self.log.debug("end_night sunset=%.6f sunrise=%.6f" % (sunset, sunrise))
+        sunset = round(sunset, 3)
+        sunrise = round(sunrise, 3)
+        self.log.debug("end_night sunset=%.3f sunrise=%.3f" % (sunset, sunrise))
 
         self.sunset_timestamp = sunset
         self.sunrise_timestamp = sunrise
@@ -362,6 +362,8 @@ class Driver(object):
     def swap_filter(self, filter_to_unmount, filter_to_mount):
 
         self.log.info("swap_filter swap %s=>cam=>%s" % (filter_to_mount, filter_to_unmount))
+
+        self.observatoryModel.swap_filter(filter_to_unmount)
 
         self.unmounted_filter = filter_to_unmount
         self.mounted_filter = filter_to_mount
