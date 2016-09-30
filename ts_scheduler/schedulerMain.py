@@ -324,9 +324,9 @@ class Main(object):
                 if scode == 0 and self.topicTime.timestamp != 0:
                     if self.topicTime.timestamp > timestamp:
                         lasttimetime = time.time()
-                        timestamp = round(self.topicTime.timestamp, 3)
+                        timestamp = self.topicTime.timestamp
                         nightstamp = self.topicTime.night
-                        self.log.debug("run: rx time=%.3f night=%i" % (timestamp, nightstamp))
+                        self.log.debug("run: rx time=%.6f night=%i" % (timestamp, nightstamp))
 
                         isnight = self.schedulerDriver.update_time(timestamp)
                         if isnight:
@@ -798,7 +798,7 @@ class Main(object):
 
         state = ObservatoryState()
 
-        state.time = round(topic_state.timestamp, 3)
+        state.time = topic_state.timestamp
         state.ra_rad = math.radians(topic_state.pointing_ra)
         state.dec_rad = math.radians(topic_state.pointing_dec)
         state.ang_rad = math.radians(topic_state.pointing_angle)

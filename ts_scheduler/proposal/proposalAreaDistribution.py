@@ -134,8 +134,8 @@ class AreaDistributionProposal(Proposal):
                         float(self.filter_visits_dict[filter]) / self.filter_goal_dict[filter]
 
         self.total_progress = float(self.total_visits) / self.total_goal
-        self.log.info("start_night targets=%i goal=%i visits=%i progress=%.6f" %
-                      (self.total_targets, self.total_goal, self.total_visits, self.total_progress))
+        self.log.info("start_night targets=%i goal=%i visits=%i progress=%.2f%%" %
+                      (self.total_targets, self.total_goal, self.total_visits, 100*self.total_progress))
 
         self.last_observation = None
         self.last_observation_was_for_this_proposal = False

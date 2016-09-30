@@ -245,7 +245,7 @@ class Driver(object):
     def start_survey(self, timestamp):
 
         self.start_time = timestamp
-        self.log.info("start_survey t=%.3f" % timestamp)
+        self.log.info("start_survey t=%.6f" % timestamp)
 
         self.survey_started = True
         for prop in self.science_proposal_list:
@@ -253,9 +253,8 @@ class Driver(object):
 
         self.sky.update(timestamp)
         (sunset, sunrise) = self.sky.get_night_boundaries(self.params.night_boundary)
-        sunset = round(sunset, 3)
-        sunrise = round(sunrise, 3)
-        self.log.debug("start_survey sunset=%.3f sunrise=%.3f" % (sunset, sunrise))
+        self.log.debug("start_survey sunset=%.6f sunrise=%.6f" % (sunset, sunrise))
+        # if round(sunset) <= round(timestamp) < round(sunrise):
         if sunset <= timestamp < sunrise:
             self.start_night(timestamp)
 
@@ -271,7 +270,7 @@ class Driver(object):
 
     def start_night(self, timestamp):
 
-        self.log.info("start_night t=%.3f" % timestamp)
+        self.log.info("start_night t=%.6f" % timestamp)
 
         self.isnight = True
 
@@ -280,7 +279,7 @@ class Driver(object):
 
     def end_night(self, timestamp):
 
-        self.log.info("end_night t=%.3f" % timestamp)
+        self.log.info("end_night t=%.6f" % timestamp)
 
         self.isnight = False
 
@@ -301,23 +300,21 @@ class Driver(object):
                 filter_progress_dict[filter] = prop.get_filter_progress(filter)
                 total_filter_visits_dict[filter] += filter_visits_dict[filter]
                 total_filter_goal_dict[filter] += filter_goal_dict[filter]
-            self.log.debug("end_night propid=%d name=%s filter_progress=%s" %
-                           (prop.propid, prop.name, str(filter_progress_dict)))
+                self.log.debug("end_night propid=%d name=%s filter=%s progress=%.2f%%" %
+                               (prop.propid, prop.name, filter, 100*filter_progress_dict[filter]))
         for filter in self.observatoryModel.filters:
             if total_filter_goal_dict[filter] > 0:
                 total_filter_progress_dict[filter] = \
                     float(total_filter_visits_dict[filter]) / total_filter_goal_dict[filter]
             else:
                 total_filter_progress_dict[filter] = 1.0
-        self.log.debug("end_night total_filter_progress=%s" %
-                       (str(total_filter_progress_dict)))
+            self.log.info("end_night filter=%s progress=%.2f%%" %
+                           (filter, 100*total_filter_progress_dict[filter]))
 
         previous_midnight_moonphase = self.midnight_moonphase
         self.sky.update(timestamp)
         (sunset, sunrise) = self.sky.get_night_boundaries(self.params.night_boundary)
-        sunset = round(sunset, 3)
-        sunrise = round(sunrise, 3)
-        self.log.debug("end_night sunset=%.3f sunrise=%.3f" % (sunset, sunrise))
+        self.log.debug("end_night sunset=%.6f sunrise=%.6f" % (sunset, sunrise))
 
         self.sunset_timestamp = sunset
         self.sunrise_timestamp = sunrise
@@ -378,9 +375,11 @@ class Driver(object):
             self.start_survey(timestamp)
 
         if self.isnight:
+            # if round(timestamp) >= round(self.sunrise_timestamp):
             if timestamp >= self.sunrise_timestamp:
                 self.end_night(timestamp)
         else:
+            # if round(timestamp) >= round(self.sunset_timestamp):
             if timestamp >= self.sunset_timestamp:
                 self.start_night(timestamp)
 
