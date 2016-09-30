@@ -105,7 +105,7 @@ class AstronomicalSkyModel(object):
         info_dict["moonDist"] = distance[0]
         return info_dict
 
-    def get_night_boundaries(self, sun_altitude, upper_limb_correction=False):
+    def get_night_boundaries(self, sun_altitude, upper_limb_correction=False, precision=6):
         """Return the set/rise times of the sun for the given altitude.
 
         This function calculates the night boundaries (the set and rise times) for a
@@ -118,6 +118,8 @@ class AstronomicalSkyModel(object):
             The altitude of the sun to get the set/rise times for.
         upper_limb_correction : bool
             Set to True is the upper limb correction should be calculated.
+        precision : int, optional
+            The place to round the rise/set times.
 
         Returns
         -------
@@ -149,7 +151,7 @@ class AstronomicalSkyModel(object):
 
             rise_timestamp = midnight_timestamp + (rise_time * self.date_profile.SECONDS_IN_HOUR)
 
-        return (set_timestamp, rise_timestamp)
+        return (round(set_timestamp, precision), round(rise_timestamp, precision))
 
     def get_sky_brightness(self, ra, dec):
         """Get the LSST 6 filter sky brightness for a set of positions at a single time.
