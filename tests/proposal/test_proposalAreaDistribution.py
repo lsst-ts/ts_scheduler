@@ -96,13 +96,13 @@ class AreaDistributionProposalTest(unittest.TestCase):
         self.assertEqual(str(self.areaprop.targets_dict[fieldid_list[0]]["g"]),
                          "targetid=0 field=1764 filter=g exp_times=[15.0, 15.0] ra=13.726 dec=-19.793 "
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
-                         "time=0.0 airmass=0.000 brightness=0.000 visits=0 progress=0.000 "
+                         "time=0.0 airmass=0.000 brightness=0.000 visits=0 progress=0.00% "
                          "need=0.000 bonus=0.000 value=0.000 "
                          "propid=[] need=[] bonus=[] value=[] slewtime=0.000 costbonus=0.000 rank=0.000")
         self.assertEqual(str(self.areaprop.targets_dict[fieldid_list[-1]]["g"]),
                          "targetid=0 field=2802 filter=g exp_times=[15.0, 15.0] ra=12.654 dec=3.318 "
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
-                         "time=0.0 airmass=0.000 brightness=0.000 visits=0 progress=0.000 "
+                         "time=0.0 airmass=0.000 brightness=0.000 visits=0 progress=0.00% "
                          "need=0.000 bonus=0.000 value=0.000 "
                          "propid=[] need=[] bonus=[] value=[] slewtime=0.000 costbonus=0.000 rank=0.000")
 
@@ -119,15 +119,15 @@ class AreaDistributionProposalTest(unittest.TestCase):
         target_list = self.areaprop.suggest_targets(timestamp)
         self.assertEqual(len(target_list), 40)
         self.assertEqual(str(target_list[0]),
-                         "targetid=0 field=1764 filter=g exp_times=[15.0, 15.0] ra=13.726 dec=-19.793 "
+                         "targetid=0 field=1764 filter=y exp_times=[15.0, 15.0] ra=13.726 dec=-19.793 "
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
-                         "time=1641000000.0 airmass=1.210 brightness=21.964 visits=0 progress=0.000 "
+                         "time=1641000000.0 airmass=1.210 brightness=18.017 visits=0 progress=0.00% "
                          "need=1.000 bonus=0.000 value=1.000 "
                          "propid=[] need=[] bonus=[] value=[] slewtime=0.000 costbonus=0.000 rank=0.000")
         self.assertEqual(str(target_list[-1]),
-                         "targetid=0 field=2802 filter=y exp_times=[15.0, 15.0] ra=12.654 dec=3.318 "
+                         "targetid=0 field=2802 filter=g exp_times=[15.0, 15.0] ra=12.654 dec=3.318 "
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
-                         "time=1641000000.0 airmass=1.522 brightness=17.784 visits=0 progress=0.000 "
+                         "time=1641000000.0 airmass=1.522 brightness=21.692 visits=0 progress=0.00% "
                          "need=1.000 bonus=0.000 value=1.000 "
                          "propid=[] need=[] bonus=[] value=[] slewtime=0.000 costbonus=0.000 rank=0.000")
 
@@ -135,29 +135,29 @@ class AreaDistributionProposalTest(unittest.TestCase):
         target_list = self.areaprop.suggest_targets(timestamp)
         self.assertEqual(len(target_list), 40)
         self.assertEqual(str(target_list[0]),
-                         "targetid=0 field=1764 filter=g exp_times=[15.0, 15.0] ra=13.726 dec=-19.793 "
+                         "targetid=0 field=1764 filter=y exp_times=[15.0, 15.0] ra=13.726 dec=-19.793 "
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
-                         "time=1641000060.0 airmass=1.213 brightness=21.971 visits=0 progress=0.000 "
+                         "time=1641000060.0 airmass=1.213 brightness=18.017 visits=0 progress=0.00% "
                          "need=1.000 bonus=0.000 value=1.000 "
                          "propid=[] need=[] bonus=[] value=[] slewtime=0.000 costbonus=0.000 rank=0.000")
         self.assertEqual(str(target_list[-1]),
-                         "targetid=0 field=2802 filter=y exp_times=[15.0, 15.0] ra=12.654 dec=3.318 "
+                         "targetid=0 field=2802 filter=g exp_times=[15.0, 15.0] ra=12.654 dec=3.318 "
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
-                         "time=1641000060.0 airmass=1.527 brightness=17.783 visits=0 progress=0.000 "
+                         "time=1641000060.0 airmass=1.527 brightness=21.698 visits=0 progress=0.00% "
                          "need=1.000 bonus=0.000 value=1.000 "
                          "propid=[] need=[] bonus=[] value=[] slewtime=0.000 costbonus=0.000 rank=0.000")
 
         observation = target_list[0]
-        self.assertEqual(observation.goal, 10)
+        self.assertEqual(observation.goal, 20)
         self.assertEqual(observation.visits, 0)
         self.assertEqual(observation.progress, 0.0)
         self.assertEqual(self.areaprop.total_goal, 1000)
         self.assertEqual(self.areaprop.total_visits, 0)
         self.assertEqual(self.areaprop.total_progress, 0.0)
         self.areaprop.register_observation(observation)
-        self.assertEqual(observation.goal, 10)
+        self.assertEqual(observation.goal, 20)
         self.assertEqual(observation.visits, 1)
-        self.assertEqual(observation.progress, 0.10)
+        self.assertEqual(observation.progress, 0.05)
         self.assertEqual(self.areaprop.total_goal, 1000)
         self.assertEqual(self.areaprop.total_visits, 1)
         self.assertEqual(self.areaprop.total_progress, 0.001)
@@ -168,12 +168,12 @@ class AreaDistributionProposalTest(unittest.TestCase):
         self.assertEqual(str(target_list[0]),
                          "targetid=0 field=1764 filter=r exp_times=[15.0, 15.0] ra=13.726 dec=-19.793 "
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
-                         "time=1641000120.0 airmass=1.216 brightness=21.019 visits=0 progress=0.000 "
+                         "time=1641000120.0 airmass=1.216 brightness=21.019 visits=0 progress=0.00% "
                          "need=1.001 bonus=0.000 value=1.001 "
                          "propid=[] need=[] bonus=[] value=[] slewtime=0.000 costbonus=0.000 rank=0.000")
         self.assertEqual(str(target_list[-1]),
-                         "targetid=0 field=1764 filter=g exp_times=[15.0, 15.0] ra=13.726 dec=-19.793 "
+                         "targetid=0 field=1764 filter=y exp_times=[15.0, 15.0] ra=13.726 dec=-19.793 "
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
-                         "time=1641000120.0 airmass=1.216 brightness=21.976 visits=1 progress=0.100 "
-                         "need=0.901 bonus=0.000 value=0.901 "
+                         "time=1641000120.0 airmass=1.216 brightness=18.017 visits=1 progress=5.00% "
+                         "need=0.951 bonus=0.000 value=0.951 "
                          "propid=[] need=[] bonus=[] value=[] slewtime=0.000 costbonus=0.000 rank=0.000")

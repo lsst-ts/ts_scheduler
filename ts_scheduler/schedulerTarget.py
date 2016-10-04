@@ -60,7 +60,7 @@ class Target(object):
                 "alt=%.3f az=%.3f rot=%.3f "
                 "telalt=%.3f telaz=%.3f telrot=%.3f "
                 "time=%.1f airmass=%.3f brightness=%.3f "
-                "visits=%i progress=%.3f "
+                "visits=%i progress=%.2f%% "
                 "need=%.3f bonus=%.3f value=%.3f "
                 "propid=%s need=%s bonus=%s value=%s "
                 "slewtime=%.3f costbonus=%.3f rank=%.3f" %
@@ -69,7 +69,7 @@ class Target(object):
                  self.alt, self.az, self.rot,
                  self.telalt, self.telaz, self.telrot,
                  self.time, self.airmass, self.sky_brightness,
-                 self.visits, self.progress,
+                 self.visits, 100*self.progress,
                  self.need, self.bonus, self.value,
                  self.propid_list, self.need_list, self.bonus_list, self.value_list,
                  self.slewtime, self.cost_bonus, self.rank))

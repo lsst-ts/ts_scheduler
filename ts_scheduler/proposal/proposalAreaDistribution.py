@@ -52,6 +52,7 @@ class AreaDistributionProposal(Proposal):
 
         self.fields_dict = {}
         self.targets_dict = {}
+        self.tonight_targets_dict = {}
 
         self.filters_tonight_list = []
         self.fields_tonight_list = []
@@ -78,6 +79,7 @@ class AreaDistributionProposal(Proposal):
         self.filter_goal_dict = {}
         self.filter_visits_dict = {}
         self.filter_progress_dict = {}
+        self.tonight_targets_dict = {}
         for filter in self.params.filter_list:
             if filter in filters_mounted_tonight_list:
                 self.filters_tonight_list.append(filter)
@@ -120,14 +122,17 @@ class AreaDistributionProposal(Proposal):
                     self.targets_dict[fieldid][filter] = target
 
             # compute total goal for tonight
+            self.tonight_targets_dict[fieldid] = {}
             for filter in self.filters_tonight_list:
                 if filter in self.targets_dict[fieldid]:
                     target = self.targets_dict[fieldid][filter]
-                    self.total_targets += 1
-                    self.total_goal += target.goal
-                    self.total_visits += target.visits
-                    self.filter_goal_dict[filter] += target.goal
-                    self.filter_visits_dict[filter] += target.visits
+                    if target.progress < 1.0:
+                        self.tonight_targets_dict[fieldid][filter] = target
+                        self.total_targets += 1
+                        self.total_goal += target.goal
+                        self.total_visits += target.visits
+                        self.filter_goal_dict[filter] += target.goal
+                        self.filter_visits_dict[filter] += target.visits
             for filter in self.filters_tonight_list:
                 if filter in self.targets_dict[fieldid]:
                     self.filter_progress_dict[filter] = \
@@ -209,6 +214,7 @@ class AreaDistributionProposal(Proposal):
 
         evaluated_fields = 0
         discarded_fields_airmass = 0
+        discarded_fields_notargets = 0
         discarded_targets_consecutive = 0
         discarded_targets_nanbrightness = 0
         discarded_targets_lowbrightness = 0
@@ -217,6 +223,11 @@ class AreaDistributionProposal(Proposal):
         # compute target value
         for field in fields_evaluation_list:
             fieldid = field.fieldid
+
+            # discard fields with no more targets tonight
+            if fieldid not in self.tonight_targets_dict:
+                discarded_fields_notargets += 1
+                continue
 
             # discard fields beyond airmass limit
             if self.ignore_airmass:
@@ -227,8 +238,8 @@ class AreaDistributionProposal(Proposal):
                     discarded_fields_airmass += 1
                     continue
 
-            for filter in self.filters_tonight_list:
-                target = self.targets_dict[fieldid][filter]
+            for filter in self.tonight_targets_dict[fieldid]:
+                target = self.tonight_targets_dict[fieldid][filter]
                 target.time = timestamp
                 target.airmass = airmass
                 # discard target if consecutive
@@ -276,10 +287,10 @@ class AreaDistributionProposal(Proposal):
                 evaluated_targets += 1
             evaluated_fields += 1
 
-        self.log.debug("suggest_targets: fields=%d, evaluated=%d, discarded airmass=%d" %
-                       (len(id_list), evaluated_fields, discarded_fields_airmass))
-        self.log.debug("suggest_targets: evaluated targets=%d, discarded consecutive=%d "
-                       "lowbright=%d highbright=%d nanbright=%d" %
+        self.log.debug("suggest_targets: fields=%i, evaluated=%i, discarded airmass=%i notargets=%i" %
+                       (len(id_list), evaluated_fields, discarded_fields_airmass, discarded_fields_notargets))
+        self.log.debug("suggest_targets: evaluated targets=%i, discarded consecutive=%i "
+                       "lowbright=%i highbright=%i nanbright=%i" %
                        (evaluated_targets, discarded_targets_consecutive,
                         discarded_targets_lowbrightness, discarded_targets_highbrightness,
                         discarded_targets_nanbrightness))
@@ -328,6 +339,16 @@ class AreaDistributionProposal(Proposal):
             target = self.targets_dict[fieldid][filter]
             target.visits += 1
             target.progress = float(target.visits) / target.goal
+            if target.progress == 1.0:
+                # target complete, remove from tonight dict
+                self.log.debug("register_observation: target complete fieldid=%i filter=%s" %
+                               (fieldid, filter))
+                del self.tonight_targets_dict[fieldid][filter]
+                if not self.tonight_targets_dict[fieldid]:
+                    # field complete, remove from tonight dict
+                    self.log.debug("register_observation: field complete fieldid=%i" %
+                               (fieldid))
+                    del self.tonight_targets_dict[fieldid]
             self.total_visits += 1
             self.total_progress = float(self.total_visits) / self.total_goal
             self.filter_visits_dict[filter] += 1

@@ -322,7 +322,7 @@ class Driver(object):
         self.sky.update(next_midnight)
         info = self.sky.get_moon_sun_info(0.0, 0.0)
         self.midnight_moonphase = info["moonPhase"]
-        self.log.info("end_night next moonphase=%.2f" % (self.midnight_moonphase))
+        self.log.info("end_night next moonphase=%.2%%f" % (self.midnight_moonphase))
 
         self.need_filter_swap = False
         self.filter_to_mount = ""
@@ -431,8 +431,8 @@ class Driver(object):
                 propboost_dict[prop.propid] = 1.0
 
             proptarget_list = prop.suggest_targets(self.time)
-            self.log.debug("select_next_target propid=%d name=%s targets=%d progress=%.6f propboost=%.3f" %
-                           (prop.propid, prop.name, len(proptarget_list), progress,
+            self.log.debug("select_next_target propid=%d name=%s targets=%d progress=%.2f%% propboost=%.3f" %
+                           (prop.propid, prop.name, len(proptarget_list), 100*progress,
                             propboost_dict[prop.propid]))
 
             for target in proptarget_list:

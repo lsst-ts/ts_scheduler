@@ -35,7 +35,7 @@ class ScriptedProposalTest(unittest.TestCase):
         self.assertEqual(str(tlist[0]),
                          "targetid=0 field=2001 filter=r exp_times=[15, 15] ra=85.721 dec=-14.442 "
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
-                         "time=1000.0 airmass=0.000 brightness=20.970 visits=0 progress=0.000 "
+                         "time=1000.0 airmass=0.000 brightness=20.970 visits=0 progress=0.00% "
                          "need=0.000 bonus=0.000 value=1.000 "
                          "propid=[] need=[] bonus=[] value=[] slewtime=0.000 costbonus=0.000 rank=0.000")
 
@@ -43,7 +43,7 @@ class ScriptedProposalTest(unittest.TestCase):
         self.assertEqual(str(tlist[0]),
                          "targetid=1 field=2002 filter=r exp_times=[15, 15] ra=229.721 dec=-14.442 "
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
-                         "time=1040.0 airmass=0.000 brightness=nan visits=0 progress=0.000 "
+                         "time=1040.0 airmass=0.000 brightness=nan visits=0 progress=0.00% "
                          "need=0.000 bonus=0.000 value=1.000 "
                          "propid=[] need=[] bonus=[] value=[] slewtime=0.000 costbonus=0.000 rank=0.000")
 
@@ -51,7 +51,7 @@ class ScriptedProposalTest(unittest.TestCase):
         self.assertEqual(str(tlist[0]),
                          "targetid=2 field=2003 filter=r exp_times=[15, 15] ra=130.279 dec=-14.442 "
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
-                         "time=1080.0 airmass=0.000 brightness=nan visits=0 progress=0.000 "
+                         "time=1080.0 airmass=0.000 brightness=nan visits=0 progress=0.00% "
                          "need=0.000 bonus=0.000 value=1.000 "
                          "propid=[] need=[] bonus=[] value=[] slewtime=0.000 costbonus=0.000 rank=0.000")
 
@@ -59,7 +59,7 @@ class ScriptedProposalTest(unittest.TestCase):
         self.assertEqual(str(tlist[0]),
                          "targetid=3 field=2004 filter=i exp_times=[15, 15] ra=346.279 dec=-14.441 "
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
-                         "time=1120.0 airmass=0.000 brightness=19.818 visits=0 progress=0.000 "
+                         "time=1120.0 airmass=0.000 brightness=19.818 visits=0 progress=0.00% "
                          "need=0.000 bonus=0.000 value=1.000 "
                          "propid=[] need=[] bonus=[] value=[] slewtime=0.000 costbonus=0.000 rank=0.000")
 
@@ -67,7 +67,7 @@ class ScriptedProposalTest(unittest.TestCase):
         self.assertEqual(str(tlist[0]),
                          "targetid=4 field=2005 filter=i exp_times=[15, 15] ra=346.279 dec=-14.441 "
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
-                         "time=1160.0 airmass=0.000 brightness=19.816 visits=0 progress=0.000 "
+                         "time=1160.0 airmass=0.000 brightness=19.816 visits=0 progress=0.00% "
                          "need=0.000 bonus=0.000 value=1.000 "
                          "propid=[] need=[] bonus=[] value=[] slewtime=0.000 costbonus=0.000 rank=0.000")
 
@@ -75,7 +75,7 @@ class ScriptedProposalTest(unittest.TestCase):
         self.assertEqual(str(tlist[0]),
                          "targetid=5 field=2006 filter=i exp_times=[15, 15] ra=13.721 dec=-14.441 "
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
-                         "time=1200.0 airmass=0.000 brightness=20.220 visits=0 progress=0.000 "
+                         "time=1200.0 airmass=0.000 brightness=20.220 visits=0 progress=0.00% "
                          "need=0.000 bonus=0.000 value=1.000 "
                          "propid=[] need=[] bonus=[] value=[] slewtime=0.000 costbonus=0.000 rank=0.000")
 
@@ -83,7 +83,7 @@ class ScriptedProposalTest(unittest.TestCase):
         self.assertEqual(str(tlist[0]),
                          "targetid=6 field=2007 filter=z exp_times=[15, 15] ra=199.206 dec=-14.112 "
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
-                         "time=1240.0 airmass=0.000 brightness=nan visits=0 progress=0.000 "
+                         "time=1240.0 airmass=0.000 brightness=nan visits=0 progress=0.00% "
                          "need=0.000 bonus=0.000 value=1.000 "
                          "propid=[] need=[] bonus=[] value=[] slewtime=0.000 costbonus=0.000 rank=0.000")
 
@@ -91,7 +91,7 @@ class ScriptedProposalTest(unittest.TestCase):
         self.assertEqual(str(tlist[0]),
                          "targetid=7 field=2008 filter=z exp_times=[15, 15] ra=160.794 dec=-14.112 "
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
-                         "time=1280.0 airmass=0.000 brightness=nan visits=0 progress=0.000 "
+                         "time=1280.0 airmass=0.000 brightness=nan visits=0 progress=0.00% "
                          "need=0.000 bonus=0.000 value=1.000 "
                          "propid=[] need=[] bonus=[] value=[] slewtime=0.000 costbonus=0.000 rank=0.000")
 
@@ -99,7 +99,7 @@ class ScriptedProposalTest(unittest.TestCase):
         self.assertEqual(str(tlist[0]),
                          "targetid=8 field=2009 filter=z exp_times=[15, 15] ra=232.794 dec=-14.112 "
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
-                         "time=1320.0 airmass=0.000 brightness=nan visits=0 progress=0.000 "
+                         "time=1320.0 airmass=0.000 brightness=nan visits=0 progress=0.00% "
                          "need=0.000 bonus=0.000 value=1.000 "
                          "propid=[] need=[] bonus=[] value=[] slewtime=0.000 costbonus=0.000 rank=0.000")
 
@@ -107,7 +107,7 @@ class ScriptedProposalTest(unittest.TestCase):
         self.assertEqual(str(tlist[0]),
                          "targetid=9 field=2010 filter=y exp_times=[15, 15] ra=127.206 dec=-14.112 "
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
-                         "time=1360.0 airmass=0.000 brightness=nan visits=0 progress=0.000 "
+                         "time=1360.0 airmass=0.000 brightness=nan visits=0 progress=0.00% "
                          "need=0.000 bonus=0.000 value=1.000 "
                          "propid=[] need=[] bonus=[] value=[] slewtime=0.000 costbonus=0.000 rank=0.000")
 
@@ -115,7 +115,7 @@ class ScriptedProposalTest(unittest.TestCase):
         self.assertEqual(str(tlist[0]),
                          "targetid=10 field=2010 filter=y exp_times=[15, 15] ra=127.206 dec=-14.112 "
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
-                         "time=1400.0 airmass=0.000 brightness=nan visits=0 progress=0.000 "
+                         "time=1400.0 airmass=0.000 brightness=nan visits=0 progress=0.00% "
                          "need=0.000 bonus=0.000 value=1.000 "
                          "propid=[] need=[] bonus=[] value=[] slewtime=0.000 costbonus=0.000 rank=0.000")
 
@@ -123,6 +123,6 @@ class ScriptedProposalTest(unittest.TestCase):
         self.assertEqual(str(tlist[0]),
                          "targetid=11 field=2010 filter=y exp_times=[15, 15] ra=127.206 dec=-14.112 "
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
-                         "time=1440.0 airmass=0.000 brightness=nan visits=0 progress=0.000 "
+                         "time=1440.0 airmass=0.000 brightness=nan visits=0 progress=0.00% "
                          "need=0.000 bonus=0.000 value=1.000 "
                          "propid=[] need=[] bonus=[] value=[] slewtime=0.000 costbonus=0.000 rank=0.000")
