@@ -69,7 +69,7 @@ class Target(object):
                  self.alt, self.az, self.rot,
                  self.telalt, self.telaz, self.telrot,
                  self.time, self.airmass, self.sky_brightness,
-                 self.visits, 100*self.progress,
+                 self.visits, 100 * self.progress,
                  self.need, self.bonus, self.value,
                  self.propid_list, self.need_list, self.bonus_list, self.value_list,
                  self.slewtime, self.cost_bonus, self.rank))

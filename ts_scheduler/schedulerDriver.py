@@ -301,7 +301,7 @@ class Driver(object):
                 total_filter_visits_dict[filter] += filter_visits_dict[filter]
                 total_filter_goal_dict[filter] += filter_goal_dict[filter]
                 self.log.debug("end_night propid=%d name=%s filter=%s progress=%.2f%%" %
-                               (prop.propid, prop.name, filter, 100*filter_progress_dict[filter]))
+                               (prop.propid, prop.name, filter, 100 * filter_progress_dict[filter]))
         for filter in self.observatoryModel.filters:
             if total_filter_goal_dict[filter] > 0:
                 total_filter_progress_dict[filter] = \
@@ -309,7 +309,7 @@ class Driver(object):
             else:
                 total_filter_progress_dict[filter] = 1.0
             self.log.info("end_night filter=%s progress=%.2f%%" %
-                           (filter, 100*total_filter_progress_dict[filter]))
+                          (filter, 100 * total_filter_progress_dict[filter]))
 
         previous_midnight_moonphase = self.midnight_moonphase
         self.sky.update(timestamp)
@@ -322,7 +322,7 @@ class Driver(object):
         self.sky.update(next_midnight)
         info = self.sky.get_moon_sun_info(0.0, 0.0, need_update=True)
         self.midnight_moonphase = info["moonPhase"]
-        self.log.info("end_night next moonphase=%.2%%f" % (self.midnight_moonphase))
+        self.log.info("end_night next moonphase=%.2f%%" % (self.midnight_moonphase))
 
         self.need_filter_swap = False
         self.filter_to_mount = ""
@@ -432,7 +432,7 @@ class Driver(object):
 
             proptarget_list = prop.suggest_targets(self.time)
             self.log.debug("select_next_target propid=%d name=%s targets=%d progress=%.2f%% propboost=%.3f" %
-                           (prop.propid, prop.name, len(proptarget_list), 100*progress,
+                           (prop.propid, prop.name, len(proptarget_list), 100 * progress,
                             propboost_dict[prop.propid]))
 
             for target in proptarget_list:

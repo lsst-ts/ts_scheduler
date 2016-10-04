@@ -138,9 +138,13 @@ class AreaDistributionProposal(Proposal):
                     self.filter_progress_dict[filter] = \
                         float(self.filter_visits_dict[filter]) / self.filter_goal_dict[filter]
 
-        self.total_progress = float(self.total_visits) / self.total_goal
+        if self.total_goal > 0:
+            self.total_progress = float(self.total_visits) / self.total_goal
+        else:
+            self.total_progress = 0.0
+
         self.log.info("start_night targets=%i goal=%i visits=%i progress=%.2f%%" %
-                      (self.total_targets, self.total_goal, self.total_visits, 100*self.total_progress))
+                      (self.total_targets, self.total_goal, self.total_visits, 100 * self.total_progress))
 
         self.last_observation = None
         self.last_observation_was_for_this_proposal = False
@@ -274,7 +278,10 @@ class AreaDistributionProposal(Proposal):
                 # compute value for available targets
                 target.sky_brightness = sky_brightness
 
-                need_ratio = (1.0 - target.progress) / (1.0 - self.total_progress)
+                if self.total_progress < 1.0:
+                    need_ratio = (1.0 - target.progress) / (1.0 - self.total_progress)
+                else:
+                    need_ratio = 0.0
 
 #                airmass_bonus = self.params.ka / airmass
 #                brightness_bonus = self.params.kb / sky_brightness
@@ -347,10 +354,13 @@ class AreaDistributionProposal(Proposal):
                 if not self.tonight_targets_dict[fieldid]:
                     # field complete, remove from tonight dict
                     self.log.debug("register_observation: field complete fieldid=%i" %
-                               (fieldid))
+                                   (fieldid))
                     del self.tonight_targets_dict[fieldid]
             self.total_visits += 1
-            self.total_progress = float(self.total_visits) / self.total_goal
+            if self.total_goal > 0:
+                self.total_progress = float(self.total_visits) / self.total_goal
+            else:
+                self.total_progress = 0.0
             self.filter_visits_dict[filter] += 1
             self.filter_progress_dict[filter] = \
                 float(self.filter_visits_dict[filter]) / self.filter_goal_dict[filter]
