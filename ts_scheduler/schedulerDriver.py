@@ -320,7 +320,7 @@ class Driver(object):
         self.sunrise_timestamp = sunrise
         next_midnight = (sunset + sunrise) / 2
         self.sky.update(next_midnight)
-        info = self.sky.get_moon_sun_info(0.0, 0.0)
+        info = self.sky.get_moon_sun_info(0.0, 0.0, need_update=True)
         self.midnight_moonphase = info["moonPhase"]
         self.log.info("end_night next moonphase=%.2%%f" % (self.midnight_moonphase))
 
