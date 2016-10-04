@@ -71,7 +71,7 @@ class AstronomicalSkyModel(object):
         return palpy.dsepVector(field_ra, field_dec, numpy.full_like(field_ra, attrs["moonRA"]),
                                 numpy.full_like(field_dec, attrs["moonDec"]))
 
-    def get_moon_sun_info(self, field_ra, field_dec):
+    def get_moon_sun_info(self, field_ra, field_dec, need_update=False):
         """Return the current moon and sun information.
 
         This function gets the right-ascension, declination, altitude, azimuth, phase and
@@ -84,6 +84,8 @@ class AstronomicalSkyModel(object):
             The target right-ascension (radians) for the moon distance.
         field_dec : float
             The target declination (radians) for the moon distance.
+        need_update : boolean, optional
+            Flag to request an update for sky brightness parameters.
 
         Returns
         -------
@@ -92,6 +94,8 @@ class AstronomicalSkyModel(object):
         """
         nra = numpy.array([field_ra])
         ndec = numpy.array([field_dec])
+        if need_update:
+            self.sky_brightness.setRaDecMjd(nra, ndec, self.date_profile.mjd)
         attrs = self.sky_brightness.getComputedVals()
         distance = palpy.dsepVector(nra, ndec,
                                     numpy.full_like(nra, attrs["moonRA"]),
