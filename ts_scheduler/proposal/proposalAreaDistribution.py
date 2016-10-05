@@ -80,12 +80,11 @@ class AreaDistributionProposal(Proposal):
         self.filter_visits_dict = {}
         self.filter_progress_dict = {}
         self.tonight_targets_dict = {}
-        for filter in self.params.filter_list:
-            if filter in filters_mounted_tonight_list:
-                self.filters_tonight_list.append(filter)
-                self.filter_goal_dict[filter] = 0
-                self.filter_visits_dict[filter] = 0
-                self.filter_progress_dict[filter] = 0.0
+        for filter in filters_mounted_tonight_list:
+            self.filters_tonight_list.append(filter)
+            self.filter_goal_dict[filter] = 0
+            self.filter_visits_dict[filter] = 0
+            self.filter_progress_dict[filter] = 0.0
         self.build_fields_tonight_list(timestamp)
 
         # compute at start night
@@ -121,7 +120,7 @@ class AreaDistributionProposal(Proposal):
                     target.progress = 0.0
                     self.targets_dict[fieldid][filter] = target
 
-            # compute total goal for tonight
+            # add to total goal for tonight
             self.tonight_targets_dict[fieldid] = {}
             for filter in self.filters_tonight_list:
                 if filter in self.targets_dict[fieldid]:
@@ -133,10 +132,10 @@ class AreaDistributionProposal(Proposal):
                         self.total_visits += target.visits
                         self.filter_goal_dict[filter] += target.goal
                         self.filter_visits_dict[filter] += target.visits
-            for filter in self.filters_tonight_list:
-                if filter in self.targets_dict[fieldid]:
-                    self.filter_progress_dict[filter] = \
-                        float(self.filter_visits_dict[filter]) / self.filter_goal_dict[filter]
+
+        for filter in self.filters_tonight_list:
+            self.filter_progress_dict[filter] = \
+                float(self.filter_visits_dict[filter]) / self.filter_goal_dict[filter]
 
         if self.total_goal > 0:
             self.total_progress = float(self.total_visits) / self.total_goal

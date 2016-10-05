@@ -1,4 +1,5 @@
 import math
+import numpy
 
 class Target(object):
     def __init__(self,
@@ -61,8 +62,8 @@ class Target(object):
                 "telalt=%.3f telaz=%.3f telrot=%.3f "
                 "time=%.1f airmass=%.3f brightness=%.3f "
                 "visits=%i progress=%.2f%% "
-                "need=%.3f bonus=%.3f value=%.3f "
-                "propid=%s need=%s bonus=%s value=%s "
+                "need=%.3f bonus=%.3f value=%.3f propboost=%.3f "
+                "propid=%s need=%s bonus=%s value=%s propboost=%s "
                 "slewtime=%.3f costbonus=%.3f rank=%.3f" %
                 (self.targetid, self.fieldid, self.filter, str(self.exp_times),
                  self.ra, self.dec, self.ang,
@@ -70,8 +71,9 @@ class Target(object):
                  self.telalt, self.telaz, self.telrot,
                  self.time, self.airmass, self.sky_brightness,
                  self.visits, 100 * self.progress,
-                 self.need, self.bonus, self.value,
-                 self.propid_list, self.need_list, self.bonus_list, self.value_list,
+                 self.need, self.bonus, self.value, self.propboost,
+                 self.propid_list, numpy.round(self.need_list, 3), numpy.round(self.bonus_list, 3),
+                 numpy.round(self.value_list, 3), numpy.round(self.propboost_list, 3),
                  self.slewtime, self.cost_bonus, self.rank))
 
     @property

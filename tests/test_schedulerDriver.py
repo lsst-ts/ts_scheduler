@@ -45,15 +45,15 @@ class TestSchedulerDriver(unittest.TestCase):
     def test_compute_slewtime_bonus(self):
 
         self.assertAlmostEquals(self.driver.compute_slewtime_bonus(0), 10, delta=1e-3)
-        self.assertAlmostEquals(self.driver.compute_slewtime_bonus(2), 1.004, delta=1e-3)
-        self.assertAlmostEquals(self.driver.compute_slewtime_bonus(3), 0.689, delta=1e-3)
-        self.assertAlmostEquals(self.driver.compute_slewtime_bonus(4), 0.524, delta=1e-3)
-        self.assertAlmostEquals(self.driver.compute_slewtime_bonus(5), 0.421, delta=1e-3)
-        self.assertAlmostEquals(self.driver.compute_slewtime_bonus(10), 0.210, delta=1e-3)
-        self.assertAlmostEquals(self.driver.compute_slewtime_bonus(30), 0.063, delta=1e-3)
-        self.assertAlmostEquals(self.driver.compute_slewtime_bonus(60), 0.026, delta=1e-3)
-        self.assertAlmostEquals(self.driver.compute_slewtime_bonus(120), 0.008, delta=1e-3)
-        self.assertAlmostEquals(self.driver.compute_slewtime_bonus(160), 0.003, delta=1e-3)
+        self.assertAlmostEquals(self.driver.compute_slewtime_bonus(2), 1.976, delta=1e-3)
+        self.assertAlmostEquals(self.driver.compute_slewtime_bonus(3), 1.404, delta=1e-3)
+        self.assertAlmostEquals(self.driver.compute_slewtime_bonus(4), 1.086, delta=1e-3)
+        self.assertAlmostEquals(self.driver.compute_slewtime_bonus(5), 0.884, delta=1e-3)
+        self.assertAlmostEquals(self.driver.compute_slewtime_bonus(10), 0.451, delta=1e-3)
+        self.assertAlmostEquals(self.driver.compute_slewtime_bonus(30), 0.139, delta=1e-3)
+        self.assertAlmostEquals(self.driver.compute_slewtime_bonus(60), 0.058, delta=1e-3)
+        self.assertAlmostEquals(self.driver.compute_slewtime_bonus(120), 0.017, delta=1e-3)
+        self.assertAlmostEquals(self.driver.compute_slewtime_bonus(160), 0.006, delta=1e-3)
         self.assertAlmostEquals(self.driver.compute_slewtime_bonus(200), 0, delta=1e-3)
 
     def test_startsurvey_startnight(self):

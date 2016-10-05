@@ -412,6 +412,7 @@ class Driver(object):
         targets_dict = {}
         ranked_targets_list = []
         propboost_dict = {}
+        sumboost = 0.0
 
         timeprogress = (self.time - self.start_time) / self.survey_duration_SECS
         for prop in self.science_proposal_list:
@@ -429,6 +430,12 @@ class Driver(object):
                 propboost_dict[prop.propid] = needindex / progressindex
             else:
                 propboost_dict[prop.propid] = 1.0
+
+            sumboost += propboost_dict[prop.propid]
+
+        for prop in self.science_proposal_list:
+            propboost_dict[prop.propid] = \
+                propboost_dict[prop.propid] * len(self.science_proposal_list) / sumboost
 
             proptarget_list = prop.suggest_targets(self.time)
             self.log.debug("select_next_target propid=%d name=%s targets=%d progress=%.2f%% propboost=%.3f" %
@@ -468,7 +475,7 @@ class Driver(object):
                 for target in targets_dict[fieldfilter]:
                     target.slewtime = slewtime
                     target.cost_bonus = cost_bonus
-                    target.rank = (target.value + cost_bonus) * target.propboost
+                    target.rank = (target.value * target.propboost) + cost_bonus
                     ranked_targets_list.append((-target.rank, target))
 
         sorted_list = sorted(ranked_targets_list, key=itemgetter(0))
