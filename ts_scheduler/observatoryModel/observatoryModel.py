@@ -592,13 +592,18 @@ class ObservatoryModel(object):
 
     def swap_filter(self, filter_to_unmount):
 
-        self.currentState.mountedfilters.remove(filter_to_unmount)
-        filter_to_mount = self.currentState.unmountedfilters.pop()
-        self.currentState.mountedfilters.append(filter_to_mount)
-        self.currentState.unmountedfilters.append(filter_to_unmount)
+        if filter_to_unmount in self.currentState.mountedfilters:
+            self.currentState.mountedfilters.remove(filter_to_unmount)
+            filter_to_mount = self.currentState.unmountedfilters.pop()
+            self.currentState.mountedfilters.append(filter_to_mount)
+            self.currentState.unmountedfilters.append(filter_to_unmount)
 
-        self.parkState.mountedfilters = self.currentState.mountedfilters
-        self.parkState.unmountedfilters = self.currentState.unmountedfilters
+            self.parkState.mountedfilters = self.currentState.mountedfilters
+            self.parkState.unmountedfilters = self.currentState.unmountedfilters
+        else:
+            self.log.info("swap_filter: REJECTED filter %s is not mounted" %
+                          (filter_to_unmount))
+        
 
     def slew_to_position(self, targetposition):
 
