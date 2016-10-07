@@ -307,7 +307,7 @@ class Driver(object):
                 total_filter_progress_dict[filter] = \
                     float(total_filter_visits_dict[filter]) / total_filter_goal_dict[filter]
             else:
-                total_filter_progress_dict[filter] = 1.0
+                total_filter_progress_dict[filter] = 0.0
             self.log.info("end_night filter=%s progress=%.2f%%" %
                           (filter, 100 * total_filter_progress_dict[filter]))
 

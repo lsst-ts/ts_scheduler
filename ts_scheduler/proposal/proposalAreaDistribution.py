@@ -24,7 +24,7 @@ class AreaDistributionProposalParameters(object):
         self.accept_consecutive_visits = confdict["scheduling"]["accept_consecutive_visits"]
 
         self.filter_list = []
-        self.filter_visits_dict = {}
+        self.filter_goal_dict = {}
         self.filter_min_brig_dict = {}
         self.filter_max_brig_dict = {}
         self.filter_max_seeing_dict = {}
@@ -35,7 +35,7 @@ class AreaDistributionProposalParameters(object):
             filter_section = "filter_%s" % filter
             if filter_section in confdict:
                 self.filter_list.append(filter)
-                self.filter_visits_dict[filter] = confdict[filter_section]["visits"]
+                self.filter_goal_dict[filter] = confdict[filter_section]["visits"]
                 self.filter_min_brig_dict[filter] = confdict[filter_section]["min_brig"]
                 self.filter_max_brig_dict[filter] = confdict[filter_section]["max_brig"]
                 self.filter_max_seeing_dict[filter] = confdict[filter_section]["max_seeing"]
@@ -50,20 +50,31 @@ class AreaDistributionProposal(Proposal):
 
         self.params = AreaDistributionProposalParameters(self.proposal_confdict)
 
-        self.fields_dict = {}
-        self.targets_dict = {}
+        # cummulative data for the survey
+        self.survey_fields = 0
+        self.survey_fields_dict = {}
+        self.survey_targets = 0
+        self.survey_targets_dict = {}
+        self.survey_targets_goal = 0
+        self.survey_targets_visits = 0
+        self.survey_targets_progress = 0.0
+        self.survey_filters_goal_dict = {}
+        self.survey_filters_visits_dict = {}
+        self.survey_filters_progress_dict = {}
+        for filter in self.params.filter_list:
+            self.survey_filters_goal_dict[filter] = 0
+            self.survey_filters_visits_dict[filter] = 0
+            self.survey_filters_progress_dict[filter] = 0.0
+
+        # cummulative data for one night
+        self.tonight_filters_list = []
+        self.tonight_fields = 0
+        self.tonight_fields_list = []
+        self.tonight_targets = 0
         self.tonight_targets_dict = {}
 
-        self.filters_tonight_list = []
-        self.fields_tonight_list = []
-        self.total_goal = 0
-        self.total_visits = 0
-        self.total_progress = 0.0
-        self.filter_goal_dict = {}
-        self.filter_visits_dict = {}
-        self.filter_progress_dict = {}
+        # data for one visit
         self.valued_targets_list = []
-
         self.last_observation = None
         self.last_observation_was_for_this_proposal = False
 
@@ -75,82 +86,91 @@ class AreaDistributionProposal(Proposal):
 
         super(AreaDistributionProposal, self).start_night(timestamp, filters_mounted_tonight_list)
 
-        self.filters_tonight_list = []
-        self.filter_goal_dict = {}
-        self.filter_visits_dict = {}
-        self.filter_progress_dict = {}
+        self.tonight_filters_list = []
+        #self.survey_filters_goal_dict = {}
+        #self.survey_filters_visits_dict = {}
+        #self.survey_filters_progress_dict = {}
+        self.tonight_targets = 0
         self.tonight_targets_dict = {}
         for filter in filters_mounted_tonight_list:
-            self.filters_tonight_list.append(filter)
-            self.filter_goal_dict[filter] = 0
-            self.filter_visits_dict[filter] = 0
-            self.filter_progress_dict[filter] = 0.0
-        self.build_fields_tonight_list(timestamp)
+            self.tonight_filters_list.append(filter)
+        self.build_tonight_fields_list(timestamp)
+        self.tonight_fields = len(self.tonight_fields_list)
 
         # compute at start night
-        self.total_targets = 0
-        self.total_goal = 0
-        self.total_visits = 0
-        for field in self.fields_tonight_list:
+        #self.total_targets = 0
+        #self.survey_targets_goal = 0
+        #self.survey_targets_visits = 0
+        for field in self.tonight_fields_list:
             fieldid = field.fieldid
 
             # remove fields too close to the moon
-#            if distance2moon(self.fields_dict[fieldid]) < self.params.min_distance_moon:
-#                del self.fields_tonight_list[fieldid]
+#            if distance2moon(self.survey_fields_dict[fieldid]) < self.params.min_distance_moon:
+#                del self.tonight_fields_list[fieldid]
 #                continue
 
             # add new fields to fields dictionary
-            if fieldid not in self.fields_dict:
-                self.fields_dict[fieldid] = copy.deepcopy(field)
+            if fieldid not in self.survey_fields_dict:
+                self.survey_fields_dict[fieldid] = copy.deepcopy(field)
+                self.survey_fields += 1
 
             # add new fields to targets dictionary
-            if fieldid not in self.targets_dict:
-                self.targets_dict[fieldid] = {}
-                for filter in self.params.filter_list:
-                    target = Target()
-                    target.fieldid = fieldid
-                    target.filter = filter
-                    target.num_exp = self.params.filter_num_exp_dict[filter]
-                    target.exp_times = self.params.filter_exp_times_dict[filter]
-                    target.ra_rad = field.ra_rad
-                    target.dec_rad = field.dec_rad
-                    target.propid = self.propid
-                    target.goal = self.params.filter_visits_dict[filter]
-                    target.visits = 0
-                    target.progress = 0.0
-                    self.targets_dict[fieldid][filter] = target
+            if fieldid not in self.survey_targets_dict:
+                self.survey_targets_dict[fieldid] = {}
 
-            # add to total goal for tonight
             self.tonight_targets_dict[fieldid] = {}
-            for filter in self.filters_tonight_list:
-                if filter in self.targets_dict[fieldid]:
-                    target = self.targets_dict[fieldid][filter]
-                    if target.progress < 1.0:
-                        self.tonight_targets_dict[fieldid][filter] = target
-                        self.total_targets += 1
-                        self.total_goal += target.goal
-                        self.total_visits += target.visits
-                        self.filter_goal_dict[filter] += target.goal
-                        self.filter_visits_dict[filter] += target.visits
+            for filter in filters_mounted_tonight_list:
+                if filter in self.params.filter_list:
+                    if self.params.filter_goal_dict[filter] > 0:
+                        if filter not in self.survey_targets_dict[fieldid]:
+                            target = Target()
+                            target.fieldid = fieldid
+                            target.filter = filter
+                            target.num_exp = self.params.filter_num_exp_dict[filter]
+                            target.exp_times = self.params.filter_exp_times_dict[filter]
+                            target.ra_rad = field.ra_rad
+                            target.dec_rad = field.dec_rad
+                            target.propid = self.propid
+                            target.goal = self.params.filter_goal_dict[filter]
+                            target.visits = 0
+                            target.progress = 0.0
+                            self.survey_targets_dict[fieldid][filter] = target
 
-        for filter in self.filters_tonight_list:
-            self.filter_progress_dict[filter] = \
-                float(self.filter_visits_dict[filter]) / self.filter_goal_dict[filter]
+                            self.survey_targets += 1
+                            self.survey_targets_goal += target.goal
+                            #self.survey_targets_visits += target.visits
+                            self.survey_filters_goal_dict[filter] += target.goal
+                            #self.survey_filters_visits_dict[filter] += target.visits
+                        target = self.survey_targets_dict[fieldid][filter]
+                        if target.progress < 1.0:
+                            self.tonight_targets_dict[fieldid][filter] = target
+                            self.tonight_targets += 1
 
-        if self.total_goal > 0:
-            self.total_progress = float(self.total_visits) / self.total_goal
+        for filter in self.params.filter_list:
+            if self.survey_filters_goal_dict[filter] > 0:
+                self.survey_filters_progress_dict[filter] = \
+                    float(self.survey_filters_visits_dict[filter]) / self.survey_filters_goal_dict[filter]
+            else:
+                self.survey_filters_progress_dict[filter] = 0.0
+
+        if self.survey_targets_goal > 0:
+            self.survey_targets_progress = float(self.survey_targets_visits) / self.survey_targets_goal
         else:
-            self.total_progress = 0.0
+            self.survey_targets_progress = 0.0
 
-        self.log.info("start_night targets=%i goal=%i visits=%i progress=%.2f%%" %
-                      (self.total_targets, self.total_goal, self.total_visits, 100 * self.total_progress))
+        self.log.info("start_night tonight fields=%i targets=%i" %
+                      (self.tonight_fields, self.tonight_targets))
+        self.log.info("start_night survey fields=%i targets=%i goal=%i visits=%i progress=%.2f%%" %
+                      (self.survey_fields, self.survey_targets,
+                       self.survey_targets_goal, self.survey_targets_visits,
+                       100 * self.survey_targets_progress))
 
         self.last_observation = None
         self.last_observation_was_for_this_proposal = False
 
-    def build_fields_tonight_list(self, timestamp):
+    def build_tonight_fields_list(self, timestamp):
 
-        self.fields_tonight_list = []
+        self.tonight_fields_list = []
 
         sql = self.select_fields(timestamp, self.params.sky_region, self.params.sky_exclusions,
                                  self.params.sky_nightly_bounds)
@@ -159,34 +179,34 @@ class AreaDistributionProposal(Proposal):
 
         for row in res:
             field = Field.from_db_row(row)
-            self.fields_tonight_list.append(field)
+            self.tonight_fields_list.append(field)
 
         return
 
     def get_progress(self):
 
-        return self.total_progress
+        return self.survey_targets_progress
 
     def get_filter_visits(self, filter):
 
-        if filter in self.filter_visits_dict:
-            return self.filter_visits_dict[filter]
+        if filter in self.survey_filters_visits_dict:
+            return self.survey_filters_visits_dict[filter]
         else:
             return 0
 
     def get_filter_goal(self, filter):
 
-        if filter in self.filter_goal_dict:
-            return self.filter_goal_dict[filter]
+        if filter in self.survey_filters_goal_dict:
+            return self.survey_filters_goal_dict[filter]
         else:
             return 0
 
     def get_filter_progress(self, filter):
 
-        if filter in self.filter_progress_dict:
-            return self.filter_progress_dict[filter]
+        if filter in self.survey_filters_progress_dict:
+            return self.survey_filters_progress_dict[filter]
         else:
-            return 1.0
+            return 0.0
 
     def suggest_targets(self, timestamp):
 
@@ -194,7 +214,7 @@ class AreaDistributionProposal(Proposal):
 
         self.clear_evaluated_target_list()
 
-        fields_evaluation_list = self.fields_tonight_list
+        fields_evaluation_list = self.tonight_fields_list
 
         # compute sky brightness for all targets
         id_list = []
@@ -277,8 +297,8 @@ class AreaDistributionProposal(Proposal):
                 # compute value for available targets
                 target.sky_brightness = sky_brightness
 
-                if self.total_progress < 1.0:
-                    need_ratio = (1.0 - target.progress) / (1.0 - self.total_progress)
+                if self.survey_targets_progress < 1.0:
+                    need_ratio = (1.0 - target.progress) / (1.0 - self.survey_targets_progress)
                 else:
                     need_ratio = 0.0
 
@@ -342,7 +362,7 @@ class AreaDistributionProposal(Proposal):
                     break
 
         if tfound is not None:
-            target = self.targets_dict[fieldid][filter]
+            target = self.survey_targets_dict[fieldid][filter]
             target.visits += 1
             target.progress = float(target.visits) / target.goal
             if target.progress == 1.0:
@@ -355,14 +375,17 @@ class AreaDistributionProposal(Proposal):
                     self.log.debug("register_observation: field complete fieldid=%i" %
                                    (fieldid))
                     del self.tonight_targets_dict[fieldid]
-            self.total_visits += 1
-            if self.total_goal > 0:
-                self.total_progress = float(self.total_visits) / self.total_goal
+            self.survey_targets_visits += 1
+            if self.survey_targets_goal > 0:
+                self.survey_targets_progress = float(self.survey_targets_visits) / self.survey_targets_goal
             else:
-                self.total_progress = 0.0
-            self.filter_visits_dict[filter] += 1
-            self.filter_progress_dict[filter] = \
-                float(self.filter_visits_dict[filter]) / self.filter_goal_dict[filter]
+                self.survey_targets_progress = 0.0
+            self.survey_filters_visits_dict[filter] += 1
+            if self.survey_filters_goal_dict[filter] > 0:
+                self.survey_filters_progress_dict[filter] = \
+                    float(self.survey_filters_visits_dict[filter]) / self.survey_filters_goal_dict[filter]
+            else:
+                self.survey_filters_progress_dict[filter] = 0.0
             self.last_observation_was_for_this_proposal = True
             self.log.debug("register_observation: %s" % (target))
         else:

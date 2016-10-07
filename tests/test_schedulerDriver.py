@@ -65,8 +65,8 @@ class TestSchedulerDriver(unittest.TestCase):
         self.assertEqual(self.driver.isnight, False)
         self.assertAlmostEquals(self.driver.sunset_timestamp, 0.0, delta=1e-1)
         self.assertAlmostEquals(self.driver.sunrise_timestamp, 0.0, delta=1e-1)
-        self.assertEqual(len(self.driver.science_proposal_list[0].fields_tonight_list), 0)
-        self.assertEqual(self.driver.science_proposal_list[0].total_goal, 0)
+        self.assertEqual(len(self.driver.science_proposal_list[0].tonight_fields_list), 0)
+        self.assertEqual(self.driver.science_proposal_list[0].survey_targets_goal, 0)
 
         time = lsst_start_timestamp
         self.driver.update_time(time)
@@ -75,8 +75,8 @@ class TestSchedulerDriver(unittest.TestCase):
         self.assertEqual(self.driver.isnight, False)
         self.assertAlmostEquals(self.driver.sunset_timestamp, 1640998122.8, delta=1e-1)
         self.assertAlmostEquals(self.driver.sunrise_timestamp, 1641026665.8, delta=1e-1)
-        self.assertEqual(len(self.driver.science_proposal_list[0].fields_tonight_list), 0)
-        self.assertEqual(self.driver.science_proposal_list[0].total_goal, 0)
+        self.assertEqual(len(self.driver.science_proposal_list[0].tonight_fields_list), 0)
+        self.assertEqual(self.driver.science_proposal_list[0].survey_targets_goal, 0)
 
         time = 1640998122
         self.driver.update_time(time)
@@ -85,8 +85,8 @@ class TestSchedulerDriver(unittest.TestCase):
         self.assertEqual(self.driver.isnight, False)
         self.assertAlmostEquals(self.driver.sunset_timestamp, 1640998122.8, delta=1e-1)
         self.assertAlmostEquals(self.driver.sunrise_timestamp, 1641026665.8, delta=1e-1)
-        self.assertEqual(len(self.driver.science_proposal_list[0].fields_tonight_list), 0)
-        self.assertEqual(self.driver.science_proposal_list[0].total_goal, 0)
+        self.assertEqual(len(self.driver.science_proposal_list[0].tonight_fields_list), 0)
+        self.assertEqual(self.driver.science_proposal_list[0].survey_targets_goal, 0)
 
         time = 1641000000
         self.driver.update_time(time)
@@ -95,8 +95,8 @@ class TestSchedulerDriver(unittest.TestCase):
         self.assertEqual(self.driver.isnight, True)
         self.assertAlmostEquals(self.driver.sunset_timestamp, 1640998122.8, delta=1e-1)
         self.assertAlmostEquals(self.driver.sunrise_timestamp, 1641026665.8, delta=1e-1)
-        self.assertEqual(len(self.driver.science_proposal_list[0].fields_tonight_list), 1515)
-        self.assertEqual(self.driver.science_proposal_list[0].total_goal, 1522575)
+        self.assertEqual(len(self.driver.science_proposal_list[0].tonight_fields_list), 1515)
+        self.assertEqual(self.driver.science_proposal_list[0].survey_targets_goal, 1522575)
 
         time = 1641010980
         self.driver.update_time(time)
@@ -105,8 +105,8 @@ class TestSchedulerDriver(unittest.TestCase):
         self.assertEqual(self.driver.isnight, True)
         self.assertAlmostEquals(self.driver.sunset_timestamp, 1640998122.8, delta=1e-1)
         self.assertAlmostEquals(self.driver.sunrise_timestamp, 1641026665.8, delta=1e-1)
-        self.assertEqual(len(self.driver.science_proposal_list[0].fields_tonight_list), 1515)
-        self.assertEqual(self.driver.science_proposal_list[0].total_goal, 1522575)
+        self.assertEqual(len(self.driver.science_proposal_list[0].tonight_fields_list), 1515)
+        self.assertEqual(self.driver.science_proposal_list[0].survey_targets_goal, 1522575)
 
         time = 1641086669
         self.driver.update_time(time)
@@ -115,8 +115,8 @@ class TestSchedulerDriver(unittest.TestCase):
         self.assertEqual(self.driver.isnight, False)
         self.assertAlmostEquals(self.driver.sunset_timestamp, 1641084532.8, delta=1e-1)
         self.assertAlmostEquals(self.driver.sunrise_timestamp, 1641113113.8, delta=1e-1)
-        self.assertEqual(len(self.driver.science_proposal_list[0].fields_tonight_list), 1515)
-        self.assertEqual(self.driver.science_proposal_list[0].total_goal, 1522575)
+        self.assertEqual(len(self.driver.science_proposal_list[0].tonight_fields_list), 1515)
+        self.assertEqual(self.driver.science_proposal_list[0].survey_targets_goal, 1522575)
 
         time = 1641114000
         self.driver.update_time(time)
@@ -125,8 +125,8 @@ class TestSchedulerDriver(unittest.TestCase):
         self.assertEqual(self.driver.isnight, True)
         self.assertAlmostEquals(self.driver.sunset_timestamp, 1641084532.8, delta=1e-1)
         self.assertAlmostEquals(self.driver.sunrise_timestamp, 1641113113.8, delta=1e-1)
-        self.assertEqual(len(self.driver.science_proposal_list[0].fields_tonight_list), 1519)
-        self.assertEqual(self.driver.science_proposal_list[0].total_goal, 1526595)
+        self.assertEqual(len(self.driver.science_proposal_list[0].tonight_fields_list), 1519)
+        self.assertEqual(self.driver.science_proposal_list[0].survey_targets_goal, 1537650)
 
     def tearDown(self):
         pass

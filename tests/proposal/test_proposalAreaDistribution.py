@@ -29,7 +29,7 @@ class AreaDistributionProposalTest(unittest.TestCase):
         self.assertEqual(self.areaprop.name, "areaProp1")
         self.assertEqual(str(self.areaprop.params.filter_list),
                          "['u', 'g', 'r', 'i', 'z', 'y']")
-        self.assertEqual(str(self.areaprop.params.filter_visits_dict),
+        self.assertEqual(str(self.areaprop.params.filter_goal_dict),
                          "{'g': 10.0, 'i': 25.0, 'r': 25.0, 'u': 7.0, 'y': 20.0, 'z': 20.0}")
         self.assertEqual(str(self.areaprop.params.filter_min_brig_dict),
                          "{'g': 21.0, 'i': 20.25, 'r': 20.5, 'u': 21.0, 'y': 17.5, 'z': 17.5}")
@@ -47,8 +47,8 @@ class AreaDistributionProposalTest(unittest.TestCase):
         # Set timestamp as 2022-01-01 0h UTC
         lsst_start_timestamp = 1640995200.0
 
-        self.areaprop.build_fields_tonight_list(lsst_start_timestamp)
-        field_list = self.areaprop.fields_tonight_list
+        self.areaprop.build_tonight_fields_list(lsst_start_timestamp)
+        field_list = self.areaprop.tonight_fields_list
         fieldid_list = []
         for field in field_list:
             fieldid_list.append(field.fieldid)
@@ -57,8 +57,8 @@ class AreaDistributionProposalTest(unittest.TestCase):
 
         lsst_six_months = lsst_start_timestamp + 182 * 24 * 3600
 
-        self.areaprop.build_fields_tonight_list(lsst_six_months)
-        field_list = self.areaprop.fields_tonight_list
+        self.areaprop.build_tonight_fields_list(lsst_six_months)
+        field_list = self.areaprop.tonight_fields_list
         fieldid_list = []
         for field in field_list:
             fieldid_list.append(field.fieldid)
@@ -76,8 +76,8 @@ class AreaDistributionProposalTest(unittest.TestCase):
         (name, ext) = os.path.splitext(name_ext)
         proposal_confdict = read_conf_file(configfilepath)
         self.areaweak = AreaDistributionProposal(2, name, proposal_confdict, self.skyModel)
-        self.areaweak.build_fields_tonight_list(lsst_start_timestamp)
-        field_list = self.areaweak.fields_tonight_list
+        self.areaweak.build_tonight_fields_list(lsst_start_timestamp)
+        field_list = self.areaweak.tonight_fields_list
         fieldid_list = []
         for field in field_list:
             fieldid_list.append(field.fieldid)
@@ -88,19 +88,19 @@ class AreaDistributionProposalTest(unittest.TestCase):
         lsst_start_timestamp = 1641000000.0
         self.areaprop.start_night(lsst_start_timestamp, ["g", "r", "i", "z", "y"])
 
-        field_list = self.areaprop.fields_tonight_list
+        field_list = self.areaprop.tonight_fields_list
         fieldid_list = []
         for field in field_list:
             fieldid_list.append(field.fieldid)
         self.assertEqual(str(fieldid_list), "[1764, 1873, 2006, 2108, 2234, 2346, 2464, 2572, 2692, 2802]")
-        self.assertEqual(str(self.areaprop.targets_dict[fieldid_list[0]]["g"]),
+        self.assertEqual(str(self.areaprop.tonight_targets_dict[fieldid_list[0]]["g"]),
                          "targetid=0 field=1764 filter=g exp_times=[15.0, 15.0] ra=13.726 dec=-19.793 "
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
                          "time=0.0 airmass=0.000 brightness=0.000 visits=0 progress=0.00% "
                          "need=0.000 bonus=0.000 value=0.000 propboost=1.000 "
                          "propid=[] need=[] bonus=[] value=[] propboost=[] "
                          "slewtime=0.000 costbonus=0.000 rank=0.000")
-        self.assertEqual(str(self.areaprop.targets_dict[fieldid_list[-1]]["g"]),
+        self.assertEqual(str(self.areaprop.tonight_targets_dict[fieldid_list[-1]]["g"]),
                          "targetid=0 field=2802 filter=g exp_times=[15.0, 15.0] ra=12.654 dec=3.318 "
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
                          "time=0.0 airmass=0.000 brightness=0.000 visits=0 progress=0.00% "
@@ -108,9 +108,9 @@ class AreaDistributionProposalTest(unittest.TestCase):
                          "propid=[] need=[] bonus=[] value=[] propboost=[] "
                          "slewtime=0.000 costbonus=0.000 rank=0.000")
 
-        self.assertEqual(self.areaprop.total_goal, 1000)
-        self.assertEqual(self.areaprop.total_visits, 0)
-        self.assertEqual(self.areaprop.total_progress, 0.0)
+        self.assertEqual(self.areaprop.survey_targets_goal, 1000)
+        self.assertEqual(self.areaprop.survey_targets_visits, 0)
+        self.assertEqual(self.areaprop.survey_targets_progress, 0.0)
 
     def test_areadistributionproposal_suggest_targets(self):
 
@@ -157,16 +157,16 @@ class AreaDistributionProposalTest(unittest.TestCase):
         self.assertEqual(observation.goal, 20)
         self.assertEqual(observation.visits, 0)
         self.assertEqual(observation.progress, 0.0)
-        self.assertEqual(self.areaprop.total_goal, 1000)
-        self.assertEqual(self.areaprop.total_visits, 0)
-        self.assertEqual(self.areaprop.total_progress, 0.0)
+        self.assertEqual(self.areaprop.survey_targets_goal, 1000)
+        self.assertEqual(self.areaprop.survey_targets_visits, 0)
+        self.assertEqual(self.areaprop.survey_targets_progress, 0.0)
         self.areaprop.register_observation(observation)
         self.assertEqual(observation.goal, 20)
         self.assertEqual(observation.visits, 1)
         self.assertEqual(observation.progress, 0.05)
-        self.assertEqual(self.areaprop.total_goal, 1000)
-        self.assertEqual(self.areaprop.total_visits, 1)
-        self.assertEqual(self.areaprop.total_progress, 0.001)
+        self.assertEqual(self.areaprop.survey_targets_goal, 1000)
+        self.assertEqual(self.areaprop.survey_targets_visits, 1)
+        self.assertEqual(self.areaprop.survey_targets_progress, 0.001)
 
         timestamp += 60
         target_list = self.areaprop.suggest_targets(timestamp)
