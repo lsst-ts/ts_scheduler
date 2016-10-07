@@ -34,6 +34,7 @@ class DriverParameters(object):
     def configure(self, confdict):
 
         self.coadd_values = confdict["ranking"]["coadd_values"]
+        self.time_balancing = confdict["ranking"]["time_balancing"]
 
         tmax = confdict["ranking"]["timebonus_tmax"]
         bmax = confdict["ranking"]["timebonus_bmax"]
@@ -150,6 +151,8 @@ class Driver(object):
         self.params.configure(confdict)
         self.log.log(WORDY,
                      "configure: coadd_values=%s" % (self.params.coadd_values))
+        self.log.log(WORDY,
+                     "configure: time_balancing=%s" % (self.params.time_balancing))
         self.log.log(WORDY,
                      "configure: timebonus_dt=%.3f" % (self.params.timebonus_dt))
         self.log.log(WORDY,
@@ -418,19 +421,21 @@ class Driver(object):
         for prop in self.science_proposal_list:
 
             progress = prop.get_progress()
-            if progress > 0.0:
-                if timeprogress < 1.0:
-                    needindex = (1.0 - progress) / (1.0 - timeprogress)
+            if self.params.time_balancing:
+                if progress > 0.0:
+                    if timeprogress < 1.0:
+                        needindex = (1.0 - progress) / (1.0 - timeprogress)
+                    else:
+                        needindex = 0.0
+                    if timeprogress > 0.0:
+                        progressindex = progress / timeprogress
+                    else:
+                        progressindex = 1.0
+                    propboost_dict[prop.propid] = needindex / progressindex
                 else:
-                    needindex = 0.0
-                if timeprogress > 0.0:
-                    progressindex = progress / timeprogress
-                else:
-                    progressindex = 1.0
-                propboost_dict[prop.propid] = needindex / progressindex
+                    propboost_dict[prop.propid] = 1.0
             else:
                 propboost_dict[prop.propid] = 1.0
-
             sumboost += propboost_dict[prop.propid]
 
         for prop in self.science_proposal_list:
