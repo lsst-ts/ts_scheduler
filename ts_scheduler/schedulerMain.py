@@ -335,7 +335,7 @@ class Main(object):
                         if isnight:
                             if is_down:
                                 self.log.info("run: downtime duration=%.1f" % (down_duration))
-                                waitstate = False
+                                waitstate = True
                             else:
                                 waitstate = True
                         else:
@@ -359,52 +359,57 @@ class Main(object):
                                 self.log.debug("run: rx state %s" % str(observatory_state))
 
                                 self.schedulerDriver.update_internal_conditions(observatory_state)
-                                target = self.schedulerDriver.select_next_target()
 
-                                self.topicTarget.targetId = target.targetid
-                                self.topicTarget.fieldId = target.fieldid
-                                self.topicTarget.filter = target.filter
-                                self.topicTarget.request_time = target.time
-                                self.topicTarget.ra = target.ra
-                                self.topicTarget.dec = target.dec
-                                self.topicTarget.angle = target.ang
-                                self.topicTarget.num_exposures = target.num_exp
-                                for i, exptime in enumerate(target.exp_times):
-                                    self.topicTarget.exposure_times[i] = int(exptime)
-                                self.topicTarget.airmass = target.airmass
-                                self.topicTarget.sky_brightness = target.sky_brightness
-                                self.topicTarget.slew_time = target.slewtime
-                                self.topicTarget.cost_bonus = target.cost_bonus
-                                self.topicTarget.rank = target.rank
-                                self.topicTarget.num_proposals = target.num_props
-                                for i, prop_id in enumerate(target.propid_list):
-                                    self.topicTarget.proposal_Ids[i] = prop_id
-                                for i, prop_value in enumerate(target.value_list):
-                                    self.topicTarget.proposal_values[i] = prop_value
-                                for i, prop_need in enumerate(target.need_list):
-                                    self.topicTarget.proposal_needs[i] = prop_need
-                                for i, prop_bonus in enumerate(target.bonus_list):
-                                    self.topicTarget.proposal_bonuses[i] = prop_bonus
+                                if is_down:
+                                    waitobservation = False
+                                else:
+                                    target = self.schedulerDriver.select_next_target()
 
-                                prop = self.schedulerDriver.science_proposal_list[0]
-                                moon_sun = prop.sky.get_moon_sun_info(target.ra_rad, target.dec_rad)
-                                if moon_sun["moonRA"] is not None:
-                                    self.topicTarget.moon_ra = math.degrees(moon_sun["moonRA"])
-                                    self.topicTarget.moon_dec = math.degrees(moon_sun["moonDec"])
-                                    self.topicTarget.moon_alt = math.degrees(moon_sun["moonAlt"])
-                                    self.topicTarget.moon_az = math.degrees(moon_sun["moonAz"])
-                                    self.topicTarget.moon_phase = moon_sun["moonPhase"]
-                                    self.topicTarget.moon_distance = math.degrees(moon_sun["moonDist"])
-                                    self.topicTarget.sun_alt = math.degrees(moon_sun["sunAlt"])
-                                    self.topicTarget.sun_az = math.degrees(moon_sun["sunAz"])
-                                    self.topicTarget.sun_ra = math.degrees(moon_sun["sunRA"])
-                                    self.topicTarget.sun_dec = math.degrees(moon_sun["sunDec"])
-                                    self.topicTarget.sun_elong = math.degrees(moon_sun["sunEclipLon"])
+                                    self.topicTarget.targetId = target.targetid
+                                    self.topicTarget.fieldId = target.fieldid
+                                    self.topicTarget.filter = target.filter
+                                    self.topicTarget.request_time = target.time
+                                    self.topicTarget.ra = target.ra
+                                    self.topicTarget.dec = target.dec
+                                    self.topicTarget.angle = target.ang
+                                    self.topicTarget.num_exposures = target.num_exp
+                                    for i, exptime in enumerate(target.exp_times):
+                                        self.topicTarget.exposure_times[i] = int(exptime)
+                                    self.topicTarget.airmass = target.airmass
+                                    self.topicTarget.sky_brightness = target.sky_brightness
+                                    self.topicTarget.slew_time = target.slewtime
+                                    self.topicTarget.cost_bonus = target.cost_bonus
+                                    self.topicTarget.rank = target.rank
+                                    self.topicTarget.num_proposals = target.num_props
+                                    for i, prop_id in enumerate(target.propid_list):
+                                        self.topicTarget.proposal_Ids[i] = prop_id
+                                    for i, prop_value in enumerate(target.value_list):
+                                        self.topicTarget.proposal_values[i] = prop_value
+                                    for i, prop_need in enumerate(target.need_list):
+                                        self.topicTarget.proposal_needs[i] = prop_need
+                                    for i, prop_bonus in enumerate(target.bonus_list):
+                                        self.topicTarget.proposal_bonuses[i] = prop_bonus
 
-                                self.sal.putSample_target(self.topicTarget)
-                                self.log.debug("run: tx target %s", str(target))
+                                    prop = self.schedulerDriver.science_proposal_list[0]
+                                    moon_sun = prop.sky.get_moon_sun_info(target.ra_rad, target.dec_rad)
+                                    if moon_sun["moonRA"] is not None:
+                                        self.topicTarget.moon_ra = math.degrees(moon_sun["moonRA"])
+                                        self.topicTarget.moon_dec = math.degrees(moon_sun["moonDec"])
+                                        self.topicTarget.moon_alt = math.degrees(moon_sun["moonAlt"])
+                                        self.topicTarget.moon_az = math.degrees(moon_sun["moonAz"])
+                                        self.topicTarget.moon_phase = moon_sun["moonPhase"]
+                                        self.topicTarget.moon_distance = math.degrees(moon_sun["moonDist"])
+                                        self.topicTarget.sun_alt = math.degrees(moon_sun["sunAlt"])
+                                        self.topicTarget.sun_az = math.degrees(moon_sun["sunAz"])
+                                        self.topicTarget.sun_ra = math.degrees(moon_sun["sunRA"])
+                                        self.topicTarget.sun_dec = math.degrees(moon_sun["sunDec"])
+                                        self.topicTarget.sun_elong = math.degrees(moon_sun["sunEclipLon"])
 
-                                waitobservation = True
+                                    self.sal.putSample_target(self.topicTarget)
+                                    self.log.debug("run: tx target %s", str(target))
+
+                                    waitobservation = True
+
                                 lastobstime = time.time()
                                 while waitobservation:
                                     scode = self.sal.getNextSample_observation(self.topicObservation)
