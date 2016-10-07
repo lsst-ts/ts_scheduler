@@ -326,11 +326,18 @@ class Main(object):
                         lasttimetime = time.time()
                         timestamp = self.topicTime.timestamp
                         nightstamp = self.topicTime.night
-                        self.log.debug("run: rx time=%.6f night=%i" % (timestamp, nightstamp))
+                        is_down = self.topicTime.is_down
+                        down_duration = self.topicTime.down_duration
+                        self.log.debug("run: rx time=%.6f night=%i is_down=%s down_duration=%.1f" %
+                                       (timestamp, nightstamp, is_down, down_duration))
 
                         isnight = self.schedulerDriver.update_time(timestamp)
                         if isnight:
-                            waitstate = True
+                            if is_down:
+                                self.log.info("run: downtime duration=%.1f" % (down_duration))
+                                waitstate = False
+                            else:
+                                waitstate = True
                         else:
                             (needswap, filter2unmount, filter2mount) = \
                                 self.schedulerDriver.get_need_filter_swap()
