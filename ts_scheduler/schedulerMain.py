@@ -322,15 +322,14 @@ class Main(object):
             while waittime:
                 scode = self.sal.getNextSample_timeHandler(self.topicTime)
                 if scode == 0 and self.topicTime.timestamp != 0:
+                    lasttimetime = time.time()
+                    nightstamp = self.topicTime.night
+                    is_down = self.topicTime.is_down
+                    down_duration = self.topicTime.down_duration
+                    self.log.debug("run: rx time=%.6f night=%i is_down=%s down_duration=%.1f" %
+                                   (self.topicTime.timestamp, nightstamp, is_down, down_duration))
                     if self.topicTime.timestamp > timestamp:
-                        lasttimetime = time.time()
                         timestamp = self.topicTime.timestamp
-                        nightstamp = self.topicTime.night
-                        is_down = self.topicTime.is_down
-                        down_duration = self.topicTime.down_duration
-                        self.log.debug("run: rx time=%.6f night=%i is_down=%s down_duration=%.1f" %
-                                       (timestamp, nightstamp, is_down, down_duration))
-
                         isnight = self.schedulerDriver.update_time(timestamp)
                         if isnight:
                             if is_down:
@@ -451,8 +450,9 @@ class Main(object):
                                     self.log.log(TRACE, "run: t=%f laststatetime=%f" % (ts, laststatetime))
 
                     else:
-                        self.log.warning("run: rx backward time previous=%f new=%f" %
+                        self.log.error("run: rx non progressive time previous=%f new=%f" %
                                          (timestamp, self.topicTime.timestamp))
+                        waittime = False
 
                 else:
                     tc = time.time()
