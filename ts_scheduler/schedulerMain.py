@@ -25,7 +25,7 @@ from SALPY_scheduler import scheduler_filterSwapC
 
 #from SALPY_scheduler import flushSamples_schedulerConfig
 
-from ts_scheduler.setup import TRACE
+from ts_scheduler.setup import TRACE, EXTENSIVE
 from ts_scheduler.schedulerDefinitions import read_conf_file, conf_file_path
 from ts_scheduler.schedulerDriver import Driver
 from ts_scheduler.schedulerTarget import Target
@@ -313,7 +313,7 @@ class Main(object):
                     self.topicField.eb = math.degrees(field_dict[fieldid].eb_rad)
                     self.topicField.fov = math.degrees(field_dict[fieldid].fov_rad)
                     self.sal.putSample_field(self.topicField)
-                    self.log.debug("run: tx field %s" % (field_dict[fieldid]))
+                    self.log.log(EXTENSIVE, "run: tx field %s" % (field_dict[fieldid]))
                 self.topicField.ID = -1
                 self.sal.putSample_field(self.topicField)
 
@@ -451,7 +451,7 @@ class Main(object):
 
                     else:
                         self.log.error("run: rx non progressive time previous=%f new=%f" %
-                                         (timestamp, self.topicTime.timestamp))
+                                       (timestamp, self.topicTime.timestamp))
                         waittime = False
 
                 else:
@@ -786,6 +786,7 @@ class Main(object):
         confdict["scheduling"]["max_num_targets"] = max_num_targets
         confdict["scheduling"]["accept_serendipity"] = accept_serendipity
         confdict["scheduling"]["accept_consecutive_visits"] = accept_consecutive_visits
+        confdict["scheduling"]["airmass_bonus"] = 0.5
 
         return confdict
 

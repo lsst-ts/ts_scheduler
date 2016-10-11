@@ -22,6 +22,7 @@ class AreaDistributionProposalParameters(object):
         self.max_num_targets = int(confdict["scheduling"]["max_num_targets"])
         self.accept_serendipity = confdict["scheduling"]["accept_serendipity"]
         self.accept_consecutive_visits = confdict["scheduling"]["accept_consecutive_visits"]
+        self.airmass_bonus = confdict["scheduling"]["airmass_bonus"]
 
         self.filter_list = []
         self.filter_goal_dict = {}
@@ -208,13 +209,17 @@ class AreaDistributionProposal(Proposal):
         else:
             return 0.0
 
-    def suggest_targets(self, timestamp):
+    def suggest_targets(self, timestamp, constrained_filter):
 
         super(AreaDistributionProposal, self).suggest_targets(timestamp)
 
         self.clear_evaluated_target_list()
 
         fields_evaluation_list = self.tonight_fields_list
+        if constrained_filter is None:
+            filters_evaluation_list = self.tonight_filters_list
+        else:
+            filters_evaluation_list = [constrained_filter]
 
         # compute sky brightness for all targets
         id_list = []
@@ -261,7 +266,13 @@ class AreaDistributionProposal(Proposal):
                     discarded_fields_airmass += 1
                     continue
 
+            airmass_rank = self.params.airmass_bonus * (1 - airmass / self.params.max_airmass)
+
             for filter in self.tonight_targets_dict[fieldid]:
+
+                if filter not in filters_evaluation_list:
+                    continue
+
                 target = self.tonight_targets_dict[fieldid][filter]
                 target.time = timestamp
                 target.airmass = airmass
@@ -306,7 +317,7 @@ class AreaDistributionProposal(Proposal):
 #                brightness_bonus = self.params.kb / sky_brightness
 
                 target.need = need_ratio
-                target.bonus = 0.0
+                target.bonus = airmass_rank
                 target.value = target.need + target.bonus
 
                 self.add_evaluated_target(target)

@@ -118,7 +118,7 @@ class AreaDistributionProposalTest(unittest.TestCase):
         self.areaprop.start_night(lsst_start_timestamp, ["g", "r", "i", "z", "y"])
 
         timestamp = lsst_start_timestamp
-        target_list = self.areaprop.suggest_targets(timestamp)
+        target_list = self.areaprop.suggest_targets(timestamp, None)
         self.assertEqual(len(target_list), 40)
         self.assertEqual(str(target_list[0]),
                          "targetid=0 field=1764 filter=y exp_times=[15.0, 15.0] ra=13.726 dec=-19.793 "
@@ -136,7 +136,7 @@ class AreaDistributionProposalTest(unittest.TestCase):
                          "slewtime=0.000 costbonus=0.000 rank=0.000")
 
         timestamp += 60
-        target_list = self.areaprop.suggest_targets(timestamp)
+        target_list = self.areaprop.suggest_targets(timestamp, None)
         self.assertEqual(len(target_list), 40)
         self.assertEqual(str(target_list[0]),
                          "targetid=0 field=1764 filter=y exp_times=[15.0, 15.0] ra=13.726 dec=-19.793 "
@@ -169,7 +169,7 @@ class AreaDistributionProposalTest(unittest.TestCase):
         self.assertEqual(self.areaprop.survey_targets_progress, 0.001)
 
         timestamp += 60
-        target_list = self.areaprop.suggest_targets(timestamp)
+        target_list = self.areaprop.suggest_targets(timestamp, None)
         self.assertEqual(len(target_list), 40)
         self.assertEqual(str(target_list[0]),
                          "targetid=0 field=1764 filter=r exp_times=[15.0, 15.0] ra=13.726 dec=-19.793 "

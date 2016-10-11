@@ -354,6 +354,9 @@ class ObservatoryModel(object):
 
     def set_state(self, new_state):
 
+        if new_state.filter != self.currentState.filter:
+            self.filter_changes_list.append(new_state.time)
+
         self.currentState.set(new_state)
 
     def update_state(self, time):
@@ -394,9 +397,10 @@ class ObservatoryModel(object):
 
     def get_slew_delay(self, target):
 
-        # check if filter is possible
-        if target.filter not in self.currentState.mountedfilters:
-            return -1.0
+        if target.filter != self.currentState.filter:
+            # check if filter is possible
+            if not self.is_filter_change_allowed_for(target.filter):
+                return -1.0
 
         targetposition = self.radecang2position(self.currentState.time,
                                                 target.ra_rad,
@@ -603,7 +607,6 @@ class ObservatoryModel(object):
         else:
             self.log.info("swap_filter: REJECTED filter %s is not mounted" %
                           (filter_to_unmount))
-        
 
     def slew_to_position(self, targetposition):
 
@@ -786,33 +789,67 @@ class ObservatoryModel(object):
 
         return delay
 
+    def is_filter_change_allowed_for(self, targetfilter):
+
+        if targetfilter in self.currentState.mountedfilters:
+            # new filter is mounted
+            allowed = self.is_filter_change_allowed()
+        else:
+            allowed = False
+        return allowed
+
+    def is_filter_change_allowed(self):
+
+        burst_num = self.params.filter_max_changes_burst_num
+        if len(self.filter_changes_list) >= burst_num:
+            deltatime = self.currentState.time - self.filter_changes_list[-burst_num]
+            if deltatime >= self.params.filter_max_changes_burst_time:
+                # burst time allowed
+                avg_num = self.params.filter_max_changes_avg_num
+                if len(self.filter_changes_list) >= avg_num:
+                    deltatime = self.currentState.time - self.filter_changes_list[-avg_num]
+                    if deltatime >= self.params.filter_max_changes_avg_time:
+                        # avg time allowed
+                        allowed = True
+                    else:
+                        allowed = False
+                else:
+                    allowed = True
+            else:
+                allowed = False
+        else:
+            allowed = True
+
+        return allowed
+
     def get_delay_for_filter(self, targetstate, initstate):
 
         if targetstate.filter != initstate.filter:
-            if targetstate.filter in initstate.mountedfilters:
-                burst_num = self.params.filter_max_changes_burst_num
-                if len(self.filter_changes_list) >= burst_num:
-                    deltatime = initstate.time - self.filter_changes_list[-burst_num]
-                    if deltatime >= self.params.filter_max_changes_burst_time:
-                        avg_num = self.params.filter_max_changes_avg_num
-                        if len(self.filter_changes_list) >= avg_num:
-                            deltatime = initstate.time - self.filter_changes_list[-avg_num]
-                            if deltatime >= self.params.filter_max_changes_avg_time:
-                                delay = self.params.Filter_ChangeTime
-                            else:
-                                delay = -1.0
-                        else:
-                            delay = self.params.Filter_ChangeTime
-                    else:
-                        delay = -1.0
-                else:
-                    delay = self.params.Filter_ChangeTime
-            else:
-                delay = -1.0
+            # filter change needed
+            delay = self.params.Filter_ChangeTime
         else:
             delay = 0.0
 
         return delay
+
+    def get_number_filter_changes(self):
+        return len(self.filter_changes_list)
+
+    def get_delta_filter_burst(self):
+        burst_num = self.params.filter_max_changes_burst_num
+        if len(self.filter_changes_list) >= burst_num:
+            deltatime = self.currentState.time - self.filter_changes_list[-burst_num]
+        else:
+            deltatime = 0.0
+        return deltatime
+
+    def get_delta_filter_avg(self):
+        avg_num = self.params.filter_max_changes_avg_num
+        if len(self.filter_changes_list) >= avg_num:
+            deltatime = self.currentState.time - self.filter_changes_list[-avg_num]
+        else:
+            deltatime = 0.0
+        return deltatime
 
     def get_delay_for_readout(self, targetstate, initstate):
 
