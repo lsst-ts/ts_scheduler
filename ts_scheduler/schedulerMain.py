@@ -25,7 +25,7 @@ from SALPY_scheduler import scheduler_filterSwapC
 
 #from SALPY_scheduler import flushSamples_schedulerConfig
 
-from ts_scheduler.setup import TRACE, EXTENSIVE
+from ts_scheduler.setup import TRACE, EXTENSIVE, WORDY
 from ts_scheduler.schedulerDefinitions import read_conf_file, conf_file_path
 from ts_scheduler.schedulerDriver import Driver
 from ts_scheduler.schedulerTarget import Target
@@ -84,7 +84,7 @@ class Main(object):
         self.sal.salTelemetryPub("scheduler_target")
         self.sal.salTelemetryPub("scheduler_filterSwap")
 
-        #self.sal.flushSamples_schedulerConfig(self.topic_schedulerConfig)
+        # self.sal.flushSamples_schedulerConfig(self.topic_schedulerConfig)
 
         meascount = 0
         visitcount = 0
@@ -294,7 +294,7 @@ class Main(object):
                     tf = time.time()
                     if self.topic_areaDistPropConfig.name == "":
                         self.log.info("run: area prop config end")
-                        waitconfig = False
+                        waitconfig = True
                     if tf - lastconfigtime > 10.0:
                         self.log.info("run: area prop config timeout")
                         waitconfig = False
@@ -493,8 +493,7 @@ class Main(object):
         confdict["constraints"]["ignore_clouds"] = topic_driver_config.ignore_clouds
         confdict["constraints"]["ignore_seeing"] = topic_driver_config.ignore_seeing
         confdict["darktime"] = {}
-        confdict["darktime"]["new_moon_phase_threshold"] = 20
-        # topic_driver_config.new_moon_phase_threshold
+        confdict["darktime"]["new_moon_phase_threshold"] = topic_driver_config.new_moon_phase_threshold
 
         return confdict
 
