@@ -386,6 +386,10 @@ class AreaDistributionProposal(Proposal):
                     self.log.debug("register_observation: field complete fieldid=%i" %
                                    (fieldid))
                     del self.tonight_targets_dict[fieldid]
+                    for field in self.tonight_fields_list:
+                        if field.fieldid == fieldid:
+                            self.tonight_fields_list.remove(field)
+                            break
             self.survey_targets_visits += 1
             if self.survey_targets_goal > 0:
                 self.survey_targets_progress = float(self.survey_targets_visits) / self.survey_targets_goal
