@@ -442,6 +442,11 @@ class Driver(object):
             constrained_filter = None
         else:
             constrained_filter = self.observatoryModel.currentState.filter
+        num_filter_changes = self.observatoryModel.get_number_filter_changes()
+        delta_burst = self.observatoryModel.get_delta_filter_burst()
+        delta_avg = self.observatoryModel.get_delta_filter_avg()
+        self.log.debug("select_next_target: filter changes num=%i tburst=%.1f tavg=%.1f constrained=%s" %
+                       (num_filter_changes, delta_burst, delta_avg, constrained_filter))
 
         for prop in self.science_proposal_list:
             propboost_dict[prop.propid] = \
@@ -494,11 +499,6 @@ class Driver(object):
             self.targetid += 1
             winner_target.targetid = self.targetid
             winner_target.time = self.time
-            num_filter_changes = self.observatoryModel.get_number_filter_changes()
-            delta_burst = self.observatoryModel.get_delta_filter_burst()
-            delta_avg = self.observatoryModel.get_delta_filter_avg()
-            self.log.debug("select_next_target: filter changes num=%i delta_burst=%.1f delta_avg=%.1f" %
-                           (num_filter_changes, delta_burst, delta_avg))
         except:
             # if no target to suggest
             winner_target = self.nulltarget
