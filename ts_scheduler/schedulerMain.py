@@ -25,7 +25,7 @@ from SALPY_scheduler import scheduler_filterSwapC
 
 #from SALPY_scheduler import flushSamples_schedulerConfig
 
-from ts_scheduler.setup import TRACE, EXTENSIVE, WORDY
+from ts_scheduler.setup import TRACE, EXTENSIVE
 from ts_scheduler.schedulerDefinitions import read_conf_file, conf_file_path
 from ts_scheduler.schedulerDriver import Driver
 from ts_scheduler.schedulerTarget import Target

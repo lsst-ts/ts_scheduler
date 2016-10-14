@@ -1,4 +1,3 @@
-import copy
 import math
 
 from operator import itemgetter
@@ -112,7 +111,7 @@ class AreaDistributionProposal(Proposal):
 
             # add new fields to fields dictionary
             if fieldid not in self.survey_fields_dict:
-                self.survey_fields_dict[fieldid] = copy.deepcopy(field)
+                self.survey_fields_dict[fieldid] = field.get_copy()
                 self.survey_fields += 1
 
             # add new fields to targets dictionary

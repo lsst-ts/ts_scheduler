@@ -1,6 +1,5 @@
 import os
 import math
-import copy
 import logging
 
 from operator import itemgetter
@@ -479,9 +478,9 @@ class Driver(object):
                         targets_dict[fieldfilter][0].value_list.append(target.value)
                         targets_dict[fieldfilter][0].propboost_list.append(target.propboost)
                     else:
-                        targets_dict[fieldfilter].append(copy.deepcopy(target))
+                        targets_dict[fieldfilter].append(target.get_copy())
                 else:
-                    targets_dict[fieldfilter] = [copy.deepcopy(target)]
+                    targets_dict[fieldfilter] = [target.get_copy()]
 
         for fieldfilter in targets_dict:
             slewtime = self.observatoryModel.get_slew_delay(targets_dict[fieldfilter][0])

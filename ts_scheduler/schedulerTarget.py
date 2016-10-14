@@ -56,6 +56,46 @@ class Target(object):
         self.value_list = []
         self.propboost_list = []
 
+    def get_copy(self):
+
+        newtarget = Target()
+        newtarget.targetid = self.targetid
+        newtarget.fieldid = self.fieldid
+        newtarget.filter = self.filter
+        newtarget.ra_rad = self.ra_rad
+        newtarget.dec_rad = self.dec_rad
+        newtarget.ang_rad = self.ang_rad
+        newtarget.num_exp = self.num_exp
+        newtarget.exp_times = list(self.exp_times)
+        newtarget.time = self.time
+        newtarget.airmass = self.airmass
+        newtarget.sky_brightness = self.sky_brightness
+        newtarget.propid = self.propid
+        newtarget.need = self.need
+        newtarget.bonus = self.bonus
+        newtarget.value = self.value
+        newtarget.goal = self.goal
+        newtarget.visits = self.visits
+        newtarget.progress = self.progress
+        newtarget.alt_rad = self.alt_rad
+        newtarget.az_rad = self.az_rad
+        newtarget.rot_rad = self.rot_rad
+        newtarget.telalt_rad = self.telalt_rad
+        newtarget.telaz_rad = self.telaz_rad
+        newtarget.telrot_rad = self.telrot_rad
+        newtarget.propboost = self.propboost
+        newtarget.slewtime = self.slewtime
+        newtarget.cost_bonus = self.cost_bonus = 0.0
+        newtarget.rank = self.rank = 0.0
+        newtarget.num_props = self.num_props
+        newtarget.propid_list = list(self.propid_list)
+        newtarget.need_list = list(self.need_list)
+        newtarget.bonus_list = list(self.bonus_list)
+        newtarget.value_list = list(self.value_list)
+        newtarget.propboost_list = list(self.propboost_list)
+
+        return newtarget
+
     def __str__(self):
         return ("targetid=%d field=%d filter=%s exp_times=%s ra=%.3f dec=%.3f ang=%.3f "
                 "alt=%.3f az=%.3f rot=%.3f "
