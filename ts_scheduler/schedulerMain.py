@@ -7,6 +7,8 @@ import math
 from SALPY_scheduler import SAL_scheduler
 from SALPY_scheduler import scheduler_timeHandlerC
 from SALPY_scheduler import scheduler_observatoryStateC
+from SALPY_scheduler import scheduler_cloudC
+from SALPY_scheduler import scheduler_seeingC
 from SALPY_scheduler import scheduler_observationC
 from SALPY_scheduler import scheduler_targetC
 from SALPY_scheduler import scheduler_fieldC
@@ -55,6 +57,8 @@ class Main(object):
         self.topic_areaDistPropConfig = scheduler_areaDistPropConfigC()
         self.topicTime = scheduler_timeHandlerC()
         self.topicObservatoryState = scheduler_observatoryStateC()
+        self.topic_cloud = scheduler_cloudC()
+        self.topic_seeing = scheduler_seeingC()
         self.topicObservation = scheduler_observationC()
         self.topicField = scheduler_fieldC()
         self.topicTarget = scheduler_targetC()
@@ -79,6 +83,8 @@ class Main(object):
         self.sal.salTelemetrySub("scheduler_areaDistPropConfig")
         self.sal.salTelemetrySub("scheduler_timeHandler")
         self.sal.salTelemetrySub("scheduler_observatoryState")
+        self.sal.salTelemetrySub("scheduler_cloud")
+        self.sal.salTelemetrySub("scheduler_seeing")
         self.sal.salTelemetrySub("scheduler_observation")
         self.sal.salTelemetryPub("scheduler_field")
         self.sal.salTelemetryPub("scheduler_target")
@@ -362,6 +368,40 @@ class Main(object):
                                 if is_down:
                                     waitobservation = False
                                 else:
+                                    waitcloud = True
+                                    lastcloudtime = time.time()
+                                    while waitcloud:
+                                        scode = self.sal.getNextSample_cloud(self.topic_cloud)
+                                        if scode == 0 and self.topic_cloud.timestamp != 0:
+                                            lastcloudtime = time.time()
+                                            waitcloud = False
+                                            cloud = self.topic_cloud.cloud
+                                        else:
+                                            tf = time.time()
+                                            if (tf - lastcloudtime > 10.0):
+                                                self.log.info("run: cloud timeout")
+                                                waitcloud = False
+                                                cloud = 0.0
+
+                                    waitseeing = True
+                                    lastseeingtime = time.time()
+                                    while waitseeing:
+                                        scode = self.sal.getNextSample_seeing(self.topic_seeing)
+                                        if scode == 0 and self.topic_seeing.timestamp != 0:
+                                            lastseeingtime = time.time()
+                                            waitseeing = False
+                                            seeing = self.topic_seeing.seeing
+                                        else:
+                                            tf = time.time()
+                                            if (tf - lastseeingtime > 10.0):
+                                                self.log.info("run: seeing timeout")
+                                                waitseeing = False
+                                                seeing = 0.0
+
+                                    self.log.debug("run: rx conditions cloud=%.2f seeing=%.2f" %
+                                                   (cloud, seeing))
+                                    self.schedulerDriver.update_external_conditions(cloud, seeing)
+
                                     target = self.schedulerDriver.select_next_target()
 
                                     self.topicTarget.targetId = target.targetid
@@ -376,6 +416,7 @@ class Main(object):
                                         self.topicTarget.exposure_times[i] = int(exptime)
                                     self.topicTarget.airmass = target.airmass
                                     self.topicTarget.sky_brightness = target.sky_brightness
+                                    self.topicTarget.cloud = target.cloud
                                     self.topicTarget.slew_time = target.slewtime
                                     self.topicTarget.cost_bonus = target.cost_bonus
                                     self.topicTarget.rank = target.rank
@@ -712,6 +753,7 @@ class Main(object):
 
         confdict["constraints"] = {}
         confdict["constraints"]["max_airmass"] = topic_areapropconf.max_airmass
+        confdict["constraints"]["max_cloud"] = topic_areapropconf.max_cloud
 
         confdict["sky_region"] = {}
         num_region_selections = topic_areapropconf.num_region_selections

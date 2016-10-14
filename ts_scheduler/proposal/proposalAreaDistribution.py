@@ -15,6 +15,7 @@ class AreaDistributionProposalParameters(object):
         self.sky_nightly_bounds = confdict["sky_nightly_bounds"]
 
         self.max_airmass = confdict["constraints"]["max_airmass"]
+        self.max_cloud = confdict["constraints"]["max_cloud"]
         max_zd_rad = math.acos(1 / self.max_airmass)
         self.min_alt_rad = math.pi / 2 - max_zd_rad
 
@@ -87,9 +88,6 @@ class AreaDistributionProposal(Proposal):
         super(AreaDistributionProposal, self).start_night(timestamp, filters_mounted_tonight_list)
 
         self.tonight_filters_list = []
-        #self.survey_filters_goal_dict = {}
-        #self.survey_filters_visits_dict = {}
-        #self.survey_filters_progress_dict = {}
         self.tonight_targets = 0
         self.tonight_targets_dict = {}
         for filter in filters_mounted_tonight_list:
@@ -98,9 +96,6 @@ class AreaDistributionProposal(Proposal):
         self.tonight_fields = len(self.tonight_fields_list)
 
         # compute at start night
-        #self.total_targets = 0
-        #self.survey_targets_goal = 0
-        #self.survey_targets_visits = 0
         for field in self.tonight_fields_list:
             fieldid = field.fieldid
 
@@ -138,9 +133,7 @@ class AreaDistributionProposal(Proposal):
 
                             self.survey_targets += 1
                             self.survey_targets_goal += target.goal
-                            #self.survey_targets_visits += target.visits
                             self.survey_filters_goal_dict[filter] += target.goal
-                            #self.survey_filters_visits_dict[filter] += target.visits
                         target = self.survey_targets_dict[fieldid][filter]
                         if target.progress < 1.0:
                             self.tonight_targets_dict[fieldid][filter] = target
@@ -208,9 +201,18 @@ class AreaDistributionProposal(Proposal):
         else:
             return 0.0
 
-    def suggest_targets(self, timestamp, constrained_filter):
+    def suggest_targets(self, timestamp, constrained_filter, cloud, seeing):
 
         super(AreaDistributionProposal, self).suggest_targets(timestamp)
+
+        if self.ignore_clouds:
+            cloud = 0.0
+        if self.ignore_seeing:
+            seeing = 0.0
+
+        if cloud > self.params.max_cloud:
+            self.log.debug("suggest_targets: cloud=%.2f > max_cloud=%.2f" % (cloud, self.params.max_cloud))
+            return []
 
         self.clear_evaluated_target_list()
 
@@ -246,6 +248,7 @@ class AreaDistributionProposal(Proposal):
         discarded_targets_nanbrightness = 0
         discarded_targets_lowbrightness = 0
         discarded_targets_highbrightness = 0
+        discarded_targets_seeing = 0
         evaluated_targets = 0
         # compute target value
         for field in fields_evaluation_list:
@@ -272,6 +275,11 @@ class AreaDistributionProposal(Proposal):
                 if filter not in filters_evaluation_list:
                     continue
 
+                # discard target beyond seeing limit
+                if seeing > self.params.filter_max_seeing_dict[filter]:
+                    discarded_targets_seeing += 1
+                    continue
+
                 target = self.tonight_targets_dict[fieldid][filter]
                 target.time = timestamp
                 target.airmass = airmass
@@ -281,10 +289,6 @@ class AreaDistributionProposal(Proposal):
                        not self.params.accept_consecutive_visits):
                         discarded_targets_consecutive += 1
                         continue
-
-                # discard target beyond seeing limit
-#                if seeing(filter) > self.params.max_seeing[filter]:
-#                    continue
 
                 if self.ignore_sky_brightness:
                     sky_brightness = 0.0
@@ -306,14 +310,13 @@ class AreaDistributionProposal(Proposal):
                 # target is accepted
                 # compute value for available targets
                 target.sky_brightness = sky_brightness
+                target.cloud = cloud
+                target.seeing = seeing
 
                 if self.survey_targets_progress < 1.0:
                     need_ratio = (1.0 - target.progress) / (1.0 - self.survey_targets_progress)
                 else:
                     need_ratio = 0.0
-
-#                airmass_bonus = self.params.ka / airmass
-#                brightness_bonus = self.params.kb / sky_brightness
 
                 target.need = need_ratio
                 target.bonus = airmass_rank
@@ -326,8 +329,10 @@ class AreaDistributionProposal(Proposal):
         self.log.debug("suggest_targets: fields=%i, evaluated=%i, discarded airmass=%i notargets=%i" %
                        (len(id_list), evaluated_fields, discarded_fields_airmass, discarded_fields_notargets))
         self.log.debug("suggest_targets: evaluated targets=%i, discarded consecutive=%i "
+                       "seeing=%i "
                        "lowbright=%i highbright=%i nanbright=%i" %
                        (evaluated_targets, discarded_targets_consecutive,
+                        discarded_targets_seeing,
                         discarded_targets_lowbrightness, discarded_targets_highbrightness,
                         discarded_targets_nanbrightness))
 

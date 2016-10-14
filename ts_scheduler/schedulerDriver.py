@@ -90,6 +90,9 @@ class Driver(object):
         self.filter_to_unmount = ""
         self.filter_to_mount = ""
 
+        self.cloud = 0.0
+        self.seeing = 0.0
+
     def configure_survey(self, survey_conf_file):
 
         prop_conf_path = os.path.dirname(survey_conf_file)
@@ -403,7 +406,11 @@ class Driver(object):
         self.time = observatory_state.time
         self.observatoryModel.set_state(observatory_state)
 
-    def update_external_conditions(self, timestamp):
+    def update_external_conditions(self, cloud, seeing):
+
+        self.cloud = cloud
+        self.seeing = seeing
+
         return
 
     def select_next_target(self):
@@ -451,7 +458,7 @@ class Driver(object):
             propboost_dict[prop.propid] = \
                 propboost_dict[prop.propid] * len(self.science_proposal_list) / sumboost
 
-            proptarget_list = prop.suggest_targets(self.time, constrained_filter)
+            proptarget_list = prop.suggest_targets(self.time, constrained_filter, self.cloud, self.seeing)
             self.log.debug("select_next_target propid=%d name=%s targets=%d progress=%.2f%% propboost=%.3f" %
                            (prop.propid, prop.name, len(proptarget_list), 100 * progress,
                             propboost_dict[prop.propid]))

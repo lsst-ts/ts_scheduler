@@ -25,6 +25,8 @@ class Target(object):
         self.time = 0.0
         self.airmass = 0.0
         self.sky_brightness = 0.0
+        self.cloud = 0.0
+        self.seeing = 0.0
 
         #computed at proposal
         self.propid = 0
@@ -70,6 +72,8 @@ class Target(object):
         newtarget.time = self.time
         newtarget.airmass = self.airmass
         newtarget.sky_brightness = self.sky_brightness
+        newtarget.cloud = self.cloud
+        newtarget.seeing = self.seeing
         newtarget.propid = self.propid
         newtarget.need = self.need
         newtarget.bonus = self.bonus
@@ -101,6 +105,7 @@ class Target(object):
                 "alt=%.3f az=%.3f rot=%.3f "
                 "telalt=%.3f telaz=%.3f telrot=%.3f "
                 "time=%.1f airmass=%.3f brightness=%.3f "
+                "cloud=%.2f seeing=%.2f "
                 "visits=%i progress=%.2f%% "
                 "need=%.3f bonus=%.3f value=%.3f propboost=%.3f "
                 "propid=%s need=%s bonus=%s value=%s propboost=%s "
@@ -110,6 +115,7 @@ class Target(object):
                  self.alt, self.az, self.rot,
                  self.telalt, self.telaz, self.telrot,
                  self.time, self.airmass, self.sky_brightness,
+                 self.cloud, self.seeing,
                  self.visits, 100 * self.progress,
                  self.need, self.bonus, self.value, self.propboost,
                  self.propid_list, numpy.round(self.need_list, 3), numpy.round(self.bonus_list, 3),
