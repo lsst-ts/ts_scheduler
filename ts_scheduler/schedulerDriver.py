@@ -1,6 +1,5 @@
 import os
 import math
-import copy
 import logging
 
 from operator import itemgetter
@@ -90,6 +89,9 @@ class Driver(object):
         self.need_filter_swap = False
         self.filter_to_unmount = ""
         self.filter_to_mount = ""
+
+        self.cloud = 0.0
+        self.seeing = 0.0
 
     def configure_survey(self, survey_conf_file):
 
@@ -404,7 +406,11 @@ class Driver(object):
         self.time = observatory_state.time
         self.observatoryModel.set_state(observatory_state)
 
-    def update_external_conditions(self, timestamp):
+    def update_external_conditions(self, cloud, seeing):
+
+        self.cloud = cloud
+        self.seeing = seeing
+
         return
 
     def select_next_target(self):
@@ -452,7 +458,7 @@ class Driver(object):
             propboost_dict[prop.propid] = \
                 propboost_dict[prop.propid] * len(self.science_proposal_list) / sumboost
 
-            proptarget_list = prop.suggest_targets(self.time, constrained_filter)
+            proptarget_list = prop.suggest_targets(self.time, constrained_filter, self.cloud, self.seeing)
             self.log.debug("select_next_target propid=%d name=%s targets=%d progress=%.2f%% propboost=%.3f" %
                            (prop.propid, prop.name, len(proptarget_list), 100 * progress,
                             propboost_dict[prop.propid]))
@@ -479,9 +485,9 @@ class Driver(object):
                         targets_dict[fieldfilter][0].value_list.append(target.value)
                         targets_dict[fieldfilter][0].propboost_list.append(target.propboost)
                     else:
-                        targets_dict[fieldfilter].append(copy.deepcopy(target))
+                        targets_dict[fieldfilter].append(target.get_copy())
                 else:
-                    targets_dict[fieldfilter] = [copy.deepcopy(target)]
+                    targets_dict[fieldfilter] = [target.get_copy()]
 
         for fieldfilter in targets_dict:
             slewtime = self.observatoryModel.get_slew_delay(targets_dict[fieldfilter][0])

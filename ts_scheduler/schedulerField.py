@@ -22,6 +22,18 @@ class Field(object):
         self.eb_rad = eb_rad
         self.fov_rad = fov_rad
 
+    def get_copy(self):
+
+        newfield = Field(self.fieldid,
+                         self.ra_rad,
+                         self.dec_rad,
+                         self.gl_rad,
+                         self.gb_rad,
+                         self.el_rad,
+                         self.eb_rad,
+                         self.fov_rad)
+        return newfield
+
     def __str__(self):
         return ("ID=%d ra=%.3f dec=%.3f gl=%.3f gb=%.3f el=%.3f eb=%.3f fov=%.3f" %
                 (self.fieldid, self.ra_rad * RAD2DEG, self.dec_rad * RAD2DEG, self.gl_rad * RAD2DEG,
