@@ -355,7 +355,7 @@ class AreaDistributionProposal(Proposal):
             self.winners_list.append(sorted_list.pop(0)[1])
 
         self.losers_list = []
-        for ix in range(min(len(sorted_list), self.params.max_num_targets)):
+        for ix in range(len(sorted_list)):
             self.losers_list.append(sorted_list.pop(0)[1])
 
         return self.winners_list
