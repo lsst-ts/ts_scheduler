@@ -417,6 +417,7 @@ class Main(object):
                                     self.topicTarget.airmass = target.airmass
                                     self.topicTarget.sky_brightness = target.sky_brightness
                                     self.topicTarget.cloud = target.cloud
+                                    self.topicTarget.seeing = target.seeing
                                     self.topicTarget.slew_time = target.slewtime
                                     self.topicTarget.cost_bonus = target.cost_bonus
                                     self.topicTarget.rank = target.rank
