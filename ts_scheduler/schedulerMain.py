@@ -827,7 +827,7 @@ class Main(object):
         confdict["scheduling"]["max_num_targets"] = max_num_targets
         confdict["scheduling"]["accept_serendipity"] = accept_serendipity
         confdict["scheduling"]["accept_consecutive_visits"] = accept_consecutive_visits
-        confdict["scheduling"]["airmass_bonus"] = 0.5
+        confdict["scheduling"]["airmass_bonus"] = topic_areapropconf.airmass_bonus
 
         return confdict
 
