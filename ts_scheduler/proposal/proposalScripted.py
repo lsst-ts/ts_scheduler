@@ -6,7 +6,7 @@ from ts_scheduler.proposal import Proposal
 class ScriptedProposal(Proposal):
     def __init__(self, propid, name, confdict, scriptfile, skymodel):
 
-        super(ScriptedProposal, self).__init__(propid, name, confdict, skymodel)
+        Proposal.__init__(self, propid, name, confdict, skymodel)
 
         self.script_file = scriptfile
         self.read_script()
@@ -41,7 +41,7 @@ class ScriptedProposal(Proposal):
 
     def suggest_targets(self, time):
 
-        super(ScriptedProposal, self).suggest_targets(time)
+        Proposal.suggest_targets(self, time)
 
         if self.targetid < len(self.targetsList):
             nexttarget = self.targetsList[self.targetid]

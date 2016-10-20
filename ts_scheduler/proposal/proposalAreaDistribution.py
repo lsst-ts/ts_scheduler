@@ -47,7 +47,7 @@ class AreaDistributionProposal(Proposal):
 
     def __init__(self, propid, name, confdict, skymodel):
 
-        super(AreaDistributionProposal, self).__init__(propid, name, confdict, skymodel)
+        Proposal.__init__(self, propid, name, confdict, skymodel)
 
         self.params = AreaDistributionProposalParameters(self.proposal_confdict)
 
@@ -81,11 +81,11 @@ class AreaDistributionProposal(Proposal):
 
     def start_survey(self):
 
-        super(AreaDistributionProposal, self).start_survey()
+        Proposal.start_survey(self)
 
     def start_night(self, timestamp, filters_mounted_tonight_list):
 
-        super(AreaDistributionProposal, self).start_night(timestamp, filters_mounted_tonight_list)
+        Proposal.start_night(self, timestamp, filters_mounted_tonight_list)
 
         self.tonight_filters_list = []
         self.tonight_targets = 0
@@ -203,7 +203,7 @@ class AreaDistributionProposal(Proposal):
 
     def suggest_targets(self, timestamp, constrained_filter, cloud, seeing):
 
-        super(AreaDistributionProposal, self).suggest_targets(timestamp)
+        Proposal.suggest_targets(self, timestamp)
 
         if self.ignore_clouds:
             cloud = 0.0
