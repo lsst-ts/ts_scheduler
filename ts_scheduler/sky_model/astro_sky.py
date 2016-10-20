@@ -51,7 +51,7 @@ class AstronomicalSkyModel(object):
         """
         self.date_profile.update(timestamp)
 
-    def get_moon_sun_info(self, field_ra, field_dec, need_update=False):
+    def get_moon_sun_info(self):
         """Return the current moon and sun information.
 
         This function gets the right-ascension, declination, altitude, azimuth, phase and
@@ -72,22 +72,23 @@ class AstronomicalSkyModel(object):
         dict
             The set of information pertaining to the moon and sun. All angles are in radians.
         """
-        nra = numpy.array([field_ra])
-        ndec = numpy.array([field_dec])
-        if need_update:
-            self.sky_brightness.setRaDecMjd(nra, ndec, self.date_profile.mjd)
-        attrs = self.sky_brightness.getComputedVals()
-        moon_distance = self.get_separation("moon", nra, ndec)
-        sun_distance = self.get_separation("sun", nra, ndec)
+        #nra = numpy.array([field_ra])
+        #nec = numpy.array([field_dec])
+        #if need_update:
+        #    self.sky_brightness.setRaDecMjd(nra, ndec, self.date_profile.mjd)
+        #attrs = self.sky_brightness.getComputedVals()
+        #moon_distance = self.get_separation("moon", nra, ndec)
+        #sun_distance = self.get_separation("sun", nra, ndec)
 
-        keys = ["moonAlt", "moonAz", "moonRA", "moonDec", "moonPhase",
-                "sunAlt", "sunAz", "sunRA", "sunDec"]
-        info_dict = {}
-        for key in keys:
-            info_dict[key] = attrs[key]
-        info_dict["moonDist"] = moon_distance[0]
-        info_dict["solarElong"] = sun_distance[0]
-        return info_dict
+        #keys = ["moonAlt", "moonAz", "moonRA", "moonDec", "moonPhase",
+        #        "sunAlt", "sunAz", "sunRA", "sunDec"]
+        #info_dict = {}
+        #for key in keys:
+        #    info_dict[key] = attrs[key]
+        #info_dict["moonDist"] = moon_distance[0]
+        #info_dict["solarElong"] = sun_distance[0]
+        #return info_dict
+	return self.sky_brightness.returnSunMoon(self.date_profile.mjd)
 
     def get_night_boundaries(self, sun_altitude, upper_limb_correction=False, precision=6):
         """Return the set/rise times of the sun for the given altitude.
@@ -220,7 +221,7 @@ class AstronomicalSkyModel(object):
 
         return mags
 
-    def get_target_information(self):
+    def get_target_information(self, ids):
         """Get information about target(s).
 
         This function gathers airmass, altitude and azimuth information for the targets
@@ -231,9 +232,10 @@ class AstronomicalSkyModel(object):
         dict
             Set of information about the target(s).
         """
-        attrs = self.sky_brightness.getComputedVals()
-        keys = ["airmass", "alts", "azs"]
-        info_dict = {}
-        for key in keys:
-            info_dict[key] = attrs[key]
-        return info_dict
+        # attrs = self.sky_brightness.getComputedVals()
+        # keys = ["airmass", "alts", "azs"]
+        # info_dict = {}
+        # for key in keys:
+        #     info_dict[key] = attrs[key]
+        # return info_dict
+        return self.sky_brightness.returnAirmass(indx=ids)
