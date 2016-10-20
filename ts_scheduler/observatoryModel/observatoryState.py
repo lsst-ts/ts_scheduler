@@ -23,16 +23,8 @@ class ObservatoryState(ObservatoryPosition):
                  mountedfilters=['g', 'r', 'i', 'z', 'y'],
                  unmountedfilters=['u']):
 
-        super(ObservatoryState, self).__init__(time,
-                                               ra_rad,
-                                               dec_rad,
-                                               ang_rad,
-                                               filter,
-                                               tracking,
-                                               alt_rad,
-                                               az_rad,
-                                               pa_rad,
-                                               rot_rad)
+        ObservatoryPosition.__init__(self, time, ra_rad, dec_rad, ang_rad, filter,
+                                     tracking, alt_rad, az_rad, pa_rad, rot_rad)
 
         self.telalt_rad = telalt_rad
         self.telalt_peakspeed_rad = 0
@@ -89,7 +81,7 @@ class ObservatoryState(ObservatoryPosition):
 
     def __str__(self):
         return ("%s telaz=%.3f telrot=%.3f mounted=%s unmounted=%s" %
-                (super(ObservatoryState, self).__str__(),
+                (ObservatoryPosition.__str__(self),
                  self.telaz, self.telrot, self.mountedfilters, self.unmountedfilters))
 
     def set(self, newstate):
