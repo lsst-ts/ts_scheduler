@@ -49,14 +49,17 @@ class AstronomicalSkyModel(object):
         """
         self.date_profile.update(timestamp)
 
-    def get_moon_separation(self, field_ra, field_dec):
-        """Return the moon separation for a set of field coordinates.
+    def get_separation(self, body, field_ra, field_dec):
+        """Return the separation between a body and a set of field coordinates.
 
-        This function returns the separation (in radians) between the moon and a given field. It uses
-        a list of (RA, Dec) coordinates. This function assumes that meth:`.get_sky_brightness` has been run.
+        This function returns the separation (in radians) between the given body (either moon or
+        sun) and a given set of fields. It uses a list of (RA, Dec) coordinates. This function
+        assumes that meth:`.get_sky_brightness` has been run.
 
         Parameters
         ----------
+        body : str
+            The name of the body to calculate the separation. Either moon or sun.
         field_ra : numpy.array(float)
             The list of field Righ Ascensions in radians.
         field_dec : numpy.array(float)
@@ -68,8 +71,8 @@ class AstronomicalSkyModel(object):
             The list of field-moon separations in radians.
         """
         attrs = self.sky_brightness.getComputedVals()
-        return palpy.dsepVector(field_ra, field_dec, numpy.full_like(field_ra, attrs["moonRA"]),
-                                numpy.full_like(field_dec, attrs["moonDec"]))
+        return palpy.dsepVector(field_ra, field_dec, numpy.full_like(field_ra, attrs["{}RA".format(body)]),
+                                numpy.full_like(field_dec, attrs["{}Dec".format(body)]))
 
     def get_moon_sun_info(self, field_ra, field_dec, need_update=False):
         """Return the current moon and sun information.
@@ -97,16 +100,16 @@ class AstronomicalSkyModel(object):
         if need_update:
             self.sky_brightness.setRaDecMjd(nra, ndec, self.date_profile.mjd)
         attrs = self.sky_brightness.getComputedVals()
-        distance = palpy.dsepVector(nra, ndec,
-                                    numpy.full_like(nra, attrs["moonRA"]),
-                                    numpy.full_like(ndec, attrs["moonDec"]))
+        moon_distance = self.get_separation("moon", nra, ndec)
+        sun_distance = self.get_separation("sun", nra, ndec)
 
         keys = ["moonAlt", "moonAz", "moonRA", "moonDec", "moonPhase",
-                "sunAlt", "sunAz", "sunRA", "sunDec", "sunEclipLon"]
+                "sunAlt", "sunAz", "sunRA", "sunDec"]
         info_dict = {}
         for key in keys:
             info_dict[key] = attrs[key]
-        info_dict["moonDist"] = distance[0]
+        info_dict["moonDist"] = moon_distance[0]
+        info_dict["solarElong"] = sun_distance[0]
         return info_dict
 
     def get_night_boundaries(self, sun_altitude, upper_limb_correction=False, precision=6):
