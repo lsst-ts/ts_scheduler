@@ -49,31 +49,6 @@ class AstronomicalSkyModel(object):
         """
         self.date_profile.update(timestamp)
 
-    def get_separation(self, body, field_ra, field_dec):
-        """Return the separation between a body and a set of field coordinates.
-
-        This function returns the separation (in radians) between the given body (either moon or
-        sun) and a given set of fields. It uses a list of (RA, Dec) coordinates. This function
-        assumes that meth:`.get_sky_brightness` has been run.
-
-        Parameters
-        ----------
-        body : str
-            The name of the body to calculate the separation. Either moon or sun.
-        field_ra : numpy.array(float)
-            The list of field Righ Ascensions in radians.
-        field_dec : numpy.array(float)
-            The list of field Declinations in radians.
-
-        Returns
-        -------
-        numpy.array(float)
-            The list of field-moon separations in radians.
-        """
-        attrs = self.sky_brightness.getComputedVals()
-        return palpy.dsepVector(field_ra, field_dec, numpy.full_like(field_ra, attrs["{}RA".format(body)]),
-                                numpy.full_like(field_dec, attrs["{}Dec".format(body)]))
-
     def get_moon_sun_info(self, field_ra, field_dec, need_update=False):
         """Return the current moon and sun information.
 
@@ -159,6 +134,31 @@ class AstronomicalSkyModel(object):
             rise_timestamp = midnight_timestamp + (rise_time * self.date_profile.SECONDS_IN_HOUR)
 
         return (round(set_timestamp, precision), round(rise_timestamp, precision))
+
+    def get_separation(self, body, field_ra, field_dec):
+        """Return the separation between a body and a set of field coordinates.
+
+        This function returns the separation (in radians) between the given body (either moon or
+        sun) and a given set of fields. It uses a list of (RA, Dec) coordinates. This function
+        assumes that meth:`.get_sky_brightness` has been run.
+
+        Parameters
+        ----------
+        body : str
+            The name of the body to calculate the separation. Either moon or sun.
+        field_ra : numpy.array(float)
+            The list of field Righ Ascensions in radians.
+        field_dec : numpy.array(float)
+            The list of field Declinations in radians.
+
+        Returns
+        -------
+        numpy.array(float)
+            The list of field-moon separations in radians.
+        """
+        attrs = self.sky_brightness.getComputedVals()
+        return palpy.dsepVector(field_ra, field_dec, numpy.full_like(field_ra, attrs["{}RA".format(body)]),
+                                numpy.full_like(field_dec, attrs["{}Dec".format(body)]))
 
     def get_sky_brightness(self, ra, dec):
         """Get the LSST 6 filter sky brightness for a set of positions at a single time.
