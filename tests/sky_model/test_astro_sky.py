@@ -104,14 +104,17 @@ class AstronomicalSkyTest(unittest.TestCase):
         self.astro_sky.update(1947713387.331446)
         self.check_night_boundary_tuple(1947713387.331446, 1947750106.804758)
 
-    def test_moon_separation_function(self):
+    def test_separation_function(self):
         initial_timestamp = 1641081600 + (.04166666666 * 3600 * 24)
         self.create_ra_dec()
         self.astro_sky.update(initial_timestamp)
         self.astro_sky.get_sky_brightness(self.ra_rads, self.dec_rads)
-        field_moon_sep = self.astro_sky.get_moon_separation(self.ra_rads, self.dec_rads)
+        field_moon_sep = self.astro_sky.get_separation("moon", self.ra_rads, self.dec_rads)
         self.assertEqual(field_moon_sep.size, 19)
         self.assertAlmostEqual(field_moon_sep[0], numpy.radians(64.69897587))
+        field_sun_sep = self.astro_sky.get_separation("sun", self.ra_rads, self.dec_rads)
+        self.assertEqual(field_sun_sep.size, 19)
+        self.assertAlmostEqual(field_sun_sep[0], numpy.radians(67.06949045))
 
     def test_moon_sun_information(self):
         initial_timestamp = 1641081600 + (.04166666666 * 3600 * 24)
@@ -124,6 +127,7 @@ class AstronomicalSkyTest(unittest.TestCase):
         self.assertAlmostEqual(info["moonDist"], 1.6289850022, delta=1e-7)
         self.assertAlmostEqual(info["moonDec"], -0.4415861752238436, delta=1e-7)
         self.assertAlmostEqual(info["moonRA"], 4.72440671517994, delta=1e-7)
+        self.assertAlmostEqual(info["solarElong"], 1.5434615315534763, delta=1e-7)
 
     def test_target_information(self):
         initial_timestamp = 1641081600 + (.04166666666 * 3600 * 24)
