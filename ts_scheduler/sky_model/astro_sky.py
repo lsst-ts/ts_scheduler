@@ -110,7 +110,6 @@ class AstronomicalSkyModel(object):
         info_dict = {}
         for key in keys:
             info_dict[key] = attrs[key]
-        print(attrs["moonSunSep"])
         # moonSunSep is in degrees! Oops!
         info_dict["moonPhase"] = attrs["moonSunSep"] / 180.0 * 100.0
         info_dict["moonAlt"], info_dict["moonAz"] = self.get_alt_az(numpy.array([attrs["moonRA"]]),
