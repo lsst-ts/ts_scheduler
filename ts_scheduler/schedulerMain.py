@@ -3,6 +3,7 @@ import logging.handlers
 import sys
 import time
 import math
+import numpy
 
 from SALPY_scheduler import SAL_scheduler
 from SALPY_scheduler import scheduler_timeHandlerC
