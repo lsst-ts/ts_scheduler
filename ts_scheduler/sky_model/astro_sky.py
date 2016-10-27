@@ -3,7 +3,6 @@ import logging
 import numpy
 import palpy
 
-#from lsst.sims.skybrightness import SkyModel
 from lsst.sims.skybrightness_pre import SkyModelPre
 
 from .date_profile import DateProfile
@@ -37,7 +36,6 @@ class AstronomicalSkyModel(object):
         """
         self.log = logging.getLogger("sky_model.AstronomicalSkyModel")
         self.date_profile = DateProfile(0, location)
-        #self.sky_brightness = SkyModel(mags=True)
         self.sky_brightness = SkyModelPre(opsimFields=True)
         self.sun = Sun()
 
@@ -51,44 +49,77 @@ class AstronomicalSkyModel(object):
         """
         self.date_profile.update(timestamp)
 
-    def get_moon_sun_info(self):
-        """Return the current moon and sun information.
-
-        This function gets the right-ascension, declination, altitude, azimuth, phase and
-        angular distance from target (by given ra and dec) for the moon and the altitude,
-        azimuth ans elongation for the sun.
+    def get_airmass(self, ids):
+        """Get the airmass of the fields.
 
         Parameters
         ----------
-        field_ra : float
-            The target right-ascension (radians) for the moon distance.
-        field_dec : float
-            The target declination (radians) for the moon distance.
-        need_update : boolean, optional
-            Flag to request an update for sky brightness parameters.
+        ids : list or numpy.array
+            The set of fields to retrieve the airmass for.
+
+        Returns
+        -------
+        numpy.array
+            The set of airmasses.
+        """
+        return self.sky_brightness.returnAirmass(self.date_profile.mjd, indx=ids)
+
+    def get_alt_az(self, ra, dec):
+        """Get the altitude (radians) and azimuth (radians) of a given sky position.
+
+        Parameters
+        ----------
+        ra : numpy.array
+            The right-ascension (radians) of the sky position.
+        dec : numpy.array
+            The declination (radians) of the sky position.
+
+        Returns
+        -------
+        tuple
+            The altitude and azimuth of the sky position.
+        """
+        hour_angle = self.date_profile.lst_rad - ra
+        azimuth, altitude = palpy.de2hVector(hour_angle, dec, self.date_profile.location.latitude_rad)
+        return altitude, azimuth
+
+    def get_moon_sun_info(self, field_ra, field_dec):
+        """Return the current moon and sun information.
+
+        This function gets the right-ascension, declination, altitude, azimuth, phase and
+        angular distance from target (by given ra and dec) for the moon and the right-ascension,
+        declination, altitude, azimuth and solar elongation from target (by given ra and dec) for the sun.
+
+        Parameters
+        ----------
+        field_ra : numpy.array
+            The target right-ascension (radians).
+        field_dec : numpy.array
+            The target declination (radians).
 
         Returns
         -------
         dict
             The set of information pertaining to the moon and sun. All angles are in radians.
         """
-        #nra = numpy.array([field_ra])
-        #nec = numpy.array([field_dec])
-        #if need_update:
-        #    self.sky_brightness.setRaDecMjd(nra, ndec, self.date_profile.mjd)
-        #attrs = self.sky_brightness.getComputedVals()
-        #moon_distance = self.get_separation("moon", nra, ndec)
-        #sun_distance = self.get_separation("sun", nra, ndec)
+        attrs = self.sky_brightness.returnSunMoon(self.date_profile.mjd)
+        moon_distance = self.get_separation("moon", field_ra, field_dec)
+        sun_distance = self.get_separation("sun", field_ra, field_dec)
 
-        #keys = ["moonAlt", "moonAz", "moonRA", "moonDec", "moonPhase",
-        #        "sunAlt", "sunAz", "sunRA", "sunDec"]
-        #info_dict = {}
-        #for key in keys:
-        #    info_dict[key] = attrs[key]
-        #info_dict["moonDist"] = moon_distance[0]
-        #info_dict["solarElong"] = sun_distance[0]
-        #return info_dict
-	return self.sky_brightness.returnSunMoon(self.date_profile.mjd)
+        keys = ["moonRA", "moonDec", "sunRA", "sunDec"]
+        info_dict = {}
+        for key in keys:
+            info_dict[key] = attrs[key]
+        print(attrs["moonSunSep"])
+        # moonSunSep is in degrees! Oops!
+        info_dict["moonPhase"] = attrs["moonSunSep"] / 180.0 * 100.0
+        info_dict["moonAlt"], info_dict["moonAz"] = self.get_alt_az(numpy.array([attrs["moonRA"]]),
+                                                                    numpy.array([attrs["moonDec"]]))
+        info_dict["sunAlt"], info_dict["sunAz"] = self.get_alt_az(numpy.array([attrs["sunRA"]]),
+                                                                  numpy.array([attrs["sunDec"]]))
+        info_dict["moonDist"] = moon_distance
+        info_dict["solarElong"] = sun_distance
+        return info_dict
 
     def get_night_boundaries(self, sun_altitude, upper_limb_correction=False, precision=6):
         """Return the set/rise times of the sun for the given altitude.
@@ -138,9 +169,6 @@ class AstronomicalSkyModel(object):
 
         return (round(set_timestamp, precision), round(rise_timestamp, precision))
 
-    def get_airmass(self, ids):
-        return self.sky_brightness.returnAirmass(self.date_profile.mjd, indx=ids)
-
     def get_separation(self, body, field_ra, field_dec):
         """Return the separation between a body and a set of field coordinates.
 
@@ -162,36 +190,33 @@ class AstronomicalSkyModel(object):
         numpy.array(float)
             The list of field-moon separations in radians.
         """
-        attrs = self.sky_brightness.getComputedVals()
+        attrs = self.sky_brightness.returnSunMoon(self.date_profile.mjd)
         return palpy.dsepVector(field_ra, field_dec, numpy.full_like(field_ra, attrs["{}RA".format(body)]),
                                 numpy.full_like(field_dec, attrs["{}Dec".format(body)]))
 
-    def get_sky_brightness(self, ids):#ra, dec):
-        """Get the LSST 6 filter sky brightness for a set of positions at a single time.
+    def get_sky_brightness(self, ids):
+        """Get the LSST 6 filter sky brightness for a set of fields at a single time.
 
         This function retrieves the LSST 6 filter sky brightness magnitudes for a given set
-        of sky positions at the MJD kept by the :class:`.DateProfile.`
+        of fields at the MJD kept by the :class:`.DateProfile.`
 
         Parameters
         ----------
-        ra : numpy.ndarray
-            The right ascension values (radians) for the sky positions.
-        dec : numpy.ndarray
-            The declination values (radians) for the sky positions.
+        ids : list or numpy.array
+            The set of fields to retrieve the sky brightness for.
 
         Returns
         -------
         numpy.ndarray
             The LSST 6 filter sky brightness magnitudes.
         """
-        #self.sky_brightness.setRaDecMjd(ra, dec, self.date_profile.mjd)
         return self.sky_brightness.returnMags(self.date_profile.mjd, indx=ids)
 
-    def get_sky_brightness_timeblock(self, timestamp, timestep, num_steps, ra, dec):
-        """Get LSST 6 filter sky brightness for a set of positions for a range of times.
+    def get_sky_brightness_timeblock(self, timestamp, timestep, num_steps, ids):
+        """Get LSST 6 filter sky brightness for a set of fields for a range of times.
 
         This function retrieves the LSST 6 filter sky brightness magnitudes for a given set
-        of sky positions at a range of MJDs provided via the timeblock information.
+        of fields at a range of MJDs provided via the timeblock information.
 
         Parameters
         ----------
@@ -201,10 +226,8 @@ class AstronomicalSkyModel(object):
             The number of seconds to increment the timestamp with.
         num_steps : int
             The number of steps to create for the time block.
-        ra : numpy.ndarray
-            The right ascension values (radians) for the sky positions.
-        dec : numpy.ndarray
-            The declination values (radians) for the sky positions.
+        ids : list or numpy.array
+            The set of fields to retrieve the sky brightness for.
 
         Returns
         -------
@@ -216,26 +239,33 @@ class AstronomicalSkyModel(object):
         for i in xrange(num_steps):
             ts = timestamp + i * timestep
             mjd, _ = dp(ts)
-            self.sky_brightness.setRaDecMjd(ra, dec, mjd)
-            mags.append(self.sky_brightness.returnMags())
+            mags.append(self.sky_brightness.returnMags(dp.mjd, indx=ids))
 
         return mags
 
-    def get_target_information(self, ids):
+    def get_target_information(self, fid, ra, dec):
         """Get information about target(s).
 
-        This function gathers airmass, altitude and azimuth information for the targets
-        that were last computed.
+        This function gathers airmass, altitude (radians) and azimuth (radians) information
+        for the target.
+
+        Parameters
+        ----------
+        fid : numpy.array
+           The field id.
+        ra : numpy.array
+            The field right-ascension (radians).
+        dec : numpy.array
+            The field declination (radians).
 
         Returns
         -------
         dict
             Set of information about the target(s).
         """
-        # attrs = self.sky_brightness.getComputedVals()
-        # keys = ["airmass", "alts", "azs"]
-        # info_dict = {}
-        # for key in keys:
-        #     info_dict[key] = attrs[key]
-        # return info_dict
-        return self.sky_brightness.returnAirmass(indx=ids)
+        info_dict = {}
+        info_dict["airmass"] = self.get_airmass(fid)
+        altitude, azimuth = self.get_alt_az(ra, dec)
+        info_dict["altitude"] = altitude
+        info_dict["azimuth"] = azimuth
+        return info_dict
