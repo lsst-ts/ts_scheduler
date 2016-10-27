@@ -8,6 +8,7 @@ from ts_scheduler.schedulerDefinitions import TWOPI
 from ts_scheduler.observatoryModel import ObservatoryLocation
 from ts_scheduler.observatoryModel import ObservatoryPosition
 from ts_scheduler.observatoryModel import ObservatoryState
+from ts_scheduler.sky_model import DateProfile
 
 class ObservatoryModelParameters(object):
 
@@ -137,6 +138,8 @@ class ObservatoryModel(object):
         self.parkState = ObservatoryState()
         self.currentState = ObservatoryState()
         self.targetPosition = ObservatoryPosition()
+
+        self.dateprofile = DateProfile(0.0, self.location)
 
         self.filters = ["u", "g", "r", "i", "z", "y"]
 
@@ -358,15 +361,17 @@ class ObservatoryModel(object):
             self.filter_changes_list.append(new_state.time)
 
         self.currentState.set(new_state)
+        self.dateprofile.update(new_state.time)
 
     def update_state(self, time):
 
         if time < self.currentState.time:
             time = self.currentState.time
+        self.dateprofile.update(time)
 
         if self.currentState.tracking:
 
-            targetposition = self.radecang2position(time,
+            targetposition = self.radecang2position(self.dateprofile,
                                                     self.currentState.ra_rad,
                                                     self.currentState.dec_rad,
                                                     self.currentState.ang_rad,
@@ -386,7 +391,7 @@ class ObservatoryModel(object):
             self.currentState.domalt_rad = targetstate.domalt_rad
             self.currentState.domaz_rad = targetstate.domaz_rad
         else:
-            (ra_rad, dec_rad, pa_rad) = self.altaz2radecpa(time,
+            (ra_rad, dec_rad, pa_rad) = self.altaz2radecpa(self.dateprofile,
                                                            self.currentState.alt_rad,
                                                            self.currentState.az_rad)
             self.currentState.time = time
@@ -402,7 +407,7 @@ class ObservatoryModel(object):
             if not self.is_filter_change_allowed_for(target.filter):
                 return -1.0
 
-        targetposition = self.radecang2position(self.currentState.time,
+        targetposition = self.radecang2position(self.dateprofile,
                                                 target.ra_rad,
                                                 target.dec_rad,
                                                 target.ang_rad,
@@ -503,12 +508,12 @@ class ObservatoryModel(object):
 
         return (final_abs_rad, distance_rad)
 
-    def radecang2position(self, time, ra_rad, dec_rad, ang_rad, filter):
+    def radecang2position(self, dateprofile, ra_rad, dec_rad, ang_rad, filter):
 
-        (alt_rad, az_rad, pa_rad) = self.radec2altazpa(time, ra_rad, dec_rad)
+        (alt_rad, az_rad, pa_rad) = self.radec2altazpa(dateprofile, ra_rad, dec_rad)
 
         position = ObservatoryPosition()
-        position.time = time
+        position.time = dateprofile.timestamp
         position.tracking = True
         position.ra_rad = ra_rad
         position.dec_rad = dec_rad
@@ -521,7 +526,7 @@ class ObservatoryModel(object):
 
         return position
 
-    def radec2altazpa(self, time, ra_rad, dec_rad):
+    def radec2altazpa(self, dateprofile, ra_rad, dec_rad):
         """
         Converts ra_rad, dec_rad coordinates into alt_rad az_rad for given DATE.
         inputs:
@@ -535,7 +540,7 @@ class ObservatoryModel(object):
                pa_rad:  Parallactic Angle in radians
                HA_HOU:  Hour Angle in hours
         """
-        lst_rad = self.date2lst(time)
+        lst_rad = dateprofile.lst_rad
         ha_rad = lst_rad - ra_rad
 
         (az_rad, alt_rad) = pal.de2h(ha_rad, dec_rad, self.location.latitude_rad)
@@ -577,7 +582,7 @@ class ObservatoryModel(object):
         self.update_state(time)
         time = self.currentState.time
 
-        targetposition = self.radecang2position(time, ra_rad, dec_rad, ang_rad, filter)
+        targetposition = self.radecang2position(self.dateprofile, ra_rad, dec_rad, ang_rad, filter)
         if not self.params.Rotator_FollowSky:
             targetposition.rot_rad = self.currentState.telrot_rad
 
@@ -862,23 +867,7 @@ class ObservatoryModel(object):
     def estimate_slewtime(self):
         return
 
-    def date2lst(self, time):
-        """
-        Computes the Local Sidereal Time for the given TIME.
-        inputs:
-               TIME: Time in seconds since simulation reference (SIMEPOCH)
-        output:
-               LST:  Local Sidereal Time in radians.
-        """
-
-        ut_day = 57388 + time / 86400.0
-
-        # LSST convention of West=negative, East=positive
-        lst_rad = pal.gmst(ut_day) + self.location.longitude_rad
-
-        return lst_rad
-
-    def altaz2radecpa(self, time, alt_rad, az_rad):
+    def altaz2radecpa(self, dateprofile, alt_rad, az_rad):
         """
         Converts ALT, AZ coordinates into RA DEC for the given TIME.
 
@@ -891,7 +880,7 @@ class ObservatoryModel(object):
                ra_rad:  Right Ascension in radians
                dec_rad: Declination in radians
         """
-        lst_rad = self.date2lst(time)
+        lst_rad = dateprofile.lst_rad
 
         (ha_rad, dec_rad) = pal.dh2e(az_rad, alt_rad, self.location.latitude_rad)
         pa_rad = pal.pa(ha_rad, dec_rad, self.location.latitude_rad)
