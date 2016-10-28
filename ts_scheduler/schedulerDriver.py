@@ -513,9 +513,13 @@ class Driver(object):
 
     def register_observation(self, observation):
 
+        target_list = []
         if observation.targetid > 0:
             for prop in self.science_proposal_list:
-                prop.register_observation(observation)
+                target = prop.register_observation(observation)
+                if target is not None:
+                    target_list.append(target)
+        return target_list
 
     def compute_slewtime_bonus(self, slewtime):
 

@@ -410,6 +410,8 @@ class AreaDistributionProposal(Proposal):
         else:
             self.last_observation_was_for_this_proposal = False
 
+        return tfound
+
     def observation_fulfills_target(self, observ, target):
 
         return (observ.fieldid == target.fieldid) and (observ.filter == target.filter)

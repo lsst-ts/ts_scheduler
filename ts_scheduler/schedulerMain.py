@@ -24,8 +24,7 @@ from SALPY_scheduler import scheduler_opticsLoopCorrConfigC
 from SALPY_scheduler import scheduler_parkConfigC
 from SALPY_scheduler import scheduler_areaDistPropConfigC
 from SALPY_scheduler import scheduler_filterSwapC
-
-#from SALPY_scheduler import flushSamples_schedulerConfig
+from SALPY_scheduler import scheduler_interestedProposalC
 
 from ts_scheduler.setup import TRACE, EXTENSIVE
 from ts_scheduler.schedulerDefinitions import read_conf_file, conf_file_path
@@ -63,6 +62,7 @@ class Main(object):
         self.topicField = scheduler_fieldC()
         self.topicTarget = scheduler_targetC()
         self.topicFilterSwap = scheduler_filterSwapC()
+        self.topicInterestedProposal = scheduler_interestedProposalC()
 
         self.schedulerDriver = Driver()
 
@@ -89,8 +89,7 @@ class Main(object):
         self.sal.salTelemetryPub("scheduler_field")
         self.sal.salTelemetryPub("scheduler_target")
         self.sal.salTelemetryPub("scheduler_filterSwap")
-
-        # self.sal.flushSamples_schedulerConfig(self.topic_schedulerConfig)
+        self.sal.salTelemetryPub("scheduler_interestedProposal")
 
         meascount = 0
         visitcount = 0
@@ -463,8 +462,12 @@ class Main(object):
 
                                             observation = self.create_observation(self.topicObservation)
                                             self.log.debug("run: rx observation %s", str(observation))
-                                            self.schedulerDriver.register_observation(observation)
-
+                                            target_list = self.schedulerDriver.register_observation(observation)
+                                            s = self.write_topic_interestedProposal(self.topicInterestedProposal,
+                                                                                    self.topicObservation.targetId,
+                                                                                    target_list)
+                                            self.sal.putSample_interestedProposal(self.topicInterestedProposal)
+                                            self.log.debug("run: tx interested %s", s)
                                             waitobservation = False
                                         else:
                                             self.log.warning("run: rx unsync observation Id=%i "
@@ -872,3 +875,28 @@ class Main(object):
         state.unmountedfilters = topic_state.filter_unmounted.split(",")
 
         return state
+
+    def write_topic_interestedProposal(self, topic, observationId, target_list):
+
+        topic.observationId = observationId
+        topic.num_proposals = len(target_list)
+        propid_list = []
+        need_list = []
+        bonus_list = []
+        value_list = []
+        propboost_list = []
+        for k in range(topic.num_proposals):
+            topic.proposal_Ids[k] = target_list[k].propid
+            topic.proposal_needs[k] = target_list[k].need
+            topic.proposal_bonuses[k] = target_list[k].bonus
+            topic.proposal_values[k] = target_list[k].value
+            topic.proposal_boosts[k] = target_list[k].propboost
+            propid_list.append(target_list[k].propid)
+            need_list.append(target_list[k].need)
+            bonus_list.append(target_list[k].bonus)
+            value_list.append(target_list[k].value)
+            propboost_list.append(target_list[k].propboost)
+        logstr = ("obsId=%i numprops=%i propid=%s need=%s bonus=%s value=%s propboost=%s" %
+                  (observationId, topic.num_proposals,
+                   propid_list, need_list, bonus_list, value_list, propboost_list))
+        return logstr
