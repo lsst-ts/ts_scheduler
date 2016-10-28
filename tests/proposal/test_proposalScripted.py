@@ -31,11 +31,11 @@ class ScriptedProposalTest(unittest.TestCase):
         self.assertEqual(len(self.scriptedprop.targetsList), 10)
 
     def test_suggest_targets(self):
-        tlist = self.scriptedprop.suggest_targets(1000)
+        tlist = self.scriptedprop.suggest_targets(1641090000)
         self.assertEqual(str(tlist[0]),
                          "targetid=0 field=2001 filter=r exp_times=[15, 15] ra=85.721 dec=-14.442 "
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
-                         "time=1000.0 airmass=0.000 brightness=20.970 cloud=0.00 seeing=0.00 "
+                         "time=1641090000.0 airmass=0.000 brightness=20.970 cloud=0.00 seeing=0.00 "
                          "visits=0 progress=0.00% "
                          "groupid=0 groupix=0 "
                          "need=0.000 bonus=0.000 value=1.000 propboost=1.000 "

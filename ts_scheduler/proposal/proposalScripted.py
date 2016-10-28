@@ -62,9 +62,11 @@ class ScriptedProposal(Proposal):
             ra_list.append(target.ra_rad)
             dec_list.append(target.dec_rad)
             filter_list.append(target.filter)
-        sky_mags = self.sky.get_sky_brightness_timeblock(time, 1, 1, id_list)
+        #sky_mags = self.sky.get_sky_brightness_timeblock(time, 1, 1, id_list)
+        self.sky.update(time)
+        sky_mags = self.sky.get_sky_brightness(id_list)
 
-        target_list[0].sky_brightness = sky_mags[0][target.filter][0]
+        target_list[0].sky_brightness = sky_mags[target.filter][0]
 
         self.targetid += 1
 
