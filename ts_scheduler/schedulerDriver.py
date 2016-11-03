@@ -134,11 +134,12 @@ class Driver(object):
             areadistribution_propconflist.append(propconf)
         self.log.info("init: areadistribution proposals %s" % (areadistribution_propconflist))
         for k in range(len(areadistribution_propconflist)):
+            self.propid_counter += 1
             configfilepath = os.path.join(prop_conf_path, "{}".format(areadistribution_propconflist[k]))
             (path, name_ext) = os.path.split(configfilepath)
             (name, ext) = os.path.splitext(name_ext)
             proposal_confdict = read_conf_file(configfilepath)
-            self.create_area_proposal(name, proposal_confdict)
+            self.create_area_proposal(self.propid_counter, name, proposal_confdict)
 
         for prop in self.science_proposal_list:
             prop.configure_constraints(self.params)
@@ -215,10 +216,10 @@ class Driver(object):
 
         self.observatoryModel.configure_park(confdict)
 
-    def create_area_proposal(self, name, config_dict):
+    def create_area_proposal(self, propid, name, config_dict):
 
         self.propid_counter += 1
-        area_prop = AreaDistributionProposal(self.propid_counter, name, config_dict, self.sky)
+        area_prop = AreaDistributionProposal(propid, name, config_dict, self.sky)
         area_prop.configure_constraints(self.params)
         self.science_proposal_list.append(area_prop)
 
