@@ -362,6 +362,9 @@ class AreaDistributionProposal(Proposal):
 
     def register_observation(self, observation):
 
+        if self.propid not in observation.propid_list and not self.params.accept_serendipity:
+            return None
+
         fieldid = observation.fieldid
         filter = observation.filter
         self.last_observation = observation
@@ -370,7 +373,7 @@ class AreaDistributionProposal(Proposal):
             if self.observation_fulfills_target(observation, target):
                 tfound = target
                 break
-        if (tfound is None) and self.params.accept_serendipity:
+        if tfound is None:
             for target in self.losers_list:
                 if self.observation_fulfills_target(observation, target):
                     tfound = target
@@ -409,6 +412,8 @@ class AreaDistributionProposal(Proposal):
             self.log.debug("register_observation: %s" % (target))
         else:
             self.last_observation_was_for_this_proposal = False
+
+        return tfound
 
     def observation_fulfills_target(self, observ, target):
 

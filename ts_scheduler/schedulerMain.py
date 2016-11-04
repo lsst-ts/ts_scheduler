@@ -24,8 +24,7 @@ from SALPY_scheduler import scheduler_opticsLoopCorrConfigC
 from SALPY_scheduler import scheduler_parkConfigC
 from SALPY_scheduler import scheduler_areaDistPropConfigC
 from SALPY_scheduler import scheduler_filterSwapC
-
-#from SALPY_scheduler import flushSamples_schedulerConfig
+from SALPY_scheduler import scheduler_interestedProposalC
 
 from ts_scheduler.setup import TRACE, EXTENSIVE
 from ts_scheduler.schedulerDefinitions import read_conf_file, conf_file_path
@@ -63,6 +62,7 @@ class Main(object):
         self.topicField = scheduler_fieldC()
         self.topicTarget = scheduler_targetC()
         self.topicFilterSwap = scheduler_filterSwapC()
+        self.topicInterestedProposal = scheduler_interestedProposalC()
 
         self.schedulerDriver = Driver()
 
@@ -89,8 +89,7 @@ class Main(object):
         self.sal.salTelemetryPub("scheduler_field")
         self.sal.salTelemetryPub("scheduler_target")
         self.sal.salTelemetryPub("scheduler_filterSwap")
-
-        # self.sal.flushSamples_schedulerConfig(self.topic_schedulerConfig)
+        self.sal.salTelemetryPub("scheduler_interestedProposal")
 
         meascount = 0
         visitcount = 0
@@ -126,7 +125,7 @@ class Main(object):
                 scode = self.sal.getNextSample_driverConfig(self.topic_driverConfig)
                 if (scode == 0 and self.topic_driverConfig.timebonus_tmax > 0):
                     lastconfigtime = time.time()
-                    config_dict = self.read_topic_driver_config(self.topic_driverConfig)
+                    config_dict = self.rtopic_driver_config(self.topic_driverConfig)
                     self.log.info("run: rx driver config=%s" % (config_dict))
                     waitconfig = False
                 else:
@@ -144,7 +143,7 @@ class Main(object):
                 scode = self.sal.getNextSample_obsSiteConfig(self.topic_obsSiteConfig)
                 if (scode == 0 and self.topic_obsSiteConfig.name != ""):
                     lastconfigtime = time.time()
-                    config_dict = self.read_topic_location_config(self.topic_obsSiteConfig)
+                    config_dict = self.rtopic_location_config(self.topic_obsSiteConfig)
                     self.log.info("run: rx site config=%s" % (config_dict))
                     waitconfig = False
                 else:
@@ -162,7 +161,7 @@ class Main(object):
                 scode = self.sal.getNextSample_telescopeConfig(self.topic_telescopeConfig)
                 if (scode == 0 and self.topic_telescopeConfig.altitude_minpos >= 0):
                     lastconfigtime = time.time()
-                    config_dict = self.read_topic_telescope_config(self.topic_telescopeConfig)
+                    config_dict = self.rtopic_telescope_config(self.topic_telescopeConfig)
                     self.log.info("run: rx telescope config=%s" % (config_dict))
                     waitconfig = False
                 else:
@@ -180,7 +179,7 @@ class Main(object):
                 scode = self.sal.getNextSample_domeConfig(self.topic_domeConfig)
                 if (scode == 0 and self.topic_domeConfig.altitude_maxspeed >= 0):
                     lastconfigtime = time.time()
-                    config_dict = self.read_topic_dome_config(self.topic_domeConfig)
+                    config_dict = self.rtopic_dome_config(self.topic_domeConfig)
                     self.log.info("run: rx dome config=%s" % (config_dict))
                     waitconfig = False
                 else:
@@ -198,7 +197,7 @@ class Main(object):
                 scode = self.sal.getNextSample_rotatorConfig(self.topic_rotatorConfig)
                 if (scode == 0 and self.topic_rotatorConfig.maxspeed >= 0):
                     lastconfigtime = time.time()
-                    config_dict = self.read_topic_rotator_config(self.topic_rotatorConfig)
+                    config_dict = self.rtopic_rotator_config(self.topic_rotatorConfig)
                     self.log.info("run: rx rotator config=%s" % (config_dict))
                     waitconfig = False
                 else:
@@ -216,7 +215,7 @@ class Main(object):
                 scode = self.sal.getNextSample_cameraConfig(self.topic_cameraConfig)
                 if (scode == 0 and self.topic_cameraConfig.readout_time > 0):
                     lastconfigtime = time.time()
-                    config_dict = self.read_topic_camera_config(self.topic_cameraConfig)
+                    config_dict = self.rtopic_camera_config(self.topic_cameraConfig)
                     self.log.info("run: rx camera config=%s" % (config_dict))
                     waitconfig = False
                 else:
@@ -235,7 +234,7 @@ class Main(object):
                 scode = self.sal.getNextSample_slewConfig(self.topic_slewConfig)
                 if (scode == 0 and self.topic_slewConfig.prereq_exposures != ""):
                     lastconfigtime = time.time()
-                    config_dict = self.read_topic_slew_config(self.topic_slewConfig)
+                    config_dict = self.rtopic_slew_config(self.topic_slewConfig)
                     self.log.info("run: rx slew config=%s" % (config_dict))
                     waitconfig = False
                 else:
@@ -254,7 +253,7 @@ class Main(object):
                 scode = self.sal.getNextSample_opticsLoopCorrConfig(self.topic_opticsConfig)
                 if (scode == 0 and self.topic_opticsConfig.tel_optics_ol_slope > 0):
                     lastconfigtime = time.time()
-                    config_dict = self.read_topic_optics_config(self.topic_opticsConfig)
+                    config_dict = self.rtopic_optics_config(self.topic_opticsConfig)
                     self.log.info("run: rx optics config=%s" % (config_dict))
                     waitconfig = False
                 else:
@@ -272,7 +271,7 @@ class Main(object):
                 scode = self.sal.getNextSample_parkConfig(self.topic_parkConfig)
                 if (scode == 0 and self.topic_parkConfig.telescope_altitude > 0):
                     lastconfigtime = time.time()
-                    config_dict = self.read_topic_park_config(self.topic_parkConfig)
+                    config_dict = self.rtopic_park_config(self.topic_parkConfig)
                     self.log.info("run: rx park config=%s" % (config_dict))
                     waitconfig = False
                 else:
@@ -292,9 +291,10 @@ class Main(object):
                 if (scode == 0 and self.topic_areaDistPropConfig.name != ""):
                     lastconfigtime = time.time()
                     name = self.topic_areaDistPropConfig.name
-                    config_dict = self.read_topic_area_prop_config(self.topic_areaDistPropConfig)
-                    self.log.info("run: rx area prop config=%s" % (config_dict))
-                    self.schedulerDriver.create_area_proposal(name, config_dict)
+                    prop_id = self.topic_areaDistPropConfig.prop_id
+                    config_dict = self.rtopic_area_prop_config(self.topic_areaDistPropConfig)
+                    self.log.info("run: rx area prop id=%i name=%s config=%s" % (prop_id, name, config_dict))
+                    self.schedulerDriver.create_area_proposal(prop_id, name, config_dict)
                     waitconfig = True
                 else:
                     tf = time.time()
@@ -359,7 +359,7 @@ class Main(object):
                             if scode == 0 and self.topicObservatoryState.timestamp != 0:
                                 laststatetime = time.time()
                                 waitstate = False
-                                observatory_state = self.create_observatory_state(self.topicObservatoryState)
+                                observatory_state = self.rtopic_observatory_state(self.topicObservatoryState)
 
                                 self.log.debug("run: rx state %s" % str(observatory_state))
 
@@ -461,10 +461,14 @@ class Main(object):
                                         if self.topicTarget.targetId == self.topicObservation.targetId:
                                             synccount += 1
 
-                                            observation = self.create_observation(self.topicObservation)
-                                            self.log.debug("run: rx observation %s", str(observation))
-                                            self.schedulerDriver.register_observation(observation)
-
+                                            obs = self.rtopic_observation(self.topicObservation)
+                                            self.log.debug("run: rx observation %s", str(obs))
+                                            target_list = self.schedulerDriver.register_observation(obs)
+                                            s = self.wtopic_interestedProposal(self.topicInterestedProposal,
+                                                                               self.topicObservation.targetId,
+                                                                               target_list)
+                                            self.sal.putSample_interestedProposal(self.topicInterestedProposal)
+                                            self.log.debug("run: tx interested %s", s)
                                             waitobservation = False
                                         else:
                                             self.log.warning("run: rx unsync observation Id=%i "
@@ -519,7 +523,7 @@ class Main(object):
         self.sal.salShutdown()
         sys.exit(0)
 
-    def read_topic_driver_config(self, topic_driver_config):
+    def rtopic_driver_config(self, topic_driver_config):
 
         confdict = {}
         confdict["ranking"] = {}
@@ -539,7 +543,7 @@ class Main(object):
 
         return confdict
 
-    def read_topic_location_config(self, topic_location_config):
+    def rtopic_location_config(self, topic_location_config):
 
         confdict = {}
         confdict["obs_site"] = {}
@@ -550,7 +554,7 @@ class Main(object):
 
         return confdict
 
-    def read_topic_telescope_config(self, topic_telescope_config):
+    def rtopic_telescope_config(self, topic_telescope_config):
 
         confdict = {}
         confdict["telescope"] = {}
@@ -571,7 +575,7 @@ class Main(object):
 
         return confdict
 
-    def read_topic_dome_config(self, topic_dome_config):
+    def rtopic_dome_config(self, topic_dome_config):
 
         confdict = {}
         confdict["dome"] = {}
@@ -585,7 +589,7 @@ class Main(object):
 
         return confdict
 
-    def read_topic_rotator_config(self, topic_rotator_config):
+    def rtopic_rotator_config(self, topic_rotator_config):
 
         confdict = {}
         confdict["rotator"] = {}
@@ -600,7 +604,7 @@ class Main(object):
 
         return confdict
 
-    def read_topic_optics_config(self, topic_optics_config):
+    def rtopic_optics_config(self, topic_optics_config):
 
         tel_optics_cl_alt_limit = []
         for k in range(3):
@@ -617,7 +621,7 @@ class Main(object):
 
         return confdict
 
-    def read_topic_camera_config(self, topic_camera_config):
+    def rtopic_camera_config(self, topic_camera_config):
 
         confdict = {}
         confdict["camera"] = {}
@@ -649,7 +653,7 @@ class Main(object):
 
         return confdict
 
-    def read_topic_slew_config(self, topic_slew_config):
+    def rtopic_slew_config(self, topic_slew_config):
 
         confdict = {}
         confdict["slew"] = {}
@@ -728,7 +732,7 @@ class Main(object):
 
         return confdict
 
-    def read_topic_park_config(self, topic_park_config):
+    def rtopic_park_config(self, topic_park_config):
 
         confdict = {}
         confdict["park"] = {}
@@ -741,12 +745,9 @@ class Main(object):
 
         return confdict
 
-    def read_topic_area_prop_config(self, topic_areapropconf):
+    def rtopic_area_prop_config(self, topic_areapropconf):
 
         confdict = {}
-
-        # name = topic_areapropconf.name
-        # prop_id = topic_areapropconf.prop_id
 
         confdict["sky_nightly_bounds"] = {}
         confdict["sky_nightly_bounds"]["twilight_boundary"] = topic_areapropconf.twilight_boundary
@@ -832,24 +833,28 @@ class Main(object):
 
         return confdict
 
-    def create_observation(self, topic_observation):
+    def rtopic_observation(self, topic_observation):
 
         observation = Target()
         observation.time = topic_observation.observation_start_time
         observation.targetid = topic_observation.targetId
         observation.fieldid = topic_observation.fieldId
         observation.filter = topic_observation.filter
+        observation.num_props = topic_observation.num_proposals
+        observation.propid_list = []
+        for k in range(observation.num_props):
+            observation.propid_list.append(topic_observation.proposal_Ids[k])
         observation.ra_rad = math.radians(topic_observation.ra)
         observation.dec_rad = math.radians(topic_observation.dec)
         observation.ang_rad = math.radians(topic_observation.angle)
         observation.num_exp = topic_observation.num_exposures
         observation.exp_times = []
-        for i in range(topic_observation.num_exposures):
-            observation.exp_times.append(topic_observation.exposure_times[i])
+        for k in range(topic_observation.num_exposures):
+            observation.exp_times.append(topic_observation.exposure_times[k])
 
         return observation
 
-    def create_observatory_state(self, topic_state):
+    def rtopic_observatory_state(self, topic_state):
 
         state = ObservatoryState()
 
@@ -872,3 +877,28 @@ class Main(object):
         state.unmountedfilters = topic_state.filter_unmounted.split(",")
 
         return state
+
+    def wtopic_interestedProposal(self, topic, observationId, target_list):
+
+        topic.observationId = observationId
+        topic.num_proposals = len(target_list)
+        propid_list = []
+        need_list = []
+        bonus_list = []
+        value_list = []
+        propboost_list = []
+        for k in range(topic.num_proposals):
+            topic.proposal_Ids[k] = target_list[k].propid
+            topic.proposal_needs[k] = target_list[k].need
+            topic.proposal_bonuses[k] = target_list[k].bonus
+            topic.proposal_values[k] = target_list[k].value
+            topic.proposal_boosts[k] = target_list[k].propboost
+            propid_list.append(target_list[k].propid)
+            need_list.append(target_list[k].need)
+            bonus_list.append(target_list[k].bonus)
+            value_list.append(target_list[k].value)
+            propboost_list.append(target_list[k].propboost)
+        logstr = ("obsId=%i numprops=%i propid=%s need=%s bonus=%s value=%s propboost=%s" %
+                  (observationId, topic.num_proposals,
+                   propid_list, need_list, bonus_list, value_list, propboost_list))
+        return logstr
