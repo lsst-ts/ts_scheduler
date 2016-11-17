@@ -47,7 +47,7 @@ class AstronomicalSkyTest(unittest.TestCase):
         self.astro_sky.update(1641084532.843324)
         airmass = self.astro_sky.get_airmass(self.field_ids)
         self.assertEqual(len(airmass), self.field_ids.size)
-        self.assertAlmostEqual(airmass[0], 2.0981613329788469, delta=1e-7)
+        self.assertAlmostEqual(airmass[0], 1.9853499253850071, delta=1e-7)
 
     def test_sky_brightness_retrieval_from_timestamp_set_and_array_of_positions(self):
         initial_timestamp = 1641081600.
@@ -59,12 +59,12 @@ class AstronomicalSkyTest(unittest.TestCase):
                                                                self.field_ids)
         self.assertEqual(len(sky_mags), number_of_steps)
         self.assertEqual(sky_mags[0]['g'].size, self.field_ids.size)
-        self.assertAlmostEqual(sky_mags[0]['u'][0], 18.706881090180314, delta=1e-7)
-        self.assertAlmostEqual(sky_mags[0]['g'][0], 19.013282025036407, delta=1e-7)
-        self.assertAlmostEqual(sky_mags[0]['r'][0], 19.128463470274614, delta=1e-7)
-        self.assertAlmostEqual(sky_mags[0]['i'][0], 18.046900652222934, delta=1e-7)
-        self.assertAlmostEqual(sky_mags[0]['z'][0], 17.058260393303964, delta=1e-7)
-        self.assertAlmostEqual(sky_mags[0]['y'][0], 15.891352279039792, delta=1e-7)
+        self.assertAlmostEqual(sky_mags[0]['u'][0], 18.811567698177235, delta=1e-7)
+        self.assertAlmostEqual(sky_mags[0]['g'][0], 19.115367630591688, delta=1e-7)
+        self.assertAlmostEqual(sky_mags[0]['r'][0], 19.223547839614682, delta=1e-7)
+        self.assertAlmostEqual(sky_mags[0]['i'][0], 18.144658531311183, delta=1e-7)
+        self.assertAlmostEqual(sky_mags[0]['z'][0], 17.155387687993628, delta=1e-7)
+        self.assertAlmostEqual(sky_mags[0]['y'][0], 15.988078842357307, delta=1e-7)
 
     def test_get_night_boundaries(self):
         # 2022/01/01
@@ -145,6 +145,6 @@ class AstronomicalSkyTest(unittest.TestCase):
         self.assertEqual(info['airmass'].size, self.field_ids.size)
         self.assertEqual(info['altitude'].size, self.ra_rads.size)
         self.assertEqual(info['azimuth'].size, self.ra_rads.size)
-        self.assertAlmostEqual(info['airmass'][0], 2.093164209117222, delta=1e-7)
+        self.assertAlmostEqual(info['airmass'][0], 1.9853499253850071, delta=1e-7)
         self.assertAlmostEqual(info['altitude'][0], 0.52786436029017303, delta=1e-7)
         self.assertFalse(numpy.isnan(info['azimuth'][0]))
