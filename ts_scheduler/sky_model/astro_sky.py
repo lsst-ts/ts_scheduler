@@ -52,6 +52,9 @@ class AstronomicalSkyModel(object):
     def get_airmass(self, ids):
         """Get the airmass of the fields.
 
+        The field ids stored in the airmass data are off-by-one from the stored field ids,
+        hence the subtraction.
+
         Parameters
         ----------
         ids : list or numpy.array
@@ -62,7 +65,7 @@ class AstronomicalSkyModel(object):
         numpy.array
             The set of airmasses.
         """
-        return self.sky_brightness.returnAirmass(self.date_profile.mjd, indx=ids)
+        return self.sky_brightness.returnAirmass(self.date_profile.mjd, indx=ids - 1)
 
     def get_alt_az(self, ra, dec):
         """Get the altitude (radians) and azimuth (radians) of a given sky position.
@@ -199,6 +202,9 @@ class AstronomicalSkyModel(object):
         This function retrieves the LSST 6 filter sky brightness magnitudes for a given set
         of fields at the MJD kept by the :class:`.DateProfile.`
 
+        The field ids stored in the sky brightness data are off-by-one from the stored field ids,
+        hence the subtraction.
+
         Parameters
         ----------
         ids : list or numpy.array
@@ -209,13 +215,16 @@ class AstronomicalSkyModel(object):
         numpy.ndarray
             The LSST 6 filter sky brightness magnitudes.
         """
-        return self.sky_brightness.returnMags(self.date_profile.mjd, indx=ids)
+        return self.sky_brightness.returnMags(self.date_profile.mjd, indx=ids - 1, apply_mask=False)
 
     def get_sky_brightness_timeblock(self, timestamp, timestep, num_steps, ids):
         """Get LSST 6 filter sky brightness for a set of fields for a range of times.
 
         This function retrieves the LSST 6 filter sky brightness magnitudes for a given set
         of fields at a range of MJDs provided via the timeblock information.
+
+        The field ids stored in the sky brightness data are off-by-one from the stored field ids,
+        hence the subtraction.
 
         Parameters
         ----------
@@ -238,7 +247,7 @@ class AstronomicalSkyModel(object):
         for i in xrange(num_steps):
             ts = timestamp + i * timestep
             mjd, _ = dp(ts)
-            mags.append(self.sky_brightness.returnMags(dp.mjd, indx=ids))
+            mags.append(self.sky_brightness.returnMags(dp.mjd, indx=ids - 1, apply_mask=False))
 
         return mags
 

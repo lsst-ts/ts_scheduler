@@ -1,4 +1,5 @@
 import math
+import numpy
 
 from operator import itemgetter
 
@@ -246,8 +247,8 @@ class AreaDistributionProposal(Proposal):
             dec_rad_list.append(field.dec_rad)
         if (len(id_list) > 0) and (not self.ignore_sky_brightness or not self.ignore_airmass):
             self.sky.update(timestamp)
-            sky_mags = self.sky.get_sky_brightness(id_list)
-            airmass = self.sky.get_airmass(id_list)
+            sky_mags = self.sky.get_sky_brightness(numpy.array(id_list))
+            airmass = self.sky.get_airmass(numpy.array(id_list))
             for ix, fieldid in enumerate(id_list):
                 mags_dict[fieldid] = {k: v[ix] for k, v in sky_mags.items()}
                 airmass_dict[fieldid] = airmass[ix]
