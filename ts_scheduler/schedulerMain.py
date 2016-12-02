@@ -878,9 +878,9 @@ class Main(object):
 
         return state
 
-    def wtopic_interestedProposal(self, topic, observationId, target_list):
+    def wtopic_interestedProposal(self, topic, targetId, target_list):
 
-        topic.observationId = observationId
+        topic.observationId = targetId
         topic.num_proposals = len(target_list)
         propid_list = []
         need_list = []
@@ -899,6 +899,6 @@ class Main(object):
             value_list.append(target_list[k].value)
             propboost_list.append(target_list[k].propboost)
         logstr = ("obsId=%i numprops=%i propid=%s need=%s bonus=%s value=%s propboost=%s" %
-                  (observationId, topic.num_proposals,
+                  (targetId, topic.num_proposals,
                    propid_list, need_list, bonus_list, value_list, propboost_list))
         return logstr

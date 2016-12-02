@@ -362,12 +362,15 @@ class AreaDistributionProposal(Proposal):
 
     def register_observation(self, observation):
 
+        self.last_observation = observation.get_copy()
+        self.last_observation_was_for_this_proposal = False
+
         if self.propid not in observation.propid_list and not self.params.accept_serendipity:
             return None
 
         fieldid = observation.fieldid
         filter = observation.filter
-        self.last_observation = observation
+
         tfound = None
         for target in self.winners_list:
             if self.observation_fulfills_target(observation, target):
@@ -380,6 +383,7 @@ class AreaDistributionProposal(Proposal):
                     break
 
         if tfound is not None:
+            target.targetid = observation.targetid
             target = self.survey_targets_dict[fieldid][filter]
             target.visits += 1
             target.progress = float(target.visits) / target.goal
@@ -410,8 +414,6 @@ class AreaDistributionProposal(Proposal):
                 self.survey_filters_progress_dict[filter] = 0.0
             self.last_observation_was_for_this_proposal = True
             self.log.debug("register_observation: %s" % (target))
-        else:
-            self.last_observation_was_for_this_proposal = False
 
         return tfound
 

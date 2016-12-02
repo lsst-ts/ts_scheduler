@@ -83,8 +83,15 @@ class Driver(object):
         self.midnight_moonphase = 0.0
 
         self.nulltarget = Target()
-        self.nulltarget.num_exp = 2
         self.nulltarget.targetid = -1
+        self.nulltarget.num_exp = 1
+        self.nulltarget.exp_times = [0.0]
+        self.nulltarget.num_props = 1
+        self.nulltarget.propid_list = [0]
+        self.nulltarget.need_list = [0.0]
+        self.nulltarget.bonus_list = [0.0]
+        self.nulltarget.value_list = [0.0]
+        self.nulltarget.propboost_list = [1.0]
 
         self.need_filter_swap = False
         self.filter_to_unmount = ""
