@@ -821,6 +821,8 @@ class Main(object):
                 exp_times_list.append(topic_areapropconf.exposures[exp_index])
                 exp_index += 1
             confdict[filter_section]["exp_times"] = exp_times_list
+            #confdict[filter_section]["num_grouped_visits"] = topic_areapropconf.num_grouped_visits[k]
+            confdict[filter_section]["num_grouped_visits"] = 2
 
         confdict["scheduling"] = {}
         max_num_targets = topic_areapropconf.max_num_targets
@@ -830,6 +832,17 @@ class Main(object):
         confdict["scheduling"]["accept_serendipity"] = accept_serendipity
         confdict["scheduling"]["accept_consecutive_visits"] = accept_consecutive_visits
         confdict["scheduling"]["airmass_bonus"] = topic_areapropconf.airmass_bonus
+
+        #confdict["scheduling"]["restrict_grouped_visits"] = topic_areapropconf.restrict_grouped_visits
+        #confdict["scheduling"]["time_interval"] = topic_areapropconf.time_interval
+        #confdict["scheduling"]["time_window_start"] = topic_areapropconf.time_window_start
+        #confdict["scheduling"]["time_window_max"] = topic_areapropconf.time_window_max
+        #confdict["scheduling"]["time_window_end"] = topic_areapropconf.time_window_end
+        confdict["scheduling"]["restrict_grouped_visits"] = True
+        confdict["scheduling"]["time_interval"] = 30 * 60.0
+        confdict["scheduling"]["time_window_start"] = 0.67
+        confdict["scheduling"]["time_window_max"] = 1.17
+        confdict["scheduling"]["time_window_end"] = 1.33
 
         return confdict
 

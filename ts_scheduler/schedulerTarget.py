@@ -37,6 +37,8 @@ class Target(object):
         self.goal = 0
         self.visits = 0
         self.progress = 0.0
+        self.groupid = 0
+        self.groupix = 0
 
         #computed at driver
         self.alt_rad = 0.0
@@ -57,6 +59,9 @@ class Target(object):
         self.bonus_list = []
         self.value_list = []
         self.propboost_list = []
+
+        #stamped at observation
+        self.last_visit_time = 0.0
 
     def get_copy(self):
 
@@ -81,6 +86,8 @@ class Target(object):
         newtarget.goal = self.goal
         newtarget.visits = self.visits
         newtarget.progress = self.progress
+        newtarget.groupid = self.groupid
+        newtarget.groupix = self.groupix
         newtarget.alt_rad = self.alt_rad
         newtarget.az_rad = self.az_rad
         newtarget.rot_rad = self.rot_rad
@@ -107,6 +114,7 @@ class Target(object):
                 "time=%.1f airmass=%.3f brightness=%.3f "
                 "cloud=%.2f seeing=%.2f "
                 "visits=%i progress=%.2f%% "
+                "groupid=%i groupix=%i "
                 "need=%.3f bonus=%.3f value=%.3f propboost=%.3f "
                 "propid=%s need=%s bonus=%s value=%s propboost=%s "
                 "slewtime=%.3f costbonus=%.3f rank=%.3f" %
@@ -117,6 +125,7 @@ class Target(object):
                  self.time, self.airmass, self.sky_brightness,
                  self.cloud, self.seeing,
                  self.visits, 100 * self.progress,
+                 self.groupid, self.groupix,
                  self.need, self.bonus, self.value, self.propboost,
                  self.propid_list, numpy.round(self.need_list, 3), numpy.round(self.bonus_list, 3),
                  numpy.round(self.value_list, 3), numpy.round(self.propboost_list, 3),
