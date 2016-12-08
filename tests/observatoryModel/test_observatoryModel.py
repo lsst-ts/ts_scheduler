@@ -497,3 +497,118 @@ class ObservatoryModelTest(unittest.TestCase):
                          "filter=r track=False alt=86.500 az=0.000 pa=0.000 rot=0.000 "
                          "telaz=0.000 telrot=0.000 "
                          "mounted=['g', 'r', 'i', 'y', 'z'] unmounted=['u']")
+
+    def test_park(self):
+        self.model.update_state(0)
+
+        target = Target()
+        target.ra_rad = math.radians(60)
+        target.dec_rad = math.radians(-20)
+        target.ang_rad = math.radians(0)
+        target.filter = "z"
+
+        self.model.slew(target)
+        self.assertEqual(str(self.model.currentState), "t=140.0 ra=60.000 dec=-20.000 ang=-116.505 "
+                         "filter=z track=True alt=61.135 az=76.255 pa=-116.748 rot=359.758 "
+                         "telaz=76.255 telrot=-0.242 "
+                         "mounted=['g', 'r', 'i', 'z', 'y'] unmounted=['u']")
+        lastslew_delays_dict = self.model.lastslew_delays_dict
+        self.assertAlmostEquals(lastslew_delays_dict["telalt"], 8.387, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["telaz"], 11.966, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["telrot"], 0.0, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["telopticsopenloop"], 7.387, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["telopticsclosedloop"], 20.0, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["domalt"], 18.775, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["domaz"], 53.174, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["domazsettle"], 1.0, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["filter"], 120.0, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["readout"], 2.0, delta=1e-3)
+        lastslew_criticalpath = self.model.lastslew_criticalpath
+        self.assertEqual(str(lastslew_criticalpath), "['telopticsclosedloop', 'filter']")
+        self.assertAlmostEquals(math.degrees(self.model.currentState.telalt_peakspeed_rad), -3.50, delta=1e-3)
+        self.assertAlmostEquals(math.degrees(self.model.currentState.telaz_peakspeed_rad), 7.00, delta=1e-3)
+        self.assertAlmostEquals(math.degrees(self.model.currentState.telrot_peakspeed_rad), 0.0, delta=1e-3)
+        self.assertAlmostEquals(math.degrees(self.model.currentState.domalt_peakspeed_rad), -1.75, delta=1e-3)
+        self.assertAlmostEquals(math.degrees(self.model.currentState.domaz_peakspeed_rad), 1.50, delta=1e-3)
+
+        self.model.park()
+        self.assertEqual(str(self.model.currentState), "t=213.8 ra=30.370 dec=-26.744 ang=180.000 "
+                         "filter=z track=False alt=86.500 az=0.000 pa=-180.000 rot=0.000 "
+                         "telaz=0.000 telrot=0.000 "
+                         "mounted=['g', 'r', 'i', 'z', 'y'] unmounted=['u']")
+        lastslew_delays_dict = self.model.lastslew_delays_dict
+        self.assertAlmostEquals(lastslew_delays_dict["telalt"], 8.247, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["telaz"], 11.894, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["telrot"], 0.985, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["telopticsopenloop"], 7.247, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["telopticsclosedloop"], 20.0, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["domalt"], 18.494, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["domaz"], 52.836, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["domazsettle"], 1.0, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["filter"], 0.0, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["readout"], 2.0, delta=1e-3)
+        lastslew_criticalpath = self.model.lastslew_criticalpath
+        self.assertEqual(str(lastslew_criticalpath), "['telopticsclosedloop', 'domazsettle', 'domaz']")
+        self.assertAlmostEquals(math.degrees(self.model.currentState.telalt_peakspeed_rad), 3.50, delta=1e-3)
+        self.assertAlmostEquals(math.degrees(self.model.currentState.telaz_peakspeed_rad), -7.00, delta=1e-3)
+        self.assertAlmostEquals(math.degrees(self.model.currentState.telrot_peakspeed_rad), 0.492, delta=1e-3)
+        self.assertAlmostEquals(math.degrees(self.model.currentState.domalt_peakspeed_rad), 1.75, delta=1e-3)
+        self.assertAlmostEquals(math.degrees(self.model.currentState.domaz_peakspeed_rad), -1.50, delta=1e-3)
+
+        target = Target()
+        target.ra_rad = math.radians(60)
+        target.dec_rad = math.radians(-20)
+        target.ang_rad = math.radians(0)
+        target.filter = "r"
+
+        self.model.slew(target)
+        self.assertEqual(str(self.model.currentState), "t=353.8 ra=60.000 dec=-20.000 ang=-116.879 "
+                         "filter=r track=True alt=61.881 az=75.460 pa=-117.141 rot=359.738 "
+                         "telaz=75.460 telrot=-0.262 "
+                         "mounted=['g', 'r', 'i', 'z', 'y'] unmounted=['u']")
+        lastslew_delays_dict = self.model.lastslew_delays_dict
+        self.assertAlmostEquals(lastslew_delays_dict["telalt"], 8.174, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["telaz"], 11.855, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["telrot"], 0.0, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["telopticsopenloop"], 7.174, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["telopticsclosedloop"], 20.0, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["domalt"], 18.348, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["domaz"], 52.657, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["domazsettle"], 1.0, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["filter"], 120.0, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["readout"], 2.0, delta=1e-3)
+        lastslew_criticalpath = self.model.lastslew_criticalpath
+        self.assertEqual(str(lastslew_criticalpath), "['telopticsclosedloop', 'filter']")
+        self.assertAlmostEquals(math.degrees(self.model.currentState.telalt_peakspeed_rad), -3.50, delta=1e-3)
+        self.assertAlmostEquals(math.degrees(self.model.currentState.telaz_peakspeed_rad), 7.00, delta=1e-3)
+        self.assertAlmostEquals(math.degrees(self.model.currentState.telrot_peakspeed_rad), 0.0, delta=1e-3)
+        self.assertAlmostEquals(math.degrees(self.model.currentState.domalt_peakspeed_rad), -1.75, delta=1e-3)
+        self.assertAlmostEquals(math.degrees(self.model.currentState.domaz_peakspeed_rad), 1.50, delta=1e-3)
+
+        self.model.park()
+        self.assertEqual(str(self.model.currentState), "t=427.1 ra=31.264 dec=-26.744 ang=180.000 "
+                         "filter=r track=False alt=86.500 az=0.000 pa=-180.000 rot=0.000 "
+                         "telaz=0.000 telrot=0.000 "
+                         "mounted=['g', 'r', 'i', 'z', 'y'] unmounted=['u']")
+        lastslew_delays_dict = self.model.lastslew_delays_dict
+        self.assertAlmostEquals(lastslew_delays_dict["telalt"], 8.034, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["telaz"], 11.780, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["telrot"], 1.024, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["telopticsopenloop"], 7.034, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["telopticsclosedloop"], 20.0, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["domalt"], 18.068, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["domaz"], 52.307, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["domazsettle"], 1.0, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["filter"], 0.0, delta=1e-3)
+        self.assertAlmostEquals(lastslew_delays_dict["readout"], 2.0, delta=1e-3)
+        lastslew_criticalpath = self.model.lastslew_criticalpath
+        self.assertEqual(str(lastslew_criticalpath), "['telopticsclosedloop', 'domazsettle', 'domaz']")
+        self.assertAlmostEquals(math.degrees(self.model.currentState.telalt_peakspeed_rad), 3.50, delta=1e-3)
+        self.assertAlmostEquals(math.degrees(self.model.currentState.telaz_peakspeed_rad), -7.00, delta=1e-3)
+        self.assertAlmostEquals(math.degrees(self.model.currentState.telrot_peakspeed_rad), 0.512, delta=1e-3)
+        self.assertAlmostEquals(math.degrees(self.model.currentState.domalt_peakspeed_rad), 1.75, delta=1e-3)
+        self.assertAlmostEquals(math.degrees(self.model.currentState.domaz_peakspeed_rad), -1.50, delta=1e-3)
+        self.assertEqual(str(self.model.parkState), "t=0.0 ra=0.000 dec=0.000 ang=0.000 "
+                         "filter=r track=False alt=86.500 az=0.000 pa=0.000 rot=0.000 "
+                         "telaz=0.000 telrot=0.000 "
+                         "mounted=['g', 'r', 'i', 'z', 'y'] unmounted=['u']")

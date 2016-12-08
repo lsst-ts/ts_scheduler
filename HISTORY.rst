@@ -4,6 +4,27 @@ History
 -------
 
 ====================
+0.7 (2016-12-08)
+--------------------
+
+Area Distribution Proposal
+    hybrid area-time behavior
+    configurable grouped visits
+    configurable time window
+    configurable constraint to revisit group per night
+Interested Proposal
+    feedback to SOCS about Proposals getting credit from observation
+Downtime handling
+Filter changer
+    filter swaps
+    configurable constraints for filter changes
+Weather handling
+    clouds
+    seeing
+Airmass bonus
+Park method implemented
+
+====================
 0.3 (2016-05-27)
 --------------------
 

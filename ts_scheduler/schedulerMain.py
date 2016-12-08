@@ -22,7 +22,7 @@ from SALPY_scheduler import scheduler_cameraConfigC
 from SALPY_scheduler import scheduler_slewConfigC
 from SALPY_scheduler import scheduler_opticsLoopCorrConfigC
 from SALPY_scheduler import scheduler_parkConfigC
-from SALPY_scheduler import scheduler_areaDistPropConfigC
+from SALPY_scheduler import scheduler_generalPropConfigC
 from SALPY_scheduler import scheduler_filterSwapC
 from SALPY_scheduler import scheduler_interestedProposalC
 
@@ -53,7 +53,7 @@ class Main(object):
         self.topic_slewConfig = scheduler_slewConfigC()
         self.topic_opticsConfig = scheduler_opticsLoopCorrConfigC()
         self.topic_parkConfig = scheduler_parkConfigC()
-        self.topic_areaDistPropConfig = scheduler_areaDistPropConfigC()
+        self.topic_areaDistPropConfig = scheduler_generalPropConfigC()
         self.topicTime = scheduler_timeHandlerC()
         self.topicObservatoryState = scheduler_observatoryStateC()
         self.topic_cloud = scheduler_cloudC()
@@ -80,7 +80,7 @@ class Main(object):
         self.sal.salTelemetrySub("scheduler_slewConfig")
         self.sal.salTelemetrySub("scheduler_opticsLoopCorrConfig")
         self.sal.salTelemetrySub("scheduler_parkConfig")
-        self.sal.salTelemetrySub("scheduler_areaDistPropConfig")
+        self.sal.salTelemetrySub("scheduler_generalPropConfig")
         self.sal.salTelemetrySub("scheduler_timeHandler")
         self.sal.salTelemetrySub("scheduler_observatoryState")
         self.sal.salTelemetrySub("scheduler_cloud")
@@ -287,7 +287,7 @@ class Main(object):
             lastconfigtime = time.time()
             config_dict = None
             while waitconfig:
-                scode = self.sal.getNextSample_areaDistPropConfig(self.topic_areaDistPropConfig)
+                scode = self.sal.getNextSample_generalPropConfig(self.topic_areaDistPropConfig)
                 if (scode == 0 and self.topic_areaDistPropConfig.name != ""):
                     lastconfigtime = time.time()
                     name = self.topic_areaDistPropConfig.name
@@ -821,8 +821,7 @@ class Main(object):
                 exp_times_list.append(topic_areapropconf.exposures[exp_index])
                 exp_index += 1
             confdict[filter_section]["exp_times"] = exp_times_list
-            #confdict[filter_section]["num_grouped_visits"] = topic_areapropconf.num_grouped_visits[k]
-            confdict[filter_section]["num_grouped_visits"] = 2
+            confdict[filter_section]["num_grouped_visits"] = topic_areapropconf.num_grouped_visits[k]
 
         confdict["scheduling"] = {}
         max_num_targets = topic_areapropconf.max_num_targets
@@ -833,16 +832,11 @@ class Main(object):
         confdict["scheduling"]["accept_consecutive_visits"] = accept_consecutive_visits
         confdict["scheduling"]["airmass_bonus"] = topic_areapropconf.airmass_bonus
 
-        #confdict["scheduling"]["restrict_grouped_visits"] = topic_areapropconf.restrict_grouped_visits
-        #confdict["scheduling"]["time_interval"] = topic_areapropconf.time_interval
-        #confdict["scheduling"]["time_window_start"] = topic_areapropconf.time_window_start
-        #confdict["scheduling"]["time_window_max"] = topic_areapropconf.time_window_max
-        #confdict["scheduling"]["time_window_end"] = topic_areapropconf.time_window_end
-        confdict["scheduling"]["restrict_grouped_visits"] = True
-        confdict["scheduling"]["time_interval"] = 30 * 60.0
-        confdict["scheduling"]["time_window_start"] = 0.67
-        confdict["scheduling"]["time_window_max"] = 1.17
-        confdict["scheduling"]["time_window_end"] = 1.33
+        confdict["scheduling"]["restrict_grouped_visits"] = topic_areapropconf.restrict_grouped_visits
+        confdict["scheduling"]["time_interval"] = topic_areapropconf.time_interval
+        confdict["scheduling"]["time_window_start"] = topic_areapropconf.time_window_start
+        confdict["scheduling"]["time_window_max"] = topic_areapropconf.time_window_max
+        confdict["scheduling"]["time_window_end"] = topic_areapropconf.time_window_end
 
         return confdict
 

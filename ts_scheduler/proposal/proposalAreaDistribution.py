@@ -459,12 +459,12 @@ class AreaDistributionProposal(Proposal):
 
         fieldid = target.fieldid
         filter = target.filter
-        self.log.debug("remove target: %s fieldid=%i filter=%s" %
+        self.log.debug("remove_target: %s fieldid=%i filter=%s" %
                        (text, fieldid, filter))
         del self.tonight_targets_dict[fieldid][filter]
         if not self.tonight_targets_dict[fieldid]:
             # field with no targets, remove from tonight dict
-            self.log.debug("remove target: fieldid=%i with no targets" %
+            self.log.debug("remove_target: fieldid=%i with no targets" %
                            (fieldid))
             del self.tonight_targets_dict[fieldid]
             for field in self.tonight_fields_list:
