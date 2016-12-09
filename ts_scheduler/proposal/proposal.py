@@ -87,7 +87,7 @@ class Proposal(object):
             if cut_type != "GP":
                 query_list.append(self.field_select.select_region(CUT_TYPEMAP[cut_type], cut[1], cut[2]))
             else:
-                query_list.append(self.field_select.galactic_region(cut[1], cut[2], cut[3], exclusion=False))
+                query_list.append(self.field_select.galactic_region(cut[2], cut[1], cut[3], exclusion=False))
 
         current_num_queries = len(query_list)
         if current_num_queries > 2:
@@ -102,7 +102,7 @@ class Proposal(object):
             for cut in sky_exclusions["cuts"]:
                 cut_type = cut[0]
                 if cut_type == "GP":
-                    query_list.append(self.field_select.galactic_region(cut[1], cut[2], cut[3]))
+                    query_list.append(self.field_select.galactic_region(cut[2], cut[1], cut[3]))
                 else:
                     self.log.warn("Do not know how to handle cuts for {}".format(cut_type))
 

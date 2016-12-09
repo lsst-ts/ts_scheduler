@@ -37,6 +37,7 @@ class ScriptedProposalTest(unittest.TestCase):
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
                          "time=1000.0 airmass=0.000 brightness=20.970 cloud=0.00 seeing=0.00 "
                          "visits=0 progress=0.00% "
+                         "groupid=0 groupix=0 "
                          "need=0.000 bonus=0.000 value=1.000 propboost=1.000 "
                          "propid=[] need=[] bonus=[] value=[] propboost=[] "
                          "slewtime=0.000 costbonus=0.000 rank=0.000")
@@ -47,6 +48,7 @@ class ScriptedProposalTest(unittest.TestCase):
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
                          "time=1040.0 airmass=0.000 brightness=nan cloud=0.00 seeing=0.00 "
                          "visits=0 progress=0.00% "
+                         "groupid=0 groupix=0 "
                          "need=0.000 bonus=0.000 value=1.000 propboost=1.000 "
                          "propid=[] need=[] bonus=[] value=[] propboost=[] "
                          "slewtime=0.000 costbonus=0.000 rank=0.000")
@@ -57,6 +59,7 @@ class ScriptedProposalTest(unittest.TestCase):
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
                          "time=1080.0 airmass=0.000 brightness=nan cloud=0.00 seeing=0.00 "
                          "visits=0 progress=0.00% "
+                         "groupid=0 groupix=0 "
                          "need=0.000 bonus=0.000 value=1.000 propboost=1.000 "
                          "propid=[] need=[] bonus=[] value=[] propboost=[] "
                          "slewtime=0.000 costbonus=0.000 rank=0.000")
@@ -67,6 +70,7 @@ class ScriptedProposalTest(unittest.TestCase):
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
                          "time=1120.0 airmass=0.000 brightness=19.818 cloud=0.00 seeing=0.00 "
                          "visits=0 progress=0.00% "
+                         "groupid=0 groupix=0 "
                          "need=0.000 bonus=0.000 value=1.000 propboost=1.000 "
                          "propid=[] need=[] bonus=[] value=[] propboost=[] "
                          "slewtime=0.000 costbonus=0.000 rank=0.000")
@@ -77,6 +81,7 @@ class ScriptedProposalTest(unittest.TestCase):
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
                          "time=1160.0 airmass=0.000 brightness=19.816 cloud=0.00 seeing=0.00 "
                          "visits=0 progress=0.00% "
+                         "groupid=0 groupix=0 "
                          "need=0.000 bonus=0.000 value=1.000 propboost=1.000 "
                          "propid=[] need=[] bonus=[] value=[] propboost=[] "
                          "slewtime=0.000 costbonus=0.000 rank=0.000")
@@ -87,6 +92,7 @@ class ScriptedProposalTest(unittest.TestCase):
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
                          "time=1200.0 airmass=0.000 brightness=20.220 cloud=0.00 seeing=0.00 "
                          "visits=0 progress=0.00% "
+                         "groupid=0 groupix=0 "
                          "need=0.000 bonus=0.000 value=1.000 propboost=1.000 "
                          "propid=[] need=[] bonus=[] value=[] propboost=[] "
                          "slewtime=0.000 costbonus=0.000 rank=0.000")
@@ -97,6 +103,7 @@ class ScriptedProposalTest(unittest.TestCase):
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
                          "time=1240.0 airmass=0.000 brightness=nan cloud=0.00 seeing=0.00 "
                          "visits=0 progress=0.00% "
+                         "groupid=0 groupix=0 "
                          "need=0.000 bonus=0.000 value=1.000 propboost=1.000 "
                          "propid=[] need=[] bonus=[] value=[] propboost=[] "
                          "slewtime=0.000 costbonus=0.000 rank=0.000")
@@ -107,6 +114,7 @@ class ScriptedProposalTest(unittest.TestCase):
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
                          "time=1280.0 airmass=0.000 brightness=nan cloud=0.00 seeing=0.00 "
                          "visits=0 progress=0.00% "
+                         "groupid=0 groupix=0 "
                          "need=0.000 bonus=0.000 value=1.000 propboost=1.000 "
                          "propid=[] need=[] bonus=[] value=[] propboost=[] "
                          "slewtime=0.000 costbonus=0.000 rank=0.000")
@@ -117,6 +125,7 @@ class ScriptedProposalTest(unittest.TestCase):
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
                          "time=1320.0 airmass=0.000 brightness=nan cloud=0.00 seeing=0.00 "
                          "visits=0 progress=0.00% "
+                         "groupid=0 groupix=0 "
                          "need=0.000 bonus=0.000 value=1.000 propboost=1.000 "
                          "propid=[] need=[] bonus=[] value=[] propboost=[] "
                          "slewtime=0.000 costbonus=0.000 rank=0.000")
@@ -127,6 +136,7 @@ class ScriptedProposalTest(unittest.TestCase):
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
                          "time=1360.0 airmass=0.000 brightness=nan cloud=0.00 seeing=0.00 "
                          "visits=0 progress=0.00% "
+                         "groupid=0 groupix=0 "
                          "need=0.000 bonus=0.000 value=1.000 propboost=1.000 "
                          "propid=[] need=[] bonus=[] value=[] propboost=[] "
                          "slewtime=0.000 costbonus=0.000 rank=0.000")
@@ -137,6 +147,7 @@ class ScriptedProposalTest(unittest.TestCase):
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
                          "time=1400.0 airmass=0.000 brightness=nan cloud=0.00 seeing=0.00 "
                          "visits=0 progress=0.00% "
+                         "groupid=0 groupix=0 "
                          "need=0.000 bonus=0.000 value=1.000 propboost=1.000 "
                          "propid=[] need=[] bonus=[] value=[] propboost=[] "
                          "slewtime=0.000 costbonus=0.000 rank=0.000")
@@ -147,6 +158,7 @@ class ScriptedProposalTest(unittest.TestCase):
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
                          "time=1440.0 airmass=0.000 brightness=nan cloud=0.00 seeing=0.00 "
                          "visits=0 progress=0.00% "
+                         "groupid=0 groupix=0 "
                          "need=0.000 bonus=0.000 value=1.000 propboost=1.000 "
                          "propid=[] need=[] bonus=[] value=[] propboost=[] "
                          "slewtime=0.000 costbonus=0.000 rank=0.000")

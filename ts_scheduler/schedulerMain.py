@@ -22,7 +22,7 @@ from SALPY_scheduler import scheduler_cameraConfigC
 from SALPY_scheduler import scheduler_slewConfigC
 from SALPY_scheduler import scheduler_opticsLoopCorrConfigC
 from SALPY_scheduler import scheduler_parkConfigC
-from SALPY_scheduler import scheduler_areaDistPropConfigC
+from SALPY_scheduler import scheduler_generalPropConfigC
 from SALPY_scheduler import scheduler_filterSwapC
 from SALPY_scheduler import scheduler_interestedProposalC
 
@@ -53,7 +53,7 @@ class Main(object):
         self.topic_slewConfig = scheduler_slewConfigC()
         self.topic_opticsConfig = scheduler_opticsLoopCorrConfigC()
         self.topic_parkConfig = scheduler_parkConfigC()
-        self.topic_areaDistPropConfig = scheduler_areaDistPropConfigC()
+        self.topic_areaDistPropConfig = scheduler_generalPropConfigC()
         self.topicTime = scheduler_timeHandlerC()
         self.topicObservatoryState = scheduler_observatoryStateC()
         self.topic_cloud = scheduler_cloudC()
@@ -80,7 +80,7 @@ class Main(object):
         self.sal.salTelemetrySub("scheduler_slewConfig")
         self.sal.salTelemetrySub("scheduler_opticsLoopCorrConfig")
         self.sal.salTelemetrySub("scheduler_parkConfig")
-        self.sal.salTelemetrySub("scheduler_areaDistPropConfig")
+        self.sal.salTelemetrySub("scheduler_generalPropConfig")
         self.sal.salTelemetrySub("scheduler_timeHandler")
         self.sal.salTelemetrySub("scheduler_observatoryState")
         self.sal.salTelemetrySub("scheduler_cloud")
@@ -287,7 +287,7 @@ class Main(object):
             lastconfigtime = time.time()
             config_dict = None
             while waitconfig:
-                scode = self.sal.getNextSample_areaDistPropConfig(self.topic_areaDistPropConfig)
+                scode = self.sal.getNextSample_generalPropConfig(self.topic_areaDistPropConfig)
                 if (scode == 0 and self.topic_areaDistPropConfig.name != ""):
                     lastconfigtime = time.time()
                     name = self.topic_areaDistPropConfig.name
@@ -404,47 +404,7 @@ class Main(object):
 
                                     target = self.schedulerDriver.select_next_target()
 
-                                    self.topicTarget.targetId = target.targetid
-                                    self.topicTarget.fieldId = target.fieldid
-                                    self.topicTarget.filter = target.filter
-                                    self.topicTarget.request_time = target.time
-                                    self.topicTarget.ra = target.ra
-                                    self.topicTarget.dec = target.dec
-                                    self.topicTarget.angle = target.ang
-                                    self.topicTarget.num_exposures = target.num_exp
-                                    for i, exptime in enumerate(target.exp_times):
-                                        self.topicTarget.exposure_times[i] = int(exptime)
-                                    self.topicTarget.airmass = target.airmass
-                                    self.topicTarget.sky_brightness = target.sky_brightness
-                                    self.topicTarget.cloud = target.cloud
-                                    self.topicTarget.seeing = target.seeing
-                                    self.topicTarget.slew_time = target.slewtime
-                                    self.topicTarget.cost_bonus = target.cost_bonus
-                                    self.topicTarget.rank = target.rank
-                                    self.topicTarget.num_proposals = target.num_props
-                                    for i, prop_id in enumerate(target.propid_list):
-                                        self.topicTarget.proposal_Ids[i] = prop_id
-                                    for i, prop_value in enumerate(target.value_list):
-                                        self.topicTarget.proposal_values[i] = prop_value
-                                    for i, prop_need in enumerate(target.need_list):
-                                        self.topicTarget.proposal_needs[i] = prop_need
-                                    for i, prop_bonus in enumerate(target.bonus_list):
-                                        self.topicTarget.proposal_bonuses[i] = prop_bonus
-
-                                    prop = self.schedulerDriver.science_proposal_list[0]
-                                    moon_sun = prop.sky.get_moon_sun_info(target.ra_rad, target.dec_rad)
-                                    if moon_sun["moonRA"] is not None:
-                                        self.topicTarget.moon_ra = math.degrees(moon_sun["moonRA"])
-                                        self.topicTarget.moon_dec = math.degrees(moon_sun["moonDec"])
-                                        self.topicTarget.moon_alt = math.degrees(moon_sun["moonAlt"])
-                                        self.topicTarget.moon_az = math.degrees(moon_sun["moonAz"])
-                                        self.topicTarget.moon_phase = moon_sun["moonPhase"]
-                                        self.topicTarget.moon_distance = math.degrees(moon_sun["moonDist"])
-                                        self.topicTarget.sun_alt = math.degrees(moon_sun["sunAlt"])
-                                        self.topicTarget.sun_az = math.degrees(moon_sun["sunAz"])
-                                        self.topicTarget.sun_ra = math.degrees(moon_sun["sunRA"])
-                                        self.topicTarget.sun_dec = math.degrees(moon_sun["sunDec"])
-                                        self.topicTarget.sun_elong = math.degrees(moon_sun["solarElong"])
+                                    self.wtopic_target(self.topicTarget, target)
 
                                     self.sal.putSample_target(self.topicTarget)
                                     self.log.debug("run: tx target %s", str(target))
@@ -821,6 +781,7 @@ class Main(object):
                 exp_times_list.append(topic_areapropconf.exposures[exp_index])
                 exp_index += 1
             confdict[filter_section]["exp_times"] = exp_times_list
+            confdict[filter_section]["num_grouped_visits"] = topic_areapropconf.num_grouped_visits[k]
 
         confdict["scheduling"] = {}
         max_num_targets = topic_areapropconf.max_num_targets
@@ -831,7 +792,58 @@ class Main(object):
         confdict["scheduling"]["accept_consecutive_visits"] = accept_consecutive_visits
         confdict["scheduling"]["airmass_bonus"] = topic_areapropconf.airmass_bonus
 
+        confdict["scheduling"]["restrict_grouped_visits"] = topic_areapropconf.restrict_grouped_visits
+        confdict["scheduling"]["time_interval"] = topic_areapropconf.time_interval
+        confdict["scheduling"]["time_window_start"] = topic_areapropconf.time_window_start
+        confdict["scheduling"]["time_window_max"] = topic_areapropconf.time_window_max
+        confdict["scheduling"]["time_window_end"] = topic_areapropconf.time_window_end
+
         return confdict
+
+    def wtopic_target(self, topicTarget, target):
+
+        topicTarget.targetId = target.targetid
+        topicTarget.groupId = target.groupid
+        topicTarget.fieldId = target.fieldid
+        topicTarget.filter = target.filter
+        topicTarget.request_time = target.time
+        topicTarget.ra = target.ra
+        topicTarget.dec = target.dec
+        topicTarget.angle = target.ang
+        topicTarget.num_exposures = target.num_exp
+        for i, exptime in enumerate(target.exp_times):
+            topicTarget.exposure_times[i] = int(exptime)
+        topicTarget.airmass = target.airmass
+        topicTarget.sky_brightness = target.sky_brightness
+        topicTarget.cloud = target.cloud
+        topicTarget.seeing = target.seeing
+        topicTarget.slew_time = target.slewtime
+        topicTarget.cost_bonus = target.cost_bonus
+        topicTarget.rank = target.rank
+        topicTarget.num_proposals = target.num_props
+        for i, prop_id in enumerate(target.propid_list):
+            topicTarget.proposal_Ids[i] = prop_id
+        for i, prop_value in enumerate(target.value_list):
+            topicTarget.proposal_values[i] = prop_value
+        for i, prop_need in enumerate(target.need_list):
+            topicTarget.proposal_needs[i] = prop_need
+        for i, prop_bonus in enumerate(target.bonus_list):
+            topicTarget.proposal_bonuses[i] = prop_bonus
+
+        prop = self.schedulerDriver.science_proposal_list[0]
+        moon_sun = prop.sky.get_moon_sun_info(target.ra_rad, target.dec_rad)
+        if moon_sun["moonRA"] is not None:
+            self.topicTarget.moon_ra = math.degrees(moon_sun["moonRA"])
+            self.topicTarget.moon_dec = math.degrees(moon_sun["moonDec"])
+            self.topicTarget.moon_alt = math.degrees(moon_sun["moonAlt"])
+            self.topicTarget.moon_az = math.degrees(moon_sun["moonAz"])
+            self.topicTarget.moon_phase = moon_sun["moonPhase"]
+            self.topicTarget.moon_distance = math.degrees(moon_sun["moonDist"])
+            self.topicTarget.sun_alt = math.degrees(moon_sun["sunAlt"])
+            self.topicTarget.sun_az = math.degrees(moon_sun["sunAz"])
+            self.topicTarget.sun_ra = math.degrees(moon_sun["sunRA"])
+            self.topicTarget.sun_dec = math.degrees(moon_sun["sunDec"])
+            self.topicTarget.sun_elong = math.degrees(moon_sun["solarElong"])
 
     def rtopic_observation(self, topic_observation):
 

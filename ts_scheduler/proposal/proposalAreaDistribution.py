@@ -24,6 +24,12 @@ class AreaDistributionProposalParameters(object):
         self.accept_consecutive_visits = confdict["scheduling"]["accept_consecutive_visits"]
         self.airmass_bonus = confdict["scheduling"]["airmass_bonus"]
 
+        self.restrict_grouped_visits = confdict["scheduling"]["restrict_grouped_visits"]
+        self.time_interval = confdict["scheduling"]["time_interval"]
+        self.time_window_start = confdict["scheduling"]["time_window_start"]
+        self.time_window_max = confdict["scheduling"]["time_window_max"]
+        self.time_window_end = confdict["scheduling"]["time_window_end"]
+
         self.filter_list = []
         self.filter_goal_dict = {}
         self.filter_min_brig_dict = {}
@@ -31,6 +37,7 @@ class AreaDistributionProposalParameters(object):
         self.filter_max_seeing_dict = {}
         self.filter_num_exp_dict = {}
         self.filter_exp_times_dict = {}
+        self.filter_num_grouped_visits_dict = {}
         self.filters = ["u", "g", "r", "i", "z", "y"]
         for filter in self.filters:
             filter_section = "filter_%s" % filter
@@ -42,6 +49,7 @@ class AreaDistributionProposalParameters(object):
                 self.filter_max_seeing_dict[filter] = confdict[filter_section]["max_seeing"]
                 self.filter_exp_times_dict[filter] = confdict[filter_section]["exp_times"]
                 self.filter_num_exp_dict[filter] = len(self.filter_exp_times_dict[filter])
+                self.filter_num_grouped_visits_dict[filter] = confdict[filter_section]["num_grouped_visits"]
 
 class AreaDistributionProposal(Proposal):
 
@@ -129,6 +137,8 @@ class AreaDistributionProposal(Proposal):
                             target.goal = self.params.filter_goal_dict[filter]
                             target.visits = 0
                             target.progress = 0.0
+                            target.groupid = 1
+                            target.groupix = 1
                             self.survey_targets_dict[fieldid][filter] = target
 
                             self.survey_targets += 1
@@ -250,6 +260,8 @@ class AreaDistributionProposal(Proposal):
         discarded_targets_highbrightness = 0
         discarded_targets_seeing = 0
         evaluated_targets = 0
+        groups_to_close_list = []
+
         # compute target value
         for field in fields_evaluation_list:
             fieldid = field.fieldid
@@ -314,17 +326,33 @@ class AreaDistributionProposal(Proposal):
                 target.seeing = seeing
 
                 if self.survey_targets_progress < 1.0:
-                    need_ratio = (1.0 - target.progress) / (1.0 - self.survey_targets_progress)
+                    area_rank = (1.0 - target.progress) / (1.0 - self.survey_targets_progress)
+                    if (self.params.filter_num_grouped_visits_dict[filter] > 1) and (target.groupix > 1):
+                        time_rank = self.time_window(timestamp - target.last_visit_time)
+                        if time_rank > 0.0:
+                            need_ratio = area_rank + time_rank
+                        else:
+                            need_ratio = time_rank
+                    else:
+                        need_ratio = area_rank
                 else:
                     need_ratio = 0.0
 
-                target.need = need_ratio
-                target.bonus = airmass_rank
-                target.value = target.need + target.bonus
+                if need_ratio > 0.0:
+                    # target is needed
+                    target.need = need_ratio
+                    target.bonus = airmass_rank
+                    target.value = target.need + target.bonus
+                    self.add_evaluated_target(target)
+                elif need_ratio < 0.0:
+                    # target group lost
+                    groups_to_close_list.append(target)
 
-                self.add_evaluated_target(target)
                 evaluated_targets += 1
             evaluated_fields += 1
+
+        for target in groups_to_close_list:
+            self.close_group(target, "group lost")
 
         self.log.debug("suggest_targets: fields=%i, evaluated=%i, discarded airmass=%i notargets=%i" %
                        (len(id_list), evaluated_fields, discarded_fields_airmass, discarded_fields_notargets))
@@ -383,24 +411,23 @@ class AreaDistributionProposal(Proposal):
                     break
 
         if tfound is not None:
+            self.log.debug("register_observation: %s" % (target))
+
             target.targetid = observation.targetid
             target = self.survey_targets_dict[fieldid][filter]
             target.visits += 1
             target.progress = float(target.visits) / target.goal
+            target.last_visit_time = observation.time
+
             if target.progress == 1.0:
                 # target complete, remove from tonight dict
-                self.log.debug("register_observation: target complete fieldid=%i filter=%s" %
-                               (fieldid, filter))
-                del self.tonight_targets_dict[fieldid][filter]
-                if not self.tonight_targets_dict[fieldid]:
-                    # field complete, remove from tonight dict
-                    self.log.debug("register_observation: field complete fieldid=%i" %
-                                   (fieldid))
-                    del self.tonight_targets_dict[fieldid]
-                    for field in self.tonight_fields_list:
-                        if field.fieldid == fieldid:
-                            self.tonight_fields_list.remove(field)
-                            break
+                self.remove_target(target, "target complete")
+            else:
+                if target.groupix == self.params.filter_num_grouped_visits_dict[filter]:
+                    self.close_group(target, "group complete")
+                else:
+                    target.groupix += 1
+
             self.survey_targets_visits += 1
             if self.survey_targets_goal > 0:
                 self.survey_targets_progress = float(self.survey_targets_visits) / self.survey_targets_goal
@@ -412,11 +439,49 @@ class AreaDistributionProposal(Proposal):
                     float(self.survey_filters_visits_dict[filter]) / self.survey_filters_goal_dict[filter]
             else:
                 self.survey_filters_progress_dict[filter] = 0.0
+
             self.last_observation_was_for_this_proposal = True
-            self.log.debug("register_observation: %s" % (target))
 
         return tfound
 
     def observation_fulfills_target(self, observ, target):
 
         return (observ.fieldid == target.fieldid) and (observ.filter == target.filter)
+
+    def close_group(self, target, text):
+
+        target.groupid += 1
+        target.groupix = 1
+        if self.params.restrict_grouped_visits:
+            self.remove_target(target, text)
+
+    def remove_target(self, target, text):
+
+        fieldid = target.fieldid
+        filter = target.filter
+        self.log.debug("remove_target: %s fieldid=%i filter=%s" %
+                       (text, fieldid, filter))
+        del self.tonight_targets_dict[fieldid][filter]
+        if not self.tonight_targets_dict[fieldid]:
+            # field with no targets, remove from tonight dict
+            self.log.debug("remove_target: fieldid=%i with no targets" %
+                           (fieldid))
+            del self.tonight_targets_dict[fieldid]
+            for field in self.tonight_fields_list:
+                if field.fieldid == fieldid:
+                    self.tonight_fields_list.remove(field)
+                    break
+
+    def time_window(self, deltaT):
+
+        ndeltaT = deltaT / self.params.time_interval
+        if ndeltaT < self.params.time_window_start:
+            need = 0.0
+        elif ndeltaT < self.params.time_window_max:
+            need = (ndeltaT - self.params.time_window_start) / (self.params.time_window_max - self.params.time_window_start)
+        elif ndeltaT < self.params.time_window_end:
+            need = 1.0
+        else:
+            need = -1.0
+
+        return need

@@ -454,7 +454,7 @@ class ObservatoryModel(object):
                                                                          self.currentState.telrot_rad,
                                                                          self.params.TelRot_MinPos_rad,
                                                                          self.params.TelRot_MaxPos_rad)
-        targetposition.ang_rad = targetposition.pa_rad - telrot_rad
+        targetposition.ang_rad = divmod(targetposition.pa_rad - telrot_rad, TWOPI)[1]
 
         (domalt_rad, delta_domalt_rad) = self.get_closest_angle_distance(targetposition.alt_rad,
                                                                          self.currentState.domalt_rad,
@@ -597,7 +597,13 @@ class ObservatoryModel(object):
         return
 
     def park(self):
-        return
+
+        self.parkState.filter = self.currentState.filter
+        slew_delay = self.get_slew_delay_for_state(self.parkState, self.currentState, True)
+        self.parkState.time = self.currentState.time + slew_delay
+        self.currentState.set(self.parkState)
+        self.update_state(self.parkState.time)
+        self.parkState.time = 0.0
 
     def swap_filter(self, filter_to_unmount):
 
