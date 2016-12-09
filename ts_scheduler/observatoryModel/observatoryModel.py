@@ -454,7 +454,7 @@ class ObservatoryModel(object):
                                                                          self.currentState.telrot_rad,
                                                                          self.params.TelRot_MinPos_rad,
                                                                          self.params.TelRot_MaxPos_rad)
-        targetposition.ang_rad = targetposition.pa_rad - telrot_rad
+        targetposition.ang_rad = divmod(targetposition.pa_rad - telrot_rad, TWOPI)[1]
 
         (domalt_rad, delta_domalt_rad) = self.get_closest_angle_distance(targetposition.alt_rad,
                                                                          self.currentState.domalt_rad,
