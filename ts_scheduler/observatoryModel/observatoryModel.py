@@ -574,7 +574,7 @@ class ObservatoryModel(object):
         ha_rad = lst_rad - ra_rad
 
         (az_rad, alt_rad) = pal.de2h(ha_rad, dec_rad, self.location.latitude_rad)
-        pa_rad = pal.pa(ha_rad, dec_rad, self.location.latitude_rad)
+        pa_rad = divmod(pal.pa(ha_rad, dec_rad, self.location.latitude_rad), TWOPI)[1]
 
         return (alt_rad, az_rad, pa_rad)
 
@@ -919,7 +919,7 @@ class ObservatoryModel(object):
         lst_rad = dateprofile.lst_rad
 
         (ha_rad, dec_rad) = pal.dh2e(az_rad, alt_rad, self.location.latitude_rad)
-        pa_rad = pal.pa(ha_rad, dec_rad, self.location.latitude_rad)
+        pa_rad = divmod(pal.pa(ha_rad, dec_rad, self.location.latitude_rad), TWOPI)[1]
         ra_rad = divmod(lst_rad - ha_rad, TWOPI)[1]
 
         return (ra_rad, dec_rad, pa_rad)
