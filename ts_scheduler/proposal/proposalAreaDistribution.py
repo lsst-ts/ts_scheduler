@@ -91,7 +91,7 @@ class AreaDistributionProposal(Proposal):
 
         Proposal.start_survey(self)
 
-    def start_night(self, timestamp, filters_mounted_tonight_list):
+    def start_night(self, timestamp, filters_mounted_tonight_list, night=1):
 
         Proposal.start_night(self, timestamp, filters_mounted_tonight_list)
 
@@ -100,7 +100,7 @@ class AreaDistributionProposal(Proposal):
         self.tonight_targets_dict = {}
         for filter in filters_mounted_tonight_list:
             self.tonight_filters_list.append(filter)
-        self.build_tonight_fields_list(timestamp)
+        self.build_tonight_fields_list(timestamp, night)
         self.tonight_fields = len(self.tonight_fields_list)
 
         # compute at start night
@@ -171,11 +171,11 @@ class AreaDistributionProposal(Proposal):
         self.last_observation = None
         self.last_observation_was_for_this_proposal = False
 
-    def build_tonight_fields_list(self, timestamp):
+    def build_tonight_fields_list(self, timestamp, night=1):
 
         self.tonight_fields_list = []
 
-        sql = self.select_fields(timestamp, self.params.sky_region, self.params.sky_exclusions,
+        sql = self.select_fields(timestamp, night, self.params.sky_region, self.params.sky_exclusions,
                                  self.params.sky_nightly_bounds)
 
         res = self.db.query(sql)

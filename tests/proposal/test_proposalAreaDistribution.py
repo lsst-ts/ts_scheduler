@@ -201,3 +201,34 @@ class AreaDistributionProposalTest(unittest.TestCase):
                          "need=0.951 bonus=0.000 value=0.951 propboost=1.000 "
                          "propid=[] need=[] bonus=[] value=[] propboost=[] "
                          "slewtime=0.000 costbonus=0.000 rank=0.000")
+
+    def test_rolling_cadence_proposal_region_selections(self):
+        configfilepath = conf_file_path(__name__, "../conf", "survey", "rolling_cadence.conf")
+        (path, name_ext) = os.path.split(configfilepath)
+        (name, ext) = os.path.splitext(name_ext)
+        proposal_confdict = read_conf_file(configfilepath)
+        self.rolling = AreaDistributionProposal(2, name, proposal_confdict, self.skyModel)
+        self.rolling.build_tonight_fields_list(1640995200.0, 1)
+        field_list = self.rolling.tonight_fields_list
+        fieldid_list = [field.fieldid for field in field_list]
+        self.assertEqual(len(fieldid_list), 1621)
+
+        self.rolling.build_tonight_fields_list(1704067200.0, 730)
+        field_list = self.rolling.tonight_fields_list
+        fieldid_list = [field.fieldid for field in field_list]
+        self.assertEqual(len(fieldid_list), 546)
+
+        self.rolling.build_tonight_fields_list(1767139200.0, 1460)
+        field_list = self.rolling.tonight_fields_list
+        fieldid_list = [field.fieldid for field in field_list]
+        self.assertEqual(len(fieldid_list), 543)
+
+        self.rolling.build_tonight_fields_list(1830211200.0, 2190)
+        field_list = self.rolling.tonight_fields_list
+        fieldid_list = [field.fieldid for field in field_list]
+        self.assertEqual(len(fieldid_list), 531)
+
+        self.rolling.build_tonight_fields_list(1893283200.0, 2920)
+        field_list = self.rolling.tonight_fields_list
+        fieldid_list = [field.fieldid for field in field_list]
+        self.assertEqual(len(fieldid_list), 1617)
