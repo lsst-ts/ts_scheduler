@@ -741,6 +741,21 @@ class Main(object):
         confdict["sky_region"]["cuts"] = region_list
         confdict["sky_region"]["combiners"] = region_combiners_list
 
+        num_time_ranges = topic_areapropconf.num_time_ranges
+        if num_time_ranges:
+            time_range_list = []
+            selection_mappings = []
+            selection_index = 0
+            for k in range(num_time_ranges):
+                time_range_list.append((topic_areapropconf.time_range_starts[k],
+                                        topic_areapropconf.time_range_ends[k]))
+                num_selection_mappings = topic_areapropconf.num_selection_mappings[k]
+                selection_map = []
+                for m in range(num_selection_mappings):
+                    selection_map.append(topic_areapropconf.selection_mappings[selection_index])
+                    selection_index += 1
+                selection_mappings.append(selection_map)
+
         confdict["sky_exclusions"] = {}
         num_exclusion_selections = topic_areapropconf.num_exclusion_selections
         exclusion_types = topic_areapropconf.exclusion_types
