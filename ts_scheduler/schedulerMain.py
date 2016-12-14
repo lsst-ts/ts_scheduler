@@ -62,7 +62,7 @@ class Main(object):
         self.topicField = scheduler_fieldC()
         self.topicTarget = scheduler_targetC()
         self.topicFilterSwap = scheduler_filterSwapC()
-        self.topicInterestedProposal = scheduler_interestedProposalC()
+        self.tInterestedProposal = scheduler_interestedProposalC()
 
         self.schedulerDriver = Driver()
 
@@ -424,10 +424,10 @@ class Main(object):
                                             obs = self.rtopic_observation(self.topicObservation)
                                             self.log.debug("run: rx observation %s", str(obs))
                                             target_list = self.schedulerDriver.register_observation(obs)
-                                            s = self.wtopic_interestedProposal(self.topicInterestedProposal,
+                                            s = self.wtopic_interestedProposal(self.tInterestedProposal,
                                                                                self.topicObservation.targetId,
                                                                                target_list)
-                                            self.sal.putSample_interestedProposal(self.topicInterestedProposal)
+                                            self.sal.putSample_interestedProposal(self.tInterestedProposal)
                                             self.log.debug("run: tx interested %s", s)
                                             waitobservation = False
                                         else:

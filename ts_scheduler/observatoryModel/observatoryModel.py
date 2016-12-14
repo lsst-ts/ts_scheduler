@@ -377,13 +377,14 @@ class ObservatoryModel(object):
                                                     self.currentState.ang_rad,
                                                     self.currentState.filter)
 
-            targetstate = self.get_closest_state(targetposition)
+            targetstate = self.get_closest_state(targetposition, istracking=True)
 
             self.currentState.time = targetstate.time
             self.currentState.alt_rad = targetstate.alt_rad
             self.currentState.az_rad = targetstate.az_rad
             self.currentState.pa_rad = targetstate.pa_rad
             self.currentState.rot_rad = targetstate.rot_rad
+            self.currentState.tracking = targetstate.tracking
 
             self.currentState.telalt_rad = targetstate.telalt_rad
             self.currentState.telaz_rad = targetstate.telaz_rad
@@ -433,35 +434,62 @@ class ObservatoryModel(object):
 
         return self.get_slew_delay_for_state(targetstate, self.currentState, False)
 
-    def get_closest_state(self, targetposition):
+    def get_closest_state(self, targetposition, istracking=False):
 
-        (telalt_rad, delta_telalt_rad) = self.get_closest_angle_distance(targetposition.alt_rad,
-                                                                         self.currentState.telalt_rad,
-                                                                         self.params.TelAlt_MinPos_rad,
-                                                                         self.params.TelAlt_MaxPos_rad)
-        (telaz_rad, delta_telaz_rad) = self.get_closest_angle_distance(targetposition.az_rad,
-                                                                       self.currentState.telaz_rad,
-                                                                       self.params.TelAz_MinPos_rad,
-                                                                       self.params.TelAz_MaxPos_rad)
+        valid_state = True
 
-        # if the target rotator angle is unreachable
-        # then sets an arbitrary value (oposite)
-        norm_rot_rad = divmod(targetposition.rot_rad - self.params.TelRot_MinPos_rad, TWOPI)[1] \
-            + self.params.TelRot_MinPos_rad
-        if norm_rot_rad > self.params.TelRot_MaxPos_rad:
-            targetposition.rot_rad = norm_rot_rad - math.pi
-        (telrot_rad, delta_telrot_rad) = self.get_closest_angle_distance(targetposition.rot_rad,
-                                                                         self.currentState.telrot_rad,
-                                                                         self.params.TelRot_MinPos_rad,
-                                                                         self.params.TelRot_MaxPos_rad)
+        if targetposition.alt_rad < self.params.TelAlt_MinPos_rad:
+            telalt_rad = self.params.TelAlt_MinPos_rad
+            domalt_rad = self.params.TelAlt_MinPos_rad
+            valid_state = False
+        elif targetposition.alt_rad > self.params.TelAlt_MaxPos_rad:
+            telalt_rad = self.params.TelAlt_MaxPos_rad
+            domalt_rad = self.params.TelAlt_MaxPos_rad
+            valid_state = False
+        else:
+            telalt_rad = targetposition.alt_rad
+            domalt_rad = targetposition.alt_rad
+
+        if istracking:
+            (telaz_rad, delta) = self.get_closest_angle_distance(targetposition.az_rad,
+                                                                 self.currentState.telaz_rad)
+            if telaz_rad < self.params.TelAz_MinPos_rad:
+                telaz_rad = self.params.TelAz_MinPos_rad
+                valid_state = False
+            elif telaz_rad > self.params.TelAz_MaxPos_rad:
+                telaz_rad = self.params.TelAz_MaxPos_rad
+                valid_state = False
+        else:
+            (telaz_rad, delta) = self.get_closest_angle_distance(targetposition.az_rad,
+                                                                 self.currentState.telaz_rad,
+                                                                 self.params.TelAz_MinPos_rad,
+                                                                 self.params.TelAz_MaxPos_rad)
+
+        (domaz_rad, delta) = self.get_closest_angle_distance(targetposition.az_rad,
+                                                             self.currentState.domaz_rad)
+
+        if istracking:
+            (telrot_rad, delta) = self.get_closest_angle_distance(targetposition.rot_rad,
+                                                                  self.currentState.telrot_rad)
+            if telrot_rad < self.params.TelRot_MinPos_rad:
+                telrot_rad = self.params.TelRot_MinPos_rad
+                valid_state = False
+            elif telrot_rad > self.params.TelRot_MaxPos_rad:
+                telrot_rad = self.params.TelRot_MaxPos_rad
+                valid_state = False
+        else:
+            # if the target rotator angle is unreachable
+            # then sets an arbitrary value (oposite)
+            norm_rot_rad = divmod(targetposition.rot_rad - self.params.TelRot_MinPos_rad, TWOPI)[1] \
+                + self.params.TelRot_MinPos_rad
+            if norm_rot_rad > self.params.TelRot_MaxPos_rad:
+                targetposition.rot_rad = norm_rot_rad - math.pi
+            (telrot_rad, delta) = self.get_closest_angle_distance(targetposition.rot_rad,
+                                                                  self.currentState.telrot_rad,
+                                                                  self.params.TelRot_MinPos_rad,
+                                                                  self.params.TelRot_MaxPos_rad)
         targetposition.ang_rad = divmod(targetposition.pa_rad - telrot_rad, TWOPI)[1]
 
-        (domalt_rad, delta_domalt_rad) = self.get_closest_angle_distance(targetposition.alt_rad,
-                                                                         self.currentState.domalt_rad,
-                                                                         self.params.TelAlt_MinPos_rad,
-                                                                         self.params.TelAlt_MaxPos_rad)
-        (domaz_rad, delta_domaz_rad) = self.get_closest_angle_distance(targetposition.az_rad,
-                                                                       self.currentState.domaz_rad)
         targetstate = ObservatoryState()
         targetstate.set_position(targetposition)
         targetstate.telalt_rad = telalt_rad
@@ -469,6 +497,8 @@ class ObservatoryModel(object):
         targetstate.telrot_rad = telrot_rad
         targetstate.domalt_rad = domalt_rad
         targetstate.domaz_rad = domaz_rad
+        if istracking:
+            targetstate.tracking = valid_state
 
         return targetstate
 
