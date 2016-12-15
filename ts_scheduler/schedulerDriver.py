@@ -267,7 +267,7 @@ class Driver(object):
 
         return self.fields_dict
 
-    def start_survey(self, timestamp):
+    def start_survey(self, timestamp, night):
 
         self.start_time = timestamp
         self.log.info("start_survey t=%.6f" % timestamp)
@@ -281,7 +281,7 @@ class Driver(object):
         self.log.debug("start_survey sunset=%.6f sunrise=%.6f" % (sunset, sunrise))
         # if round(sunset) <= round(timestamp) < round(sunrise):
         if sunset <= timestamp < sunrise:
-            self.start_night(timestamp)
+            self.start_night(timestamp, night)
 
         self.sunset_timestamp = sunset
         self.sunrise_timestamp = sunrise
@@ -397,7 +397,7 @@ class Driver(object):
         self.time = timestamp
         self.observatoryModel.update_state(self.time)
         if not self.survey_started:
-            self.start_survey(timestamp)
+            self.start_survey(timestamp, night)
 
         if self.isnight:
             # if round(timestamp) >= round(self.sunrise_timestamp):
@@ -414,14 +414,14 @@ class Driver(object):
 
         return (self.need_filter_swap, self.filter_to_unmount, self.filter_to_mount)
 
-    def update_internal_conditions(self, observatory_state):
+    def update_internal_conditions(self, observatory_state, night):
 
         if observatory_state.unmountedfilters != self.observatoryModel.currentState.unmountedfilters:
             unmount = observatory_state.unmountedfilters[0]
             mount = self.observatoryModel.currentState.unmountedfilters[0]
             self.swap_filter(unmount, mount)
             for prop in self.science_proposal_list:
-                prop.start_night(observatory_state.time, observatory_state.mountedfilters)
+                prop.start_night(observatory_state.time, observatory_state.mountedfilters, night)
 
         self.time = observatory_state.time
         self.observatoryModel.set_state(observatory_state)

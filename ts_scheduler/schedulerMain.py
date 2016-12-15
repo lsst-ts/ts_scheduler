@@ -363,7 +363,7 @@ class Main(object):
 
                                 self.log.debug("run: rx state %s" % str(observatory_state))
 
-                                self.schedulerDriver.update_internal_conditions(observatory_state)
+                                self.schedulerDriver.update_internal_conditions(observatory_state, nightstamp)
 
                                 if is_down:
                                     waitobservation = False
@@ -755,6 +755,9 @@ class Main(object):
                     selection_map.append(topic_areapropconf.selection_mappings[selection_index])
                     selection_index += 1
                 selection_mappings.append(selection_map)
+
+            confdict["sky_region"]["time_ranges"] = time_range_list
+            confdict["sky_region"]["selection_mappings"] = selection_mappings
 
         confdict["sky_exclusions"] = {}
         num_exclusion_selections = topic_areapropconf.num_exclusion_selections
