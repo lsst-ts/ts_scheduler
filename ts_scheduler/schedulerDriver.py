@@ -10,6 +10,7 @@ from ts_scheduler.schedulerDefinitions import read_conf_file
 from ts_scheduler.schedulerField import Field
 from ts_scheduler.schedulerTarget import Target
 from ts_scheduler.observatoryModel import ObservatoryModel
+from ts_scheduler.observatoryModel import ObservatoryState
 from ts_scheduler.observatoryModel import ObservatoryLocation
 from ts_scheduler.proposal import ScriptedProposal
 from ts_scheduler.proposal import AreaDistributionProposal
@@ -58,6 +59,8 @@ class Driver(object):
         self.location = ObservatoryLocation()
 
         self.observatoryModel = ObservatoryModel(self.location)
+        self.observatoryModel2 = ObservatoryModel(self.location)
+        self.observatoryState = ObservatoryState()
 
         self.sky = AstronomicalSkyModel(self.location)
 
@@ -189,39 +192,48 @@ class Driver(object):
 
         self.location.configure(confdict)
         self.observatoryModel.location.configure(confdict)
+        self.observatoryModel2.location.configure(confdict)
         self.sky.__init__(self.location)
 
     def configure_observatory(self, confdict):
 
         self.observatoryModel.configure(confdict)
+        self.observatoryModel2.configure(confdict)
 
     def configure_telescope(self, confdict):
 
         self.observatoryModel.configure_telescope(confdict)
+        self.observatoryModel2.configure_telescope(confdict)
 
     def configure_rotator(self, confdict):
 
         self.observatoryModel.configure_rotator(confdict)
+        self.observatoryModel2.configure_rotator(confdict)
 
     def configure_dome(self, confdict):
 
         self.observatoryModel.configure_dome(confdict)
+        self.observatoryModel2.configure_dome(confdict)
 
     def configure_optics(self, confdict):
 
         self.observatoryModel.configure_optics(confdict)
+        self.observatoryModel2.configure_optics(confdict)
 
     def configure_camera(self, confdict):
 
         self.observatoryModel.configure_camera(confdict)
+        self.observatoryModel2.configure_camera(confdict)
 
     def configure_slew(self, confdict):
 
         self.observatoryModel.configure_slew(confdict)
+        self.observatoryModel2.configure_slew(confdict)
 
     def configure_park(self, confdict):
 
         self.observatoryModel.configure_park(confdict)
+        self.observatoryModel2.configure_park(confdict)
 
     def create_area_proposal(self, propid, name, config_dict):
 
@@ -413,6 +425,7 @@ class Driver(object):
 
         self.time = observatory_state.time
         self.observatoryModel.set_state(observatory_state)
+        self.observatoryState.set(observatory_state)
 
     def update_external_conditions(self, cloud, seeing):
 
@@ -508,14 +521,25 @@ class Driver(object):
                     ranked_targets_list.append((-target.rank, target))
 
         sorted_list = sorted(ranked_targets_list, key=itemgetter(0))
-        try:
+
+        lookingfortarget = True
+        winner_target = self.nulltarget
+        while len(sorted_list) > 0 and lookingfortarget:
             winner_target = sorted_list.pop(0)[1]
-            self.targetid += 1
-            winner_target.targetid = self.targetid
-            winner_target.time = self.time
-        except:
-            # if no target to suggest
-            winner_target = self.nulltarget
+
+            self.observatoryModel2.set_state(self.observatoryState)
+            self.observatoryModel2.observe(winner_target)
+            self.observatoryModel2.update_state(self.observatoryModel2.currentState.time + 30.0)
+            if self.observatoryModel2.currentState.tracking:
+                self.targetid += 1
+                winner_target.targetid = self.targetid
+                winner_target.time = self.time
+                lookingfortarget = False
+            else:
+                self.log.debug("select_next_target: target rejected %s" %
+                               str(winner_target))
+                self.log.debug("select_next_target: state rejected %s" %
+                               str(self.observatoryModel2.currentState))
 
         return winner_target
 

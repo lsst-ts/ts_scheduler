@@ -624,7 +624,12 @@ class ObservatoryModel(object):
                         target.ra_rad, target.dec_rad, target.ang_rad, target.filter)
 
     def observe(self, target):
-        return
+
+        self.slew(target)
+        visit_time = sum(target.exp_times) + \
+            target.num_exp * self.params.ShutterTime + \
+            max(target.num_exp - 1, 0) * self.params.ReadoutTime
+        self.update_state(self.currentState.time + visit_time)
 
     def park(self):
 
