@@ -868,7 +868,7 @@ class Main(object):
             topicTarget.proposal_bonuses[i] = prop_bonus
 
         prop = self.schedulerDriver.science_proposal_list[0]
-        moon_sun = prop.sky.get_moon_sun_info(target.ra_rad, target.dec_rad)
+        moon_sun = prop.sky.get_moon_sun_info(numpy.array([target.ra_rad]), numpy.array([target.dec_rad]))
         if moon_sun["moonRA"] is not None:
             self.topicTarget.moon_ra = math.degrees(moon_sun["moonRA"])
             self.topicTarget.moon_dec = math.degrees(moon_sun["moonDec"])
