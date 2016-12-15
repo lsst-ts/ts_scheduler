@@ -293,14 +293,14 @@ class Driver(object):
         for prop in self.science_proposal_list:
             prop.end_survey()
 
-    def start_night(self, timestamp):
+    def start_night(self, timestamp, night):
 
-        self.log.info("start_night t=%.6f" % timestamp)
+        self.log.info("start_night t=%.6f, night = %d" % (timestamp, night))
 
         self.isnight = True
 
         for prop in self.science_proposal_list:
-            prop.start_night(timestamp, self.observatoryModel.currentState.mountedfilters)
+            prop.start_night(timestamp, self.observatoryModel.currentState.mountedfilters, night)
 
     def end_night(self, timestamp):
 
@@ -392,7 +392,7 @@ class Driver(object):
 
         return
 
-    def update_time(self, timestamp):
+    def update_time(self, timestamp, night):
 
         self.time = timestamp
         self.observatoryModel.update_state(self.time)
@@ -406,7 +406,7 @@ class Driver(object):
         else:
             # if round(timestamp) >= round(self.sunset_timestamp):
             if timestamp >= self.sunset_timestamp:
-                self.start_night(timestamp)
+                self.start_night(timestamp, night)
 
         return self.isnight
 

@@ -46,8 +46,9 @@ class AreaDistributionProposalTest(unittest.TestCase):
     def test_build_fields_tonight_list(self):
         # Set timestamp as 2022-01-01 0h UTC
         lsst_start_timestamp = 1640995200.0
+        night = 1
 
-        self.areaprop.build_tonight_fields_list(lsst_start_timestamp)
+        self.areaprop.build_tonight_fields_list(lsst_start_timestamp, night)
         field_list = self.areaprop.tonight_fields_list
         fieldid_list = []
         for field in field_list:
@@ -56,8 +57,9 @@ class AreaDistributionProposalTest(unittest.TestCase):
         self.assertEqual(str(fieldid_list), "[1764, 1873, 2006, 2108, 2234, 2346, 2464, 2572, 2692, 2802]")
 
         lsst_six_months = lsst_start_timestamp + 182 * 24 * 3600
+        night = 181
 
-        self.areaprop.build_tonight_fields_list(lsst_six_months)
+        self.areaprop.build_tonight_fields_list(lsst_six_months, night)
         field_list = self.areaprop.tonight_fields_list
         fieldid_list = []
         for field in field_list:
@@ -76,7 +78,7 @@ class AreaDistributionProposalTest(unittest.TestCase):
         (name, ext) = os.path.splitext(name_ext)
         proposal_confdict = read_conf_file(configfilepath)
         self.areaweak = AreaDistributionProposal(2, name, proposal_confdict, self.skyModel)
-        self.areaweak.build_tonight_fields_list(lsst_start_timestamp)
+        self.areaweak.build_tonight_fields_list(lsst_start_timestamp, night)
         field_list = self.areaweak.tonight_fields_list
         fieldid_list = []
         for field in field_list:
@@ -86,7 +88,8 @@ class AreaDistributionProposalTest(unittest.TestCase):
     def test_areadistributionproposal_start_night(self):
 
         lsst_start_timestamp = 1641000000.0
-        self.areaprop.start_night(lsst_start_timestamp, ["g", "r", "i", "z", "y"])
+        night = 2
+        self.areaprop.start_night(lsst_start_timestamp, ["g", "r", "i", "z", "y"], night)
 
         field_list = self.areaprop.tonight_fields_list
         fieldid_list = []
@@ -119,7 +122,8 @@ class AreaDistributionProposalTest(unittest.TestCase):
     def test_areadistributionproposal_suggest_targets(self):
 
         lsst_start_timestamp = 1641000000.0
-        self.areaprop.start_night(lsst_start_timestamp, ["g", "r", "i", "z", "y"])
+        night = 1
+        self.areaprop.start_night(lsst_start_timestamp, ["g", "r", "i", "z", "y"], night)
 
         timestamp = lsst_start_timestamp
         target_list = self.areaprop.suggest_targets(timestamp, None, 0, 0)

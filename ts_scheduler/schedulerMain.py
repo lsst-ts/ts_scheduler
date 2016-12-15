@@ -336,7 +336,7 @@ class Main(object):
                                    (self.topicTime.timestamp, nightstamp, is_down, down_duration))
                     if self.topicTime.timestamp > timestamp:
                         timestamp = self.topicTime.timestamp
-                        isnight = self.schedulerDriver.update_time(timestamp)
+                        isnight = self.schedulerDriver.update_time(timestamp, nightstamp)
                         if isnight:
                             if is_down:
                                 self.log.info("run: downtime duration=%.1f" % (down_duration))

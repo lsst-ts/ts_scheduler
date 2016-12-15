@@ -34,7 +34,7 @@ class Proposal(object):
     def end_survey(self):
         return
 
-    def start_night(self, timestamp, filters_mounted_tonight_list, night=1):
+    def start_night(self, timestamp, filters_mounted_tonight_list, night):
         return
 
     def end_night(self):
