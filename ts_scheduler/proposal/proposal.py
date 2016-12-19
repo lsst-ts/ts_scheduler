@@ -34,7 +34,7 @@ class Proposal(object):
     def end_survey(self):
         return
 
-    def start_night(self, timestamp, filters_mounted_tonight_list):
+    def start_night(self, timestamp, filters_mounted_tonight_list, night):
         return
 
     def end_night(self):
@@ -43,7 +43,7 @@ class Proposal(object):
     def suggest_targets(self, time):
         return []
 
-    def select_fields(self, timestamp, sky_region, sky_exclusions, sky_nightly_bounds):
+    def select_fields(self, timestamp, night, sky_region, sky_exclusions, sky_nightly_bounds):
         query_list = []
 
         delta_lst = sky_nightly_bounds["delta_lst"]
@@ -81,8 +81,22 @@ class Proposal(object):
 
         combine_list = ["and"]
 
+        # Handle any time dependent cuts
+        try:
+            time_ranges = sky_region["time_ranges"]
+            index = 0
+            for i, time_range in enumerate(time_ranges):
+                if night >= time_range[0] and night <= time_range[1]:
+                    index = i
+                    break
+            # Mappings are float arrays when read from file
+            mapping = [int(x) for x in sky_region["selection_mappings"][index]]
+            region_cuts = sky_region["cuts"][mapping[0]:mapping[-1] + 1]
+        except KeyError:
+            region_cuts = sky_region["cuts"]
+
         # Handle the sky region selections
-        for cut in sky_region["cuts"]:
+        for cut in region_cuts:
             cut_type = cut[0]
             if cut_type != "GP":
                 query_list.append(self.field_select.select_region(CUT_TYPEMAP[cut_type], cut[1], cut[2]))

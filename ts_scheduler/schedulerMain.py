@@ -336,7 +336,7 @@ class Main(object):
                                    (self.topicTime.timestamp, nightstamp, is_down, down_duration))
                     if self.topicTime.timestamp > timestamp:
                         timestamp = self.topicTime.timestamp
-                        isnight = self.schedulerDriver.update_time(timestamp)
+                        isnight = self.schedulerDriver.update_time(timestamp, nightstamp)
                         if isnight:
                             if is_down:
                                 self.log.info("run: downtime duration=%.1f" % (down_duration))
@@ -363,7 +363,7 @@ class Main(object):
 
                                 self.log.debug("run: rx state %s" % str(observatory_state))
 
-                                self.schedulerDriver.update_internal_conditions(observatory_state)
+                                self.schedulerDriver.update_internal_conditions(observatory_state, nightstamp)
 
                                 if is_down:
                                     waitobservation = False
@@ -740,6 +740,24 @@ class Main(object):
             region_combiners_list = region_combiners.split(",")
         confdict["sky_region"]["cuts"] = region_list
         confdict["sky_region"]["combiners"] = region_combiners_list
+
+        num_time_ranges = topic_areapropconf.num_time_ranges
+        if num_time_ranges:
+            time_range_list = []
+            selection_mappings = []
+            selection_index = 0
+            for k in range(num_time_ranges):
+                time_range_list.append((topic_areapropconf.time_range_starts[k],
+                                        topic_areapropconf.time_range_ends[k]))
+                num_selection_mappings = topic_areapropconf.num_selection_mappings[k]
+                selection_map = []
+                for m in range(num_selection_mappings):
+                    selection_map.append(topic_areapropconf.selection_mappings[selection_index])
+                    selection_index += 1
+                selection_mappings.append(selection_map)
+
+            confdict["sky_region"]["time_ranges"] = time_range_list
+            confdict["sky_region"]["selection_mappings"] = selection_mappings
 
         confdict["sky_exclusions"] = {}
         num_exclusion_selections = topic_areapropconf.num_exclusion_selections
