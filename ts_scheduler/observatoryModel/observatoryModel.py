@@ -905,9 +905,6 @@ class ObservatoryModel(object):
 
         return 0.0
 
-    def estimate_slewtime(self):
-        return
-
     def altaz2radecpa(self, dateprofile, alt_rad, az_rad):
         """
         Converts ALT, AZ coordinates into RA DEC for the given TIME.

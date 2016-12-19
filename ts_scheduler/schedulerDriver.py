@@ -522,9 +522,8 @@ class Driver(object):
 
         sorted_list = sorted(ranked_targets_list, key=itemgetter(0))
 
-        lookingfortarget = True
-        winner_target = self.nulltarget
-        while len(sorted_list) > 0 and lookingfortarget:
+        winner_found = False
+        while len(sorted_list) > 0 and not winner_found:
             winner_target = sorted_list.pop(0)[1]
 
             self.observatoryModel2.set_state(self.observatoryState)
@@ -534,14 +533,17 @@ class Driver(object):
                 self.targetid += 1
                 winner_target.targetid = self.targetid
                 winner_target.time = self.time
-                lookingfortarget = False
+                winner_found = True
             else:
                 self.log.debug("select_next_target: target rejected %s" %
                                str(winner_target))
                 self.log.debug("select_next_target: state rejected %s" %
                                str(self.observatoryModel2.currentState))
 
-        return winner_target
+        if winner_found:
+            return winner_target
+        else:
+            return self.nulltarget
 
     def register_observation(self, observation):
 
