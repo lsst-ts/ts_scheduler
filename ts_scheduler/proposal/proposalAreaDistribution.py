@@ -478,7 +478,8 @@ class AreaDistributionProposal(Proposal):
         if ndeltaT < self.params.time_window_start:
             need = 0.0
         elif ndeltaT < self.params.time_window_max:
-            need = (ndeltaT - self.params.time_window_start) / (self.params.time_window_max - self.params.time_window_start)
+            need = (ndeltaT - self.params.time_window_start) /\
+                   (self.params.time_window_max - self.params.time_window_start)
         elif ndeltaT < self.params.time_window_end:
             need = 1.0
         else:
