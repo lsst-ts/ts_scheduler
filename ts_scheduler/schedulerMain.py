@@ -474,8 +474,8 @@ class Main(object):
                     meastime = newtime
                     meascount = 0
 
-        except KeyboardInterrupt:
-            self.log.info("Scheduler interrupted")
+        except:
+            self.log.exception("An exception was thrown in the Scheduler!")
 
         self.schedulerDriver.end_survey()
 
