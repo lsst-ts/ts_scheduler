@@ -4,6 +4,18 @@ History
 -------
 
 ====================
+0.8 (2016-12-22)
+--------------------
+
+Observatory Model
+    normalized angles
+    Tracking=False when a limit is reached
+Driver
+    Remaining tracking time verified for targets before sending them
+Sky regions
+    Time ranges for areas
+
+====================
 0.7 (2016-12-08)
 --------------------
 
