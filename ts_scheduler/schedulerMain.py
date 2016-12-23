@@ -300,7 +300,7 @@ class Main(object):
                     tf = time.time()
                     if self.topic_areaDistPropConfig.name == "":
                         self.log.info("run: area prop config end")
-                        waitconfig = True
+                        waitconfig = False
                     if tf - lastconfigtime > 10.0:
                         self.log.info("run: area prop config timeout")
                         waitconfig = False
