@@ -21,9 +21,10 @@ class DriverParameters(object):
     def __init__(self):
 
         self.coadd_values = False
-        self.timebonus_dt = 0.0
-        self.timebonus_db = 0.0
-        self.timebonus_slope = 0.0
+        self.timecost_weight = 0.0
+        self.timecost_dc = 0.0
+        self.timecost_dt = 0.0
+        self.timecost_k = 0.0
         self.night_boundary = 0.0
         self.ignore_sky_brightness = False
         self.ignore_airmass = False
@@ -36,12 +37,14 @@ class DriverParameters(object):
         self.coadd_values = confdict["ranking"]["coadd_values"]
         self.time_balancing = confdict["ranking"]["time_balancing"]
 
-        tmax = confdict["ranking"]["timebonus_tmax"]
-        bmax = confdict["ranking"]["timebonus_bmax"]
-        slope = confdict["ranking"]["timebonus_slope"]
-        self.timebonus_dt = (math.sqrt(tmax * tmax + 4 * slope * tmax / bmax) - tmax) / 2
-        self.timebonus_db = slope / (tmax + self.timebonus_dt)
-        self.timebonus_slope = slope
+        tmax = confdict["ranking"]["timecost_time_max"]
+        tref = confdict["ranking"]["timecost_time_ref"]
+        cref = float(confdict["ranking"]["timecost_cost_ref"])
+        self.timecost_weight = confdict["ranking"]["timecost_weight"]
+
+        self.timecost_dc = cref * (tmax - tref) / (tref - cref * tmax)
+        self.timecost_dt = -tmax * (self.timecost_dc + 1.0)
+        self.timecost_k = self.timecost_dc * self.timecost_dt
 
         self.night_boundary = confdict["constraints"]["night_boundary"]
         self.ignore_sky_brightness = confdict["constraints"]["ignore_sky_brightness"]
@@ -167,11 +170,13 @@ class Driver(object):
         self.log.log(WORDY,
                      "configure: time_balancing=%s" % (self.params.time_balancing))
         self.log.log(WORDY,
-                     "configure: timebonus_dt=%.3f" % (self.params.timebonus_dt))
+                     "configure: timecost_dc=%.3f" % (self.params.timecost_dc))
         self.log.log(WORDY,
-                     "configure: timebonus_db=%.3f" % (self.params.timebonus_db))
+                     "configure: timecost_dt=%.3f" % (self.params.timecost_dt))
         self.log.log(WORDY,
-                     "configure: timebonus_slope=%.3f" % (self.params.timebonus_slope))
+                     "configure: timecost_k=%.3f" % (self.params.timecost_k))
+        self.log.log(WORDY,
+                     "configure: timecost_weight=%.3f" % (self.params.timecost_weight))
         self.log.log(WORDY,
                      "configure: night_boundary=%.1f" % (self.params.night_boundary))
         self.log.log(WORDY,
@@ -513,11 +518,11 @@ class Driver(object):
         for fieldfilter in targets_dict:
             slewtime = self.observatoryModel.get_slew_delay(targets_dict[fieldfilter][0])
             if slewtime >= 0:
-                cost_bonus = self.compute_slewtime_bonus(slewtime)
+                cost = self.compute_slewtime_cost(slewtime) * self.params.timecost_weight
                 for target in targets_dict[fieldfilter]:
                     target.slewtime = slewtime
-                    target.cost_bonus = cost_bonus
-                    target.rank = (target.value * target.propboost) + cost_bonus
+                    target.cost_bonus = cost
+                    target.rank = (target.value * target.propboost) - cost
                     ranked_targets_list.append((-target.rank, target))
 
         sorted_list = sorted(ranked_targets_list, key=itemgetter(0))
@@ -555,8 +560,15 @@ class Driver(object):
                     target_list.append(target)
         return target_list
 
-    def compute_slewtime_bonus(self, slewtime):
+    def compute_slewtime_cost(self, slewtime):
 
-        bonus = self.params.timebonus_slope / (slewtime + self.params.timebonus_dt) - self.params.timebonus_db
+        cost = self.params.timecost_k / (slewtime + self.params.timecost_dt) - self.params.timecost_dc
 
-        return bonus
+        return cost
+
+    def compute_filterchange_cost(self):
+
+        bonus = min(self.params.filterchange_cost * \
+                    self.observatoryModel.get_delta_last_filterchange() / \
+                    self.observatoryModel.params.filter_avg_interval - \
+                    self.params.filterchange_cost, 0.0)

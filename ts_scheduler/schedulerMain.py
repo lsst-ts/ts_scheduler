@@ -489,9 +489,13 @@ class Main(object):
         confdict["ranking"] = {}
         confdict["ranking"]["coadd_values"] = topic_driver_config.coadd_values
         confdict["ranking"]["time_balancing"] = topic_driver_config.time_balancing
-        confdict["ranking"]["timebonus_tmax"] = topic_driver_config.timebonus_tmax
-        confdict["ranking"]["timebonus_bmax"] = topic_driver_config.timebonus_bmax
-        confdict["ranking"]["timebonus_slope"] = topic_driver_config.timebonus_slope
+        #confdict["ranking"]["timebonus_tmax"] = topic_driver_config.timebonus_tmax
+        #confdict["ranking"]["timebonus_bmax"] = topic_driver_config.timebonus_bmax
+        #confdict["ranking"]["timebonus_slope"] = topic_driver_config.timebonus_slope
+        confdict["ranking"]["timecost_time_max"] = 150.0
+        confdict["ranking"]["timecost_time_ref"] = 5.0
+        confdict["ranking"]["timecost_cost_ref"] = 0.033
+        confdict["ranking"]["timecost_weight"] = 2.0
         confdict["constraints"] = {}
         confdict["constraints"]["night_boundary"] = topic_driver_config.night_boundary
         confdict["constraints"]["ignore_sky_brightness"] = topic_driver_config.ignore_sky_brightness
@@ -815,6 +819,7 @@ class Main(object):
         confdict["scheduling"]["time_window_start"] = topic_areapropconf.time_window_start
         confdict["scheduling"]["time_window_max"] = topic_areapropconf.time_window_max
         confdict["scheduling"]["time_window_end"] = topic_areapropconf.time_window_end
+        confdict["scheduling"]["time_weight"] = 1.0
 
         return confdict
 
