@@ -40,11 +40,12 @@ class DriverParameters(object):
         tmax = confdict["ranking"]["timecost_time_max"]
         tref = confdict["ranking"]["timecost_time_ref"]
         cref = float(confdict["ranking"]["timecost_cost_ref"])
-        self.timecost_weight = confdict["ranking"]["timecost_weight"]
 
         self.timecost_dc = cref * (tmax - tref) / (tref - cref * tmax)
         self.timecost_dt = -tmax * (self.timecost_dc + 1.0)
         self.timecost_k = self.timecost_dc * self.timecost_dt
+        self.timecost_weight = confdict["ranking"]["timecost_weight"]
+        self.filtercost_weight = confdict["ranking"]["filtercost_weight"]
 
         self.night_boundary = confdict["constraints"]["night_boundary"]
         self.ignore_sky_brightness = confdict["constraints"]["ignore_sky_brightness"]
@@ -300,7 +301,9 @@ class Driver(object):
 
     def start_night(self, timestamp, night):
 
-        self.log.info("start_night t=%.6f, night = %d" % (timestamp, night))
+        timeprogress = (timestamp - self.start_time) / self.survey_duration_SECS
+        self.log.info("start_night t=%.6f, night=%d timeprogress=%.2f%%" %
+                      (timestamp, night, 100 * timeprogress))
 
         self.isnight = True
 
@@ -515,14 +518,18 @@ class Driver(object):
                 else:
                     targets_dict[fieldfilter] = [target.get_copy()]
 
+        filtercost = self.compute_filterchange_cost() * self.params.filtercost_weight
         for fieldfilter in targets_dict:
             slewtime = self.observatoryModel.get_slew_delay(targets_dict[fieldfilter][0])
             if slewtime >= 0:
-                cost = self.compute_slewtime_cost(slewtime) * self.params.timecost_weight
+                timecost = self.compute_slewtime_cost(slewtime) * self.params.timecost_weight
                 for target in targets_dict[fieldfilter]:
                     target.slewtime = slewtime
-                    target.cost_bonus = cost
-                    target.rank = (target.value * target.propboost) - cost
+                    if target.filter != self.observatoryModel.currentState.filter:
+                        target.cost = timecost + filtercost
+                    else:
+                        target.cost = timecost
+                    target.rank = (target.value * target.propboost) - target.cost
                     ranked_targets_list.append((-target.rank, target))
 
         sorted_list = sorted(ranked_targets_list, key=itemgetter(0))
@@ -568,7 +575,11 @@ class Driver(object):
 
     def compute_filterchange_cost(self):
 
-        bonus = min(self.params.filterchange_cost * \
-                    self.observatoryModel.get_delta_last_filterchange() / \
-                    self.observatoryModel.params.filter_avg_interval - \
-                    self.params.filterchange_cost, 0.0)
+        t = self.observatoryModel.get_delta_last_filterchange()
+        T = self.observatoryModel.params.filter_max_changes_avg_interval
+        if t < T:
+            cost = 1.0 - t / T
+        else:
+            cost = 0.0
+
+        return cost

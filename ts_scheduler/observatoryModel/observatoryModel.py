@@ -56,6 +56,7 @@ class ObservatoryModelParameters(object):
         self.filter_max_changes_burst_time = 0.0
         self.filter_max_changes_avg_num = 0
         self.filter_max_changes_avg_time = 0.0
+        self.filter_max_changes_avg_interval = 0.0
         self.filter_init_mounted_list = []
         self.filter_init_unmounted_list = []
 
@@ -114,6 +115,11 @@ class ObservatoryModelParameters(object):
         self.filter_max_changes_burst_time = confdict["camera"]["filter_max_changes_burst_time"]
         self.filter_max_changes_avg_num = confdict["camera"]["filter_max_changes_avg_num"]
         self.filter_max_changes_avg_time = confdict["camera"]["filter_max_changes_avg_time"]
+        if self.filter_max_changes_avg_num > 0:
+            self.filter_max_changes_avg_interval =\
+                self.filter_max_changes_avg_time / self.filter_max_changes_avg_num
+        else:
+            self.filter_max_changes_avg_interval = 0.0
 
         self.filter_init_mounted_list = confdict["camera"]["filter_mounted"]
         self.filter_init_unmounted_list = confdict["camera"]["filter_unmounted"]
@@ -867,6 +873,15 @@ class ObservatoryModel(object):
             allowed = True
 
         return allowed
+
+    def get_delta_last_filterchange(self):
+
+        if len(self.filter_changes_list) > 0:
+            delta = self.currentState.time - self.filter_changes_list[-1]
+        else:
+            delta = self.currentState.time
+
+        return delta
 
     def get_delay_for_filter(self, targetstate, initstate):
 

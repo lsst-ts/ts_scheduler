@@ -494,8 +494,9 @@ class Main(object):
         #confdict["ranking"]["timebonus_slope"] = topic_driver_config.timebonus_slope
         confdict["ranking"]["timecost_time_max"] = 150.0
         confdict["ranking"]["timecost_time_ref"] = 5.0
-        confdict["ranking"]["timecost_cost_ref"] = 0.033
+        confdict["ranking"]["timecost_cost_ref"] = 0.25
         confdict["ranking"]["timecost_weight"] = 2.0
+        confdict["ranking"]["filtercost_weight"] = 1.0
         confdict["constraints"] = {}
         confdict["constraints"]["night_boundary"] = topic_driver_config.night_boundary
         confdict["constraints"]["ignore_sky_brightness"] = topic_driver_config.ignore_sky_brightness
@@ -841,7 +842,7 @@ class Main(object):
         topicTarget.cloud = target.cloud
         topicTarget.seeing = target.seeing
         topicTarget.slew_time = target.slewtime
-        topicTarget.cost_bonus = target.cost_bonus
+        topicTarget.cost_bonus = target.cost
         topicTarget.rank = target.rank
         topicTarget.num_proposals = target.num_props
         for i, prop_id in enumerate(target.propid_list):
