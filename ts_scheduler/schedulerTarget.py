@@ -49,7 +49,7 @@ class Target(object):
         self.telrot_rad = 0.0
         self.propboost = 1.0
         self.slewtime = 0.0
-        self.cost_bonus = 0.0
+        self.cost = 0.0
         self.rank = 0.0
 
         #assembled at driver
@@ -96,7 +96,7 @@ class Target(object):
         newtarget.telrot_rad = self.telrot_rad
         newtarget.propboost = self.propboost
         newtarget.slewtime = self.slewtime
-        newtarget.cost_bonus = self.cost_bonus = 0.0
+        newtarget.cost = self.cost = 0.0
         newtarget.rank = self.rank = 0.0
         newtarget.num_props = self.num_props
         newtarget.propid_list = list(self.propid_list)
@@ -117,7 +117,7 @@ class Target(object):
                 "groupid=%i groupix=%i "
                 "need=%.3f bonus=%.3f value=%.3f propboost=%.3f "
                 "propid=%s need=%s bonus=%s value=%s propboost=%s "
-                "slewtime=%.3f costbonus=%.3f rank=%.3f" %
+                "slewtime=%.3f cost=%.3f rank=%.3f" %
                 (self.targetid, self.fieldid, self.filter, str(self.exp_times),
                  self.ra, self.dec, self.ang,
                  self.alt, self.az, self.rot,
@@ -129,7 +129,7 @@ class Target(object):
                  self.need, self.bonus, self.value, self.propboost,
                  self.propid_list, numpy.round(self.need_list, 3), numpy.round(self.bonus_list, 3),
                  numpy.round(self.value_list, 3), numpy.round(self.propboost_list, 3),
-                 self.slewtime, self.cost_bonus, self.rank))
+                 self.slewtime, self.cost, self.rank))
 
     @property
     def ra(self):
