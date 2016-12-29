@@ -40,7 +40,7 @@ class ScriptedProposalTest(unittest.TestCase):
                          "groupid=0 groupix=0 "
                          "need=0.000 bonus=0.000 value=1.000 propboost=1.000 "
                          "propid=[] need=[] bonus=[] value=[] propboost=[] "
-                         "slewtime=0.000 costbonus=0.000 rank=0.000")
+                         "slewtime=0.000 cost=0.000 rank=0.000")
 
         tlist = self.scriptedprop.suggest_targets(1040)
         self.assertEqual(str(tlist[0]),
@@ -51,7 +51,7 @@ class ScriptedProposalTest(unittest.TestCase):
                          "groupid=0 groupix=0 "
                          "need=0.000 bonus=0.000 value=1.000 propboost=1.000 "
                          "propid=[] need=[] bonus=[] value=[] propboost=[] "
-                         "slewtime=0.000 costbonus=0.000 rank=0.000")
+                         "slewtime=0.000 cost=0.000 rank=0.000")
 
         tlist = self.scriptedprop.suggest_targets(1080)
         self.assertEqual(str(tlist[0]),
@@ -62,7 +62,7 @@ class ScriptedProposalTest(unittest.TestCase):
                          "groupid=0 groupix=0 "
                          "need=0.000 bonus=0.000 value=1.000 propboost=1.000 "
                          "propid=[] need=[] bonus=[] value=[] propboost=[] "
-                         "slewtime=0.000 costbonus=0.000 rank=0.000")
+                         "slewtime=0.000 cost=0.000 rank=0.000")
 
         tlist = self.scriptedprop.suggest_targets(1120)
         self.assertEqual(str(tlist[0]),
@@ -73,7 +73,7 @@ class ScriptedProposalTest(unittest.TestCase):
                          "groupid=0 groupix=0 "
                          "need=0.000 bonus=0.000 value=1.000 propboost=1.000 "
                          "propid=[] need=[] bonus=[] value=[] propboost=[] "
-                         "slewtime=0.000 costbonus=0.000 rank=0.000")
+                         "slewtime=0.000 cost=0.000 rank=0.000")
 
         tlist = self.scriptedprop.suggest_targets(1160)
         self.assertEqual(str(tlist[0]),
@@ -84,7 +84,7 @@ class ScriptedProposalTest(unittest.TestCase):
                          "groupid=0 groupix=0 "
                          "need=0.000 bonus=0.000 value=1.000 propboost=1.000 "
                          "propid=[] need=[] bonus=[] value=[] propboost=[] "
-                         "slewtime=0.000 costbonus=0.000 rank=0.000")
+                         "slewtime=0.000 cost=0.000 rank=0.000")
 
         tlist = self.scriptedprop.suggest_targets(1200)
         self.assertEqual(str(tlist[0]),
@@ -95,7 +95,7 @@ class ScriptedProposalTest(unittest.TestCase):
                          "groupid=0 groupix=0 "
                          "need=0.000 bonus=0.000 value=1.000 propboost=1.000 "
                          "propid=[] need=[] bonus=[] value=[] propboost=[] "
-                         "slewtime=0.000 costbonus=0.000 rank=0.000")
+                         "slewtime=0.000 cost=0.000 rank=0.000")
 
         tlist = self.scriptedprop.suggest_targets(1240)
         self.assertEqual(str(tlist[0]),
@@ -106,7 +106,7 @@ class ScriptedProposalTest(unittest.TestCase):
                          "groupid=0 groupix=0 "
                          "need=0.000 bonus=0.000 value=1.000 propboost=1.000 "
                          "propid=[] need=[] bonus=[] value=[] propboost=[] "
-                         "slewtime=0.000 costbonus=0.000 rank=0.000")
+                         "slewtime=0.000 cost=0.000 rank=0.000")
 
         tlist = self.scriptedprop.suggest_targets(1280)
         self.assertEqual(str(tlist[0]),
@@ -117,7 +117,7 @@ class ScriptedProposalTest(unittest.TestCase):
                          "groupid=0 groupix=0 "
                          "need=0.000 bonus=0.000 value=1.000 propboost=1.000 "
                          "propid=[] need=[] bonus=[] value=[] propboost=[] "
-                         "slewtime=0.000 costbonus=0.000 rank=0.000")
+                         "slewtime=0.000 cost=0.000 rank=0.000")
 
         tlist = self.scriptedprop.suggest_targets(1320)
         self.assertEqual(str(tlist[0]),
@@ -128,7 +128,7 @@ class ScriptedProposalTest(unittest.TestCase):
                          "groupid=0 groupix=0 "
                          "need=0.000 bonus=0.000 value=1.000 propboost=1.000 "
                          "propid=[] need=[] bonus=[] value=[] propboost=[] "
-                         "slewtime=0.000 costbonus=0.000 rank=0.000")
+                         "slewtime=0.000 cost=0.000 rank=0.000")
 
         tlist = self.scriptedprop.suggest_targets(1360)
         self.assertEqual(str(tlist[0]),
@@ -139,7 +139,7 @@ class ScriptedProposalTest(unittest.TestCase):
                          "groupid=0 groupix=0 "
                          "need=0.000 bonus=0.000 value=1.000 propboost=1.000 "
                          "propid=[] need=[] bonus=[] value=[] propboost=[] "
-                         "slewtime=0.000 costbonus=0.000 rank=0.000")
+                         "slewtime=0.000 cost=0.000 rank=0.000")
 
         tlist = self.scriptedprop.suggest_targets(1400)
         self.assertEqual(str(tlist[0]),
@@ -150,7 +150,7 @@ class ScriptedProposalTest(unittest.TestCase):
                          "groupid=0 groupix=0 "
                          "need=0.000 bonus=0.000 value=1.000 propboost=1.000 "
                          "propid=[] need=[] bonus=[] value=[] propboost=[] "
-                         "slewtime=0.000 costbonus=0.000 rank=0.000")
+                         "slewtime=0.000 cost=0.000 rank=0.000")
 
         tlist = self.scriptedprop.suggest_targets(1440)
         self.assertEqual(str(tlist[0]),
@@ -161,4 +161,4 @@ class ScriptedProposalTest(unittest.TestCase):
                          "groupid=0 groupix=0 "
                          "need=0.000 bonus=0.000 value=1.000 propboost=1.000 "
                          "propid=[] need=[] bonus=[] value=[] propboost=[] "
-                         "slewtime=0.000 costbonus=0.000 rank=0.000")
+                         "slewtime=0.000 cost=0.000 rank=0.000")
