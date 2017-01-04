@@ -123,7 +123,7 @@ class Main(object):
             lastconfigtime = time.time()
             while waitconfig:
                 scode = self.sal.getNextSample_driverConfig(self.topic_driverConfig)
-                if (scode == 0 and self.topic_driverConfig.timebonus_tmax > 0):
+                if (scode == 0 and self.topic_driverConfig.timecost_time_max > 0):
                     lastconfigtime = time.time()
                     config_dict = self.rtopic_driver_config(self.topic_driverConfig)
                     self.log.info("run: rx driver config=%s" % (config_dict))
@@ -489,14 +489,11 @@ class Main(object):
         confdict["ranking"] = {}
         confdict["ranking"]["coadd_values"] = topic_driver_config.coadd_values
         confdict["ranking"]["time_balancing"] = topic_driver_config.time_balancing
-        #confdict["ranking"]["timebonus_tmax"] = topic_driver_config.timebonus_tmax
-        #confdict["ranking"]["timebonus_bmax"] = topic_driver_config.timebonus_bmax
-        #confdict["ranking"]["timebonus_slope"] = topic_driver_config.timebonus_slope
-        confdict["ranking"]["timecost_time_max"] = 150.0
-        confdict["ranking"]["timecost_time_ref"] = 5.0
-        confdict["ranking"]["timecost_cost_ref"] = 0.25
-        confdict["ranking"]["timecost_weight"] = 2.0
-        confdict["ranking"]["filtercost_weight"] = 1.0
+        confdict["ranking"]["timecost_time_max"] = topic_driver_config.timecost_time_max
+        confdict["ranking"]["timecost_time_ref"] = topic_driver_config.timecost_time_ref
+        confdict["ranking"]["timecost_cost_ref"] = topic_driver_config.timecost_cost_ref
+        confdict["ranking"]["timecost_weight"] = topic_driver_config.timecost_weight
+        confdict["ranking"]["filtercost_weight"] = topic_driver_config.filtercost_weight
         confdict["constraints"] = {}
         confdict["constraints"]["night_boundary"] = topic_driver_config.night_boundary
         confdict["constraints"]["ignore_sky_brightness"] = topic_driver_config.ignore_sky_brightness
@@ -820,7 +817,7 @@ class Main(object):
         confdict["scheduling"]["time_window_start"] = topic_areapropconf.time_window_start
         confdict["scheduling"]["time_window_max"] = topic_areapropconf.time_window_max
         confdict["scheduling"]["time_window_end"] = topic_areapropconf.time_window_end
-        confdict["scheduling"]["time_weight"] = 1.0
+        confdict["scheduling"]["time_weight"] = topic_areapropconf.time_weight
 
         return confdict
 
