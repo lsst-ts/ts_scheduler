@@ -839,7 +839,7 @@ class Main(object):
         topicTarget.cloud = target.cloud
         topicTarget.seeing = target.seeing
         topicTarget.slew_time = target.slewtime
-        topicTarget.cost_bonus = target.cost
+        topicTarget.cost = target.cost
         topicTarget.rank = target.rank
         topicTarget.num_proposals = target.num_props
         for i, prop_id in enumerate(target.propid_list):
