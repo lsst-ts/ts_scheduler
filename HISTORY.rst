@@ -4,6 +4,18 @@ History
 -------
 
 ====================
+0.8.5 (2017-01-06)
+--------------------
+
+Driver
+    New cost function for time interval since last filter change.
+    This cost function adds to the slew time cost.
+    New parameters to control this new behavior.
+Target
+    Renamed cost_bonus into cost.
+    cost is now a quantity that is substracted from rank.
+
+====================
 0.8 (2016-12-22)
 --------------------
 
