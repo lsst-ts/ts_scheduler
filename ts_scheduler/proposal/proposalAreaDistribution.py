@@ -29,6 +29,7 @@ class AreaDistributionProposalParameters(object):
         self.time_window_start = confdict["scheduling"]["time_window_start"]
         self.time_window_max = confdict["scheduling"]["time_window_max"]
         self.time_window_end = confdict["scheduling"]["time_window_end"]
+        self.time_weight = confdict["scheduling"]["time_weight"]
 
         self.filter_list = []
         self.filter_goal_dict = {}
@@ -161,8 +162,8 @@ class AreaDistributionProposal(Proposal):
         else:
             self.survey_targets_progress = 0.0
 
-        self.log.info("start_night tonight fields=%i targets=%i" %
-                      (self.tonight_fields, self.tonight_targets))
+        self.log.debug("start_night tonight fields=%i targets=%i" %
+                       (self.tonight_fields, self.tonight_targets))
         self.log.info("start_night survey fields=%i targets=%i goal=%i visits=%i progress=%.2f%%" %
                       (self.survey_fields, self.survey_targets,
                        self.survey_targets_goal, self.survey_targets_visits,
@@ -280,7 +281,8 @@ class AreaDistributionProposal(Proposal):
                     discarded_fields_airmass += 1
                     continue
 
-            airmass_rank = self.params.airmass_bonus * (1 - airmass / self.params.max_airmass)
+            airmass_rank = self.params.airmass_bonus * \
+                (self.params.max_airmass - airmass) / (self.params.max_airmass - 1.0)
 
             for filter in self.tonight_targets_dict[fieldid]:
 
@@ -330,7 +332,7 @@ class AreaDistributionProposal(Proposal):
                     if (self.params.filter_num_grouped_visits_dict[filter] > 1) and (target.groupix > 1):
                         time_rank = self.time_window(timestamp - target.last_visit_time)
                         if time_rank > 0.0:
-                            need_ratio = area_rank + time_rank
+                            need_ratio = area_rank + time_rank * self.params.time_weight
                         else:
                             need_ratio = time_rank
                     else:

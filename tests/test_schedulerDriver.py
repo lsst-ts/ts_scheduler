@@ -42,19 +42,19 @@ class TestSchedulerDriver(unittest.TestCase):
         self.assertEqual(len(self.driver.science_proposal_list), 1)
         self.assertEqual(self.driver.science_proposal_list[0].name, "weak_lensing")
 
-    def test_compute_slewtime_bonus(self):
+    def test_compute_slewtime_cost(self):
 
-        self.assertAlmostEquals(self.driver.compute_slewtime_bonus(0), 10, delta=1e-3)
-        self.assertAlmostEquals(self.driver.compute_slewtime_bonus(2), 1.976, delta=1e-3)
-        self.assertAlmostEquals(self.driver.compute_slewtime_bonus(3), 1.404, delta=1e-3)
-        self.assertAlmostEquals(self.driver.compute_slewtime_bonus(4), 1.086, delta=1e-3)
-        self.assertAlmostEquals(self.driver.compute_slewtime_bonus(5), 0.884, delta=1e-3)
-        self.assertAlmostEquals(self.driver.compute_slewtime_bonus(10), 0.451, delta=1e-3)
-        self.assertAlmostEquals(self.driver.compute_slewtime_bonus(30), 0.139, delta=1e-3)
-        self.assertAlmostEquals(self.driver.compute_slewtime_bonus(60), 0.058, delta=1e-3)
-        self.assertAlmostEquals(self.driver.compute_slewtime_bonus(120), 0.017, delta=1e-3)
-        self.assertAlmostEquals(self.driver.compute_slewtime_bonus(160), 0.006, delta=1e-3)
-        self.assertAlmostEquals(self.driver.compute_slewtime_bonus(200), 0, delta=1e-3)
+        self.assertAlmostEquals(self.driver.compute_slewtime_cost(0), 0.000, delta=1e-3)
+        self.assertAlmostEquals(self.driver.compute_slewtime_cost(2), 0.013, delta=1e-3)
+        self.assertAlmostEquals(self.driver.compute_slewtime_cost(3), 0.020, delta=1e-3)
+        self.assertAlmostEquals(self.driver.compute_slewtime_cost(4), 0.026, delta=1e-3)
+        self.assertAlmostEquals(self.driver.compute_slewtime_cost(5), 0.033, delta=1e-3)
+        self.assertAlmostEquals(self.driver.compute_slewtime_cost(10), 0.066, delta=1e-3)
+        self.assertAlmostEquals(self.driver.compute_slewtime_cost(30), 0.198, delta=1e-3)
+        self.assertAlmostEquals(self.driver.compute_slewtime_cost(60), 0.398, delta=1e-3)
+        self.assertAlmostEquals(self.driver.compute_slewtime_cost(120), 0.798, delta=1e-3)
+        self.assertAlmostEquals(self.driver.compute_slewtime_cost(150), 1.000, delta=1e-3)
+        self.assertAlmostEquals(self.driver.compute_slewtime_cost(200), 1.338, delta=1e-3)
 
     def test_startsurvey_startnight(self):
 
