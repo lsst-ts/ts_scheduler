@@ -1,3 +1,4 @@
+import logging.handlers
 import unittest
 
 from ts_scheduler.setup.parser import create_parser
@@ -19,6 +20,7 @@ class ArgParserTest(unittest.TestCase):
         self.assertFalse(args.scripted)
         self.assertIsNone(args.console_format)
         self.assertFalse(args.profile)
+        self.assertEqual(args.log_port, logging.handlers.DEFAULT_TCP_LOGGING_PORT)
 
     def test_scripted_flag(self):
         args = self.parser.parse_args(["-s"])
@@ -31,3 +33,8 @@ class ArgParserTest(unittest.TestCase):
     def test_profile(self):
         args = self.parser.parse_args(["--profile"])
         self.assertTrue(args.profile)
+
+    def test_log_port(self):
+        port = "16324"
+        args = self.parser.parse_args(["--log-port", port])
+        self.assertEqual(args.log_port, int(port))

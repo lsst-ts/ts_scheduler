@@ -8,7 +8,7 @@ from ts_scheduler.setup import configure_logging, create_parser, generate_logfil
 
 def main(args):
     logfilename = generate_logfile()
-    configure_logging(args, logfilename)
+    configure_logging(args, logfilename, args.log_port)
 
     logger = logging.getLogger("scheduler")
     logger.info("logfile=%s" % logfilename)
