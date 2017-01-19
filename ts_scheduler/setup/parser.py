@@ -1,4 +1,5 @@
 import argparse
+import logging.handlers
 
 __all__ = ["create_parser"]
 
@@ -19,5 +20,7 @@ def create_parser():
                         help="Override the console format.")
     parser.add_argument("--profile", dest="profile", action="store_true", help="Run the profiler on Scheduler"
                         "code.")
+    parser.add_argument("--log-port", dest="log_port", default=logging.handlers.DEFAULT_TCP_LOGGING_PORT,
+                        type=int, help="Specify the logging port for the Scheduler.")
 
     return parser

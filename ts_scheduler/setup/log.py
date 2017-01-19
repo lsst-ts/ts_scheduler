@@ -32,7 +32,7 @@ def generate_logfile(basename="scheduler"):
     logfilename = os.path.join(log_path, "%s.%s.log" % (basename, timestr))
     return logfilename
 
-def configure_logging(options, logfilename=None):
+def configure_logging(options, logfilename=None, log_port=logging.handlers.DEFAULT_TCP_LOGGING_PORT):
     """Configure the logging for the system.
 
     Parameters
@@ -41,6 +41,8 @@ def configure_logging(options, logfilename=None):
         The options returned by the ArgumentParser instance.argparse.
     logfilename : str
         A name, including path, for a log file.
+    log_port : int, optional
+        An alternate port for the socket logger.
     """
     console_detail, file_detail = set_log_levels(options.verbose)
     main_level = max(console_detail, file_detail)
@@ -65,7 +67,7 @@ def configure_logging(options, logfilename=None):
     logging.getLogger().addHandler(ch)
 
     if options.scripted:
-        socket = logging.handlers.SocketHandler('localhost', logging.handlers.DEFAULT_TCP_LOGGING_PORT)
+        socket = logging.handlers.SocketHandler('localhost', log_port)
         logging.getLogger().addHandler(socket)
 
     if not options.scripted:
