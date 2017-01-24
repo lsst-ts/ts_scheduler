@@ -90,6 +90,7 @@ class Main(object):
         self.sal.salTelemetryPub("scheduler_target")
         self.sal.salTelemetryPub("scheduler_filterSwap")
         self.sal.salTelemetryPub("scheduler_interestedProposal")
+        self.log.info("Finished pub/sub initialization")
 
         meascount = 0
         visitcount = 0
