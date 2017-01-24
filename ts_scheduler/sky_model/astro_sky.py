@@ -196,7 +196,7 @@ class AstronomicalSkyModel(object):
         return palpy.dsepVector(field_ra, field_dec, numpy.full_like(field_ra, attrs["{}RA".format(body)]),
                                 numpy.full_like(field_dec, attrs["{}Dec".format(body)]))
 
-    def get_sky_brightness(self, ids):
+    def get_sky_brightness(self, ids, extrapolate=False):
         """Get the LSST 6 filter sky brightness for a set of fields at a single time.
 
         This function retrieves the LSST 6 filter sky brightness magnitudes for a given set
@@ -215,7 +215,7 @@ class AstronomicalSkyModel(object):
         numpy.ndarray
             The LSST 6 filter sky brightness magnitudes.
         """
-        return self.sky_brightness.returnMags(self.date_profile.mjd, indx=ids - 1, apply_mask=False)
+        return self.sky_brightness.returnMags(self.date_profile.mjd, indx=ids - 1, extrapolate=extrapolate)
 
     def get_sky_brightness_timeblock(self, timestamp, timestep, num_steps, ids):
         """Get LSST 6 filter sky brightness for a set of fields for a range of times.
