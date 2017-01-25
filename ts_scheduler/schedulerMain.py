@@ -880,7 +880,7 @@ class Main(object):
             self.topicTarget.sun_az = math.degrees(moon_sun["sunAz"])
             self.topicTarget.sun_ra = math.degrees(moon_sun["sunRA"])
             self.topicTarget.sun_dec = math.degrees(moon_sun["sunDec"])
-            self.topicTarget.sun_elong = math.degrees(moon_sun["solarElong"])
+            self.topicTarget.solar_elong = math.degrees(moon_sun["solarElong"])
 
     def rtopic_observation(self, topic_observation):
 
