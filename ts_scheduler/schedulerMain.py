@@ -301,6 +301,7 @@ class Main(object):
             waitconfig = True
             lastconfigtime = time.time()
             config_dict = None
+            good_config = False
             while waitconfig:
                 scode = self.sal.getNextSample_generalPropConfig(self.topic_areaDistPropConfig)
                 if (scode == 0 and self.topic_areaDistPropConfig.name != ""):
@@ -311,13 +312,22 @@ class Main(object):
                     self.log.info("run: rx area prop id=%i name=%s config=%s" % (prop_id, name, config_dict))
                     self.schedulerDriver.create_area_proposal(prop_id, name, config_dict)
                     waitconfig = True
+                    good_config = True
                 else:
                     tf = time.time()
-                    if self.topic_areaDistPropConfig.name == "":
-                        self.log.info("run: area prop config end")
-                        waitconfig = False
+                    # if self.topic_areaDistPropConfig.name == "":
+                    #     self.log.info("run: area prop config end")
+                    #     waitconfig = False
                     if tf - lastconfigtime > 10.0:
                         self.log.info("run: area prop config timeout")
+                        if not good_config:
+                            area_proposals = ["north_ecliptic_spur.conf", "south_celestial_pole.conf",
+                                              "wide_fast_deep.conf", "galactic_plane.conf"]
+                            for prop_id, prop_config in enumerate(area_proposals):
+                                config_file = conf_file_path(__name__, "conf", "survey", prop_config)
+                                config_dict = read_conf_file(config_file)
+                                name = "".join([x.capitalize() for x in prop_config.split('.')[0].split('_')])
+                                self.schedulerDriver.create_area_proposal(prop_id, name, config_dict)
                         waitconfig = False
                     time.sleep(self.sal_sleeper)
 
