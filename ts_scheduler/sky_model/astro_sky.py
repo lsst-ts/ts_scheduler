@@ -4,6 +4,7 @@ import numpy
 import palpy
 
 from lsst.sims.skybrightness_pre import SkyModelPre
+from lsst.sims.skybrightness_pre import __version__ as sky_model_pre_version
 
 from .date_profile import DateProfile
 from .sun import Sun
@@ -290,7 +291,8 @@ class AstronomicalSkyModel(object):
         """
         config = []
         header = self.sky_brightness.header
-        config.append(("sky_brightness_pre/version", header['version']))
+        config.append(("sky_brightness_pre/program_version", sky_model_pre_version))
+        config.append(("sky_brightness_pre/file_version", header['version']))
         config.append(("sky_brightness_pre/fingerprint", header['fingerprint']))
         config.append(("sky_brightness_pre/moon_dist_limit", header['moon_dist_limit']))
         config.append(("sky_brightness_pre/planet_dist_limit", header['planet_dist_limit']))
