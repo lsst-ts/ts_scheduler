@@ -280,3 +280,22 @@ class AstronomicalSkyModel(object):
         info_dict["altitude"] = altitude
         info_dict["azimuth"] = azimuth
         return info_dict
+
+    def sky_brightness_config(self):
+        """Get the configuration from the SkyModelPre files.
+
+        Returns
+        -------
+        list[tuple(key, value)]
+        """
+        config = []
+        header = self.sky_brightness.header
+        config.append(("sky_brightness_pre/version", header['version']))
+        config.append(("sky_brightness_pre/fingerprint", header['fingerprint']))
+        config.append(("sky_brightness_pre/moon_dist_limit", header['moon_dist_limit']))
+        config.append(("sky_brightness_pre/planet_dist_limit", header['planet_dist_limit']))
+        config.append(("sky_brightness_pre/airmass_limit", header['airmass_limit']))
+        config.append(("sky_brightness_pre/timestep", header['timestep'] * 24 * 3600))
+        config.append(("sky_brightness_pre/timestep_max", header['timestep_max'] * 24 * 3600))
+        config.append(("sky_brightness_pre/dm", header['dm']))
+        return config
