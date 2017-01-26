@@ -215,7 +215,8 @@ class AstronomicalSkyModel(object):
         numpy.ndarray
             The LSST 6 filter sky brightness magnitudes.
         """
-        return self.sky_brightness.returnMags(self.date_profile.mjd, indx=ids - 1, badval=float('nan'),
+        return self.sky_brightness.returnMags(self.date_profile.mjd, indx=ids - 1, apply_mask=False,
+                                              badval=float('nan'),
                                               extrapolate=extrapolate)
 
     def get_sky_brightness_timeblock(self, timestamp, timestep, num_steps, ids):
