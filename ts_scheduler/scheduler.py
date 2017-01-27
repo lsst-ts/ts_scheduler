@@ -14,6 +14,9 @@ def main(args):
     logger.info("logfile=%s" % logfilename)
 
     scheduler = Main(args)
+    scheduler.sal_init()
+    with open('.scheduler_{}'.format(args.log_port), 'w'):
+        pass
     scheduler.run()
 
     sys.exit(0)
