@@ -42,6 +42,7 @@ class Main(object):
 
         self.sal = SAL_scheduler()
         self.sal.setDebugLevel(0)
+        self.sal_sleeper = 0.1
 
         self.topic_schedulerConfig = scheduler_schedulerConfigC()
         self.topic_driverConfig = scheduler_driverConfigC()
@@ -66,10 +67,8 @@ class Main(object):
 
         self.schedulerDriver = Driver()
 
-    def run(self):
-
-        self.log.info("run")
-
+    def sal_init(self):
+        self.log.info("Starting pub/sub initialization")
         self.sal.salTelemetrySub("scheduler_schedulerConfig")
         self.sal.salTelemetrySub("scheduler_driverConfig")
         self.sal.salTelemetrySub("scheduler_obsSiteConfig")
@@ -92,6 +91,10 @@ class Main(object):
         self.sal.salTelemetryPub("scheduler_interestedProposal")
         self.log.info("Finished pub/sub initialization")
 
+    def run(self):
+
+        self.log.info("run")
+
         meascount = 0
         visitcount = 0
         synccount = 0
@@ -112,12 +115,13 @@ class Main(object):
                     waitconfig = False
                 else:
                     tf = time.time()
-                    if (tf - lastconfigtime > 10.0):
+                    if (tf - lastconfigtime > 20.0):
                         self.log.info("run: scheduler config timeout")
                         config_file = conf_file_path(__name__, "conf", "survey", "survey.conf")
                         config_dict = read_conf_file(config_file)
                         survey_duration = config_dict["survey"]["survey_duration"]
                         waitconfig = False
+                    time.sleep(self.sal_sleeper)
             self.schedulerDriver.configure_duration(survey_duration)
 
             waitconfig = True
@@ -136,6 +140,7 @@ class Main(object):
                         config_file = conf_file_path(__name__, "conf", "scheduler", "driver.conf")
                         config_dict = read_conf_file(config_file)
                         waitconfig = False
+                    time.sleep(self.sal_sleeper)
             self.schedulerDriver.configure(config_dict)
 
             waitconfig = True
@@ -154,6 +159,7 @@ class Main(object):
                         config_file = conf_file_path(__name__, "conf", "system", "site.conf")
                         config_dict = read_conf_file(config_file)
                         waitconfig = False
+                    time.sleep(self.sal_sleeper)
             self.schedulerDriver.configure_location(config_dict)
 
             waitconfig = True
@@ -172,6 +178,7 @@ class Main(object):
                         config_file = conf_file_path(__name__, "conf", "system", "observatory_model.conf")
                         config_dict = read_conf_file(config_file)
                         waitconfig = False
+                    time.sleep(self.sal_sleeper)
             self.schedulerDriver.configure_telescope(config_dict)
 
             waitconfig = True
@@ -190,6 +197,7 @@ class Main(object):
                         config_file = conf_file_path(__name__, "conf", "system", "observatory_model.conf")
                         config_dict = read_conf_file(config_file)
                         waitconfig = False
+                    time.sleep(self.sal_sleeper)
             self.schedulerDriver.configure_dome(config_dict)
 
             waitconfig = True
@@ -208,6 +216,7 @@ class Main(object):
                         config_file = conf_file_path(__name__, "conf", "system", "observatory_model.conf")
                         config_dict = read_conf_file(config_file)
                         waitconfig = False
+                    time.sleep(self.sal_sleeper)
             self.schedulerDriver.configure_rotator(config_dict)
 
             waitconfig = True
@@ -227,6 +236,7 @@ class Main(object):
                         config_file = conf_file_path(__name__, "conf", "system", "observatory_model.conf")
                         config_dict = read_conf_file(config_file)
                         waitconfig = False
+                    time.sleep(self.sal_sleeper)
             self.schedulerDriver.configure_camera(config_dict)
 
             waitconfig = True
@@ -246,6 +256,7 @@ class Main(object):
                         config_file = conf_file_path(__name__, "conf", "system", "observatory_model.conf")
                         config_dict = read_conf_file(config_file)
                         waitconfig = False
+                    time.sleep(self.sal_sleeper)
             self.schedulerDriver.configure_slew(config_dict)
 
             waitconfig = True
@@ -264,6 +275,7 @@ class Main(object):
                         config_file = conf_file_path(__name__, "conf", "system", "observatory_model.conf")
                         config_dict = read_conf_file(config_file)
                         waitconfig = False
+                    time.sleep(self.sal_sleeper)
             self.schedulerDriver.configure_optics(config_dict)
 
             waitconfig = True
@@ -282,6 +294,7 @@ class Main(object):
                         config_file = conf_file_path(__name__, "conf", "system", "observatory_model.conf")
                         config_dict = read_conf_file(config_file)
                         waitconfig = False
+                    time.sleep(self.sal_sleeper)
             self.schedulerDriver.configure_park(config_dict)
 
             waitconfig = True
@@ -305,6 +318,7 @@ class Main(object):
                     if tf - lastconfigtime > 10.0:
                         self.log.info("run: area prop config timeout")
                         waitconfig = False
+                    time.sleep(self.sal_sleeper)
 
             field_dict = self.schedulerDriver.get_fields_dict()
             if len(field_dict) > 0:
