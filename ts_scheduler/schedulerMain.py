@@ -744,6 +744,8 @@ class Main(object):
         confdict["constraints"] = {}
         confdict["constraints"]["max_airmass"] = topic_areapropconf.max_airmass
         confdict["constraints"]["max_cloud"] = topic_areapropconf.max_cloud
+        confdict["constraints"]["min_distance_moon"] = topic_areapropconf.min_distance_moon
+        confdict["constraints"]["exclude_planets"] = topic_areapropconf.exclude_planets
 
         confdict["sky_region"] = {}
         num_region_selections = topic_areapropconf.num_region_selections

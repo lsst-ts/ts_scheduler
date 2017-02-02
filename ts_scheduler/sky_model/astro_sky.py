@@ -39,6 +39,17 @@ class AstronomicalSkyModel(object):
         self.date_profile = DateProfile(0, location)
         self.sky_brightness = SkyModelPre(opsimFields=True)
         self.sun = Sun()
+        self.exclude_planets = True
+
+    def configure(self, exclude_planets):
+        """Add configuration for the sky brightness model.
+
+        Parameters
+        ----------
+        exclude_planets : bool
+            Flag to mask planets in sky brightness information.
+        """
+        self.exclude_planets = exclude_planets
 
     def update(self, timestamp):
         """Update the internal timestamp.
@@ -197,7 +208,7 @@ class AstronomicalSkyModel(object):
         return palpy.dsepVector(field_ra, field_dec, numpy.full_like(field_ra, attrs["{}RA".format(body)]),
                                 numpy.full_like(field_dec, attrs["{}Dec".format(body)]))
 
-    def get_sky_brightness(self, ids, extrapolate=False):
+    def get_sky_brightness(self, ids, extrapolate=False, override_exclude_planets=None):
         """Get the LSST 6 filter sky brightness for a set of fields at a single time.
 
         This function retrieves the LSST 6 filter sky brightness magnitudes for a given set
@@ -210,14 +221,24 @@ class AstronomicalSkyModel(object):
         ----------
         ids : list or numpy.array
             The set of fields to retrieve the sky brightness for.
+        extrapolate : boolean, optional
+            Flag to extrapolate fields with bad sky brightness to nearest field that is good.
+        override_exclude_planets : boolean, optional
+            Override the internally stored exclude_planets flag.
 
         Returns
         -------
         numpy.ndarray
             The LSST 6 filter sky brightness magnitudes.
         """
+        if override_exclude_planets is not None:
+            exclude_planets = override_exclude_planets
+        else:
+            exclude_planets = self.exclude_planets
+
         return self.sky_brightness.returnMags(self.date_profile.mjd, indx=ids - 1,
-                                              badval=float('nan'),
+                                              badval=float('nan'), zenith_mask=False,
+                                              planet_mask=exclude_planets,
                                               extrapolate=extrapolate)
 
     def get_sky_brightness_timeblock(self, timestamp, timestep, num_steps, ids):
@@ -250,7 +271,10 @@ class AstronomicalSkyModel(object):
         for i in xrange(num_steps):
             ts = timestamp + i * timestep
             mjd, _ = dp(ts)
-            mags.append(self.sky_brightness.returnMags(dp.mjd, indx=ids - 1, badval=float('nan'),
+            mags.append(self.sky_brightness.returnMags(dp.mjd, indx=ids - 1,
+                                                       badval=float('nan'),
+                                                       zenith_mask=False,
+                                                       planet_mask=self.exclude_planets,
                                                        extrapolate=False))
 
         return mags

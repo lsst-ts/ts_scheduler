@@ -30,6 +30,7 @@ class AstronomicalSkyTest(unittest.TestCase):
         self.assertIsNotNone(self.astro_sky.date_profile)
         self.assertIsNotNone(self.astro_sky.sky_brightness)
         self.assertIsNotNone(self.astro_sky.sun)
+        self.assertTrue(self.astro_sky.exclude_planets)
 
     def test_update_mechanism(self):
         self.astro_sky.update(LSST_START_TIMESTAMP)
@@ -148,3 +149,7 @@ class AstronomicalSkyTest(unittest.TestCase):
         self.assertAlmostEqual(info['airmass'][0], 1.9853499253850071, delta=1e-7)
         self.assertAlmostEqual(info['altitude'][0], 0.52786436029017303, delta=1e-7)
         self.assertFalse(numpy.isnan(info['azimuth'][0]))
+
+    def test_configure(self):
+        self.astro_sky.configure(exclude_planets=False)
+        self.assertFalse(self.astro_sky.exclude_planets)
