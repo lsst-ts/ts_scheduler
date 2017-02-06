@@ -1,4 +1,5 @@
 import math
+import numpy
 
 from operator import itemgetter
 
@@ -18,6 +19,8 @@ class AreaDistributionProposalParameters(object):
         self.max_cloud = confdict["constraints"]["max_cloud"]
         max_zd_rad = math.acos(1 / self.max_airmass)
         self.min_alt_rad = math.pi / 2 - max_zd_rad
+        self.min_distance_moon_rad = math.radians(confdict["constraints"]["min_distance_moon"])
+        self.exclude_planets = confdict["constraints"]["exclude_planets"]
 
         self.max_num_targets = int(confdict["scheduling"]["max_num_targets"])
         self.accept_serendipity = confdict["scheduling"]["accept_serendipity"]
@@ -59,6 +62,7 @@ class AreaDistributionProposal(Proposal):
         Proposal.__init__(self, propid, name, confdict, skymodel)
 
         self.params = AreaDistributionProposalParameters(self.proposal_confdict)
+        self.sky.configure(self.params.exclude_planets)
 
         # cummulative data for the survey
         self.survey_fields = 0
@@ -107,11 +111,6 @@ class AreaDistributionProposal(Proposal):
         # compute at start night
         for field in self.tonight_fields_list:
             fieldid = field.fieldid
-
-            # remove fields too close to the moon
-#            if distance2moon(self.survey_fields_dict[fieldid]) < self.params.min_distance_moon:
-#                del self.tonight_fields_list[fieldid]
-#                continue
 
             # add new fields to fields dictionary
             if fieldid not in self.survey_fields_dict:
@@ -239,6 +238,7 @@ class AreaDistributionProposal(Proposal):
         dec_rad_list = []
         mags_dict = {}
         airmass_dict = {}
+        moon_distance_dict = {}
         for field in fields_evaluation_list:
             # create coordinates arrays
             id_list.append(field.fieldid)
@@ -246,11 +246,14 @@ class AreaDistributionProposal(Proposal):
             dec_rad_list.append(field.dec_rad)
         if (len(id_list) > 0) and (not self.ignore_sky_brightness or not self.ignore_airmass):
             self.sky.update(timestamp)
-            sky_mags = self.sky.get_sky_brightness(ra_rad_list, dec_rad_list)
-            attrs = self.sky.sky_brightness.getComputedVals()
+            sky_mags = self.sky.get_sky_brightness(numpy.array(id_list))
+            airmass = self.sky.get_airmass(numpy.array(id_list))
+            moon_distance = self.sky.get_separation("moon", numpy.array(ra_rad_list),
+                                                    numpy.array(dec_rad_list))
             for ix, fieldid in enumerate(id_list):
                 mags_dict[fieldid] = {k: v[ix] for k, v in sky_mags.items()}
-                airmass_dict[fieldid] = attrs["airmass"][ix]
+                airmass_dict[fieldid] = airmass[ix]
+                moon_distance_dict[fieldid] = moon_distance[ix]
 
         evaluated_fields = 0
         discarded_fields_airmass = 0
@@ -260,6 +263,7 @@ class AreaDistributionProposal(Proposal):
         discarded_targets_lowbrightness = 0
         discarded_targets_highbrightness = 0
         discarded_targets_seeing = 0
+        discarded_moon_distance = 0
         evaluated_targets = 0
         groups_to_close_list = []
 
@@ -280,6 +284,11 @@ class AreaDistributionProposal(Proposal):
                 if airmass > self.params.max_airmass:
                     discarded_fields_airmass += 1
                     continue
+
+            moon_distance = moon_distance_dict[fieldid]
+            if moon_distance < self.params.min_distance_moon_rad:
+                discarded_moon_distance += 1
+                continue
 
             airmass_rank = self.params.airmass_bonus * \
                 (self.params.max_airmass - airmass) / (self.params.max_airmass - 1.0)
@@ -360,11 +369,11 @@ class AreaDistributionProposal(Proposal):
                        (len(id_list), evaluated_fields, discarded_fields_airmass, discarded_fields_notargets))
         self.log.debug("suggest_targets: evaluated targets=%i, discarded consecutive=%i "
                        "seeing=%i "
-                       "lowbright=%i highbright=%i nanbright=%i" %
+                       "lowbright=%i highbright=%i nanbright=%i moondistance=%i" %
                        (evaluated_targets, discarded_targets_consecutive,
                         discarded_targets_seeing,
                         discarded_targets_lowbrightness, discarded_targets_highbrightness,
-                        discarded_targets_nanbrightness))
+                        discarded_targets_nanbrightness, discarded_moon_distance))
 
         return self.get_evaluated_target_list()
 

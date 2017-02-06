@@ -1,4 +1,5 @@
 import math
+import numpy
 
 from ts_scheduler.schedulerTarget import Target
 from ts_scheduler.proposal import Proposal
@@ -53,16 +54,19 @@ class ScriptedProposal(Proposal):
 
         target_list = list([nexttarget])
 
+        id_list = []
         ra_list = []
         dec_list = []
         filter_list = []
         for target in target_list:
+            id_list.append(target.fieldid)
             ra_list.append(target.ra_rad)
             dec_list.append(target.dec_rad)
             filter_list.append(target.filter)
-        sky_mags = self.sky.get_sky_brightness_timeblock(time, 1, 1, ra_list, dec_list)
+        self.sky.update(time)
+        sky_mags = self.sky.get_sky_brightness(numpy.array(id_list))
 
-        target_list[0].sky_brightness = sky_mags[0][target.filter][0]
+        target_list[0].sky_brightness = sky_mags[target.filter][0]
 
         self.targetid += 1
 

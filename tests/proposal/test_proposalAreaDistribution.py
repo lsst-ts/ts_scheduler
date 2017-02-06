@@ -153,7 +153,7 @@ class AreaDistributionProposalTest(unittest.TestCase):
         self.assertEqual(str(target_list[0]),
                          "targetid=0 field=1764 filter=y exp_times=[15.0, 15.0] ra=13.726 dec=-19.793 "
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
-                         "time=1641000060.0 airmass=1.213 brightness=18.017 cloud=0.00 seeing=0.00 "
+                         "time=1641000060.0 airmass=1.213 brightness=18.015 cloud=0.00 seeing=0.00 "
                          "visits=0 progress=0.00% "
                          "groupid=1 groupix=1 "
                          "need=1.000 bonus=0.000 value=1.000 propboost=1.000 "
@@ -162,7 +162,7 @@ class AreaDistributionProposalTest(unittest.TestCase):
         self.assertEqual(str(target_list[-1]),
                          "targetid=0 field=2802 filter=g exp_times=[15.0, 15.0] ra=12.654 dec=3.318 "
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
-                         "time=1641000060.0 airmass=1.527 brightness=21.698 cloud=0.00 seeing=0.00 "
+                         "time=1641000060.0 airmass=1.528 brightness=21.694 cloud=0.00 seeing=0.00 "
                          "visits=0 progress=0.00% "
                          "groupid=1 groupix=1 "
                          "need=1.000 bonus=0.000 value=1.000 propboost=1.000 "
@@ -190,7 +190,7 @@ class AreaDistributionProposalTest(unittest.TestCase):
         self.assertEqual(str(target_list[0]),
                          "targetid=0 field=1764 filter=r exp_times=[15.0, 15.0] ra=13.726 dec=-19.793 "
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
-                         "time=1641000120.0 airmass=1.216 brightness=21.019 cloud=0.00 seeing=0.00 "
+                         "time=1641000120.0 airmass=1.217 brightness=21.017 cloud=0.00 seeing=0.00 "
                          "visits=0 progress=0.00% "
                          "groupid=1 groupix=1 "
                          "need=1.001 bonus=0.000 value=1.001 propboost=1.000 "
@@ -199,7 +199,7 @@ class AreaDistributionProposalTest(unittest.TestCase):
         self.assertEqual(str(target_list[-1]),
                          "targetid=0 field=1764 filter=y exp_times=[15.0, 15.0] ra=13.726 dec=-19.793 "
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
-                         "time=1641000120.0 airmass=1.216 brightness=18.017 cloud=0.00 seeing=0.00 "
+                         "time=1641000120.0 airmass=1.217 brightness=18.014 cloud=0.00 seeing=0.00 "
                          "visits=1 progress=5.00% "
                          "groupid=2 groupix=1 "
                          "need=0.951 bonus=0.000 value=0.951 propboost=1.000 "

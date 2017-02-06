@@ -3,6 +3,7 @@ import logging.handlers
 import sys
 import time
 import math
+import numpy
 
 from SALPY_scheduler import SAL_scheduler
 from SALPY_scheduler import scheduler_timeHandlerC
@@ -300,6 +301,7 @@ class Main(object):
             waitconfig = True
             lastconfigtime = time.time()
             config_dict = None
+            good_config = False
             while waitconfig:
                 scode = self.sal.getNextSample_generalPropConfig(self.topic_areaDistPropConfig)
                 if (scode == 0 and self.topic_areaDistPropConfig.name != ""):
@@ -310,13 +312,22 @@ class Main(object):
                     self.log.info("run: rx area prop id=%i name=%s config=%s" % (prop_id, name, config_dict))
                     self.schedulerDriver.create_area_proposal(prop_id, name, config_dict)
                     waitconfig = True
+                    good_config = True
                 else:
                     tf = time.time()
-                    if self.topic_areaDistPropConfig.name == "":
-                        self.log.info("run: area prop config end")
-                        waitconfig = False
+                    # if self.topic_areaDistPropConfig.name == "":
+                    #     self.log.info("run: area prop config end")
+                    #     waitconfig = False
                     if tf - lastconfigtime > 10.0:
                         self.log.info("run: area prop config timeout")
+                        if not good_config:
+                            area_proposals = ["north_ecliptic_spur.conf", "south_celestial_pole.conf",
+                                              "wide_fast_deep.conf", "galactic_plane.conf"]
+                            for prop_id, prop_config in enumerate(area_proposals):
+                                config_file = conf_file_path(__name__, "conf", "survey", prop_config)
+                                config_dict = read_conf_file(config_file)
+                                name = "".join([x.capitalize() for x in prop_config.split('.')[0].split('_')])
+                                self.schedulerDriver.create_area_proposal(prop_id, name, config_dict)
                         waitconfig = False
                     time.sleep(self.sal_sleeper)
 
@@ -733,6 +744,8 @@ class Main(object):
         confdict["constraints"] = {}
         confdict["constraints"]["max_airmass"] = topic_areapropconf.max_airmass
         confdict["constraints"]["max_cloud"] = topic_areapropconf.max_cloud
+        confdict["constraints"]["min_distance_moon"] = topic_areapropconf.min_distance_moon
+        confdict["constraints"]["exclude_planets"] = topic_areapropconf.exclude_planets
 
         confdict["sky_region"] = {}
         num_region_selections = topic_areapropconf.num_region_selections
@@ -867,7 +880,7 @@ class Main(object):
             topicTarget.proposal_bonuses[i] = prop_bonus
 
         prop = self.schedulerDriver.science_proposal_list[0]
-        moon_sun = prop.sky.get_moon_sun_info(target.ra_rad, target.dec_rad)
+        moon_sun = prop.sky.get_moon_sun_info(numpy.array([target.ra_rad]), numpy.array([target.dec_rad]))
         if moon_sun["moonRA"] is not None:
             self.topicTarget.moon_ra = math.degrees(moon_sun["moonRA"])
             self.topicTarget.moon_dec = math.degrees(moon_sun["moonDec"])
@@ -879,7 +892,7 @@ class Main(object):
             self.topicTarget.sun_az = math.degrees(moon_sun["sunAz"])
             self.topicTarget.sun_ra = math.degrees(moon_sun["sunRA"])
             self.topicTarget.sun_dec = math.degrees(moon_sun["sunDec"])
-            self.topicTarget.sun_elong = math.degrees(moon_sun["solarElong"])
+            self.topicTarget.solar_elong = math.degrees(moon_sun["solarElong"])
 
     def rtopic_observation(self, topic_observation):
 

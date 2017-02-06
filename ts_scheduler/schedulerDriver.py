@@ -1,5 +1,6 @@
 import os
 import math
+import numpy
 import logging
 
 from operator import itemgetter
@@ -353,7 +354,7 @@ class Driver(object):
         self.sunrise_timestamp = sunrise
         next_midnight = (sunset + sunrise) / 2
         self.sky.update(next_midnight)
-        info = self.sky.get_moon_sun_info(0.0, 0.0, need_update=True)
+        info = self.sky.get_moon_sun_info(numpy.array([0.0]), numpy.array([0.0]))
         self.midnight_moonphase = info["moonPhase"]
         self.log.info("end_night next moonphase=%.2f%%" % (self.midnight_moonphase))
 
