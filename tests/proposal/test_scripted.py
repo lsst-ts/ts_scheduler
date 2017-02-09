@@ -3,10 +3,10 @@ import logging
 import unittest
 import warnings
 
-from ts_scheduler.schedulerDefinitions import read_conf_file, conf_file_path
-from ts_scheduler.proposal import ScriptedProposal
-from ts_scheduler.observatoryModel import ObservatoryLocation
-from ts_scheduler.sky_model import AstronomicalSkyModel
+from lsst.ts.scheduler.kernel import read_conf_file, conf_file_path
+from lsst.ts.scheduler.proposal import ScriptedProposal
+from lsst.ts.scheduler.observatory_model import ObservatoryLocation
+from lsst.ts.scheduler.sky_model import AstronomicalSkyModel
 
 class ScriptedProposalTest(unittest.TestCase):
 

@@ -1,10 +1,10 @@
 from datetime import datetime
 import unittest
 
-from ts_scheduler.sky_model import Sun
+from lsst.ts.scheduler.sky_model import Sun
 
-from tests.test_constants import LSST_LATITUDE, LSST_LONGITUDE
-from tests.test_constants import LSST_START_TIMESTAMP
+from tests.constants import LSST_LATITUDE, LSST_LONGITUDE
+from tests.constants import LSST_START_TIMESTAMP
 
 class SunTest(unittest.TestCase):
 

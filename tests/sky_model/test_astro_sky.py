@@ -2,9 +2,9 @@ import numpy
 import unittest
 import warnings
 
-from ts_scheduler.sky_model import AstronomicalSkyModel
+from lsst.ts.scheduler.sky_model import AstronomicalSkyModel
 
-from tests.test_constants import LSST_SITE, LSST_START_TIMESTAMP
+from tests.constants import LSST_SITE, LSST_START_TIMESTAMP
 
 class AstronomicalSkyTest(unittest.TestCase):
 

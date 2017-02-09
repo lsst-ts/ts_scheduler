@@ -1,9 +1,9 @@
 import unittest
 import math
 
-from ts_scheduler.schedulerDefinitions import conf_file_path, read_conf_file
-from ts_scheduler.schedulerTarget import Target
-from ts_scheduler.observatoryModel import ObservatoryLocation, ObservatoryModel
+from lsst.ts.scheduler.kernel import conf_file_path, read_conf_file
+from lsst.ts.scheduler.kernel import Target
+from lsst.ts.scheduler.observatory_model import ObservatoryLocation, ObservatoryModel
 
 class ObservatoryModelTest(unittest.TestCase):
 

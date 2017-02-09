@@ -1,6 +1,6 @@
 import unittest
 
-from ts_scheduler.fields import FieldsDatabase
+from lsst.ts.scheduler.fields import FieldsDatabase
 
 class FieldsDatabaseTest(unittest.TestCase):
 

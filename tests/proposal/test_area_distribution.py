@@ -2,10 +2,10 @@ import os
 import logging
 import unittest
 
-from ts_scheduler.schedulerDefinitions import read_conf_file, conf_file_path, RAD2DEG
-from ts_scheduler.proposal import AreaDistributionProposal
-from ts_scheduler.observatoryModel import ObservatoryLocation
-from ts_scheduler.sky_model import AstronomicalSkyModel
+from lsst.ts.scheduler.kernel import read_conf_file, conf_file_path, RAD2DEG
+from lsst.ts.scheduler.proposal import AreaDistributionProposal
+from lsst.ts.scheduler.observatory_model import ObservatoryLocation
+from lsst.ts.scheduler.sky_model import AstronomicalSkyModel
 
 class AreaDistributionProposalTest(unittest.TestCase):
 

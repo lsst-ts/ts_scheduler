@@ -2,10 +2,8 @@ import unittest
 import os
 import sqlite3
 
-from ts_scheduler.fields import create_fields_db
-from ts_scheduler.fields import create_fields_table
-from ts_scheduler.fields import create_fields_data
-from ts_scheduler.fields import ingest_fields_data
+from lsst.ts.scheduler.fields import create_fields_db, create_fields_table
+from lsst.ts.scheduler.fields import create_fields_data, ingest_fields_data
 
 class FieldsTest(unittest.TestCase):
 
@@ -32,7 +30,8 @@ class FieldsTest(unittest.TestCase):
         for row in data:
             self.assertEqual(str(row), "")
 
-        create_fields_data("ts_scheduler/fields/tessellationInput.txt", self.fieldsdata_filename)
+        create_fields_data("ts_scheduler/python/lsst/ts/scheduler/fields/tessellationInput.txt",
+                           self.fieldsdata_filename)
         filestat = os.stat(self.fieldsdata_filename)
         self.assertEqual(filestat.st_size, 335705)
 

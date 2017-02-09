@@ -8,7 +8,7 @@ except ImportError:
 import os
 import unittest
 
-from ts_scheduler.setup.log import configure_logging, generate_logfile, set_log_levels
+from lsst.ts.scheduler.setup import configure_logging, generate_logfile, set_log_levels
 
 class LogTest(unittest.TestCase):
 

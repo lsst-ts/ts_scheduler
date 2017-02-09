@@ -1,7 +1,7 @@
 import os
 import unittest
 
-from ts_scheduler.schedulerDefinitions import conf_file_path, read_conf_file
+from lsst.ts.scheduler.kernel import conf_file_path, read_conf_file
 
 class DefinitionsTest(unittest.TestCase):
 

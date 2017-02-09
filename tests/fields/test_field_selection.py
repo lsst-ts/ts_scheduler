@@ -1,6 +1,6 @@
 import unittest
 
-from ts_scheduler.fields import FieldSelection
+from lsst.ts.scheduler.fields import FieldSelection
 
 class FieldSelectionTest(unittest.TestCase):
 

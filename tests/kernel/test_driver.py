@@ -1,24 +1,15 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
-"""
-test_schedulerDriver
-----------------------------------
-
-Tests for `schedulerDriver` module.
-"""
 import logging
 import os
 import unittest
 
-from ts_scheduler.schedulerDefinitions import conf_file_path, read_conf_file
-from ts_scheduler.schedulerDriver import Driver
+from lsst.ts.scheduler.kernel import conf_file_path, read_conf_file
+from lsst.ts.scheduler.kernel import Driver
 
 class TestSchedulerDriver(unittest.TestCase):
 
     def setUp(self):
         logging.getLogger().setLevel(logging.WARN)
-        conf_path = conf_file_path(__name__, "conf")
+        conf_path = conf_file_path(__name__, "../conf")
         self.driver = Driver()
 
         driver_conf_file = os.path.join(conf_path, "scheduler", "driver.conf")
