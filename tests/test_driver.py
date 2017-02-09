@@ -9,7 +9,7 @@ class TestSchedulerDriver(unittest.TestCase):
 
     def setUp(self):
         logging.getLogger().setLevel(logging.WARN)
-        conf_path = conf_file_path(__name__, "../conf")
+        conf_path = conf_file_path(__name__, "conf")
         self.driver = Driver()
 
         driver_conf_file = os.path.join(conf_path, "scheduler", "driver.conf")
