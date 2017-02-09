@@ -1,7 +1,9 @@
 import logging
 import math
 
-from ts_scheduler.fields import CUT_TYPEMAP, FieldsDatabase, FieldSelection
+from lsst.ts.scheduler.fields import CUT_TYPEMAP, FieldsDatabase, FieldSelection
+
+__all__ = ["Proposal"]
 
 class Proposal(object):
     def __init__(self, propid, name, confdict, skymodel):

@@ -1,5 +1,7 @@
 import math
 
+__all__ = ["ObservatoryLocation"]
+
 class ObservatoryLocation(object):
 
     def __init__(self,

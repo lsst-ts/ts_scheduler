@@ -2,6 +2,8 @@ import numpy
 import sys
 import sqlite3
 
+__all__ = ["ingest_fields_data"]
+
 FOV = 3.5
 
 def ingest_fields_data(dbfilename, fieldsdatafilename):

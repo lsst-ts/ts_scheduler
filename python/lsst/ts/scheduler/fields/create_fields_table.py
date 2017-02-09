@@ -1,6 +1,8 @@
 import sys
 import sqlite3
 
+__all__ = ["create_fields_table"]
+
 def create_fields_table(dbfilename="Fields.db"):
     conn = sqlite3.connect(dbfilename)
     cursor = conn.cursor()
@@ -14,7 +16,7 @@ def create_fields_table(dbfilename="Fields.db"):
 
 if __name__ == "__main__":
     if len(sys.argv) != 1:
-        print "Usage: python createFieldsTable.py"
+        print "Usage: python create_fields_table.py"
     else:
         create_fields_table()
     sys.exit(0)

@@ -3,12 +3,14 @@ import logging
 
 import palpy as pal
 
-from ts_scheduler.setup import WORDY
-from ts_scheduler.schedulerDefinitions import TWOPI
-from ts_scheduler.observatoryModel import ObservatoryLocation
-from ts_scheduler.observatoryModel import ObservatoryPosition
-from ts_scheduler.observatoryModel import ObservatoryState
-from ts_scheduler.sky_model import DateProfile
+from lsst.ts.scheduler.setup import WORDY
+from lsst.ts.scheduler.kernel import TWOPI
+from lsst.ts.scheduler.observatory_model import ObservatoryLocation
+from lsst.ts.scheduler.observatory_model import ObservatoryPosition
+from lsst.ts.scheduler.observatory_model import ObservatoryState
+from lsst.ts.scheduler.sky_model import DateProfile
+
+__all__ = ["ObservatoryModel", "ObservatoryModelParameters"]
 
 class ObservatoryModelParameters(object):
 

@@ -1,6 +1,8 @@
 import math
 
-from ts_scheduler.observatoryModel import ObservatoryPosition
+from lsst.ts.scheduler.observatory_model import ObservatoryPosition
+
+__all__ = ["ObservatoryState"]
 
 class ObservatoryState(ObservatoryPosition):
 

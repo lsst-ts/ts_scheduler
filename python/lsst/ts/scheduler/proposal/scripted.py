@@ -1,8 +1,10 @@
 import math
 import numpy
 
-from ts_scheduler.schedulerTarget import Target
-from ts_scheduler.proposal import Proposal
+from lsst.ts.scheduler.kernel import Target
+from lsst.ts.scheduler.proposal import Proposal
+
+__all__ = ["ScriptedProposal"]
 
 class ScriptedProposal(Proposal):
     def __init__(self, propid, name, confdict, scriptfile, skymodel):

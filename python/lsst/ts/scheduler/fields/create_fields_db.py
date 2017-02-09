@@ -3,6 +3,8 @@ import os
 import time
 import sqlite3
 
+_all__ = ["create_fields_db"]
+
 def create_fields_db(dbfilename="Fields.db"):
 
     if os.path.isfile(dbfilename):

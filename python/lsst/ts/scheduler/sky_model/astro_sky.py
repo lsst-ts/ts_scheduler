@@ -6,8 +6,7 @@ import palpy
 from lsst.sims.skybrightness_pre import SkyModelPre
 from lsst.sims.skybrightness_pre import __version__ as sky_model_pre_version
 
-from .date_profile import DateProfile
-from .sun import Sun
+from lsst.ts.scheduler.sky_model import DateProfile, Sun
 
 class Planets(Enum):
     """Handle planet values for palpy calls.

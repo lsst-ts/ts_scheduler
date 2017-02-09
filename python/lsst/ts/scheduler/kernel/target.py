@@ -1,6 +1,8 @@
 import math
 import numpy
 
+__all__ = ["Target"]
+
 class Target(object):
     def __init__(self,
                  targetid=0,

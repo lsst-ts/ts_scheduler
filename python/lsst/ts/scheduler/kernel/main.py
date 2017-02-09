@@ -27,18 +27,20 @@ from SALPY_scheduler import scheduler_generalPropConfigC
 from SALPY_scheduler import scheduler_filterSwapC
 from SALPY_scheduler import scheduler_interestedProposalC
 
-from ts_scheduler.setup import TRACE, EXTENSIVE
-from ts_scheduler.schedulerDefinitions import read_conf_file, conf_file_path
-from ts_scheduler.schedulerDriver import Driver
-from ts_scheduler.schedulerTarget import Target
-from ts_scheduler.observatoryModel import ObservatoryState
+from lsst.ts.scheduler.setup import TRACE, EXTENSIVE
+from lsst.ts.scheduler.kernel import read_conf_file, conf_file_path
+from lsst.ts.scheduler.kernel import Driver
+from lsst.ts.scheduler.kernel import Target
+from lsst.ts.scheduler.observatory_model import ObservatoryState
+
+__all__ = ["Main"]
 
 class Main(object):
 
     def __init__(self, options):
         self.log = logging.getLogger("schedulerMain")
 
-        main_confdict = read_conf_file(conf_file_path(__name__, "conf", "scheduler", "main.conf"))
+        main_confdict = read_conf_file(conf_file_path(__name__, "../conf", "scheduler", "main.conf"))
         self.measinterval = main_confdict['log']['rate_meas_interval']
 
         self.sal = SAL_scheduler()
@@ -118,7 +120,7 @@ class Main(object):
                     tf = time.time()
                     if (tf - lastconfigtime > 20.0):
                         self.log.info("run: scheduler config timeout")
-                        config_file = conf_file_path(__name__, "conf", "survey", "survey.conf")
+                        config_file = conf_file_path(__name__, "../conf", "survey", "survey.conf")
                         config_dict = read_conf_file(config_file)
                         survey_duration = config_dict["survey"]["survey_duration"]
                         waitconfig = False
@@ -138,7 +140,7 @@ class Main(object):
                     tf = time.time()
                     if (tf - lastconfigtime > 10.0):
                         self.log.info("run: driver config timeout")
-                        config_file = conf_file_path(__name__, "conf", "scheduler", "driver.conf")
+                        config_file = conf_file_path(__name__, "../conf", "scheduler", "driver.conf")
                         config_dict = read_conf_file(config_file)
                         waitconfig = False
                     time.sleep(self.sal_sleeper)
@@ -157,7 +159,7 @@ class Main(object):
                     tf = time.time()
                     if (tf - lastconfigtime > 10.0):
                         self.log.info("run: site config timeout")
-                        config_file = conf_file_path(__name__, "conf", "system", "site.conf")
+                        config_file = conf_file_path(__name__, "../conf", "system", "site.conf")
                         config_dict = read_conf_file(config_file)
                         waitconfig = False
                     time.sleep(self.sal_sleeper)
@@ -176,7 +178,7 @@ class Main(object):
                     tf = time.time()
                     if (tf - lastconfigtime > 10.0):
                         self.log.info("run: telescope config timeout")
-                        config_file = conf_file_path(__name__, "conf", "system", "observatory_model.conf")
+                        config_file = conf_file_path(__name__, "../conf", "system", "observatory_model.conf")
                         config_dict = read_conf_file(config_file)
                         waitconfig = False
                     time.sleep(self.sal_sleeper)
@@ -195,7 +197,7 @@ class Main(object):
                     tf = time.time()
                     if (tf - lastconfigtime > 10.0):
                         self.log.info("run: dome config timeout")
-                        config_file = conf_file_path(__name__, "conf", "system", "observatory_model.conf")
+                        config_file = conf_file_path(__name__, "../conf", "system", "observatory_model.conf")
                         config_dict = read_conf_file(config_file)
                         waitconfig = False
                     time.sleep(self.sal_sleeper)
@@ -214,7 +216,7 @@ class Main(object):
                     tf = time.time()
                     if (tf - lastconfigtime > 10.0):
                         self.log.info("run: rotator config timeout")
-                        config_file = conf_file_path(__name__, "conf", "system", "observatory_model.conf")
+                        config_file = conf_file_path(__name__, "../conf", "system", "observatory_model.conf")
                         config_dict = read_conf_file(config_file)
                         waitconfig = False
                     time.sleep(self.sal_sleeper)
@@ -234,7 +236,7 @@ class Main(object):
                     if (tf - lastconfigtime > 10.0):
                         waitconfig = False
                         self.log.info("run: camera config timeout")
-                        config_file = conf_file_path(__name__, "conf", "system", "observatory_model.conf")
+                        config_file = conf_file_path(__name__, "../conf", "system", "observatory_model.conf")
                         config_dict = read_conf_file(config_file)
                         waitconfig = False
                     time.sleep(self.sal_sleeper)
@@ -254,7 +256,7 @@ class Main(object):
                     if (tf - lastconfigtime > 10.0):
                         waitconfig = False
                         self.log.info("run: slew config timeout")
-                        config_file = conf_file_path(__name__, "conf", "system", "observatory_model.conf")
+                        config_file = conf_file_path(__name__, "../conf", "system", "observatory_model.conf")
                         config_dict = read_conf_file(config_file)
                         waitconfig = False
                     time.sleep(self.sal_sleeper)
@@ -273,7 +275,7 @@ class Main(object):
                     tf = time.time()
                     if (tf - lastconfigtime > 10.0):
                         self.log.info("run: optics config timeout")
-                        config_file = conf_file_path(__name__, "conf", "system", "observatory_model.conf")
+                        config_file = conf_file_path(__name__, "../conf", "system", "observatory_model.conf")
                         config_dict = read_conf_file(config_file)
                         waitconfig = False
                     time.sleep(self.sal_sleeper)
@@ -292,7 +294,7 @@ class Main(object):
                     tf = time.time()
                     if (tf - lastconfigtime > 10.0):
                         self.log.info("run: optics config timeout")
-                        config_file = conf_file_path(__name__, "conf", "system", "observatory_model.conf")
+                        config_file = conf_file_path(__name__, "../conf", "system", "observatory_model.conf")
                         config_dict = read_conf_file(config_file)
                         waitconfig = False
                     time.sleep(self.sal_sleeper)
@@ -324,7 +326,7 @@ class Main(object):
                             area_proposals = ["north_ecliptic_spur.conf", "south_celestial_pole.conf",
                                               "wide_fast_deep.conf", "galactic_plane.conf"]
                             for prop_id, prop_config in enumerate(area_proposals):
-                                config_file = conf_file_path(__name__, "conf", "survey", prop_config)
+                                config_file = conf_file_path(__name__, "../conf", "survey", prop_config)
                                 config_dict = read_conf_file(config_file)
                                 name = "".join([x.capitalize() for x in prop_config.split('.')[0].split('_')])
                                 self.schedulerDriver.create_area_proposal(prop_id, name, config_dict)

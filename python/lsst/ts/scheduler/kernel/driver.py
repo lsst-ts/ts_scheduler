@@ -2,20 +2,21 @@ import os
 import math
 import numpy
 import logging
-
 from operator import itemgetter
 
-from ts_scheduler.setup import EXTENSIVE, WORDY
-from ts_scheduler.sky_model import AstronomicalSkyModel
-from ts_scheduler.schedulerDefinitions import read_conf_file
-from ts_scheduler.schedulerField import Field
-from ts_scheduler.schedulerTarget import Target
-from ts_scheduler.observatoryModel import ObservatoryModel
-from ts_scheduler.observatoryModel import ObservatoryState
-from ts_scheduler.observatoryModel import ObservatoryLocation
-from ts_scheduler.proposal import ScriptedProposal
-from ts_scheduler.proposal import AreaDistributionProposal
-from ts_scheduler.fields import FieldsDatabase
+from lsst.ts.scheduler.setup import EXTENSIVE, WORDY
+from lsst.ts.scheduler.sky_model import AstronomicalSkyModel
+from lsst.ts.scheduler.kernel import read_conf_file
+from lsst.ts.scheduler.kernel import Field
+from lsst.ts.scheduler.kernel import Target
+from lsst.ts.scheduler.observatory_model import ObservatoryModel
+from lsst.ts.scheduler.observatory_model import ObservatoryState
+from lsst.ts.scheduler.observatory_model import ObservatoryLocation
+from lsst.ts.scheduler.proposal import ScriptedProposal
+from lsst.ts.scheduler.proposal import AreaDistributionProposal
+from lsst.ts.scheduler.fields import FieldsDatabase
+
+__all__ = ["Driver", "DriverParameters"]
 
 class DriverParameters(object):
 

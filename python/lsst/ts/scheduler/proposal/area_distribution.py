@@ -3,9 +3,10 @@ import numpy
 
 from operator import itemgetter
 
-from ts_scheduler.proposal import Proposal
-from ts_scheduler.schedulerField import Field
-from ts_scheduler.schedulerTarget import Target
+from lsst.ts.scheduler.proposal import Proposal
+from lsst.ts.scheduler.kernel import Field, Target
+
+__all__ = ["AreaDistributionProposalParameters", "AreaDistributionProposal"]
 
 class AreaDistributionProposalParameters(object):
 

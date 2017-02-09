@@ -1,5 +1,8 @@
 import math
-from schedulerDefinitions import RAD2DEG
+
+from lsst.ts.scheduler.kernel import RAD2DEG
+
+__all__ = ["Field"]
 
 class Field(object):
 

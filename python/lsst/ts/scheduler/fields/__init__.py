@@ -2,11 +2,10 @@
 
 __author__ = 'Francisco Delgado'
 __email__ = 'fdelgado@lsst.org'
-__version__ = '0.3.0'
 
-from .createFieldsDB import *
-from .createFieldsTable import *
-from .createFieldsData import *
-from .ingestFieldsData import *
-from .FieldsDatabase import *
+from .create_fields_db import *
+from .create_fields_table import *
+from .create_fields_data import *
+from .ingest_fields_data import *
+from .fields_database import *
 from .field_selection import *

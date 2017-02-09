@@ -1,7 +1,8 @@
 import sqlite3
 
-from ts_scheduler.schedulerField import Field
-from ts_scheduler.schedulerDefinitions import conf_file_path
+from lsst.ts.scheduler.kernel import Field, conf_file_path
+
+__all__ = ["FieldsDatabase"]
 
 FIELDSDB_FILENAME = "Fields.db"
 
