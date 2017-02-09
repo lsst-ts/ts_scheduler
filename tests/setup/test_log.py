@@ -27,6 +27,7 @@ class LogTest(unittest.TestCase):
         log_path = generate_logfile()
         self.assertEqual(mock_strftime.called, 1)
         self.assertEqual(os.path.basename(log_path), self.log_file_name)
+        os.remove(self.log_file_name)
 
     def test_configure_logging_default(self):
         configure_logging(self.args, self.log_file_name)
