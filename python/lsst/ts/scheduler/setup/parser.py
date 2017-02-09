@@ -1,6 +1,8 @@
 import argparse
 import logging.handlers
 
+from lsst.ts.scheduler import __version__
+
 __all__ = ["create_parser"]
 
 def create_parser():
@@ -12,6 +14,7 @@ def create_parser():
                                      description=" ".join(description),
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
+    parser.add_argument("--version", action="version", version=__version__)
     parser.add_argument("-s", "--scripted", dest="scripted", action="store_true",
                         help="Flag to run the Scheduler code from another script.")
     parser.add_argument("-v", "--verbose", dest="verbose", action='count', default=0,
