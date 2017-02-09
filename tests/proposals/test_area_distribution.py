@@ -3,7 +3,6 @@ import logging
 import unittest
 
 from lsst.ts.scheduler.kernel import read_conf_file, conf_file_path
-from lsst.ts.scheduler.kernel.definitions import RAD2DEG
 from lsst.ts.scheduler.proposals import AreaDistributionProposal
 from lsst.ts.scheduler.observatory_model import ObservatoryLocation
 from lsst.ts.scheduler.sky_model import AstronomicalSkyModel
@@ -42,7 +41,7 @@ class AreaDistributionProposalTest(unittest.TestCase):
                          "{'g': [15.0, 15.0], 'i': [15.0, 15.0], 'r': [15.0, 15.0], "
                          "'u': [25.0, 25.0], 'y': [15.0, 15.0], 'z': [15.0, 15.0]}")
         self.assertEqual(self.areaprop.params.max_airmass, 2.5)
-        self.assertAlmostEqual(self.areaprop.params.min_alt_rad * RAD2DEG, 23.578, delta=1e-3)
+        self.assertAlmostEqual(self.areaprop.params.min_alt, 23.578, delta=1e-3)
 
     def test_build_fields_tonight_list(self):
         # Set timestamp as 2022-01-01 0h UTC

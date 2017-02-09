@@ -56,6 +56,10 @@ class AreaDistributionProposalParameters(object):
                 self.filter_num_exp_dict[filter] = len(self.filter_exp_times_dict[filter])
                 self.filter_num_grouped_visits_dict[filter] = confdict[filter_section]["num_grouped_visits"]
 
+    @property
+    def min_alt(self):
+        return math.degrees(self.min_alt_rad)
+
 class AreaDistributionProposal(Proposal):
 
     def __init__(self, propid, name, confdict, skymodel):
