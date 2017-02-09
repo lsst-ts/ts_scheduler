@@ -7,7 +7,6 @@ __all__ = ["read_conf_file", "conf_file_path"]
 # Routines and non user-specific globals
 DEG2RAD = math.pi / 180.    # radians = degrees * DEG2RAD
 RAD2DEG = 180. / math.pi    # degrees = radians * RAD2DEG
-TWOPI = 2 * math.pi
 
 def read_conf_file(filename):
     """Read the new type of configuration file.

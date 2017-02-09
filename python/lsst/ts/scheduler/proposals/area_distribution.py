@@ -6,7 +6,7 @@ from operator import itemgetter
 from lsst.ts.scheduler.kernel import Field, Target
 from lsst.ts.scheduler.proposals import Proposal
 
-__all__ = ["AreaDistributionProposalParameters", "AreaDistributionProposal"]
+__all__ = ["AreaDistributionProposal"]
 
 class AreaDistributionProposalParameters(object):
 

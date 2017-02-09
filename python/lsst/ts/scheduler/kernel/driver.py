@@ -16,7 +16,7 @@ from lsst.ts.scheduler.proposals import ScriptedProposal
 from lsst.ts.scheduler.proposals import AreaDistributionProposal
 from lsst.ts.scheduler.fields import FieldsDatabase
 
-__all__ = ["Driver", "DriverParameters"]
+__all__ = ["Driver"]
 
 class DriverParameters(object):
 

@@ -4,13 +4,14 @@ import logging
 import palpy as pal
 
 from lsst.ts.scheduler.setup import WORDY
-from lsst.ts.scheduler.kernel.definitions import TWOPI
 from lsst.ts.scheduler.observatory_model import ObservatoryLocation
 from lsst.ts.scheduler.observatory_model import ObservatoryPosition
 from lsst.ts.scheduler.observatory_model import ObservatoryState
 from lsst.ts.scheduler.sky_model import DateProfile
 
-__all__ = ["ObservatoryModel", "ObservatoryModelParameters"]
+__all__ = ["ObservatoryModel"]
+
+TWOPI = 2 * math.pi
 
 class ObservatoryModelParameters(object):
 
