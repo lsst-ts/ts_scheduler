@@ -3,8 +3,8 @@
 import logging
 import sys
 
-from schedulerMain import Main
-from ts_scheduler.setup import configure_logging, create_parser, generate_logfile
+from lsst.ts.scheduler import Main
+from lsst.ts.scheduler.setup import configure_logging, create_parser, generate_logfile
 
 def main(args):
     logfilename = generate_logfile()

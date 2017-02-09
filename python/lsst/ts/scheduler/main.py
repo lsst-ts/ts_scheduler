@@ -29,7 +29,7 @@ from SALPY_scheduler import scheduler_interestedProposalC
 
 from lsst.ts.scheduler.setup import TRACE, EXTENSIVE
 from lsst.ts.scheduler.kernel import read_conf_file, conf_file_path
-from lsst.ts.scheduler.kernel import Driver
+from lsst.ts.scheduler import Driver
 from lsst.ts.scheduler.kernel import Target
 from lsst.ts.scheduler.observatory_model import ObservatoryState
 

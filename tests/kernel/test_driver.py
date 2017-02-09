@@ -3,7 +3,7 @@ import os
 import unittest
 
 from lsst.ts.scheduler.kernel import conf_file_path, read_conf_file
-from lsst.ts.scheduler.kernel import Driver
+from lsst.ts.scheduler import Driver
 
 class TestSchedulerDriver(unittest.TestCase):
 
