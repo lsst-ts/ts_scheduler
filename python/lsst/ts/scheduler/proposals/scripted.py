@@ -2,7 +2,7 @@ import math
 import numpy
 
 from lsst.ts.scheduler.kernel import Target
-from lsst.ts.scheduler.proposal import Proposal
+from lsst.ts.scheduler.proposals import Proposal
 
 __all__ = ["ScriptedProposal"]
 

@@ -12,8 +12,8 @@ from lsst.ts.scheduler.kernel import Target
 from lsst.ts.scheduler.observatory_model import ObservatoryModel
 from lsst.ts.scheduler.observatory_model import ObservatoryState
 from lsst.ts.scheduler.observatory_model import ObservatoryLocation
-from lsst.ts.scheduler.proposal import ScriptedProposal
-from lsst.ts.scheduler.proposal import AreaDistributionProposal
+from lsst.ts.scheduler.proposals import ScriptedProposal
+from lsst.ts.scheduler.proposals import AreaDistributionProposal
 from lsst.ts.scheduler.fields import FieldsDatabase
 
 __all__ = ["Driver", "DriverParameters"]

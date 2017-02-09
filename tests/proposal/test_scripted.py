@@ -4,7 +4,7 @@ import unittest
 import warnings
 
 from lsst.ts.scheduler.kernel import read_conf_file, conf_file_path
-from lsst.ts.scheduler.proposal import ScriptedProposal
+from lsst.ts.scheduler.proposals import ScriptedProposal
 from lsst.ts.scheduler.observatory_model import ObservatoryLocation
 from lsst.ts.scheduler.sky_model import AstronomicalSkyModel
 

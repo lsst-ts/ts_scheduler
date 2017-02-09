@@ -10,7 +10,7 @@ class Proposal(object):
 
         self.propid = propid
         self.name = name
-        self.log = logging.getLogger("scheduler.proposal.%s" % self.name)
+        self.log = logging.getLogger("scheduler.proposals.%s" % self.name)
         self.proposal_confdict = confdict
         self.sky = skymodel
         self.db = FieldsDatabase()

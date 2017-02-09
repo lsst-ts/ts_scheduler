@@ -3,8 +3,8 @@ import numpy
 
 from operator import itemgetter
 
-from lsst.ts.scheduler.proposal import Proposal
 from lsst.ts.scheduler.kernel import Field, Target
+from lsst.ts.scheduler.proposals import Proposal
 
 __all__ = ["AreaDistributionProposalParameters", "AreaDistributionProposal"]
 
