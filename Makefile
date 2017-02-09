@@ -40,10 +40,10 @@ lint:
 	flake8 ts_scheduler tests
 
 test:
-	./drun python setup.py test
+	python setup.py test
 
 test-alt:
-	./drun python -m unittest discover tests
+	python -m unittest discover tests
 
 test-all:
 	tox
@@ -70,10 +70,6 @@ dist: clean
 	python setup.py sdist
 	python setup.py bdist_wheel
 	ls -l dist
-
-all:
-	bash build_scheduler
-
 
 install: clean
 	python setup.py install
