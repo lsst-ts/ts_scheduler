@@ -4,7 +4,7 @@
    contain the root `toctree` directive.
 
 Welcome to LSST Scheduler's documentation!
-======================================
+==========================================
 
 Contents:
 
@@ -14,9 +14,16 @@ Contents:
    readme
    installation
    usage
-   contributing
    authors
    history
+
+Class Documentation
+-------------------
+
+.. autosummary::
+	:toctree: api
+
+	lsst.ts.scheduler
 
 Indices and tables
 ==================

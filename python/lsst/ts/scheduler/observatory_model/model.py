@@ -924,17 +924,21 @@ class ObservatoryModel(object):
         return 0.0
 
     def altaz2radecpa(self, dateprofile, alt_rad, az_rad):
-        """
-        Converts ALT, AZ coordinates into RA DEC for the given TIME.
+        """Converts ALT, AZ coordinates into RA, DEC for the given TIME.
 
-        inputs:
-               alt_rad: Altitude in radians [-90.0deg  90.0deg] 90deg=>zenith
-               az_rad:  Azimuth in radians [  0.0deg 360.0deg] 0deg=>N 90deg=>E
-               time:    Time in seconds since simulation reference (SIMEPOCH)
-        output:
-               (ra_rad, dec_rad)
-               ra_rad:  Right Ascension in radians
-               dec_rad: Declination in radians
+        Parameters
+        ----------
+        dateprofile : :class:`.DateProfile`
+            Instance containing the time information.
+        alt_rad : float
+            Altitude in radians [-90.0deg  90.0deg] 90deg=>zenith
+        az_rad : float
+            Azimuth in radians [0.0deg 360.0deg] 0deg=>N 90deg=>E
+
+        Returns
+        -------
+        tuple(float, float)
+            (Right Ascension in radians, Declination in radians)
         """
         lst_rad = dateprofile.lst_rad
 

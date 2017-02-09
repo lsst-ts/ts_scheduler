@@ -3,83 +3,101 @@
 History
 -------
 
-====================
+In progress
+===========
+
+* Restructured repository
+* Renamed modules
+* Uses scons to get version information
+
 0.8.5 (2017-01-06)
---------------------
+==================
 
-Driver
-    New cost function for time interval since last filter change.
-    This cost function adds to the slew time cost.
-    New parameters to control this new behavior.
-Target
-    Renamed cost_bonus into cost.
-    cost is now a quantity that is substracted from rank.
+* Driver
 
-====================
+  * New cost function for time interval since last filter change.
+  * This cost function adds to the slew time cost.
+  * New parameters to control this new behavior.
+
+* Target
+
+  * Renamed cost_bonus into cost.
+  * cost is now a quantity that is substracted from rank.
+
 0.8 (2016-12-22)
---------------------
+================
 
-Observatory Model
-    normalized angles
-    Tracking=False when a limit is reached
-Driver
-    Remaining tracking time verified for targets before sending them
-Sky regions
-    Time ranges for areas
+* Observatory Model
 
-====================
+  * normalized angles
+  * Tracking=False when a limit is reached
+
+* Driver
+
+  * Remaining tracking time verified for targets before sending them
+
+* Sky regions
+
+  * Time ranges for areas
+
 0.7 (2016-12-08)
---------------------
+================
 
-Area Distribution Proposal
-    hybrid area-time behavior
-    configurable grouped visits
-    configurable time window
-    configurable constraint to revisit group per night
-Interested Proposal
-    feedback to SOCS about Proposals getting credit from observation
-Downtime handling
-Filter changer
-    filter swaps
-    configurable constraints for filter changes
-Weather handling
-    clouds
-    seeing
-Airmass bonus
-Park method implemented
+* Area Distribution Proposal
 
-====================
+  * hybrid area-time behavior
+  * configurable grouped visits
+  * configurable time window
+  * configurable constraint to revisit group per night
+
+* Interested Proposal
+
+  * feedback to SOCS about Proposals getting credit from observation
+
+* Downtime handling
+
+* Filter changer
+
+  * filter swaps
+  * configurable constraints for filter changes
+
+* Weather handling
+
+  * clouds
+  * seeing
+
+* Airmass bonus
+
+* Park method implemented
+
 0.3 (2016-05-27)
---------------------
+================
 
-Area Distribution Proposal
-Configuration from SOCS
-New cost functions
-New value functions
-New flexible serendipity
-Repeatable code
-New sky brightness
-Observatory Model constantly updated from telemetry
-Several unit tests
+* Area Distribution Proposal
+* Configuration from SOCS
+* New cost functions
+* New value functions
+* New flexible serendipity
+* Repeatable code
+* New sky brightness
+* Observatory Model constantly updated from telemetry
+* Several unit tests
 
-====================
 0.2   (2015-12-23)
---------------------
+==================
 
-Observatory Model states and tracking implemented.
-Generic basic Proposal implemented.
-First version of scripted proposal implemented.
-Fields table read from configuration file.
-Configuration from external SOCS.
-Transmission of fields.
+* Observatory Model states and tracking implemented.
+* Generic basic Proposal implemented.
+* First version of scripted proposal implemented.
+* Fields table read from configuration file.
+* Configuration from external SOCS.
+* Transmission of fields.
 
-
-====================
 0.1.4 (2015-10-22)
---------------------
+==================
 
 LSS_DDS_DOMAIN handling
-logger extended to stdout for INFO+ level
+logger extended to stdout for INFO* level
 
 #	deleted:    ts_scheduler/build_scheduler
     unused copy
@@ -94,29 +112,25 @@ logger extended to stdout for INFO+ level
 #	modified:   ts_scheduler/schedulerMain.py
     logger extended to stdout when level appropriate
 
-====================
 0.1.3 (2015-10-21)
---------------------
+==================
 * Cookiecutter compliant
 
-====================
 0.1.2 (2015-10-14)
---------------------
+==================
 * Logger
 
-====================
 0.1.1 (2015-10-09)
---------------------
+==================
 * Interface tests
 
-+ scheduler.py
-+ schedulerMain.py
-+ schedulerDriver.py
-+ schedulerTarget.py
-+ schedulerTest.py
-+ build_scheduler
+* scheduler.py
+* schedulerMain.py
+* schedulerDriver.py
+* schedulerTarget.py
+* schedulerTest.py
+* build_scheduler
 
-====================
 0.1.0 (2015-08-31)
---------------------
+==================
 * First release on ts_scheduler repository.

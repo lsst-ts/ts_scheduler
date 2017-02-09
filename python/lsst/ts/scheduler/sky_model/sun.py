@@ -14,19 +14,20 @@ class Sun(object):
     current use.
 
     The original header for this class is given below.
+    ::
 
-    ***********************************************************************************
-    SUNRISET.C - computes Sun rise/set times, start/end of twilight, and
-             the length of the day at any date and latitude
+        ***********************************************************************************
+        SUNRISET.C - computes Sun rise/set times, start/end of twilight, and
+                 the length of the day at any date and latitude
 
-    Written as DAYLEN.C, 1989-08-16
+        Written as DAYLEN.C, 1989-08-16
 
-    Modified to SUNRISET.C, 1992-12-01
+        Modified to SUNRISET.C, 1992-12-01
 
-    (c) Paul Schlyter, 1989, 1992
+        (c) Paul Schlyter, 1989, 1992
 
-    Released to the public domain by Paul Schlyter, December 1992
-    ***********************************************************************************
+        Released to the public domain by Paul Schlyter, December 1992
+        ***********************************************************************************
     """
 
     END_ANGLE = 360.0

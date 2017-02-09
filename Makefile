@@ -56,8 +56,8 @@ coverage:
 	#open htmlcov/index.html
 
 docs:
-	rm -f doc/api/lsst*.rst
-	rm -f doc/api/modules.rst
+	rm -f docs/api/lsst*.rst
+	rm -f docs/api/modules.rst
 	sphinx-apidoc -H ts_scheduler -e -o docs/api python/lsst
 	$(MAKE) -C docs clean
 	$(MAKE) -C docs html
