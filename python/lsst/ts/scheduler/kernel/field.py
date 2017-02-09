@@ -1,6 +1,6 @@
 import math
 
-from lsst.ts.scheduler.kernel import RAD2DEG
+from lsst.ts.scheduler.kernel.definitions import RAD2DEG
 
 __all__ = ["Field"]
 

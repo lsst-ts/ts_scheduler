@@ -2,7 +2,8 @@ import os
 import logging
 import unittest
 
-from lsst.ts.scheduler.kernel import read_conf_file, conf_file_path, RAD2DEG
+from lsst.ts.scheduler.kernel import read_conf_file, conf_file_path
+from lsst.ts.scheduler.kernel.definitions import RAD2DEG
 from lsst.ts.scheduler.proposal import AreaDistributionProposal
 from lsst.ts.scheduler.observatory_model import ObservatoryLocation
 from lsst.ts.scheduler.sky_model import AstronomicalSkyModel

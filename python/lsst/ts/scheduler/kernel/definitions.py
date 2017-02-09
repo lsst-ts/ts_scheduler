@@ -2,7 +2,7 @@ import math
 import os
 import pkg_resources
 
-__all__ = ["TWOPI", "DEG2RAD", "RAD2DEG", "read_conf_file", "conf_file_path"]
+__all__ = ["read_conf_file", "conf_file_path"]
 
 # Routines and non user-specific globals
 DEG2RAD = math.pi / 180.    # radians = degrees * DEG2RAD

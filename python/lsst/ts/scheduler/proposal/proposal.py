@@ -1,7 +1,7 @@
 import logging
 import math
 
-from lsst.ts.scheduler.fields import CUT_TYPEMAP, FieldsDatabase, FieldSelection
+from lsst.ts.scheduler.fields import FieldsDatabase, FieldSelection
 
 __all__ = ["Proposal"]
 
@@ -78,8 +78,8 @@ class Proposal(object):
         max_rel_dec = self.sky.date_profile.location.latitude + dec_window
 
         # Handle delta LST and max reach
-        query_list.append(self.field_select.select_region("fieldRA", min_rel_ra, max_rel_ra))
-        query_list.append(self.field_select.select_region("fieldDec", min_rel_dec, max_rel_dec))
+        query_list.append(self.field_select.select_region("RA", min_rel_ra, max_rel_ra))
+        query_list.append(self.field_select.select_region("Dec", min_rel_dec, max_rel_dec))
 
         combine_list = ["and"]
 
@@ -101,7 +101,7 @@ class Proposal(object):
         for cut in region_cuts:
             cut_type = cut[0]
             if cut_type != "GP":
-                query_list.append(self.field_select.select_region(CUT_TYPEMAP[cut_type], cut[1], cut[2]))
+                query_list.append(self.field_select.select_region(cut_type, cut[1], cut[2]))
             else:
                 query_list.append(self.field_select.galactic_region(cut[2], cut[1], cut[3], exclusion=False))
 

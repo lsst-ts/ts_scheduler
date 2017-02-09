@@ -4,7 +4,7 @@ import logging
 import palpy as pal
 
 from lsst.ts.scheduler.setup import WORDY
-from lsst.ts.scheduler.kernel import TWOPI
+from lsst.ts.scheduler.kernel.definitions import TWOPI
 from lsst.ts.scheduler.observatory_model import ObservatoryLocation
 from lsst.ts.scheduler.observatory_model import ObservatoryPosition
 from lsst.ts.scheduler.observatory_model import ObservatoryState

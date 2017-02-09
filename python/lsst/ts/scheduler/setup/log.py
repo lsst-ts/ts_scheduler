@@ -1,9 +1,10 @@
 import logging
+import logging.handlers
 import os
 import pkg_resources
 import time
 
-__all__ = ["EXTENSIVE", "TRACE", "WORDY", "configure_logging", "generate_logfile"]
+__all__ = ["EXTENSIVE", "TRACE", "WORDY", "configure_logging", "generate_logfile", "set_log_levels"]
 
 # Extra INFO levels
 WORDY = 15

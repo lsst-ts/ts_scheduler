@@ -1,7 +1,7 @@
 import sys
 
-from lsst.ts.scheduler import create_fields_db, create_fields_table
-from lsst.ts.scheduler import create_fields_data, ingest_fields_data
+from lsst.ts.scheduler.fields import create_fields_db, create_fields_table
+from lsst.ts.scheduler.fields import create_fields_data, ingest_fields_data
 
 if __name__ == "__main__":
 
