@@ -37,10 +37,11 @@ clean-test:
 	find . -name '*.dif' -exec rm -f {} +
 
 lint:
-	flake8 ts_scheduler tests
+	flake8 python/lsst tests scripts/*
 
 test:
-	python setup.py test
+	py.test -v
+	#python setup.py test
 
 test-alt:
 	python -m unittest discover tests
@@ -49,18 +50,18 @@ test-all:
 	tox
 
 coverage:
-	coverage run --source ts_scheduler setup.py test
+	coverage run --source python/lsst -m unittest discover tests
 	coverage report -m
 	coverage html
-	open htmlcov/index.html
+	#open htmlcov/index.html
 
 docs:
-	rm -f docs/ts_scheduler.rst
-	rm -f docs/modules.rst
-	sphinx-apidoc -o docs/ ts_scheduler
+	rm -f doc/api/lsst*.rst
+	rm -f doc/api/modules.rst
+	sphinx-apidoc -H ts_scheduler -e -o docs/api python/lsst
 	$(MAKE) -C docs clean
 	$(MAKE) -C docs html
-	open docs/_build/html/index.html
+	#open docs/_build/html/index.html
 
 release: clean
 	python setup.py sdist upload
