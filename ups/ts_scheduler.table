@@ -1,5 +1,7 @@
 setupRequired(python)
 setupRequired(palpy)
+setupRequired(sconsUtils)
 setupRequired(sims_skybrightness_pre)
 
-envPrepend(PYTHONPATH, ${PRODUCT_DIR})
+envPrepend(PYTHONPATH, ${PRODUCT_DIR}/python)
+envPrepend(PATH, ${PRODUCT_DIR}/scripts)
