@@ -31,3 +31,13 @@ htmlcov
 
 #PyTest
 .cache
+
+# Project
+version.py
+config_*
+
+# LSST Stack
+.sconf_temp
+.sconsign.dblite
+*.tests
+ups/*.cfgc

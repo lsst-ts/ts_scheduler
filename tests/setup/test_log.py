@@ -8,7 +8,7 @@ except ImportError:
 import os
 import unittest
 
-from ts_scheduler.setup.log import configure_logging, generate_logfile, set_log_levels
+from lsst.ts.scheduler.setup import configure_logging, generate_logfile, set_log_levels
 
 class LogTest(unittest.TestCase):
 
@@ -27,6 +27,7 @@ class LogTest(unittest.TestCase):
         log_path = generate_logfile()
         self.assertEqual(mock_strftime.called, 1)
         self.assertEqual(os.path.basename(log_path), self.log_file_name)
+        os.remove(self.log_file_name)
 
     def test_configure_logging_default(self):
         configure_logging(self.args, self.log_file_name)

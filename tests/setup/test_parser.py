@@ -1,7 +1,7 @@
 import logging.handlers
 import unittest
 
-from ts_scheduler.setup.parser import create_parser
+from lsst.ts.scheduler.setup import create_parser
 
 class ArgParserTest(unittest.TestCase):
 
