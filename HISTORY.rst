@@ -3,8 +3,8 @@
 History
 -------
 
-In progress
-===========
+0.8.8 (2017-02-13)
+==================
 
 * Restructured repository
 * Renamed modules
