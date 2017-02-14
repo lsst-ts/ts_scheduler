@@ -24,6 +24,7 @@ from SALPY_scheduler import scheduler_slewConfigC
 from SALPY_scheduler import scheduler_opticsLoopCorrConfigC
 from SALPY_scheduler import scheduler_parkConfigC
 from SALPY_scheduler import scheduler_generalPropConfigC
+from SALPY_scheduler import scheduler_sequencePropConfigC
 from SALPY_scheduler import scheduler_filterSwapC
 from SALPY_scheduler import scheduler_interestedProposalC
 
@@ -58,6 +59,7 @@ class Main(object):
         self.topic_opticsConfig = scheduler_opticsLoopCorrConfigC()
         self.topic_parkConfig = scheduler_parkConfigC()
         self.topic_areaDistPropConfig = scheduler_generalPropConfigC()
+        self.topic_sequencePropConfig = scheduler_sequencePropConfigC()
         self.topicTime = scheduler_timeHandlerC()
         self.topicObservatoryState = scheduler_observatoryStateC()
         self.topic_cloud = scheduler_cloudC()
@@ -83,6 +85,7 @@ class Main(object):
         self.sal.salTelemetrySub("scheduler_opticsLoopCorrConfig")
         self.sal.salTelemetrySub("scheduler_parkConfig")
         self.sal.salTelemetrySub("scheduler_generalPropConfig")
+        self.sal.salTelemetrySub("scheduler_sequencePropConfig")
         self.sal.salTelemetrySub("scheduler_timeHandler")
         self.sal.salTelemetrySub("scheduler_observatoryState")
         self.sal.salTelemetrySub("scheduler_cloud")
@@ -330,6 +333,35 @@ class Main(object):
                                 config_dict = read_conf_file(config_file)
                                 name = "".join([x.capitalize() for x in prop_config.split('.')[0].split('_')])
                                 self.schedulerDriver.create_area_proposal(prop_id, name, config_dict)
+                        waitconfig = False
+                    time.sleep(self.sal_sleeper)
+
+            waitconfig = True
+            lastconfigtime = time.time()
+            config_dict = None
+            good_config = False
+            while waitconfig:
+                scode = self.sal.getNextSample_sequencePropConfig(self.topic_sequencePropConfig)
+                if (scode == 0 and self.topic_sequencePropConfig.name != ""):
+                    lastconfigtime = time.time()
+                    name = self.topic_sequencePropConfig.name
+                    prop_id = self.topic_sequencePropConfig.prop_id
+                    config_dict = self.rtopic_seq_prop_config(self.topic_sequencePropConfig)
+                    self.log.info("run: rx seq prop id=%i name=%s config=%s" % (prop_id, name, config_dict))
+                    # self.schedulerDriver.create_sequence_proposal(prop_id, name, config_dict)
+                    waitconfig = True
+                    good_config = True
+                else:
+                    tf = time.time()
+                    if tf - lastconfigtime > 10.0:
+                        self.log.info("run: seq prop config timeout")
+                        if not good_config:
+                            seq_proposals = ["deep_drilling_cosmology1.conf"]
+                            for prop_id, prop_config in enumerate(seq_proposals):
+                                config_file = conf_file_path(__name__, "conf", "survey", prop_config)
+                                config_dict = read_conf_file(config_file)
+                                name = "".join([x.capitalize() for x in prop_config.split('.')[0].split('_')])
+                                #self.schedulerDriver.create_sequence_proposal(prop_id, name, config_dict)
                         waitconfig = False
                     time.sleep(self.sal_sleeper)
 
@@ -848,6 +880,150 @@ class Main(object):
         confdict["scheduling"]["time_window_max"] = topic_areapropconf.time_window_max
         confdict["scheduling"]["time_window_end"] = topic_areapropconf.time_window_end
         confdict["scheduling"]["time_weight"] = topic_areapropconf.time_weight
+
+        return confdict
+
+    def rtopic_seq_prop_config(self, topic_seqpropconf):
+
+        confdict = {}
+
+        confdict["sky_nightly_bounds"] = {}
+        confdict["sky_nightly_bounds"]["twilight_boundary"] = topic_seqpropconf.twilight_boundary
+        confdict["sky_nightly_bounds"]["delta_lst"] = topic_seqpropconf.delta_lst
+
+        confdict["constraints"] = {}
+        confdict["constraints"]["max_airmass"] = topic_seqpropconf.max_airmass
+        confdict["constraints"]["max_cloud"] = topic_seqpropconf.max_cloud
+        confdict["constraints"]["min_distance_moon"] = topic_seqpropconf.min_distance_moon
+        confdict["constraints"]["exclude_planets"] = topic_seqpropconf.exclude_planets
+
+        confdict["sky_region"] = {}
+        num_sky_user_regions = topic_seqpropconf.num_sky_user_regions
+        region_list = []
+        for k in range(num_sky_user_regions):
+            region_list.append(topic_seqpropconf.user_region_ids[k])
+
+        confdict["sky_region"]["user_regions"] = region_list
+
+        confdict["sky_exclusions"] = {}
+        confdict["sky_exclusions"]["dec_window"] = topic_seqpropconf.dec_window
+
+        num_sub_sequences = topic_seqpropconf.num_sub_sequences
+        if num_sub_sequences:
+            confdict["subsequences"] = {}
+            sub_sequence_names = topic_seqpropconf.sub_sequence_names.split(',')
+            confdict["subsequences"]["names"] = sub_sequence_names
+            sub_sequence_filters = topic_seqpropconf.sub_sequence_filters.split(',')
+            sub_sequence_visits_per_filter = topic_seqpropconf.num_sub_sequence_filter_visits
+            index = 0
+            for k, sname in enumerate(sub_sequence_names):
+                sub_seq_section = "subseq_{}".format(sname)
+                confdict[sub_seq_section] = {}
+                num_sub_sequence_filters = topic_seqpropconf.num_sub_sequence_filters
+                confdict[sub_seq_section]["filters"] = \
+                    sub_sequence_filters[index:index + num_sub_sequence_filters]
+                confdict[sub_seq_section]["visits_per_filter"] = \
+                    sub_sequence_visits_per_filter[index:index + num_sub_sequence_filters]
+                index += num_sub_sequence_filters
+                confdict[sub_seq_section]["num_events"] = topic_seqpropconf.num_sub_sequence_events[k]
+                confdict[sub_seq_section]["num_max_missed"] = topic_seqpropconf.num_sub_sequence_max_missed[k]
+                confdict[sub_seq_section]["time_interval"] = topic_seqpropconf.sub_sequence_time_intervals[k]
+                confdict[sub_seq_section]["time_window_start"] = \
+                    topic_seqpropconf.sub_sequence_time_window_starts[k]
+                confdict[sub_seq_section]["time_window_max"] = \
+                    topic_seqpropconf.sub_sequence_time_window_maximums[k]
+                confdict[sub_seq_section]["time_window_end"] = \
+                    topic_seqpropconf.sub_sequence_time_window_ends[k]
+                confdict[sub_seq_section]["time_weight"] = topic_seqpropconf.sub_sequence_time_weights[k]
+
+        num_master_sub_sequences = topic_seqpropconf.num_master_sub_sequences
+        if num_master_sub_sequences:
+            confdict["master_subsequences"] = {}
+            master_sub_sequence_names = topic_seqpropconf.master_sub_sequence_names.split(',')
+
+            confdict["master_subsequences"]["names"] = master_sub_sequence_names
+            confdict["master_subsequences"]["num_nested"] = \
+                topic_seqpropconf.num_nested_sub_sequences[:num_master_sub_sequences]
+            nested_sub_sequence_names = topic_seqpropconf.nested_sub_sequence_names.split(',')
+            confdict["master_subsequences"]
+            nested_sub_sequence_filters = topic_seqpropconf.nested_sub_sequence_filters.split(',')
+            index = 0
+            findex = 0
+            for k, mname in enumerate(master_sub_sequence_names):
+                msub_seq_section = "msubseq_{}".format(mname)
+                confdict[msub_seq_section] = {}
+                num_nested_sub_sequences = topic_seqpropconf.num_nested_sub_sequences[k]
+                confdict[msub_seq_section]["nested_names"] = \
+                    nested_sub_sequence_names[index:index + num_nested_sub_sequences]
+                confdict[msub_seq_section]["num_events"] = topic_seqpropconf.num_master_sub_sequence_events[k]
+                confdict[msub_seq_section]["num_max_missed"] = \
+                    topic_seqpropconf.num_master_sub_sequence_max_missed[k]
+                confdict[msub_seq_section]["time_interval"] = \
+                    topic_seqpropconf.master_sub_sequence_time_intervals[k]
+                confdict[msub_seq_section]["time_window_start"] = \
+                    topic_seqpropconf.master_sub_sequence_time_window_starts[k]
+                confdict[msub_seq_section]["time_window_max"] = \
+                    topic_seqpropconf.master_sub_sequence_time_window_maximums[k]
+                confdict[msub_seq_section]["time_window_end"] = \
+                    topic_seqpropconf.master_sub_sequence_time_window_ends[k]
+                confdict[msub_seq_section]["time_weight"] = \
+                    topic_seqpropconf.master_sub_sequence_time_weights[k]
+
+                for l, nname in enumerate(confdict[msub_seq_section]["nested_names"]):
+                    nindex = index + l
+                    nsub_seq_section = "nsubseq_{}".format(nname)
+                    confdict[nsub_seq_section] = {}
+                    num_nested_sub_sequence_filters = \
+                        topic_seqpropconf.num_nested_sub_sequence_filters[nindex]
+                    last_index = findex + num_sub_sequence_filters
+                    confdict[nsub_seq_section]["filters"] = nested_sub_sequence_filters[findex:last_index]
+                    confdict[nsub_seq_section]["visits_per_filter"] = \
+                        topic_seqpropconf.num_nested_sub_sequence_filter_visits[findex:last_index]
+                    findex += num_nested_sub_sequence_filters
+                    confdict[nsub_seq_section]["num_events"] = \
+                        topic_seqpropconf.num_nested_sub_sequence_events[nindex]
+                    confdict[nsub_seq_section]["num_max_missed"] = \
+                        topic_seqpropconf.num_nested_sub_sequence_max_missed[nindex]
+                    confdict[nsub_seq_section]["time_interval"] = \
+                        topic_seqpropconf.nested_sub_sequence_time_intervals[nindex]
+                    confdict[nsub_seq_section]["time_window_start"] = \
+                        topic_seqpropconf.nested_sub_sequence_time_window_starts[nindex]
+                    confdict[nsub_seq_section]["time_window_max"] = \
+                        topic_seqpropconf.nested_sub_sequence_time_window_maximums[nindex]
+                    confdict[nsub_seq_section]["time_window_end"] = \
+                        topic_seqpropconf.nested_sub_sequence_time_window_ends[nindex]
+                    confdict[nsub_seq_section]["time_weight"] = \
+                        topic_seqpropconf.nested_sub_sequence_time_weights[nindex]
+
+                index += num_nested_sub_sequences
+
+        num_filters = topic_seqpropconf.num_filters
+        filter_names = topic_seqpropconf.filter_names
+        filter_list = filter_names.split(",")
+        exp_index = 0
+        for k in range(num_filters):
+            filter = filter_list[k]
+            filter_section = "filter_%s" % filter
+            confdict[filter_section] = {}
+            confdict[filter_section]["min_brig"] = \
+                topic_seqpropconf.bright_limit[k]
+            confdict[filter_section]["max_brig"] = topic_seqpropconf.dark_limit[k]
+            confdict[filter_section]["max_seeing"] = topic_seqpropconf.max_seeing[k]
+            num_exp = topic_seqpropconf.num_filter_exposures[k]
+            exp_times_list = []
+            for n in range(num_exp):
+                exp_times_list.append(topic_seqpropconf.exposures[exp_index])
+                exp_index += 1
+            confdict[filter_section]["exp_times"] = exp_times_list
+
+        confdict["scheduling"] = {}
+        max_num_targets = topic_seqpropconf.max_num_targets
+        accept_serendipity = topic_seqpropconf.accept_serendipity
+        accept_consecutive_visits = topic_seqpropconf.accept_consecutive_visits
+        confdict["scheduling"]["max_num_targets"] = max_num_targets
+        confdict["scheduling"]["accept_serendipity"] = accept_serendipity
+        confdict["scheduling"]["accept_consecutive_visits"] = accept_consecutive_visits
+        confdict["scheduling"]["airmass_bonus"] = topic_seqpropconf.airmass_bonus
 
         return confdict
 
