@@ -898,9 +898,9 @@ class Main(object):
         confdict["constraints"]["exclude_planets"] = topic_seqpropconf.exclude_planets
 
         confdict["sky_region"] = {}
-        num_sky_user_regions = topic_seqpropconf.num_sky_user_regions
+        num_user_regions = topic_seqpropconf.num_user_regions
         region_list = []
-        for k in range(num_sky_user_regions):
+        for k in range(num_user_regions):
             region_list.append(topic_seqpropconf.user_region_ids[k])
 
         confdict["sky_region"]["user_regions"] = region_list
@@ -919,7 +919,7 @@ class Main(object):
             for k, sname in enumerate(sub_sequence_names):
                 sub_seq_section = "subseq_{}".format(sname)
                 confdict[sub_seq_section] = {}
-                num_sub_sequence_filters = topic_seqpropconf.num_sub_sequence_filters
+                num_sub_sequence_filters = topic_seqpropconf.num_sub_sequence_filters[k]
                 confdict[sub_seq_section]["filters"] = \
                     sub_sequence_filters[index:index + num_sub_sequence_filters]
                 confdict[sub_seq_section]["visits_per_filter"] = \
@@ -945,7 +945,6 @@ class Main(object):
             confdict["master_subsequences"]["num_nested"] = \
                 topic_seqpropconf.num_nested_sub_sequences[:num_master_sub_sequences]
             nested_sub_sequence_names = topic_seqpropconf.nested_sub_sequence_names.split(',')
-            confdict["master_subsequences"]
             nested_sub_sequence_filters = topic_seqpropconf.nested_sub_sequence_filters.split(',')
             index = 0
             findex = 0
@@ -975,7 +974,7 @@ class Main(object):
                     confdict[nsub_seq_section] = {}
                     num_nested_sub_sequence_filters = \
                         topic_seqpropconf.num_nested_sub_sequence_filters[nindex]
-                    last_index = findex + num_sub_sequence_filters
+                    last_index = findex + num_nested_sub_sequence_filters
                     confdict[nsub_seq_section]["filters"] = nested_sub_sequence_filters[findex:last_index]
                     confdict[nsub_seq_section]["visits_per_filter"] = \
                         topic_seqpropconf.num_nested_sub_sequence_filter_visits[findex:last_index]
@@ -1002,8 +1001,7 @@ class Main(object):
         filter_list = filter_names.split(",")
         exp_index = 0
         for k in range(num_filters):
-            filter = filter_list[k]
-            filter_section = "filter_%s" % filter
+            filter_section = "filter_%s" % filter_list[k]
             confdict[filter_section] = {}
             confdict[filter_section]["min_brig"] = \
                 topic_seqpropconf.bright_limit[k]
