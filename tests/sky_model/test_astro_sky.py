@@ -1,7 +1,9 @@
+import math
 import numpy
 import unittest
 import warnings
 
+from lsst.ts.scheduler.observatory_model import ObservatoryLocation
 from lsst.ts.scheduler.sky_model import AstronomicalSkyModel
 
 from tests.constants import LSST_SITE, LSST_START_TIMESTAMP
@@ -153,3 +155,15 @@ class AstronomicalSkyTest(unittest.TestCase):
     def test_configure(self):
         self.astro_sky.configure(exclude_planets=False)
         self.assertFalse(self.astro_sky.exclude_planets)
+
+    def test_update_location(self):
+        # Kitt Peak
+        latitude = 31.959954
+        longitude = -111.599808
+        height = 2097.0
+        location = ObservatoryLocation(math.radians(latitude), math.radians(longitude), height)
+        self.astro_sky.update_location(location)
+        dp = self.astro_sky.date_profile
+        self.assertEqual(dp.location.latitude, latitude)
+        self.assertEqual(dp.location.longitude, longitude)
+        self.assertEqual(dp.location.height, height)

@@ -324,3 +324,13 @@ class AstronomicalSkyModel(object):
         config.append(("sky_brightness_pre/timestep_max", header['timestep_max'] * 24 * 3600))
         config.append(("sky_brightness_pre/dm", header['dm']))
         return config
+
+    def update_location(self, location):
+        """Update the current location.
+
+        Parameters
+        ----------
+        location : :class:.`ObservatoryLocation`
+            The instance of an ObservatoryLocation containing the relevant information.
+        """
+        self.date_profile.location = location
