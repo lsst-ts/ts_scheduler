@@ -201,7 +201,7 @@ class Driver(object):
         self.location.configure(confdict)
         self.observatoryModel.location.configure(confdict)
         self.observatoryModel2.location.configure(confdict)
-        self.sky.__init__(self.location)
+        self.sky.update_location(self.location)
 
     def configure_observatory(self, confdict):
 
