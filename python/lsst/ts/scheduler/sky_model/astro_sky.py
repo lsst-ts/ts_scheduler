@@ -97,6 +97,24 @@ class AstronomicalSkyModel(object):
         azimuth, altitude = palpy.de2hVector(hour_angle, dec, self.date_profile.location.latitude_rad)
         return altitude, azimuth
 
+    def get_hour_angle(self, ra):
+        """Get the hour angle (radians) of a sky position.
+
+        Parameters
+        ----------
+        ra : numpy.array
+            The right-ascension (radians) of the sky position.
+
+        Returns
+        -------
+        numpy.array
+            The hour angle (radians) of the sky position on range of -pi to pi.
+        """
+        hour_angle = self.date_profile.lst_rad - ra
+        hour_angle = numpy.where(hour_angle < -numpy.pi, hour_angle + (2.0 * numpy.pi), hour_angle)
+        hour_angle = numpy.where(hour_angle > numpy.pi, hour_angle - (2.0 * numpy.pi), hour_angle)
+        return hour_angle
+
     def get_moon_sun_info(self, field_ra, field_dec):
         """Return the current moon and sun information.
 
