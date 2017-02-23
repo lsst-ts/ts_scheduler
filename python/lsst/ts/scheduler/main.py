@@ -313,9 +313,11 @@ class Main(object):
                     lastconfigtime = time.time()
                     name = self.topic_areaDistPropConfig.name
                     prop_id = self.topic_areaDistPropConfig.prop_id
-                    config_dict = self.rtopic_area_prop_config(self.topic_areaDistPropConfig)
-                    self.log.info("run: rx area prop id=%i name=%s config=%s" % (prop_id, name, config_dict))
-                    self.schedulerDriver.create_area_proposal(prop_id, name, config_dict)
+                    if not (prop_id == -1 and name == "NULL"):
+                        config_dict = self.rtopic_area_prop_config(self.topic_areaDistPropConfig)
+                        self.log.info("run: rx area prop id=%i name=%s config=%s" % (prop_id, name,
+                                                                                     config_dict))
+                        self.schedulerDriver.create_area_proposal(prop_id, name, config_dict)
                     waitconfig = True
                     good_config = True
                 else:
@@ -346,9 +348,11 @@ class Main(object):
                     lastconfigtime = time.time()
                     name = self.topic_sequencePropConfig.name
                     prop_id = self.topic_sequencePropConfig.prop_id
-                    config_dict = self.rtopic_seq_prop_config(self.topic_sequencePropConfig)
-                    self.log.info("run: rx seq prop id=%i name=%s config=%s" % (prop_id, name, config_dict))
-                    # self.schedulerDriver.create_sequence_proposal(prop_id, name, config_dict)
+                    if not (prop_id == -1 and name == "NULL"):
+                        config_dict = self.rtopic_seq_prop_config(self.topic_sequencePropConfig)
+                        self.log.info("run: rx seq prop id=%i name=%s config=%s" % (prop_id, name,
+                                                                                    config_dict))
+                        # self.schedulerDriver.create_sequence_proposal(prop_id, name, config_dict)
                     waitconfig = True
                     good_config = True
                 else:
