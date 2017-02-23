@@ -14,6 +14,7 @@ def create_fields_db(dbfilename="Fields.db"):
     conn = sqlite3.connect(dbfilename)
     conn.close()
 
+
 if __name__ == "__main__":
     if len(sys.argv) != 1:
         print "Usage: python create_fields_db.py"

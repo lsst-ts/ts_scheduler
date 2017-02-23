@@ -124,3 +124,12 @@ class FieldSelection(object):
                                                                               end_value)
 
         return sql
+
+    def user_regions(self, fieldid_list):
+
+        sql = "(fieldId=%i" % fieldid_list[0]
+        for fieldid in fieldid_list[1:]:
+            sql += " or fieldId=%i" % fieldid
+        sql += ")"
+
+        return sql

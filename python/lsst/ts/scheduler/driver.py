@@ -13,7 +13,7 @@ from lsst.ts.scheduler.observatory_model import ObservatoryModel
 from lsst.ts.scheduler.observatory_model import ObservatoryState
 from lsst.ts.scheduler.observatory_model import ObservatoryLocation
 from lsst.ts.scheduler.proposals import ScriptedProposal
-from lsst.ts.scheduler.proposals import AreaDistributionProposal
+from lsst.ts.scheduler.proposals import AreaDistributionProposal, TimeDistributionProposal
 from lsst.ts.scheduler.fields import FieldsDatabase
 
 __all__ = ["Driver"]
@@ -249,6 +249,13 @@ class Driver(object):
         area_prop = AreaDistributionProposal(propid, name, config_dict, self.sky)
         area_prop.configure_constraints(self.params)
         self.science_proposal_list.append(area_prop)
+
+    def create_sequence_proposal(self, propid, name, config_dict):
+
+        self.propid_counter += 1
+        seq_prop = TimeDistributionProposal(propid, name, config_dict, self.sky)
+        seq_prop.configure_constraints(self.params)
+        self.science_proposal_list.append(seq_prop)
 
     def build_fields_dict(self):
 

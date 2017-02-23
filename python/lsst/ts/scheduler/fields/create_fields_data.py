@@ -39,6 +39,7 @@ def create_fields_data(tessellation_filename, fieldsdata_filename):
 
     numpy.savetxt(fieldsdata_filename, output_array, "%.6f")
 
+
 if __name__ == "__main__":
     if len(sys.argv) != 3:
         print "Usage: python create_fields_data.py <tessellationFileName> <fieldsDataFileName>"

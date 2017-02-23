@@ -26,6 +26,7 @@ def ingest_fields_data(dbfilename, fieldsdatafilename):
 
     return
 
+
 if __name__ == "__main__":
     if len(sys.argv) != 2:
         print "Usage: python CreateFieldTable.py <tessellationFieldsFile>"

@@ -325,6 +325,7 @@ class Main(object):
                     #     waitconfig = False
                     if tf - lastconfigtime > 10.0:
                         self.log.info("run: area prop config timeout")
+                        """
                         if not good_config:
                             area_proposals = ["north_ecliptic_spur.conf", "south_celestial_pole.conf",
                                               "wide_fast_deep.conf", "galactic_plane.conf"]
@@ -333,6 +334,7 @@ class Main(object):
                                 config_dict = read_conf_file(config_file)
                                 name = "".join([x.capitalize() for x in prop_config.split('.')[0].split('_')])
                                 self.schedulerDriver.create_area_proposal(prop_id, name, config_dict)
+                        """
                         waitconfig = False
                     time.sleep(self.sal_sleeper)
 
@@ -348,7 +350,7 @@ class Main(object):
                     prop_id = self.topic_sequencePropConfig.prop_id
                     config_dict = self.rtopic_seq_prop_config(self.topic_sequencePropConfig)
                     self.log.info("run: rx seq prop id=%i name=%s config=%s" % (prop_id, name, config_dict))
-                    # self.schedulerDriver.create_sequence_proposal(prop_id, name, config_dict)
+                    self.schedulerDriver.create_sequence_proposal(prop_id, name, config_dict)
                     waitconfig = True
                     good_config = True
                 else:
@@ -361,7 +363,7 @@ class Main(object):
                                 config_file = conf_file_path(__name__, "conf", "survey", prop_config)
                                 config_dict = read_conf_file(config_file)
                                 name = "".join([x.capitalize() for x in prop_config.split('.')[0].split('_')])
-                                #self.schedulerDriver.create_sequence_proposal(prop_id, name, config_dict)
+                                self.schedulerDriver.create_sequence_proposal(prop_id, name, config_dict)
                         waitconfig = False
                     time.sleep(self.sal_sleeper)
 

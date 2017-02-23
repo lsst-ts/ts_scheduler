@@ -3,6 +3,31 @@
 History
 -------
 
+0.9.0 (2017-02-23)
+==================
+
+* Time Distribution Proposal
+#	python/lsst/ts/scheduler/proposals/sequence.py
+#	python/lsst/ts/scheduler/proposals/subsequence.py
+#	python/lsst/ts/scheduler/proposals/time_distribution.py
+    New code to implement time distribution.
+    Sequence observation with multiple subsequences as children
+
+#	modified:   python/lsst/ts/scheduler/main.py
+#	modified:   python/lsst/ts/scheduler/driver.py
+    Extended to instantiate the time distribution proposals from config
+
+#	modified:   python/lsst/ts/scheduler/fields/field_selection.py
+#	modified:   python/lsst/ts/scheduler/proposals/proposal.py
+    user regions implemented for deep drilling
+
+#	modified:   python/lsst/ts/scheduler/fields/create_fields_data.py
+#	modified:   python/lsst/ts/scheduler/fields/create_fields_db.py
+#	modified:   python/lsst/ts/scheduler/fields/create_fields_table.py
+#	modified:   python/lsst/ts/scheduler/fields/ingest_fields_data.py
+#	modified:   python/lsst/ts/scheduler/proposals/__init__.py
+    updated for "pep8" compliance
+
 0.8.8 (2017-02-13)
 ==================
 

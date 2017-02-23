@@ -83,49 +83,56 @@ class Proposal(object):
 
         combine_list = ["and"]
 
-        # Handle any time dependent cuts
-        try:
-            time_ranges = sky_region["time_ranges"]
-            index = 0
-            for i, time_range in enumerate(time_ranges):
-                if night >= time_range[0] and night <= time_range[1]:
-                    index = i
-                    break
-            # Mappings are float arrays when read from file
-            mapping = [int(x) for x in sky_region["selection_mappings"][index]]
-            region_cuts = sky_region["cuts"][mapping[0]:mapping[-1] + 1]
-        except KeyError:
-            region_cuts = sky_region["cuts"]
-
-        # Handle the sky region selections
-        for cut in region_cuts:
-            cut_type = cut[0]
-            if cut_type != "GP":
-                query_list.append(self.field_select.select_region(cut_type, cut[1], cut[2]))
-            else:
-                query_list.append(self.field_select.galactic_region(cut[2], cut[1], cut[3], exclusion=False))
-
-        current_num_queries = len(query_list)
-        if current_num_queries > 2:
+        if "user_regions" in sky_region:
+            # Handle user regions as a list of field ids
+            query_list.append(self.field_select.user_regions(sky_region["user_regions"]))
             combine_list.append("and")
-        try:
-            combine_list.extend(sky_region["combiners"])
-        except KeyError:
-            pass
 
-        # Handle the sky exclusion selections
-        try:
-            for cut in sky_exclusions["cuts"]:
+        else:
+            # Handle any time dependent cuts
+            try:
+                time_ranges = sky_region["time_ranges"]
+                index = 0
+                for i, time_range in enumerate(time_ranges):
+                    if night >= time_range[0] and night <= time_range[1]:
+                        index = i
+                        break
+                # Mappings are float arrays when read from file
+                mapping = [int(x) for x in sky_region["selection_mappings"][index]]
+                region_cuts = sky_region["cuts"][mapping[0]:mapping[-1] + 1]
+            except KeyError:
+                region_cuts = sky_region["cuts"]
+
+            # Handle the sky region selections
+            for cut in region_cuts:
                 cut_type = cut[0]
-                if cut_type == "GP":
-                    query_list.append(self.field_select.galactic_region(cut[2], cut[1], cut[3]))
+                if cut_type != "GP":
+                    query_list.append(self.field_select.select_region(cut_type, cut[1], cut[2]))
                 else:
-                    self.log.warn("Do not know how to handle cuts for {}".format(cut_type))
+                    query_list.append(self.field_select.galactic_region(cut[2], cut[1], cut[3],
+                                                                        exclusion=False))
 
-            if len(query_list) > current_num_queries:
+            current_num_queries = len(query_list)
+            if current_num_queries > 2:
                 combine_list.append("and")
-        except KeyError:
-            # No exclusion region(s) given.
-            pass
+            try:
+                combine_list.extend(sky_region["combiners"])
+            except KeyError:
+                pass
+
+            # Handle the sky exclusion selections
+            try:
+                for cut in sky_exclusions["cuts"]:
+                    cut_type = cut[0]
+                    if cut_type == "GP":
+                        query_list.append(self.field_select.galactic_region(cut[2], cut[1], cut[3]))
+                    else:
+                        self.log.warn("Do not know how to handle cuts for {}".format(cut_type))
+
+                if len(query_list) > current_num_queries:
+                    combine_list.append("and")
+            except KeyError:
+                # No exclusion region(s) given.
+                pass
 
         return self.field_select.combine_queries(combine_list, *query_list)

@@ -14,6 +14,7 @@ def create_fields_table(dbfilename="Fields.db"):
     conn.commit()
     conn.close()
 
+
 if __name__ == "__main__":
     if len(sys.argv) != 1:
         print "Usage: python create_fields_table.py"
