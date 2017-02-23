@@ -313,16 +313,18 @@ class Main(object):
                     lastconfigtime = time.time()
                     name = self.topic_areaDistPropConfig.name
                     prop_id = self.topic_areaDistPropConfig.prop_id
-                    config_dict = self.rtopic_area_prop_config(self.topic_areaDistPropConfig)
-                    self.log.info("run: rx area prop id=%i name=%s config=%s" % (prop_id, name, config_dict))
-                    self.schedulerDriver.create_area_proposal(prop_id, name, config_dict)
-                    waitconfig = True
+                    if (prop_id == -1 and name == "NULL"):
+                        self.log.info("run: area prop config null")
+                        waitconfig = False
+                    else:
+                        config_dict = self.rtopic_area_prop_config(self.topic_areaDistPropConfig)
+                        self.log.info("run: rx area prop id=%i name=%s config=%s" % (prop_id, name,
+                                                                                     config_dict))
+                        self.schedulerDriver.create_area_proposal(prop_id, name, config_dict)
+                        waitconfig = True
                     good_config = True
                 else:
                     tf = time.time()
-                    # if self.topic_areaDistPropConfig.name == "":
-                    #     self.log.info("run: area prop config end")
-                    #     waitconfig = False
                     if tf - lastconfigtime > 10.0:
                         self.log.info("run: area prop config timeout")
                         """
@@ -348,15 +350,21 @@ class Main(object):
                     lastconfigtime = time.time()
                     name = self.topic_sequencePropConfig.name
                     prop_id = self.topic_sequencePropConfig.prop_id
-                    config_dict = self.rtopic_seq_prop_config(self.topic_sequencePropConfig)
-                    self.log.info("run: rx seq prop id=%i name=%s config=%s" % (prop_id, name, config_dict))
-                    self.schedulerDriver.create_sequence_proposal(prop_id, name, config_dict)
-                    waitconfig = True
+                    if (prop_id == -1 and name == "NULL"):
+                        self.log.info("run: seq prop config null")
+                        waitconfig = False
+                    else:
+                        config_dict = self.rtopic_seq_prop_config(self.topic_sequencePropConfig)
+                        self.log.info("run: rx seq prop id=%i name=%s config=%s" % (prop_id, name,
+                                                                                    config_dict))
+                        self.schedulerDriver.create_sequence_proposal(prop_id, name, config_dict)
+                        waitconfig = True
                     good_config = True
                 else:
                     tf = time.time()
                     if tf - lastconfigtime > 10.0:
                         self.log.info("run: seq prop config timeout")
+                        """
                         if not good_config:
                             seq_proposals = ["deep_drilling_cosmology1.conf"]
                             for prop_id, prop_config in enumerate(seq_proposals):
@@ -364,6 +372,7 @@ class Main(object):
                                 config_dict = read_conf_file(config_file)
                                 name = "".join([x.capitalize() for x in prop_config.split('.')[0].split('_')])
                                 self.schedulerDriver.create_sequence_proposal(prop_id, name, config_dict)
+                        """
                         waitconfig = False
                     time.sleep(self.sal_sleeper)
 
