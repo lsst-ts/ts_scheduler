@@ -78,4 +78,4 @@ class TestSequencePropTopicReader(unittest.TestCase):
         self.assertFalse(confdict["scheduling"]["accept_serendipity"])
         self.assertTrue(confdict["scheduling"]["accept_consecutive_visits"])
         self.assertEquals(confdict["scheduling"]["airmass_bonus"], 0.5)
-
+        self.assertEquals(confdict["scheduling"]["hour_angle_bonus"], 0.5)
