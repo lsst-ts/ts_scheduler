@@ -17,7 +17,6 @@ class AreaDistributionProposalParameters(object):
         self.sky_nightly_bounds = confdict["sky_nightly_bounds"]
 
         self.max_airmass = confdict["constraints"]["max_airmass"]
-        self.max_hour_angle = numpy.pi
         self.max_cloud = confdict["constraints"]["max_cloud"]
         max_zd_rad = math.acos(1 / self.max_airmass)
         self.min_alt_rad = math.pi / 2 - max_zd_rad
@@ -29,6 +28,7 @@ class AreaDistributionProposalParameters(object):
         self.accept_consecutive_visits = confdict["scheduling"]["accept_consecutive_visits"]
         self.airmass_bonus = confdict["scheduling"]["airmass_bonus"]
         self.hour_angle_bonus = confdict["scheduling"]["hour_angle_bonus"]
+        self.hour_angle_max_rad = math.radians(confdict["scheduling"]["hour_angle_max"] * 15.0)
 
         self.restrict_grouped_visits = confdict["scheduling"]["restrict_grouped_visits"]
         self.time_interval = confdict["scheduling"]["time_interval"]
@@ -305,7 +305,7 @@ class AreaDistributionProposal(Proposal):
                 (self.params.max_airmass - airmass) / (self.params.max_airmass - 1.0)
 
             hour_angle_rank = self.params.hour_angle_bonus * \
-                (1.0 - numpy.abs(hour_angle_dict[fieldid]) / self.params.max_hour_angle)
+                (1.0 - numpy.abs(hour_angle_dict[fieldid]) / self.params.hour_angle_max_rad)
 
             for filter in self.tonight_targets_dict[fieldid]:
 
