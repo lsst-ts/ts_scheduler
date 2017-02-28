@@ -30,4 +30,5 @@ if __name__ == '__main__':
         from datetime import datetime
         cProfile.run("main(args)",
                      "scheduler_prof_{}.dat".format(datetime.now().strftime("%Y-%m-%d_%H:%M:%S")))
-    main(args)
+    else:
+        main(args)
