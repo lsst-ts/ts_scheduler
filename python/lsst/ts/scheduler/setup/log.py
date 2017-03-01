@@ -13,7 +13,7 @@ EXTENSIVE = 5
 TRACE = 2
 
 DETAIL_LEVEL = {
-    0: logging.WARN,
+    0: logging.ERROR,
     1: logging.INFO,
     2: WORDY,
     3: logging.DEBUG,
@@ -55,6 +55,7 @@ def configure_logging(options, logfilename=None, log_port=logging.handlers.DEFAU
         console_format = options.console_format
 
     logging.basicConfig(level=DETAIL_LEVEL[main_level], format=console_format)
+    logging.captureWarnings(True)
     # Remove old console logger as it will double up messages when levels match.
     logging.getLogger().removeHandler(logging.getLogger().handlers[0])
 

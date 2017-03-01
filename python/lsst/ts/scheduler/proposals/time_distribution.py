@@ -27,6 +27,8 @@ class TimeDistributionProposalParameters(object):
         self.accept_serendipity = confdict["scheduling"]["accept_serendipity"]
         self.accept_consecutive_visits = confdict["scheduling"]["accept_consecutive_visits"]
         self.airmass_bonus = confdict["scheduling"]["airmass_bonus"]
+        self.hour_angle_bonus = confdict["scheduling"]["hour_angle_bonus"]
+        self.hour_angle_max_rad = math.radians(confdict["scheduling"]["hour_angle_max"] * 15.0)
 
         self.filter_list = []
         self.filter_min_brig_dict = {}
@@ -250,6 +252,7 @@ class TimeDistributionProposal(Proposal):
         dec_rad_list = []
         mags_dict = {}
         airmass_dict = {}
+        hour_angle_dict = {}
         moon_distance_dict = {}
         for field in fields_evaluation_list:
             # create coordinates arrays
@@ -260,12 +263,15 @@ class TimeDistributionProposal(Proposal):
             self.sky.update(timestamp)
             sky_mags = self.sky.get_sky_brightness(numpy.array(id_list))
             airmass = self.sky.get_airmass(numpy.array(id_list))
-            moon_distance = self.sky.get_separation("moon", numpy.array(ra_rad_list),
+            nra = numpy.array(ra_rad_list)
+            moon_distance = self.sky.get_separation("moon", nra,
                                                     numpy.array(dec_rad_list))
+            hour_angle = self.sky.get_hour_angle(nra)
             for ix, fieldid in enumerate(id_list):
                 mags_dict[fieldid] = {k: v[ix] for k, v in sky_mags.items()}
                 airmass_dict[fieldid] = airmass[ix]
                 moon_distance_dict[fieldid] = moon_distance[ix]
+                hour_angle_dict[fieldid] = hour_angle[ix]
 
         if in_deep_drilling:
             fieldid = deepdrilling_target.fieldid
@@ -337,6 +343,9 @@ class TimeDistributionProposal(Proposal):
             airmass_rank = self.params.airmass_bonus * \
                 (self.params.max_airmass - airmass) / (self.params.max_airmass - 1.0)
 
+            hour_angle_rank = self.params.hour_angle_bonus * \
+                (1.0 - numpy.abs(hour_angle_dict[fieldid]) / self.params.hour_angle_max_rad)
+
             for name in sequence.enabled_subsequences_list:
                 target = sequence.get_next_target_subsequence(name)
                 filter = target.filter
@@ -387,7 +396,7 @@ class TimeDistributionProposal(Proposal):
                 if need_ratio > 0.0:
                     # target is needed
                     target.need = need_ratio
-                    target.bonus = airmass_rank
+                    target.bonus = airmass_rank + hour_angle_rank
                     target.value = target.need + target.bonus
 
                     self.add_evaluated_target(target)
