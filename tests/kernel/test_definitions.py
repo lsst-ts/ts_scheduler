@@ -26,5 +26,6 @@ class DefinitionsTest(unittest.TestCase):
         self.assertTupleEqual(selection_mappings[0], (0,))
         self.assertTupleEqual(selection_mappings[1], (1,))
 
+
 if __name__ == "__main__":
     unittest.main()

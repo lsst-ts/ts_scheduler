@@ -22,6 +22,7 @@ class Planets(Enum):
     NEPTUNE = 8
     PLUTO = 9
 
+
 __all__ = ["AstronomicalSkyModel"]
 
 class AstronomicalSkyModel(object):
