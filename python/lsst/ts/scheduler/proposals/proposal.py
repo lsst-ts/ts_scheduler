@@ -39,7 +39,7 @@ class Proposal(object):
     def start_night(self, timestamp, filters_mounted_tonight_list, night):
         return
 
-    def end_night(self):
+    def end_night(self, timestamp):
         return
 
     def suggest_targets(self, time):

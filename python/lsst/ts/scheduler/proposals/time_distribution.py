@@ -107,6 +107,7 @@ class TimeDistributionProposal(Proposal):
         self.valued_targets_list = []
         self.last_observation = None
         self.last_observation_was_for_this_proposal = False
+        self.in_deep_drilling = False
 
     def start_survey(self):
 
@@ -169,6 +170,17 @@ class TimeDistributionProposal(Proposal):
         self.last_observation = None
         self.last_observation_was_for_this_proposal = False
 
+    def end_night(self, timestamp):
+
+        Proposal.end_night(self, timestamp)
+
+        if self.in_deep_drilling:
+            fieldid = self.last_observation.fieldid
+            sequence = self.tonight_sequences_dict[fieldid]
+            ssname = self.last_observation.subsequencename
+            sequence.miss_observation_subsequence(ssname, timestamp)
+            self.evaluate_sequence_continuation(fieldid, "end of night")
+
     def build_tonight_fields_list(self, timestamp, night):
 
         self.tonight_fields_list = []
@@ -227,19 +239,19 @@ class TimeDistributionProposal(Proposal):
         if deepdrilling_target is None:
             fields_evaluation_list = self.tonight_fields_list
             num_targets_to_propose = self.params.max_num_targets
-            in_deep_drilling = False
+            self.in_deep_drilling = False
         else:
             if deepdrilling_target.propid == self.propid:
                 fields_evaluation_list = [self.survey_fields_dict[deepdrilling_target.fieldid]]
                 num_targets_to_propose = 1
-                in_deep_drilling = True
+                self.in_deep_drilling = True
             else:
                 if deepdrilling_target.fieldid in self.tonight_fields_list:
                     fields_evaluation_list = [self.survey_fields_dict[deepdrilling_target.fieldid]]
                 else:
                     fields_evaluation_list = []
                 num_targets_to_propose = 0
-                in_deep_drilling = False
+                self.in_deep_drilling = False
 
         if constrained_filter is None:
             filters_evaluation_list = self.tonight_filters_list
@@ -273,7 +285,7 @@ class TimeDistributionProposal(Proposal):
                 moon_distance_dict[fieldid] = moon_distance[ix]
                 hour_angle_dict[fieldid] = hour_angle[ix]
 
-        if in_deep_drilling:
+        if self.in_deep_drilling:
             fieldid = deepdrilling_target.fieldid
             sequence = self.tonight_sequences_dict[fieldid]
             target = sequence.get_next_target_subsequence(deepdrilling_target.subsequencename)

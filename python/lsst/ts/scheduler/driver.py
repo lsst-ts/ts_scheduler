@@ -328,11 +328,15 @@ class Driver(object):
 
         self.isnight = False
 
+        self.last_winner_target = self.nulltarget.get_copy()
+        self.last_observation = self.nulltarget.get_copy()
+        self.in_deep_drilling = False
+
         total_filter_visits_dict = {}
         total_filter_goal_dict = {}
         total_filter_progress_dict = {}
         for prop in self.science_proposal_list:
-            prop.end_night()
+            prop.end_night(timestamp)
             filter_visits_dict = {}
             filter_goal_dict = {}
             filter_progress_dict = {}
