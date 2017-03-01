@@ -115,8 +115,8 @@ class Target(object):
         newtarget.telrot_rad = self.telrot_rad
         newtarget.propboost = self.propboost
         newtarget.slewtime = self.slewtime
-        newtarget.cost = self.cost = 0.0
-        newtarget.rank = self.rank = 0.0
+        newtarget.cost = self.cost
+        newtarget.rank = self.rank
         newtarget.num_props = self.num_props
         newtarget.propid_list = list(self.propid_list)
         newtarget.need_list = list(self.need_list)

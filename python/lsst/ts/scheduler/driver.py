@@ -491,7 +491,7 @@ class Driver(object):
 
         if self.in_deep_drilling:
             deepdrilling_target = self.last_observation
-            self.log.debug("select_next_target: in deep drilling target=%s" % str(deepdrilling_target))
+            self.log.debug("select_next_target: in deep drilling %s" % str(deepdrilling_target))
         else:
             deepdrilling_target = None
 
