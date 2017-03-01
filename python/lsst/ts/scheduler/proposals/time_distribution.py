@@ -145,7 +145,7 @@ class TimeDistributionProposal(Proposal):
                     self.survey_filters_goal_dict[filter] += sequence.filters_goal_dict[filter]
             else:
                 sequence = self.survey_sequences_dict[fieldid]
-            if sequence.progress < 1.0:
+            if sequence.is_idle_or_active():
                 self.tonight_sequences_dict[fieldid] = sequence
                 self.tonight_sequences += 1
 
