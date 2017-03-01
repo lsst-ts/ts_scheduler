@@ -24,15 +24,33 @@ class Subsequence(object):
         self.filter_num_exp_dict = dict(params.filter_num_exp_dict)
         self.filter_exp_times_dict = dict(params.filter_exp_times_dict)
 
-        self.goal = self.num_events
+        self.num_visits_per_event = 0
         self.filters_goal_dict = {}
 
-        filter = self.filter_list[0]
-        self.filters_goal_dict[filter] = self.num_events
+        self.num_subevents = len(self.filter_list)
+        for ix, filter in enumerate(self.filter_list):
+            if filter not in self.filters_goal_dict:
+                self.filters_goal_dict[filter] = 0
+            self.filters_goal_dict[filter] += self.num_events * self.visits_list[ix]
+            self.num_visits_per_event += self.visits_list[ix]
+        self.goal = self.num_events * self.num_visits_per_event
+
+        if (len(self.visits_list) > 1) or (self.visits_list[0] > 1):
+            self.is_deep_drilling = True
+            self.remaining_dd_visits = self.num_visits_per_event
+        else:
+            self.is_deep_drilling = False
+            self.remaining_dd_visits = 0
+        self.subevent_index = 0
+        self.subevent_num_visits_left = self.visits_list[0]
+        self.event_visits_list = []
+        self.all_events_list = []
+        self.obs_events_list = []
+        self.mis_events_list = []
 
         self.target = Target()
         self.target.fieldid = field.fieldid
-        self.target.filter = filter
+        self.target.filter = self.filter_list[0]
         self.target.num_exp = self.filter_num_exp_dict[filter]
         self.target.exp_times = self.filter_exp_times_dict[filter]
         self.target.ra_rad = field.ra_rad
@@ -41,12 +59,13 @@ class Subsequence(object):
         self.target.goal = self.goal
         self.target.visits = 0
         self.target.progress = 0.0
+
+        self.target.sequenceid = self.field.fieldid
+        self.target.subsequencename = self.name
         self.target.groupid = 1
         self.target.groupix = 1
-
-        self.all_events_list = []
-        self.obs_events_list = []
-        self.mis_events_list = []
+        self.target.is_deep_drilling = self.is_deep_drilling
+        self.target.remaining_dd_visits = self.remaining_dd_visits
 
         self.update_state()
 
@@ -89,9 +108,12 @@ class Subsequence(object):
 
     def get_next_target(self):
 
-        self.target.filter = self.filter_list[0]
+        self.target.filter = self.filter_list[self.subevent_index]
         self.target.num_exp = self.filter_num_exp_dict[self.target.filter]
         self.target.exp_times = self.filter_exp_times_dict[self.target.filter]
+        self.target.groupid = self.num_all_events + 1
+        self.target.groupix = self.subevent_index + 1
+        self.target.remaining_dd_visits = self.remaining_dd_visits
 
         return self.target
 
@@ -116,20 +138,49 @@ class Subsequence(object):
 
     def miss_observation(self, time):
 
+        # miss event
         self.all_events_list.append(time)
         self.mis_events_list.append(time)
 
-        self.target.visits += 1
-        self.target.progress = float(self.target.visits) / self.target.goal
-
+        # update state
         self.update_state()
+        if not self.is_lost():
+            if self.is_deep_drilling:
+                self.target.visits += self.remaining_dd_visits
+            else:
+                self.target.visits += 1
+            self.target.progress = float(self.target.visits) / self.target.goal
+
+        # reset to first subevent
+        self.subevent_index = 0
+        self.subevent_num_visits_left = self.visits_list[0]
+        self.event_visits_list = []
+        if self.is_deep_drilling:
+            self.remaining_dd_visits = self.num_visits_per_event
 
     def register_observation(self, time):
 
-        self.all_events_list.append(time)
-        self.obs_events_list.append(time)
-
+        self.event_visits_list.append(time)
+        self.subevent_num_visits_left -= 1
+        self.remaining_dd_visits -= 1
         self.target.visits += 1
         self.target.progress = float(self.target.visits) / self.target.goal
+        if self.subevent_num_visits_left == 0:
+            # subevent is complete
+            if self.subevent_index == (self.num_subevents - 1):
+                # event is complete
+                # observation is recorded with first visit timestamp
+                self.all_events_list.append(self.event_visits_list[0])
+                self.obs_events_list.append(self.event_visits_list[0])
+                # reset to first subevent
+                self.subevent_index = 0
+                self.subevent_num_visits_left = self.visits_list[0]
+                self.event_visits_list = []
+                if self.is_deep_drilling:
+                    self.remaining_dd_visits = self.num_visits_per_event
+            else:
+                # advance to next subevent
+                self.subevent_index += 1
+                self.subevent_num_visits_left = self.visits_list[self.subevent_index]
 
         self.update_state()

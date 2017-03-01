@@ -403,7 +403,7 @@ class Main(object):
                     nightstamp = self.topicTime.night
                     is_down = self.topicTime.is_down
                     down_duration = self.topicTime.down_duration
-                    self.log.debug("run: rx time=%.6f night=%i is_down=%s down_duration=%.1f" %
+                    self.log.log(EXTENSIVE, "run: rx time=%.6f night=%i is_down=%s down_duration=%.1f" %
                                    (self.topicTime.timestamp, nightstamp, is_down, down_duration))
                     if self.topicTime.timestamp > timestamp:
                         timestamp = self.topicTime.timestamp
@@ -432,7 +432,7 @@ class Main(object):
                                 waitstate = False
                                 observatory_state = self.rtopic_observatory_state(self.topicObservatoryState)
 
-                                self.log.debug("run: rx state %s" % str(observatory_state))
+                                self.log.log(TRACE, "run: rx state %s" % str(observatory_state))
 
                                 self.schedulerDriver.update_internal_conditions(observatory_state, nightstamp)
 
@@ -469,7 +469,7 @@ class Main(object):
                                                 waitseeing = False
                                                 seeing = 0.0
 
-                                    self.log.debug("run: rx conditions cloud=%.2f seeing=%.2f" %
+                                    self.log.log(EXTENSIVE, "run: rx conditions cloud=%.2f seeing=%.2f" %
                                                    (cloud, seeing))
                                     self.schedulerDriver.update_external_conditions(cloud, seeing)
 
@@ -493,13 +493,13 @@ class Main(object):
                                             synccount += 1
 
                                             obs = self.rtopic_observation(self.topicObservation)
-                                            self.log.debug("run: rx observation %s", str(obs))
+                                            self.log.log(EXTENSIVE, "run: rx observation %s", str(obs))
                                             target_list = self.schedulerDriver.register_observation(obs)
                                             s = self.wtopic_interestedProposal(self.tInterestedProposal,
                                                                                self.topicObservation.targetId,
                                                                                target_list)
                                             self.sal.putSample_interestedProposal(self.tInterestedProposal)
-                                            self.log.debug("run: tx interested %s", s)
+                                            self.log.log(EXTENSIVE, "run: tx interested %s", s)
                                             waitobservation = False
                                         else:
                                             self.log.warning("run: rx unsync observation Id=%i "

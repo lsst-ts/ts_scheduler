@@ -101,6 +101,9 @@ class Driver(object):
         self.nulltarget.bonus_list = [0.0]
         self.nulltarget.value_list = [0.0]
         self.nulltarget.propboost_list = [1.0]
+        self.last_winner_target = self.nulltarget.get_copy()
+        self.last_observation = self.nulltarget.get_copy()
+        self.in_deep_drilling = False
 
         self.need_filter_swap = False
         self.filter_to_unmount = ""
@@ -482,6 +485,11 @@ class Driver(object):
                 propboost_dict[prop.propid] = 1.0
             sumboost += propboost_dict[prop.propid]
 
+        if self.in_deep_drilling:
+            deepdrilling_target = self.last_observation
+        else:
+            deepdrilling_target = None
+
         if self.observatoryModel.is_filter_change_allowed():
             constrained_filter = None
         else:
@@ -496,8 +504,8 @@ class Driver(object):
             propboost_dict[prop.propid] = \
                 propboost_dict[prop.propid] * len(self.science_proposal_list) / sumboost
 
-            proptarget_list = prop.suggest_targets(self.time, constrained_filter, self.cloud, self.seeing)
-            self.log.debug("select_next_target propid=%d name=%s targets=%d progress=%.2f%% propboost=%.3f" %
+            proptarget_list = prop.suggest_targets(self.time, deepdrilling_target, constrained_filter, self.cloud, self.seeing)
+            self.log.log(EXTENSIVE, "select_next_target propid=%d name=%s targets=%d progress=%.2f%% propboost=%.3f" %
                            (prop.propid, prop.name, len(proptarget_list), 100 * progress,
                             propboost_dict[prop.propid]))
 
@@ -509,6 +517,13 @@ class Driver(object):
                 target.bonus_list = [target.bonus]
                 target.value_list = [target.value]
                 target.propboost_list = [target.propboost]
+                target.sequenceid_list = [target.sequenceid]
+                target.subsequencename_list = [target.subsequencename]
+                target.groupid_list = [target.groupid]
+                target.groupix_list = [target.groupix]
+                target.is_deep_drilling_list = [target.is_deep_drilling]
+                target.remaining_dd_visits_list = [target.remaining_dd_visits]
+
                 fieldfilter = (target.fieldid, target.filter)
                 if fieldfilter in targets_dict:
                     if self.params.coadd_values:
@@ -516,12 +531,25 @@ class Driver(object):
                         targets_dict[fieldfilter][0].bonus += target.bonus
                         targets_dict[fieldfilter][0].value += target.value
                         targets_dict[fieldfilter][0].propboost *= target.propboost
+                        if target.is_deep_drilling:
+                            targets_dict[fieldfilter][0].sequenceid = target.sequenceid
+                            targets_dict[fieldfilter][0].subsequencename = target.subsequencename
+                            targets_dict[fieldfilter][0].groupid = target.groupid
+                            targets_dict[fieldfilter][0].groupix = target.groupix
+                            targets_dict[fieldfilter][0].is_deep_drilling = True
+                            targets_dict[fieldfilter][0].remaining_dd_visits = target.remaining_dd_visits
                         targets_dict[fieldfilter][0].num_props += 1
                         targets_dict[fieldfilter][0].propid_list.append(prop.propid)
                         targets_dict[fieldfilter][0].need_list.append(target.need)
                         targets_dict[fieldfilter][0].bonus_list.append(target.bonus)
                         targets_dict[fieldfilter][0].value_list.append(target.value)
                         targets_dict[fieldfilter][0].propboost_list.append(target.propboost)
+                        targets_dict[fieldfilter][0].sequenceid_list.append(target.sequenceid)
+                        targets_dict[fieldfilter][0].subsequencename_list.append(target.subsequencename)
+                        targets_dict[fieldfilter][0].groupid_list.append(target.groupid)
+                        targets_dict[fieldfilter][0].groupix_list.append(target.groupix)
+                        targets_dict[fieldfilter][0].is_deep_drilling_list.append(target.is_deep_drilling)
+                        targets_dict[fieldfilter][0].remaining_dd_visits_list.append(target.remaining_dd_visits)
                     else:
                         targets_dict[fieldfilter].append(target.get_copy())
                 else:
@@ -562,18 +590,34 @@ class Driver(object):
                                str(self.observatoryModel2.currentState))
 
         if winner_found:
-            return winner_target
+            self.last_winner_target = winner_target.get_copy()
         else:
-            return self.nulltarget
+            self.last_winner_target = self.nulltarget.get_copy()
+
+        return self.last_winner_target
 
     def register_observation(self, observation):
 
         target_list = []
         if observation.targetid > 0:
+            if self.observation_fulfills_target(observation, self.last_winner_target):
+                observation = self.last_winner_target
+            else:
+                self.log.info("register_observation: unexpected observation %s" % str(observation))
+
             for prop in self.science_proposal_list:
                 target = prop.register_observation(observation)
                 if target is not None:
                     target_list.append(target)
+
+        self.last_observation = observation.get_copy()
+        if self.last_observation.is_deep_drilling:
+            self.in_deep_drilling = True
+            self.remaining_dd_visits = self.last_observation.remaining_dd_visits
+        else:
+            self.in_deep_drilling = False
+            self.remaining_dd_visits = 0
+
         return target_list
 
     def compute_slewtime_cost(self, slewtime):
@@ -592,3 +636,7 @@ class Driver(object):
             cost = 0.0
 
         return cost
+
+    def observation_fulfills_target(self, observ, target):
+
+        return (observ.fieldid == target.fieldid) and (observ.filter == target.filter)

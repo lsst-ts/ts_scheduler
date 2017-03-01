@@ -3,6 +3,7 @@ import numpy
 
 from operator import itemgetter
 
+from lsst.ts.scheduler.setup import TRACE, EXTENSIVE
 from lsst.ts.scheduler.kernel import Field
 from lsst.ts.scheduler.proposals import Proposal
 from lsst.ts.scheduler.proposals.sequence import Sequence
@@ -206,7 +207,7 @@ class TimeDistributionProposal(Proposal):
         else:
             return 0.0
 
-    def suggest_targets(self, timestamp, constrained_filter, cloud, seeing):
+    def suggest_targets(self, timestamp, deepdrilling_target, constrained_filter, cloud, seeing):
 
         Proposal.suggest_targets(self, timestamp)
 
@@ -221,7 +222,23 @@ class TimeDistributionProposal(Proposal):
 
         self.clear_evaluated_target_list()
 
-        fields_evaluation_list = self.tonight_fields_list
+        if deepdrilling_target is None:
+            fields_evaluation_list = self.tonight_fields_list
+            num_targets_to_propose = self.params.max_num_targets
+            in_deep_drilling = False
+        else:
+            if deepdrilling_target.propid == self.propid:
+                fields_evaluation_list = [self.survey_fields_dict[deepdrilling_target.fieldid]]
+                num_targets_to_propose = 1
+                in_deep_drilling = True
+            else:
+                if deepdrilling_target.fieldid in self.tonight_fields_list:
+                    fields_evaluation_list = [self.survey_fields_dict[deepdrilling_target.fieldid]]
+                else:
+                    fields_evaluation_list = []
+                num_targets_to_propose = 0
+                in_deep_drilling = False
+
         if constrained_filter is None:
             filters_evaluation_list = self.tonight_filters_list
         else:
@@ -249,6 +266,36 @@ class TimeDistributionProposal(Proposal):
                 mags_dict[fieldid] = {k: v[ix] for k, v in sky_mags.items()}
                 airmass_dict[fieldid] = airmass[ix]
                 moon_distance_dict[fieldid] = moon_distance[ix]
+
+        if in_deep_drilling:
+            fieldid = deepdrilling_target.fieldid
+            sequence = self.tonight_sequences_dict[fieldid]
+            target = sequence.get_next_target_subsequence(deepdrilling_target.subsequencename)
+            filter = target.filter
+
+            if self.ignore_airmass:
+                airmass = 1.0
+            else:
+                airmass = airmass_dict[fieldid]
+            if self.ignore_sky_brightness:
+                sky_brightness = 0.0
+            else:
+                sky_brightness = mags_dict[fieldid][filter]
+                if math.isnan(sky_brightness):
+                    sky_brightness = 0.0
+
+            target.time = timestamp
+            target.airmass = airmass
+            target.sky_brightness = sky_brightness
+            target.cloud = cloud
+            target.seeing = seeing
+
+            target.need = 1.0
+            target.bonus = 0.0
+            target.value = target.need + target.bonus
+            self.add_evaluated_target(target)
+
+            return self.get_evaluated_target_list(1)
 
         evaluated_fields = 0
         discarded_fields_airmass = 0
@@ -342,6 +389,7 @@ class TimeDistributionProposal(Proposal):
                     target.need = need_ratio
                     target.bonus = airmass_rank
                     target.value = target.need + target.bonus
+
                     self.add_evaluated_target(target)
                 elif need_ratio < 0.0:
                     # subsequence event missed
@@ -354,9 +402,9 @@ class TimeDistributionProposal(Proposal):
             self.survey_sequences_dict[fieldid].miss_observation_subsequence(name, timestamp)
             self.evaluate_sequence_continuation(fieldid, "missed observation")
 
-        self.log.debug("suggest_targets: fields=%i, evaluated=%i, discarded airmass=%i notargets=%i" %
+        self.log.log(EXTENSIVE, "suggest_targets: fields=%i, evaluated=%i, discarded airmass=%i notargets=%i" %
                        (len(id_list), evaluated_fields, discarded_fields_airmass, discarded_fields_notargets))
-        self.log.debug("suggest_targets: evaluated targets=%i, discarded consecutive=%i "
+        self.log.log(EXTENSIVE, "suggest_targets: evaluated targets=%i, discarded consecutive=%i "
                        "seeing=%i "
                        "lowbright=%i highbright=%i nanbright=%i moondistance=%i" %
                        (evaluated_targets, discarded_targets_consecutive,
@@ -364,7 +412,7 @@ class TimeDistributionProposal(Proposal):
                         discarded_targets_lowbrightness, discarded_targets_highbrightness,
                         discarded_targets_nanbrightness, discarded_moon_distance))
 
-        return self.get_evaluated_target_list()
+        return self.get_evaluated_target_list(num_targets_to_propose)
 
     def clear_evaluated_target_list(self):
 
@@ -374,12 +422,12 @@ class TimeDistributionProposal(Proposal):
 
         self.valued_targets_list.append((-target.value, target))
 
-    def get_evaluated_target_list(self):
+    def get_evaluated_target_list(self, num_targets_to_propose):
 
         sorted_list = sorted(self.valued_targets_list, key=itemgetter(0))
 
         self.winners_list = []
-        for ix in range(min(len(sorted_list), self.params.max_num_targets)):
+        for ix in range(min(len(sorted_list), num_targets_to_propose)):
             self.winners_list.append(sorted_list.pop(0)[1])
 
         self.losers_list = []
@@ -411,7 +459,7 @@ class TimeDistributionProposal(Proposal):
                     break
 
         if tfound is not None:
-            self.log.debug("register_observation: %s" % (target))
+            self.log.log(EXTENSIVE, "register_observation: %s" % (target))
 
             self.survey_sequences_dict[fieldid].register_observation(observation)
             self.evaluate_sequence_continuation(fieldid, "new observation")

@@ -101,7 +101,7 @@ class AreaDistributionProposalTest(unittest.TestCase):
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
                          "time=0.0 airmass=0.000 brightness=0.000 cloud=0.00 seeing=0.00 "
                          "visits=0 progress=0.00% "
-                         "groupid=1 groupix=1 "
+                         "seqid=0 ssname= groupid=1 groupix=1 ddvisits=0 "
                          "need=0.000 bonus=0.000 value=0.000 propboost=1.000 "
                          "propid=[] need=[] bonus=[] value=[] propboost=[] "
                          "slewtime=0.000 cost=0.000 rank=0.000")
@@ -110,7 +110,7 @@ class AreaDistributionProposalTest(unittest.TestCase):
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
                          "time=0.0 airmass=0.000 brightness=0.000 cloud=0.00 seeing=0.00 "
                          "visits=0 progress=0.00% "
-                         "groupid=1 groupix=1 "
+                         "seqid=0 ssname= groupid=1 groupix=1 ddvisits=0 "
                          "need=0.000 bonus=0.000 value=0.000 propboost=1.000 "
                          "propid=[] need=[] bonus=[] value=[] propboost=[] "
                          "slewtime=0.000 cost=0.000 rank=0.000")
@@ -126,14 +126,14 @@ class AreaDistributionProposalTest(unittest.TestCase):
         self.areaprop.start_night(lsst_start_timestamp, ["g", "r", "i", "z", "y"], night)
 
         timestamp = lsst_start_timestamp
-        target_list = self.areaprop.suggest_targets(timestamp, None, 0, 0)
+        target_list = self.areaprop.suggest_targets(timestamp, None, None, 0, 0)
         self.assertEqual(len(target_list), 40)
         self.assertEqual(str(target_list[0]),
                          "targetid=0 field=1764 filter=y exp_times=[15.0, 15.0] ra=13.726 dec=-19.793 "
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
                          "time=1641000000.0 airmass=1.210 brightness=18.017 cloud=0.00 seeing=0.00 "
                          "visits=0 progress=0.00% "
-                         "groupid=1 groupix=1 "
+                         "seqid=0 ssname= groupid=1 groupix=1 ddvisits=0 "
                          "need=1.000 bonus=0.000 value=1.000 propboost=1.000 "
                          "propid=[] need=[] bonus=[] value=[] propboost=[] "
                          "slewtime=0.000 cost=0.000 rank=0.000")
@@ -142,20 +142,20 @@ class AreaDistributionProposalTest(unittest.TestCase):
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
                          "time=1641000000.0 airmass=1.522 brightness=21.692 cloud=0.00 seeing=0.00 "
                          "visits=0 progress=0.00% "
-                         "groupid=1 groupix=1 "
+                         "seqid=0 ssname= groupid=1 groupix=1 ddvisits=0 "
                          "need=1.000 bonus=0.000 value=1.000 propboost=1.000 "
                          "propid=[] need=[] bonus=[] value=[] propboost=[] "
                          "slewtime=0.000 cost=0.000 rank=0.000")
 
         timestamp += 60
-        target_list = self.areaprop.suggest_targets(timestamp, None, 0, 0)
+        target_list = self.areaprop.suggest_targets(timestamp, None, None, 0, 0)
         self.assertEqual(len(target_list), 40)
         self.assertEqual(str(target_list[0]),
                          "targetid=0 field=1764 filter=y exp_times=[15.0, 15.0] ra=13.726 dec=-19.793 "
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
                          "time=1641000060.0 airmass=1.213 brightness=18.015 cloud=0.00 seeing=0.00 "
                          "visits=0 progress=0.00% "
-                         "groupid=1 groupix=1 "
+                         "seqid=0 ssname= groupid=1 groupix=1 ddvisits=0 "
                          "need=1.000 bonus=0.000 value=1.000 propboost=1.000 "
                          "propid=[] need=[] bonus=[] value=[] propboost=[] "
                          "slewtime=0.000 cost=0.000 rank=0.000")
@@ -164,7 +164,7 @@ class AreaDistributionProposalTest(unittest.TestCase):
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
                          "time=1641000060.0 airmass=1.528 brightness=21.694 cloud=0.00 seeing=0.00 "
                          "visits=0 progress=0.00% "
-                         "groupid=1 groupix=1 "
+                         "seqid=0 ssname= groupid=1 groupix=1 ddvisits=0 "
                          "need=1.000 bonus=0.000 value=1.000 propboost=1.000 "
                          "propid=[] need=[] bonus=[] value=[] propboost=[] "
                          "slewtime=0.000 cost=0.000 rank=0.000")
@@ -185,14 +185,14 @@ class AreaDistributionProposalTest(unittest.TestCase):
         self.assertEqual(self.areaprop.survey_targets_progress, 0.001)
 
         timestamp += 60
-        target_list = self.areaprop.suggest_targets(timestamp, None, 0, 0)
+        target_list = self.areaprop.suggest_targets(timestamp, None, None, 0, 0)
         self.assertEqual(len(target_list), 40)
         self.assertEqual(str(target_list[0]),
                          "targetid=0 field=1764 filter=r exp_times=[15.0, 15.0] ra=13.726 dec=-19.793 "
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
                          "time=1641000120.0 airmass=1.217 brightness=21.017 cloud=0.00 seeing=0.00 "
                          "visits=0 progress=0.00% "
-                         "groupid=1 groupix=1 "
+                         "seqid=0 ssname= groupid=1 groupix=1 ddvisits=0 "
                          "need=1.001 bonus=0.000 value=1.001 propboost=1.000 "
                          "propid=[] need=[] bonus=[] value=[] propboost=[] "
                          "slewtime=0.000 cost=0.000 rank=0.000")
@@ -201,7 +201,7 @@ class AreaDistributionProposalTest(unittest.TestCase):
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
                          "time=1641000120.0 airmass=1.217 brightness=18.014 cloud=0.00 seeing=0.00 "
                          "visits=1 progress=5.00% "
-                         "groupid=2 groupix=1 "
+                         "seqid=0 ssname= groupid=2 groupix=1 ddvisits=0 "
                          "need=0.951 bonus=0.000 value=0.951 propboost=1.000 "
                          "propid=[] need=[] bonus=[] value=[] propboost=[] "
                          "slewtime=0.000 cost=0.000 rank=0.000")

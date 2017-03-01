@@ -24,10 +24,9 @@ class Sequence(object):
             self.enabled_subsequences_list.append(name)
             self.goal += subsequence.goal
             for filter in subsequence.filters_goal_dict:
-                if filter in self.filters_goal_dict:
-                    self.filters_goal_dict[filter] += subsequence.filters_goal_dict[filter]
-                else:
-                    self.filters_goal_dict[filter] = subsequence.filters_goal_dict[filter]
+                if filter not in self.filters_goal_dict:
+                    self.filters_goal_dict[filter] = 0
+                self.filters_goal_dict[filter] += subsequence.filters_goal_dict[filter]
 
         self.update_state()
 

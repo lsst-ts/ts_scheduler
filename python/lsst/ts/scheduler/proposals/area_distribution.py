@@ -3,6 +3,7 @@ import numpy
 
 from operator import itemgetter
 
+from lsst.ts.scheduler.setup import TRACE, EXTENSIVE
 from lsst.ts.scheduler.kernel import Field, Target
 from lsst.ts.scheduler.proposals import Proposal
 
@@ -216,7 +217,7 @@ class AreaDistributionProposal(Proposal):
         else:
             return 0.0
 
-    def suggest_targets(self, timestamp, constrained_filter, cloud, seeing):
+    def suggest_targets(self, timestamp, deepdrilling_target, constrained_filter, cloud, seeing):
 
         Proposal.suggest_targets(self, timestamp)
 
@@ -231,7 +232,16 @@ class AreaDistributionProposal(Proposal):
 
         self.clear_evaluated_target_list()
 
-        fields_evaluation_list = self.tonight_fields_list
+        if deepdrilling_target is None:
+            fields_evaluation_list = self.tonight_fields_list
+            num_targets_to_propose = self.params.max_num_targets
+        else:
+            if deepdrilling_target.fieldid in self.tonight_fields_list:
+                fields_evaluation_list = [self.survey_fields_dict[deepdrilling_target.fieldid]]
+            else:
+                fields_evaluation_list = []
+            num_targets_to_propose = 0
+
         if constrained_filter is None:
             filters_evaluation_list = self.tonight_filters_list
         else:
@@ -370,9 +380,9 @@ class AreaDistributionProposal(Proposal):
         for target in groups_to_close_list:
             self.close_group(target, "group lost")
 
-        self.log.debug("suggest_targets: fields=%i, evaluated=%i, discarded airmass=%i notargets=%i" %
+        self.log.log(EXTENSIVE, "suggest_targets: fields=%i, evaluated=%i, discarded airmass=%i notargets=%i" %
                        (len(id_list), evaluated_fields, discarded_fields_airmass, discarded_fields_notargets))
-        self.log.debug("suggest_targets: evaluated targets=%i, discarded consecutive=%i "
+        self.log.log(EXTENSIVE, "suggest_targets: evaluated targets=%i, discarded consecutive=%i "
                        "seeing=%i "
                        "lowbright=%i highbright=%i nanbright=%i moondistance=%i" %
                        (evaluated_targets, discarded_targets_consecutive,
@@ -380,7 +390,7 @@ class AreaDistributionProposal(Proposal):
                         discarded_targets_lowbrightness, discarded_targets_highbrightness,
                         discarded_targets_nanbrightness, discarded_moon_distance))
 
-        return self.get_evaluated_target_list()
+        return self.get_evaluated_target_list(num_targets_to_propose)
 
     def clear_evaluated_target_list(self):
 
@@ -390,12 +400,12 @@ class AreaDistributionProposal(Proposal):
 
         self.valued_targets_list.append((-target.value, target))
 
-    def get_evaluated_target_list(self):
+    def get_evaluated_target_list(self, num_targets_to_propose):
 
         sorted_list = sorted(self.valued_targets_list, key=itemgetter(0))
 
         self.winners_list = []
-        for ix in range(min(len(sorted_list), self.params.max_num_targets)):
+        for ix in range(min(len(sorted_list), num_targets_to_propose)):
             self.winners_list.append(sorted_list.pop(0)[1])
 
         self.losers_list = []
@@ -427,7 +437,7 @@ class AreaDistributionProposal(Proposal):
                     break
 
         if tfound is not None:
-            self.log.debug("register_observation: %s" % (target))
+            self.log.log(EXTENSIVE, "register_observation: %s" % (target))
 
             target.targetid = observation.targetid
             target = self.survey_targets_dict[fieldid][filter]
@@ -475,12 +485,12 @@ class AreaDistributionProposal(Proposal):
 
         fieldid = target.fieldid
         filter = target.filter
-        self.log.debug("remove_target: %s fieldid=%i filter=%s" %
+        self.log.log(EXTENSIVE, "remove_target: %s fieldid=%i filter=%s" %
                        (text, fieldid, filter))
         del self.tonight_targets_dict[fieldid][filter]
         if not self.tonight_targets_dict[fieldid]:
             # field with no targets, remove from tonight dict
-            self.log.debug("remove_target: fieldid=%i with no targets" %
+            self.log.log(EXTENSIVE, "remove_target: fieldid=%i with no targets" %
                            (fieldid))
             del self.tonight_targets_dict[fieldid]
             for field in self.tonight_fields_list:

@@ -39,8 +39,13 @@ class Target(object):
         self.goal = 0
         self.visits = 0
         self.progress = 0.0
+
+        self.sequenceid = 0
+        self.subsequencename = ""
         self.groupid = 0
         self.groupix = 0
+        self.is_deep_drilling = False
+        self.remaining_dd_visits = 0
 
         #computed at driver
         self.alt_rad = 0.0
@@ -61,6 +66,12 @@ class Target(object):
         self.bonus_list = []
         self.value_list = []
         self.propboost_list = []
+        self.sequenceid_list = []
+        self.subsequencename_list = []
+        self.groupid_list = []
+        self.groupix_list = []
+        self.is_deep_drilling_list = []
+        self.remaining_dd_visits_list = []
 
         #stamped at observation
         self.last_visit_time = 0.0
@@ -88,8 +99,14 @@ class Target(object):
         newtarget.goal = self.goal
         newtarget.visits = self.visits
         newtarget.progress = self.progress
+
+        newtarget.sequenceid = self.sequenceid
+        newtarget.subsequencename = self.subsequencename
         newtarget.groupid = self.groupid
         newtarget.groupix = self.groupix
+        newtarget.is_deep_drilling = self.is_deep_drilling
+        newtarget.remaining_dd_visits = self.remaining_dd_visits
+
         newtarget.alt_rad = self.alt_rad
         newtarget.az_rad = self.az_rad
         newtarget.rot_rad = self.rot_rad
@@ -106,6 +123,19 @@ class Target(object):
         newtarget.bonus_list = list(self.bonus_list)
         newtarget.value_list = list(self.value_list)
         newtarget.propboost_list = list(self.propboost_list)
+        newtarget.sequenceid_list = list(self.sequenceid_list)
+        newtarget.subsequencename_list = list(self.subsequencename_list)
+        newtarget.groupid_list = list(self.groupid_list)
+        newtarget.groupix_list = list(self.groupix_list)
+        newtarget.is_deep_drilling_list = list(self.is_deep_drilling_list)
+        newtarget.remaining_dd_visits_list = list(self.remaining_dd_visits_list)
+
+        self.sequenceid_list = []
+        self.subsequencename_list = []
+        self.groupid_list = []
+        self.groupix_list = []
+        self.is_deep_drilling_list = []
+        self.remaining_dd_visits_list = []
 
         return newtarget
 
@@ -116,7 +146,9 @@ class Target(object):
                 "time=%.1f airmass=%.3f brightness=%.3f "
                 "cloud=%.2f seeing=%.2f "
                 "visits=%i progress=%.2f%% "
+                "seqid=%i ssname=%s "
                 "groupid=%i groupix=%i "
+                "ddvisits=%i "
                 "need=%.3f bonus=%.3f value=%.3f propboost=%.3f "
                 "propid=%s need=%s bonus=%s value=%s propboost=%s "
                 "slewtime=%.3f cost=%.3f rank=%.3f" %
@@ -127,7 +159,10 @@ class Target(object):
                  self.time, self.airmass, self.sky_brightness,
                  self.cloud, self.seeing,
                  self.visits, 100 * self.progress,
+                 self.sequenceid,
+                 self.subsequencename,
                  self.groupid, self.groupix,
+                 self.remaining_dd_visits,
                  self.need, self.bonus, self.value, self.propboost,
                  self.propid_list, numpy.round(self.need_list, 3), numpy.round(self.bonus_list, 3),
                  numpy.round(self.value_list, 3), numpy.round(self.propboost_list, 3),
