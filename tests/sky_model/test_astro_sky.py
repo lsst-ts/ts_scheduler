@@ -167,3 +167,11 @@ class AstronomicalSkyTest(unittest.TestCase):
         self.assertEqual(dp.location.latitude, latitude)
         self.assertEqual(dp.location.longitude, longitude)
         self.assertEqual(dp.location.height, height)
+
+    def test_get_hour_angle(self):
+        initial_timestamp = 1641081600 + (.04166666666 * 3600 * 24)
+        self.create_ra_dec()
+        self.astro_sky.update(initial_timestamp)
+        hour_angle = self.astro_sky.get_hour_angle(self.ra_rads)
+        self.assertEqual(hour_angle.size, self.ra_rads.size)
+        self.assertAlmostEqual(hour_angle[0], 0.80123444432390389, delta=1e-7)

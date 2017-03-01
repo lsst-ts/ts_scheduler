@@ -884,6 +884,8 @@ class Main(object):
         confdict["scheduling"]["accept_serendipity"] = accept_serendipity
         confdict["scheduling"]["accept_consecutive_visits"] = accept_consecutive_visits
         confdict["scheduling"]["airmass_bonus"] = topic_areapropconf.airmass_bonus
+        confdict["scheduling"]["hour_angle_bonus"] = topic_areapropconf.hour_angle_bonus
+        confdict["scheduling"]["hour_angle_max"] = topic_areapropconf.hour_angle_max
 
         confdict["scheduling"]["restrict_grouped_visits"] = topic_areapropconf.restrict_grouped_visits
         confdict["scheduling"]["time_interval"] = topic_areapropconf.time_interval
@@ -1033,6 +1035,8 @@ class Main(object):
         confdict["scheduling"]["accept_serendipity"] = accept_serendipity
         confdict["scheduling"]["accept_consecutive_visits"] = accept_consecutive_visits
         confdict["scheduling"]["airmass_bonus"] = topic_seqpropconf.airmass_bonus
+        confdict["scheduling"]["hour_angle_bonus"] = topic_seqpropconf.hour_angle_bonus
+        confdict["scheduling"]["hour_angle_max"] = topic_seqpropconf.hour_angle_max
 
         return confdict
 

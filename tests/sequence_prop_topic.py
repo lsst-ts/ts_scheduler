@@ -124,3 +124,5 @@ seqprop.max_num_targets = 100
 seqprop.accept_serendipity = False
 seqprop.accept_consecutive_visits = True
 seqprop.airmass_bonus = 0.5
+seqprop.hour_angle_bonus = 0.5
+seqprop.hour_angle_max = 5.0
