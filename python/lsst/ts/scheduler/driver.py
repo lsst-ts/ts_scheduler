@@ -491,6 +491,7 @@ class Driver(object):
 
         if self.in_deep_drilling:
             deepdrilling_target = self.last_observation
+            self.log.debug("select_next_target: in deep drilling target=%s" % str(deepdrilling_target))
         else:
             deepdrilling_target = None
 
@@ -508,10 +509,13 @@ class Driver(object):
             propboost_dict[prop.propid] = \
                 propboost_dict[prop.propid] * len(self.science_proposal_list) / sumboost
 
-            proptarget_list = prop.suggest_targets(self.time, deepdrilling_target, constrained_filter, self.cloud, self.seeing)
-            self.log.log(EXTENSIVE, "select_next_target propid=%d name=%s targets=%d progress=%.2f%% propboost=%.3f" %
-                           (prop.propid, prop.name, len(proptarget_list), 100 * progress,
-                            propboost_dict[prop.propid]))
+            proptarget_list = prop.suggest_targets(self.time,
+                                                   deepdrilling_target, constrained_filter,
+                                                   self.cloud, self.seeing)
+            self.log.log(EXTENSIVE, "select_next_target propid=%d name=%s "
+                         "targets=%d progress=%.2f%% propboost=%.3f" %
+                         (prop.propid, prop.name,
+                          len(proptarget_list), 100 * progress, propboost_dict[prop.propid]))
 
             for target in proptarget_list:
                 target.num_props = 1
