@@ -404,7 +404,7 @@ class Main(object):
                     is_down = self.topicTime.is_down
                     down_duration = self.topicTime.down_duration
                     self.log.log(EXTENSIVE, "run: rx time=%.6f night=%i is_down=%s down_duration=%.1f" %
-                                   (self.topicTime.timestamp, nightstamp, is_down, down_duration))
+                                 (self.topicTime.timestamp, nightstamp, is_down, down_duration))
                     if self.topicTime.timestamp > timestamp:
                         timestamp = self.topicTime.timestamp
                         isnight = self.schedulerDriver.update_time(timestamp, nightstamp)
@@ -470,7 +470,7 @@ class Main(object):
                                                 seeing = 0.0
 
                                     self.log.log(EXTENSIVE, "run: rx conditions cloud=%.2f seeing=%.2f" %
-                                                   (cloud, seeing))
+                                                 (cloud, seeing))
                                     self.schedulerDriver.update_external_conditions(cloud, seeing)
 
                                     target = self.schedulerDriver.select_next_target()

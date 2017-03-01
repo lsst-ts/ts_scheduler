@@ -3,7 +3,7 @@ import numpy
 
 from operator import itemgetter
 
-from lsst.ts.scheduler.setup import TRACE, EXTENSIVE
+from lsst.ts.scheduler.setup import EXTENSIVE
 from lsst.ts.scheduler.kernel import Field, Target
 from lsst.ts.scheduler.proposals import Proposal
 
@@ -92,6 +92,7 @@ class AreaDistributionProposal(Proposal):
         self.tonight_filters_list = []
         self.tonight_fields = 0
         self.tonight_fields_list = []
+        self.tonight_fieldid_list = []
         self.tonight_targets = 0
         self.tonight_targets_dict = {}
 
@@ -182,6 +183,7 @@ class AreaDistributionProposal(Proposal):
     def build_tonight_fields_list(self, timestamp, night):
 
         self.tonight_fields_list = []
+        self.tonight_fieldid_list = []
 
         sql = self.select_fields(timestamp, night, self.params.sky_region, self.params.sky_exclusions,
                                  self.params.sky_nightly_bounds)
@@ -191,7 +193,7 @@ class AreaDistributionProposal(Proposal):
         for row in res:
             field = Field.from_db_row(row)
             self.tonight_fields_list.append(field)
-
+            self.tonight_fieldid_list.append(field.fieldid)
         return
 
     def get_progress(self):
@@ -389,15 +391,17 @@ class AreaDistributionProposal(Proposal):
         for target in groups_to_close_list:
             self.close_group(target, "group lost")
 
-        self.log.log(EXTENSIVE, "suggest_targets: fields=%i, evaluated=%i, discarded airmass=%i notargets=%i" %
-                       (len(id_list), evaluated_fields, discarded_fields_airmass, discarded_fields_notargets))
+        self.log.log(EXTENSIVE, "suggest_targets: fields=%i, evaluated=%i, "
+                     "discarded airmass=%i notargets=%i" %
+                     (len(id_list), evaluated_fields,
+                      discarded_fields_airmass, discarded_fields_notargets))
         self.log.log(EXTENSIVE, "suggest_targets: evaluated targets=%i, discarded consecutive=%i "
-                       "seeing=%i "
-                       "lowbright=%i highbright=%i nanbright=%i moondistance=%i" %
-                       (evaluated_targets, discarded_targets_consecutive,
-                        discarded_targets_seeing,
-                        discarded_targets_lowbrightness, discarded_targets_highbrightness,
-                        discarded_targets_nanbrightness, discarded_moon_distance))
+                     "seeing=%i "
+                     "lowbright=%i highbright=%i nanbright=%i moondistance=%i" %
+                     (evaluated_targets, discarded_targets_consecutive,
+                      discarded_targets_seeing,
+                      discarded_targets_lowbrightness, discarded_targets_highbrightness,
+                      discarded_targets_nanbrightness, discarded_moon_distance))
 
         return self.get_evaluated_target_list(num_targets_to_propose)
 
@@ -495,17 +499,17 @@ class AreaDistributionProposal(Proposal):
         fieldid = target.fieldid
         filter = target.filter
         self.log.log(EXTENSIVE, "remove_target: %s fieldid=%i filter=%s" %
-                       (text, fieldid, filter))
+                     (text, fieldid, filter))
         del self.tonight_targets_dict[fieldid][filter]
         if not self.tonight_targets_dict[fieldid]:
             # field with no targets, remove from tonight dict
-            self.log.log(EXTENSIVE, "remove_target: fieldid=%i with no targets" %
-                           (fieldid))
+            self.log.log(EXTENSIVE, "remove_target: fieldid=%i with no targets" % (fieldid))
             del self.tonight_targets_dict[fieldid]
             for field in self.tonight_fields_list:
                 if field.fieldid == fieldid:
                     self.tonight_fields_list.remove(field)
                     break
+            self.tonight_fieldid_list.remove(fieldid)
 
     def time_window(self, deltaT):
 
