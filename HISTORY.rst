@@ -3,6 +3,24 @@
 History
 -------
 
+1.0   (2017-02-28)
+==================
+
+* Deep Drilling extension
+#	modified:   python/lsst/ts/scheduler/proposals/sequence.py
+#	modified:   python/lsst/ts/scheduler/proposals/subsequence.py
+#	modified:   python/lsst/ts/scheduler/proposals/time_distribution.py
+#	modified:   python/lsst/ts/scheduler/driver.py
+#	modified:   python/lsst/ts/scheduler/kernel/target.py
+    New extensions to the code to support Deep Drilling
+    new target.sequenceid is fieldid for now
+    new target.subsequencename is the sub-sequence name
+    target.groupid is reused as event counter
+    target.groupix is reused as subevent (filter) counter
+    new target.remaining_dd_visits is regresive counter for total visits in the event
+
+    Reduced log verbosity at level -v
+
 0.9.0 (2017-02-23)
 ==================
 

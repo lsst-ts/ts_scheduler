@@ -170,6 +170,7 @@ class TimeDistributionProposal(Proposal):
 
         self.last_observation = None
         self.last_observation_was_for_this_proposal = False
+        self.in_deep_drilling = False
 
     def end_night(self, timestamp):
 
@@ -182,6 +183,7 @@ class TimeDistributionProposal(Proposal):
             sequence.miss_observation_subsequence(ssname, timestamp)
             self.log.debug("end_night: miss observation field=%i, ssname=%s" % (fieldid, ssname))
             self.evaluate_sequence_continuation(fieldid, "end of night")
+            self.in_deep_drilling = False
 
     def build_tonight_fields_list(self, timestamp, night):
 
