@@ -432,7 +432,7 @@ class Main(object):
                                 waitstate = False
                                 observatory_state = self.rtopic_observatory_state(self.topicObservatoryState)
 
-                                self.log.log(TRACE, "run: rx state %s" % str(observatory_state))
+                                self.log.log(EXTENSIVE, "run: rx state %s" % str(observatory_state))
 
                                 self.schedulerDriver.update_internal_conditions(observatory_state, nightstamp)
 
@@ -508,7 +508,7 @@ class Main(object):
                                                               self.topicTarget.targetId))
                                     else:
                                         to = time.time()
-                                        if (to - lastobstime > 10.0):
+                                        if (to - lastobstime > 60.0):
                                             waitobservation = False
                                         self.log.log(TRACE, "run: t=%f lastobstime=%f" % (to, lastobstime))
 
@@ -522,7 +522,7 @@ class Main(object):
                                         meascount = 0
                             else:
                                 ts = time.time()
-                                if (ts - laststatetime > 10.0):
+                                if (ts - laststatetime > 60.0):
                                     waitstate = False
                                     self.log.log(TRACE, "run: t=%f laststatetime=%f" % (ts, laststatetime))
 
@@ -533,7 +533,7 @@ class Main(object):
 
                 else:
                     tc = time.time()
-                    if (tc - lasttimetime) > 10.0:
+                    if (tc - lasttimetime) > 60.0:
                         waittime = False
 
                 newtime = time.time()
