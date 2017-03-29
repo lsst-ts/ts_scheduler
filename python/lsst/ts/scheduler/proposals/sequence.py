@@ -85,7 +85,7 @@ class Sequence(object):
 
         self.subsequence_dict[name].miss_observation(time)
         if not self.subsequence_dict[name].is_idle_or_active():
-            self.enabled_subsequences_list.remove(name)
+            self.disable_subsequence(name)
 
         self.update_state()
 
@@ -97,13 +97,17 @@ class Sequence(object):
             if expected_target.filter == observation.filter:
                 self.subsequence_dict[name].register_observation(observation.time)
                 if not self.subsequence_dict[name].is_idle_or_active():
-                    self.enabled_subsequences_list.remove(name)
+                    self.disable_subsequence(name)
         self.update_state()
 
     def register_observation_subsequence(self, name, time):
 
         self.subsequence_dict[name].register_observation(time)
         if not self.subsequence_dict[name].is_idle_or_active():
-            self.enabled_subsequences_list.remove(name)
+            self.disable_subsequence(name)
 
         self.update_state()
+
+    def disable_subsequence(self, name):
+        if name in self.enabled_subsequences_list:
+            self.enabled_subsequences_list.remove(name)
