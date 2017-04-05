@@ -37,7 +37,7 @@ class ScriptedProposalTest(unittest.TestCase):
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
                          "time=1641090000.0 airmass=0.000 brightness=21.211 cloud=0.00 seeing=0.00 "
                          "visits=0 progress=0.00% "
-                         "seqid=0 ssname= groupid=0 groupix=0 ddvisits=0 "
+                         "seqid=0 ssname= groupid=0 groupix=0 firstdd=False ddvisits=0 "
                          "need=0.000 bonus=0.000 value=1.000 propboost=1.000 "
                          "propid=[] need=[] bonus=[] value=[] propboost=[] "
                          "slewtime=0.000 cost=0.000 rank=0.000")
@@ -48,7 +48,7 @@ class ScriptedProposalTest(unittest.TestCase):
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
                          "time=1641091040.0 airmass=0.000 brightness=nan cloud=0.00 seeing=0.00 "
                          "visits=0 progress=0.00% "
-                         "seqid=0 ssname= groupid=0 groupix=0 ddvisits=0 "
+                         "seqid=0 ssname= groupid=0 groupix=0 firstdd=False ddvisits=0 "
                          "need=0.000 bonus=0.000 value=1.000 propboost=1.000 "
                          "propid=[] need=[] bonus=[] value=[] propboost=[] "
                          "slewtime=0.000 cost=0.000 rank=0.000")
@@ -59,7 +59,7 @@ class ScriptedProposalTest(unittest.TestCase):
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
                          "time=1641091080.0 airmass=0.000 brightness=20.869 cloud=0.00 seeing=0.00 "
                          "visits=0 progress=0.00% "
-                         "seqid=0 ssname= groupid=0 groupix=0 ddvisits=0 "
+                         "seqid=0 ssname= groupid=0 groupix=0 firstdd=False ddvisits=0 "
                          "need=0.000 bonus=0.000 value=1.000 propboost=1.000 "
                          "propid=[] need=[] bonus=[] value=[] propboost=[] "
                          "slewtime=0.000 cost=0.000 rank=0.000")
@@ -70,7 +70,7 @@ class ScriptedProposalTest(unittest.TestCase):
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
                          "time=1641091120.0 airmass=0.000 brightness=nan cloud=0.00 seeing=0.00 "
                          "visits=0 progress=0.00% "
-                         "seqid=0 ssname= groupid=0 groupix=0 ddvisits=0 "
+                         "seqid=0 ssname= groupid=0 groupix=0 firstdd=False ddvisits=0 "
                          "need=0.000 bonus=0.000 value=1.000 propboost=1.000 "
                          "propid=[] need=[] bonus=[] value=[] propboost=[] "
                          "slewtime=0.000 cost=0.000 rank=0.000")
@@ -81,7 +81,7 @@ class ScriptedProposalTest(unittest.TestCase):
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
                          "time=1641091160.0 airmass=0.000 brightness=nan cloud=0.00 seeing=0.00 "
                          "visits=0 progress=0.00% "
-                         "seqid=0 ssname= groupid=0 groupix=0 ddvisits=0 "
+                         "seqid=0 ssname= groupid=0 groupix=0 firstdd=False ddvisits=0 "
                          "need=0.000 bonus=0.000 value=1.000 propboost=1.000 "
                          "propid=[] need=[] bonus=[] value=[] propboost=[] "
                          "slewtime=0.000 cost=0.000 rank=0.000")
@@ -92,7 +92,7 @@ class ScriptedProposalTest(unittest.TestCase):
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
                          "time=1641091200.0 airmass=0.000 brightness=19.857 cloud=0.00 seeing=0.00 "
                          "visits=0 progress=0.00% "
-                         "seqid=0 ssname= groupid=0 groupix=0 ddvisits=0 "
+                         "seqid=0 ssname= groupid=0 groupix=0 firstdd=False ddvisits=0 "
                          "need=0.000 bonus=0.000 value=1.000 propboost=1.000 "
                          "propid=[] need=[] bonus=[] value=[] propboost=[] "
                          "slewtime=0.000 cost=0.000 rank=0.000")
@@ -103,7 +103,7 @@ class ScriptedProposalTest(unittest.TestCase):
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
                          "time=1641091240.0 airmass=0.000 brightness=nan cloud=0.00 seeing=0.00 "
                          "visits=0 progress=0.00% "
-                         "seqid=0 ssname= groupid=0 groupix=0 ddvisits=0 "
+                         "seqid=0 ssname= groupid=0 groupix=0 firstdd=False ddvisits=0 "
                          "need=0.000 bonus=0.000 value=1.000 propboost=1.000 "
                          "propid=[] need=[] bonus=[] value=[] propboost=[] "
                          "slewtime=0.000 cost=0.000 rank=0.000")
@@ -114,7 +114,7 @@ class ScriptedProposalTest(unittest.TestCase):
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
                          "time=1641091280.0 airmass=0.000 brightness=nan cloud=0.00 seeing=0.00 "
                          "visits=0 progress=0.00% "
-                         "seqid=0 ssname= groupid=0 groupix=0 ddvisits=0 "
+                         "seqid=0 ssname= groupid=0 groupix=0 firstdd=False ddvisits=0 "
                          "need=0.000 bonus=0.000 value=1.000 propboost=1.000 "
                          "propid=[] need=[] bonus=[] value=[] propboost=[] "
                          "slewtime=0.000 cost=0.000 rank=0.000")
@@ -125,7 +125,7 @@ class ScriptedProposalTest(unittest.TestCase):
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
                          "time=1641091320.0 airmass=0.000 brightness=nan cloud=0.00 seeing=0.00 "
                          "visits=0 progress=0.00% "
-                         "seqid=0 ssname= groupid=0 groupix=0 ddvisits=0 "
+                         "seqid=0 ssname= groupid=0 groupix=0 firstdd=False ddvisits=0 "
                          "need=0.000 bonus=0.000 value=1.000 propboost=1.000 "
                          "propid=[] need=[] bonus=[] value=[] propboost=[] "
                          "slewtime=0.000 cost=0.000 rank=0.000")
@@ -136,7 +136,7 @@ class ScriptedProposalTest(unittest.TestCase):
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
                          "time=1641091360.0 airmass=0.000 brightness=17.725 cloud=0.00 seeing=0.00 "
                          "visits=0 progress=0.00% "
-                         "seqid=0 ssname= groupid=0 groupix=0 ddvisits=0 "
+                         "seqid=0 ssname= groupid=0 groupix=0 firstdd=False ddvisits=0 "
                          "need=0.000 bonus=0.000 value=1.000 propboost=1.000 "
                          "propid=[] need=[] bonus=[] value=[] propboost=[] "
                          "slewtime=0.000 cost=0.000 rank=0.000")
@@ -147,7 +147,7 @@ class ScriptedProposalTest(unittest.TestCase):
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
                          "time=1641091400.0 airmass=0.000 brightness=17.728 cloud=0.00 seeing=0.00 "
                          "visits=0 progress=0.00% "
-                         "seqid=0 ssname= groupid=0 groupix=0 ddvisits=0 "
+                         "seqid=0 ssname= groupid=0 groupix=0 firstdd=False ddvisits=0 "
                          "need=0.000 bonus=0.000 value=1.000 propboost=1.000 "
                          "propid=[] need=[] bonus=[] value=[] propboost=[] "
                          "slewtime=0.000 cost=0.000 rank=0.000")
@@ -158,7 +158,7 @@ class ScriptedProposalTest(unittest.TestCase):
                          "ang=0.000 alt=0.000 az=0.000 rot=0.000 telalt=0.000 telaz=0.000 telrot=0.000 "
                          "time=1641091440.0 airmass=0.000 brightness=17.731 cloud=0.00 seeing=0.00 "
                          "visits=0 progress=0.00% "
-                         "seqid=0 ssname= groupid=0 groupix=0 ddvisits=0 "
+                         "seqid=0 ssname= groupid=0 groupix=0 firstdd=False ddvisits=0 "
                          "need=0.000 bonus=0.000 value=1.000 propboost=1.000 "
                          "propid=[] need=[] bonus=[] value=[] propboost=[] "
                          "slewtime=0.000 cost=0.000 rank=0.000")

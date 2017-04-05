@@ -45,7 +45,11 @@ class Target(object):
         self.groupid = 0
         self.groupix = 0
         self.is_deep_drilling = False
+        self.is_dd_firstvisit = False
         self.remaining_dd_visits = 0
+        self.dd_exposures = 0
+        self.dd_filterchanges = 0
+        self.dd_exptime = 0.0
 
         #computed at driver
         self.alt_rad = 0.0
@@ -71,7 +75,11 @@ class Target(object):
         self.groupid_list = []
         self.groupix_list = []
         self.is_deep_drilling_list = []
+        self.is_dd_firstvisit_list = []
         self.remaining_dd_visits_list = []
+        self.dd_exposures_list = []
+        self.dd_filterchanges_list = []
+        self.dd_exptime_list = []
 
         #stamped at observation
         self.last_visit_time = 0.0
@@ -105,7 +113,11 @@ class Target(object):
         newtarget.groupid = self.groupid
         newtarget.groupix = self.groupix
         newtarget.is_deep_drilling = self.is_deep_drilling
+        newtarget.is_dd_firstvisit = self.is_dd_firstvisit
         newtarget.remaining_dd_visits = self.remaining_dd_visits
+        newtarget.dd_exposures = self.dd_exposures
+        newtarget.dd_filterchanges = self.dd_filterchanges
+        newtarget.dd_exptime = self.dd_exptime
 
         newtarget.alt_rad = self.alt_rad
         newtarget.az_rad = self.az_rad
@@ -128,14 +140,11 @@ class Target(object):
         newtarget.groupid_list = list(self.groupid_list)
         newtarget.groupix_list = list(self.groupix_list)
         newtarget.is_deep_drilling_list = list(self.is_deep_drilling_list)
+        newtarget.is_dd_firstvisit_list = list(self.is_dd_firstvisit_list)
         newtarget.remaining_dd_visits_list = list(self.remaining_dd_visits_list)
-
-        self.sequenceid_list = []
-        self.subsequencename_list = []
-        self.groupid_list = []
-        self.groupix_list = []
-        self.is_deep_drilling_list = []
-        self.remaining_dd_visits_list = []
+        newtarget.dd_exposures_list = list(self.dd_exposures_list)
+        newtarget.dd_filterchanges_list = list(self.dd_filterchanges_list)
+        newtarget.dd_exptime_list = list(self.dd_exptime_list)
 
         return newtarget
 
@@ -148,6 +157,7 @@ class Target(object):
                 "visits=%i progress=%.2f%% "
                 "seqid=%i ssname=%s "
                 "groupid=%i groupix=%i "
+                "firstdd=%s "
                 "ddvisits=%i "
                 "need=%.3f bonus=%.3f value=%.3f propboost=%.3f "
                 "propid=%s need=%s bonus=%s value=%s propboost=%s "
@@ -162,6 +172,7 @@ class Target(object):
                  self.sequenceid,
                  self.subsequencename,
                  self.groupid, self.groupix,
+                 self.is_dd_firstvisit,
                  self.remaining_dd_visits,
                  self.need, self.bonus, self.value, self.propboost,
                  self.propid_list, numpy.round(self.need_list, 3), numpy.round(self.bonus_list, 3),

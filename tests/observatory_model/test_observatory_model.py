@@ -613,3 +613,16 @@ class ObservatoryModelTest(unittest.TestCase):
                          "filter=r track=False alt=86.500 az=0.000 pa=0.000 rot=0.000 "
                          "telaz=0.000 telrot=0.000 "
                          "mounted=['g', 'r', 'i', 'z', 'y'] unmounted=['u']")
+
+    def test_get_deep_drilling_time(self):
+
+        target = Target()
+        target.is_deep_drilling = True
+        target.is_dd_firstvisit = True
+        target.remaining_dd_visits = 96
+        target.dd_exposures = 2 * 96
+        target.dd_filterchanges = 3
+        target.dd_exptime = 96 * 2 * 15.0
+
+        ddtime = self.model.get_deep_drilling_time(target)
+        self.assertEqual(ddtime, 3808.0)

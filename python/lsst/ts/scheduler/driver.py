@@ -102,8 +102,7 @@ class Driver(object):
         self.nulltarget.value_list = [0.0]
         self.nulltarget.propboost_list = [1.0]
         self.last_winner_target = self.nulltarget.get_copy()
-        self.last_observation = self.nulltarget.get_copy()
-        self.in_deep_drilling = False
+        self.deep_drilling_target = None
 
         self.need_filter_swap = False
         self.filter_to_unmount = ""
@@ -329,8 +328,7 @@ class Driver(object):
         self.isnight = False
 
         self.last_winner_target = self.nulltarget.get_copy()
-        self.last_observation = self.nulltarget.get_copy()
-        self.in_deep_drilling = False
+        self.deep_drilling_target = None
 
         total_filter_visits_dict = {}
         total_filter_goal_dict = {}
@@ -489,11 +487,8 @@ class Driver(object):
                 propboost_dict[prop.propid] = 1.0
             sumboost += propboost_dict[prop.propid]
 
-        if self.in_deep_drilling:
-            deepdrilling_target = self.last_observation
-            self.log.debug("select_next_target: in deep drilling %s" % str(deepdrilling_target))
-        else:
-            deepdrilling_target = None
+        if self.deep_drilling_target is not None:
+            self.log.debug("select_next_target: in deep drilling %s" % str(self.deep_drilling_target))
 
         if self.observatoryModel.is_filter_change_allowed():
             constrained_filter = None
@@ -510,7 +505,7 @@ class Driver(object):
                 propboost_dict[prop.propid] * len(self.science_proposal_list) / sumboost
 
             proptarget_list = prop.suggest_targets(self.time,
-                                                   deepdrilling_target, constrained_filter,
+                                                   self.deep_drilling_target, constrained_filter,
                                                    self.cloud, self.seeing)
             self.log.log(EXTENSIVE, "select_next_target propid=%d name=%s "
                          "targets=%d progress=%.2f%% propboost=%.3f" %
@@ -530,7 +525,11 @@ class Driver(object):
                 target.groupid_list = [target.groupid]
                 target.groupix_list = [target.groupix]
                 target.is_deep_drilling_list = [target.is_deep_drilling]
+                target.is_dd_firstvisit_list = [target.is_dd_firstvisit]
                 target.remaining_dd_visits_list = [target.remaining_dd_visits]
+                target.dd_exposures_list = [target.dd_exposures]
+                target.dd_filterchanges_list = [target.dd_filterchanges]
+                target.dd_exptime_list = [target.dd_exptime]
 
                 fieldfilter = (target.fieldid, target.filter)
                 if fieldfilter in targets_dict:
@@ -538,14 +537,29 @@ class Driver(object):
                         targets_dict[fieldfilter][0].need += target.need
                         targets_dict[fieldfilter][0].bonus += target.bonus
                         targets_dict[fieldfilter][0].value += target.value
-                        targets_dict[fieldfilter][0].propboost *= target.propboost
+                        targets_dict[fieldfilter][0].propboost += target.propboost
                         if target.is_deep_drilling:
+                            # overrides to make the coadded target a consistent deep drilling
+                            targets_dict[fieldfilter][0].is_deep_drilling = target.is_deep_drilling
+                            targets_dict[fieldfilter][0].is_dd_firstvisit = target.is_dd_firstvisit
+                            targets_dict[fieldfilter][0].remaining_dd_visits = target.remaining_dd_visits
+                            targets_dict[fieldfilter][0].dd_exposures = target.dd_exposures
+                            targets_dict[fieldfilter][0].dd_filterchanges = target.dd_filterchanges
+                            targets_dict[fieldfilter][0].dd_exptime = target.dd_exptime
                             targets_dict[fieldfilter][0].sequenceid = target.sequenceid
                             targets_dict[fieldfilter][0].subsequencename = target.subsequencename
                             targets_dict[fieldfilter][0].groupid = target.groupid
                             targets_dict[fieldfilter][0].groupix = target.groupix
-                            targets_dict[fieldfilter][0].is_deep_drilling = True
-                            targets_dict[fieldfilter][0].remaining_dd_visits = target.remaining_dd_visits
+                        else:
+                            # new target to coadd is not deep drilling
+                            if not targets_dict[0].is_deep_drilling:
+                                # coadded target is not deep drilling
+                                # overrides with new sequence information
+                                targets_dict[fieldfilter][0].sequenceid = target.sequenceid
+                                targets_dict[fieldfilter][0].subsequencename = target.subsequencename
+                                targets_dict[fieldfilter][0].groupid = target.groupid
+                                targets_dict[fieldfilter][0].groupix = target.groupix
+                            # if coadded target is already deep drilling, don't override
                         targets_dict[fieldfilter][0].num_props += 1
                         targets_dict[fieldfilter][0].propid_list.append(prop.propid)
                         targets_dict[fieldfilter][0].need_list.append(target.need)
@@ -557,7 +571,11 @@ class Driver(object):
                         targets_dict[fieldfilter][0].groupid_list.append(target.groupid)
                         targets_dict[fieldfilter][0].groupix_list.append(target.groupix)
                         targets_dict[fieldfilter][0].is_deep_drilling_list.append(target.is_deep_drilling)
+                        targets_dict[fieldfilter][0].is_dd_firstvisit_list.append(target.is_dd_firstvisit)
                         targets_dict[fieldfilter][0].remaining_dd_visits_list.append(target.remaining_dd_visits)
+                        targets_dict[fieldfilter][0].dd_exposures_list.append(target.dd_exposures)
+                        targets_dict[fieldfilter][0].dd_filterchanges_list.append(target.dd_filterchanges)
+                        targets_dict[fieldfilter][0].dd_exptime_list.append(target.dd_exptime)
                     else:
                         targets_dict[fieldfilter].append(target.get_copy())
                 else:
@@ -585,15 +603,19 @@ class Driver(object):
 
             self.observatoryModel2.set_state(self.observatoryState)
             self.observatoryModel2.observe(winner_target)
-            self.observatoryModel2.update_state(self.observatoryModel2.currentState.time + 30.0)
+            if winner_target.is_dd_firstvisit:
+                ttime = self.observatoryModel2.get_deep_drilling_time(winner_target)
+            else:
+                ttime = 30.0
+            self.observatoryModel2.update_state(self.observatoryModel2.currentState.time + ttime)
             if self.observatoryModel2.currentState.tracking:
                 self.targetid += 1
                 winner_target.targetid = self.targetid
                 winner_target.time = self.time
                 winner_found = True
             else:
-                self.log.debug("select_next_target: target rejected %s" %
-                               str(winner_target))
+                self.log.debug("select_next_target: target rejected ttime=%.1f %s" %
+                               (ttime, str(winner_target)))
                 self.log.debug("select_next_target: state rejected %s" %
                                str(self.observatoryModel2.currentState))
 
@@ -619,12 +641,10 @@ class Driver(object):
                     target_list.append(target)
 
         self.last_observation = observation.get_copy()
-        if self.last_observation.is_deep_drilling:
-            self.in_deep_drilling = True
-            self.remaining_dd_visits = self.last_observation.remaining_dd_visits
+        if self.last_observation.is_deep_drilling and (self.last_observation.remaining_dd_visits > 1):
+            self.deep_drilling_target = self.last_observation
         else:
-            self.in_deep_drilling = False
-            self.remaining_dd_visits = 0
+            self.deep_drilling_target = None
 
         return target_list
 

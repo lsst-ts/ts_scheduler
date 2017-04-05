@@ -640,6 +640,15 @@ class ObservatoryModel(object):
             max(target.num_exp - 1, 0) * self.params.ReadoutTime
         self.update_state(self.currentState.time + visit_time)
 
+    def get_deep_drilling_time(self, target):
+
+        ddtime = target.dd_exptime + \
+            target.dd_exposures * self.params.ShutterTime + \
+            max(target.dd_exposures - 1, 0) * self.params.ReadoutTime + \
+            target.dd_filterchanges * (self.params.Filter_ChangeTime - self.params.ReadoutTime)
+
+        return ddtime
+
     def park(self):
 
         self.parkState.filter = self.currentState.filter
