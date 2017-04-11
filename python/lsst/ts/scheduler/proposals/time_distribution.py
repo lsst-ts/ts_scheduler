@@ -26,6 +26,8 @@ class TimeDistributionProposalParameters(object):
         self.max_num_targets = int(confdict["scheduling"]["max_num_targets"])
         self.accept_serendipity = confdict["scheduling"]["accept_serendipity"]
         self.accept_consecutive_visits = confdict["scheduling"]["accept_consecutive_visits"]
+        self.restart_lost_sequences = confdict["scheduling"]["restart_lost_sequences"]
+        self.restart_complete_sequences = confdict["scheduling"]["restart_complete_sequences"]
         self.airmass_bonus = confdict["scheduling"]["airmass_bonus"]
         self.hour_angle_bonus = confdict["scheduling"]["hour_angle_bonus"]
         self.hour_angle_max_rad = math.radians(confdict["scheduling"]["hour_angle_max"] * 15.0)
@@ -528,6 +530,7 @@ class TimeDistributionProposal(Proposal):
 
             self.survey_sequences_dict[fieldid].register_observation(observation)
             self.evaluate_sequence_continuation(fieldid, "new observation")
+            self.in_deep_drilling = self.survey_sequences_dict[fieldid].is_in_deep_drilling()
 
             self.survey_targets_visits += 1
             if self.survey_targets_goal > 0:
@@ -553,10 +556,18 @@ class TimeDistributionProposal(Proposal):
 
         if self.survey_sequences_dict[fieldid].is_lost():
             self.log.debug("evaluate_sequence_continuation: sequence LOST field=%i %s" % (fieldid, text))
-            self.remove_sequence(fieldid)
+            if self.params.restart_lost_sequences:
+                self.survey_sequences_dict[fieldid].restart()
+                self.log.debug("evaluate_sequence_continuation: sequence RESTARTED field=%i" % (fieldid))
+            else:
+                self.remove_sequence(fieldid)
         elif self.survey_sequences_dict[fieldid].is_complete():
             self.log.debug("evaluate_sequence_continuation: sequence COMPLETE field=%i %s" % (fieldid, text))
-            self.remove_sequence(fieldid)
+            if self.params.restart_complete_sequences:
+                self.survey_sequences_dict[fieldid].restart()
+                self.log.debug("evaluate_sequence_continuation: sequence RESTARTED field=%i" % (fieldid))
+            else:
+                self.remove_sequence(fieldid)
 
     def remove_sequence(self, fieldid):
 

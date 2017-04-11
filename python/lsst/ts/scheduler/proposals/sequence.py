@@ -30,6 +30,19 @@ class Sequence(object):
 
         self.update_state()
 
+    def restart(self):
+
+        self.enabled_subsequences_list = []
+        for name in self.subsequence_name_list:
+            subsequence = self.subsequence_dict[name]
+            subsequence.restart()
+            self.enabled_subsequences_list.append(name)
+            self.goal += subsequence.goal
+            for filter in subsequence.filters_goal_dict:
+                self.filters_goal_dict[filter] += subsequence.filters_goal_dict[filter]
+
+        self.update_state()
+
     def update_state(self):
 
         all_idle = True
@@ -60,6 +73,17 @@ class Sequence(object):
     def is_active(self):
 
         return self.state == SEQ_ACTIVE
+
+    def is_in_deep_drilling(self):
+
+        in_deep_drilling = False
+        for name in self.subsequence_name_list:
+            subsequence = self.subsequence_dict[name]
+            if subsequence.is_in_deep_drilling():
+                in_deep_drilling = True
+                break
+
+        return in_deep_drilling
 
     def is_idle_or_active(self):
 
