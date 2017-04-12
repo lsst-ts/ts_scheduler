@@ -321,9 +321,11 @@ class Driver(object):
         for prop in self.science_proposal_list:
             prop.start_night(timestamp, self.observatoryModel.currentState.mountedfilters, night)
 
-    def end_night(self, timestamp):
+    def end_night(self, timestamp, night):
 
-        self.log.info("end_night t=%.6f" % timestamp)
+        timeprogress = (timestamp - self.start_time) / self.survey_duration_SECS
+        self.log.info("end_night t=%.6f, night=%d timeprogress=%.2f%%" %
+                      (timestamp, night, 100 * timeprogress))
 
         self.isnight = False
 
@@ -424,7 +426,7 @@ class Driver(object):
         if self.isnight:
             # if round(timestamp) >= round(self.sunrise_timestamp):
             if timestamp >= self.sunrise_timestamp:
-                self.end_night(timestamp)
+                self.end_night(timestamp, night)
         else:
             # if round(timestamp) >= round(self.sunset_timestamp):
             if timestamp >= self.sunset_timestamp:

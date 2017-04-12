@@ -165,10 +165,6 @@ class TimeDistributionProposal(Proposal):
 
         self.log.debug("start_night tonight fields=%i sequences=%i" %
                        (self.tonight_fields, self.tonight_sequences))
-        self.log.info("start_night survey fields=%i sequences=%i goal=%i visits=%i progress=%.2f%%" %
-                      (self.survey_fields, self.survey_sequences,
-                       self.survey_targets_goal, self.survey_targets_visits,
-                       100 * self.survey_targets_progress))
 
         self.last_observation = None
         self.last_observation_was_for_this_proposal = False
@@ -186,6 +182,11 @@ class TimeDistributionProposal(Proposal):
             self.log.debug("end_night: miss observation field=%i, ssname=%s" % (fieldid, ssname))
             self.evaluate_sequence_continuation(fieldid, "end of night")
             self.in_deep_drilling = False
+
+        self.log.info("end_night survey fields=%i sequences=%i goal=%i visits=%i progress=%.2f%%" %
+                      (self.survey_fields, self.survey_sequences,
+                       self.survey_targets_goal, self.survey_targets_visits,
+                       100 * self.survey_targets_progress))
 
     def build_tonight_fields_list(self, timestamp, night):
 
@@ -554,6 +555,7 @@ class TimeDistributionProposal(Proposal):
 
     def evaluate_sequence_continuation(self, fieldid, text):
 
+        previous_goal = self.survey_sequences_dict[fieldid].goal
         if self.survey_sequences_dict[fieldid].is_lost():
             self.log.debug("evaluate_sequence_continuation: sequence LOST field=%i %s" % (fieldid, text))
             if self.params.restart_lost_sequences:
@@ -568,6 +570,12 @@ class TimeDistributionProposal(Proposal):
                 self.log.debug("evaluate_sequence_continuation: sequence RESTARTED field=%i" % (fieldid))
             else:
                 self.remove_sequence(fieldid)
+        delta_goal = self.survey_sequences_dict[fieldid].goal - previous_goal
+
+        if delta_goal > 0:
+            # sequence was restarted and new goal of visits has increased
+            self.survey_targets_goal += delta_goal
+            self.survey_targets_progress = float(self.survey_targets_visits) / self.survey_targets_goal
 
     def remove_sequence(self, fieldid):
 

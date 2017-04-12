@@ -172,13 +172,18 @@ class AreaDistributionProposal(Proposal):
 
         self.log.debug("start_night tonight fields=%i targets=%i" %
                        (self.tonight_fields, self.tonight_targets))
-        self.log.info("start_night survey fields=%i targets=%i goal=%i visits=%i progress=%.2f%%" %
-                      (self.survey_fields, self.survey_targets,
-                       self.survey_targets_goal, self.survey_targets_visits,
-                       100 * self.survey_targets_progress))
 
         self.last_observation = None
         self.last_observation_was_for_this_proposal = False
+
+    def end_night(self, timestamp):
+
+        Proposal.end_night(self, timestamp)
+
+        self.log.info("end_night survey fields=%i targets=%i goal=%i visits=%i progress=%.2f%%" %
+                      (self.survey_fields, self.survey_targets,
+                       self.survey_targets_goal, self.survey_targets_visits,
+                       100 * self.survey_targets_progress))
 
     def build_tonight_fields_list(self, timestamp, night):
 
