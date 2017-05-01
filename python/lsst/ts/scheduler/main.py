@@ -510,6 +510,7 @@ class Main(object):
                                         to = time.time()
                                         if (to - lastobstime > 60.0):
                                             waitobservation = False
+                                            self.log.debug("run: observation timeout")
                                         self.log.log(TRACE, "run: t=%f lastobstime=%f" % (to, lastobstime))
 
                                     newtime = time.time()
@@ -522,8 +523,9 @@ class Main(object):
                                         meascount = 0
                             else:
                                 ts = time.time()
-                                if (ts - laststatetime > 60.0):
+                                if (ts - laststatetime > 180.0):
                                     waitstate = False
+                                    self.log.debug("run: state timeout")
                                     self.log.log(TRACE, "run: t=%f laststatetime=%f" % (ts, laststatetime))
 
                     else:
@@ -533,7 +535,8 @@ class Main(object):
 
                 else:
                     tc = time.time()
-                    if (tc - lasttimetime) > 60.0:
+                    if (tc - lasttimetime) > 180.0:
+                        self.log.debug("run: time timeout")
                         waittime = False
 
                 newtime = time.time()
