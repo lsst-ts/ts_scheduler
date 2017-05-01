@@ -47,6 +47,7 @@ class Main(object):
         self.sal = SAL_scheduler()
         self.sal.setDebugLevel(0)
         self.sal_sleeper = 0.1
+        self.main_loop_timeouts = options.timeout
 
         self.topic_schedulerConfig = scheduler_schedulerConfigC()
         self.topic_driverConfig = scheduler_driverConfigC()
@@ -508,7 +509,7 @@ class Main(object):
                                                               self.topicTarget.targetId))
                                     else:
                                         to = time.time()
-                                        if (to - lastobstime > 60.0):
+                                        if (to - lastobstime > self.main_loop_timeouts):
                                             waitobservation = False
                                             self.log.debug("run: observation timeout")
                                         self.log.log(TRACE, "run: t=%f lastobstime=%f" % (to, lastobstime))
@@ -523,7 +524,7 @@ class Main(object):
                                         meascount = 0
                             else:
                                 ts = time.time()
-                                if (ts - laststatetime > 180.0):
+                                if (ts - laststatetime > self.main_loop_timeouts):
                                     waitstate = False
                                     self.log.debug("run: state timeout")
                                     self.log.log(TRACE, "run: t=%f laststatetime=%f" % (ts, laststatetime))
@@ -535,7 +536,7 @@ class Main(object):
 
                 else:
                     tc = time.time()
-                    if (tc - lasttimetime) > 180.0:
+                    if (tc - lasttimetime) > self.main_loop_timeouts:
                         self.log.debug("run: time timeout")
                         waittime = False
 

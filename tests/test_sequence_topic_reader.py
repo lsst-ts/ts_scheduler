@@ -1,3 +1,4 @@
+import collections
 import unittest
 try:
     from unittest import mock
@@ -14,7 +15,10 @@ class TestSequencePropTopicReader(unittest.TestCase):
         self.addCleanup(patcher1.stop)
         self.mock_driver = patcher1.start()
 
-        self.main = Main(None)
+        options = collections.namedtuple("options", ["timeout"])
+        options.timeout = 60.0
+
+        self.main = Main(options)
 
     def check_filter(self, cdict, name, *truths):
         band_filter = "filter_{}".format(name)
