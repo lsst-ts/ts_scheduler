@@ -25,5 +25,7 @@ def create_parser():
                         "code.")
     parser.add_argument("--log-port", dest="log_port", default=logging.handlers.DEFAULT_TCP_LOGGING_PORT,
                         type=int, help="Specify the logging port for the Scheduler.")
+    parser.add_argument("-t", "--timeout", dest="timeout", default=60.0, type=float,
+                        help="Specify the timeout for the DDS messaging checks.")
 
     return parser
