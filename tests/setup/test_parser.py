@@ -21,6 +21,7 @@ class ArgParserTest(unittest.TestCase):
         self.assertIsNone(args.console_format)
         self.assertFalse(args.profile)
         self.assertEqual(args.log_port, logging.handlers.DEFAULT_TCP_LOGGING_PORT)
+        self.assertEqual(args.timeout, 60.0)
 
     def test_scripted_flag(self):
         args = self.parser.parse_args(["-s"])
@@ -38,3 +39,8 @@ class ArgParserTest(unittest.TestCase):
         port = "16324"
         args = self.parser.parse_args(["--log-port", port])
         self.assertEqual(args.log_port, int(port))
+
+    def test_timeout(self):
+        timeout = "180.0"
+        args = self.parser.parse_args(["--timeout", timeout])
+        self.assertEqual(args.timeout, float(timeout))
