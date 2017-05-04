@@ -554,7 +554,7 @@ class Driver(object):
                             targets_dict[fieldfilter][0].groupix = target.groupix
                         else:
                             # new target to coadd is not deep drilling
-                            if not targets_dict[0].is_deep_drilling:
+                            if not targets_dict[fieldfilter][0].is_deep_drilling:
                                 # coadded target is not deep drilling
                                 # overrides with new sequence information
                                 targets_dict[fieldfilter][0].sequenceid = target.sequenceid
