@@ -554,7 +554,7 @@ class Driver(object):
                             targets_dict[fieldfilter][0].groupix = target.groupix
                         else:
                             # new target to coadd is not deep drilling
-                            if not targets_dict[0].is_deep_drilling:
+                            if not targets_dict[fieldfilter][0].is_deep_drilling:
                                 # coadded target is not deep drilling
                                 # overrides with new sequence information
                                 targets_dict[fieldfilter][0].sequenceid = target.sequenceid
@@ -622,6 +622,10 @@ class Driver(object):
                                str(self.observatoryModel2.currentState))
 
         if winner_found:
+            if not self.params.coadd_values:
+                first_target = targets_dict[(winner_target.fieldid, winner_target.filter)][0]
+                if first_target.propid != winner_target.propid:
+                    winner_target.copy_driver_state(first_target)
             self.last_winner_target = winner_target.get_copy()
         else:
             self.last_winner_target = self.nulltarget.get_copy()

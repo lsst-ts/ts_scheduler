@@ -148,6 +148,15 @@ class Target(object):
 
         return newtarget
 
+    def copy_driver_state(self, target):
+        self.alt_rad = target.alt_rad
+        self.az_rad = target.az_rad
+        self.rot_rad = target.rot_rad
+        self.telalt_rad = target.telalt_rad
+        self.telaz_rad = target.telaz_rad
+        self.telrot_rad = target.telrot_rad
+        self.ang_rad = target.ang_rad
+
     def __str__(self):
         return ("targetid=%d field=%d filter=%s exp_times=%s ra=%.3f dec=%.3f ang=%.3f "
                 "alt=%.3f az=%.3f rot=%.3f "
