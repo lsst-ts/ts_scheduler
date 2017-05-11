@@ -329,7 +329,7 @@ class Driver(object):
 
         self.isnight = False
 
-        self.last_winner_target = self.nulltarget.get_copy()
+        self.last_winner_target = self.nulltarget
         self.deep_drilling_target = None
 
         total_filter_visits_dict = {}
@@ -536,6 +536,7 @@ class Driver(object):
                 fieldfilter = (target.fieldid, target.filter)
                 if fieldfilter in targets_dict:
                     if self.params.coadd_values:
+                        targets_dict[fieldfilter][0] = targets_dict[fieldfilter][0].get_copy()
                         targets_dict[fieldfilter][0].need += target.need
                         targets_dict[fieldfilter][0].bonus += target.bonus
                         targets_dict[fieldfilter][0].value += target.value
@@ -579,9 +580,9 @@ class Driver(object):
                         targets_dict[fieldfilter][0].dd_filterchanges_list.append(target.dd_filterchanges)
                         targets_dict[fieldfilter][0].dd_exptime_list.append(target.dd_exptime)
                     else:
-                        targets_dict[fieldfilter].append(target.get_copy())
+                        targets_dict[fieldfilter].append(target)
                 else:
-                    targets_dict[fieldfilter] = [target.get_copy()]
+                    targets_dict[fieldfilter] = [target]
 
         filtercost = self.compute_filterchange_cost() * self.params.filtercost_weight
         for fieldfilter in targets_dict:
@@ -628,7 +629,7 @@ class Driver(object):
                     winner_target.copy_driver_state(first_target)
             self.last_winner_target = winner_target.get_copy()
         else:
-            self.last_winner_target = self.nulltarget.get_copy()
+            self.last_winner_target = self.nulltarget
 
         return self.last_winner_target
 
