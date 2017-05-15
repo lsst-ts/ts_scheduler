@@ -3,19 +3,20 @@ import logging
 import unittest
 import warnings
 
+from lsst.ts.astrosky.model import AstronomicalSkyModel
+from lsst.ts.dateloc import ObservatoryLocation
 from lsst.ts.scheduler.kernel import read_conf_file, conf_file_path
 from lsst.ts.scheduler.proposals import ScriptedProposal
-from lsst.ts.scheduler.observatory_model import ObservatoryLocation
-from lsst.ts.scheduler.sky_model import AstronomicalSkyModel
 
 class ScriptedProposalTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
         warnings.filterwarnings('ignore', category=FutureWarning, append=True)
-        site_confdict = read_conf_file(conf_file_path(__name__, "../conf", "system", "site.conf"))
+        #site_confdict = read_conf_file(conf_file_path(__name__, "../conf", "system", "site.conf"))
         location = ObservatoryLocation()
-        location.configure(site_confdict)
+        location.for_lsst()
+        #location.configure(site_confdict)
         cls.skyModel = AstronomicalSkyModel(location)
 
     def setUp(self):

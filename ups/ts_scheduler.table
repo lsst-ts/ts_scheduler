@@ -1,7 +1,7 @@
 setupRequired(python)
-setupRequired(palpy)
 setupRequired(sconsUtils)
-setupRequired(sims_skybrightness_pre)
+setupRequired(ts_astrosky_model)
+setupRequired(ts_observatory_model)
 
 envPrepend(PYTHONPATH, ${PRODUCT_DIR}/python)
 envPrepend(PATH, ${PRODUCT_DIR}/scripts)

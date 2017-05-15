@@ -5,4 +5,3 @@ __email__ = 'fdelgado@lsst.org'
 
 from .definitions import *
 from .field import *
-from .target import *

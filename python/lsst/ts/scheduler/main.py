@@ -28,11 +28,11 @@ from SALPY_scheduler import scheduler_sequencePropConfigC
 from SALPY_scheduler import scheduler_filterSwapC
 from SALPY_scheduler import scheduler_interestedProposalC
 
+from lsst.ts.observatory.model import ObservatoryState
+from lsst.ts.observatory.model import Target
 from lsst.ts.scheduler.setup import TRACE, EXTENSIVE
 from lsst.ts.scheduler.kernel import read_conf_file, conf_file_path
 from lsst.ts.scheduler import Driver
-from lsst.ts.scheduler.kernel import Target
-from lsst.ts.scheduler.observatory_model import ObservatoryState
 
 __all__ = ["Main"]
 
