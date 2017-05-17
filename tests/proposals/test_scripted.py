@@ -13,10 +13,8 @@ class ScriptedProposalTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         warnings.filterwarnings('ignore', category=FutureWarning, append=True)
-        #site_confdict = read_conf_file(conf_file_path(__name__, "../conf", "system", "site.conf"))
         location = ObservatoryLocation()
         location.for_lsst()
-        #location.configure(site_confdict)
         cls.skyModel = AstronomicalSkyModel(location)
 
     def setUp(self):

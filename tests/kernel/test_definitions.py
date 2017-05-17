@@ -6,7 +6,7 @@ from lsst.ts.scheduler.kernel import conf_file_path, read_conf_file
 class DefinitionsTest(unittest.TestCase):
 
     def test_conf_file_path(self):
-        file_path = conf_file_path(__name__, "../conf", "system", "site.conf")
+        file_path = conf_file_path(__name__, "../conf", "scheduler", "main.conf")
         self.assertTrue(os.path.exists(file_path))
 
     def test_read_conf_file(self):
