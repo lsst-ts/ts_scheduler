@@ -4,14 +4,14 @@ import numpy
 import logging
 from operator import itemgetter
 
+from lsst.ts.astrosky.model import AstronomicalSkyModel
+from lsst.ts.dateloc import ObservatoryLocation
+from lsst.ts.observatory.model import ObservatoryModel
+from lsst.ts.observatory.model import ObservatoryState
+from lsst.ts.observatory.model import Target
 from lsst.ts.scheduler.setup import EXTENSIVE, WORDY
-from lsst.ts.scheduler.sky_model import AstronomicalSkyModel
 from lsst.ts.scheduler.kernel import read_conf_file
 from lsst.ts.scheduler.kernel import Field
-from lsst.ts.scheduler.kernel import Target
-from lsst.ts.scheduler.observatory_model import ObservatoryModel
-from lsst.ts.scheduler.observatory_model import ObservatoryState
-from lsst.ts.scheduler.observatory_model import ObservatoryLocation
 from lsst.ts.scheduler.proposals import ScriptedProposal
 from lsst.ts.scheduler.proposals import AreaDistributionProposal, TimeDistributionProposal
 from lsst.ts.scheduler.fields import FieldsDatabase
@@ -64,8 +64,8 @@ class Driver(object):
         self.params = DriverParameters()
         self.location = ObservatoryLocation()
 
-        self.observatoryModel = ObservatoryModel(self.location)
-        self.observatoryModel2 = ObservatoryModel(self.location)
+        self.observatoryModel = ObservatoryModel(self.location, WORDY)
+        self.observatoryModel2 = ObservatoryModel(self.location, WORDY)
         self.observatoryState = ObservatoryState()
 
         self.sky = AstronomicalSkyModel(self.location)
@@ -319,7 +319,7 @@ class Driver(object):
         self.isnight = True
 
         for prop in self.science_proposal_list:
-            prop.start_night(timestamp, self.observatoryModel.currentState.mountedfilters, night)
+            prop.start_night(timestamp, self.observatoryModel.current_state.mountedfilters, night)
 
     def end_night(self, timestamp, night):
 
@@ -440,9 +440,9 @@ class Driver(object):
 
     def update_internal_conditions(self, observatory_state, night):
 
-        if observatory_state.unmountedfilters != self.observatoryModel.currentState.unmountedfilters:
+        if observatory_state.unmountedfilters != self.observatoryModel.current_state.unmountedfilters:
             unmount = observatory_state.unmountedfilters[0]
-            mount = self.observatoryModel.currentState.unmountedfilters[0]
+            mount = self.observatoryModel.current_state.unmountedfilters[0]
             self.swap_filter(unmount, mount)
             for prop in self.science_proposal_list:
                 prop.start_night(observatory_state.time, observatory_state.mountedfilters, night)
@@ -495,7 +495,7 @@ class Driver(object):
         if self.observatoryModel.is_filter_change_allowed():
             constrained_filter = None
         else:
-            constrained_filter = self.observatoryModel.currentState.filter
+            constrained_filter = self.observatoryModel.current_state.filter
         num_filter_changes = self.observatoryModel.get_number_filter_changes()
         delta_burst = self.observatoryModel.get_delta_filter_burst()
         delta_avg = self.observatoryModel.get_delta_filter_avg()
@@ -591,7 +591,7 @@ class Driver(object):
                 timecost = self.compute_slewtime_cost(slewtime) * self.params.timecost_weight
                 for target in targets_dict[fieldfilter]:
                     target.slewtime = slewtime
-                    if target.filter != self.observatoryModel.currentState.filter:
+                    if target.filter != self.observatoryModel.current_state.filter:
                         target.cost = timecost + filtercost
                     else:
                         target.cost = timecost
@@ -610,8 +610,8 @@ class Driver(object):
                 ttime = self.observatoryModel2.get_deep_drilling_time(winner_target)
             else:
                 ttime = 30.0
-            self.observatoryModel2.update_state(self.observatoryModel2.currentState.time + ttime)
-            if self.observatoryModel2.currentState.tracking:
+            self.observatoryModel2.update_state(self.observatoryModel2.current_state.time + ttime)
+            if self.observatoryModel2.current_state.tracking:
                 self.targetid += 1
                 winner_target.targetid = self.targetid
                 winner_target.time = self.time
@@ -620,7 +620,7 @@ class Driver(object):
                 self.log.debug("select_next_target: target rejected ttime=%.1f %s" %
                                (ttime, str(winner_target)))
                 self.log.debug("select_next_target: state rejected %s" %
-                               str(self.observatoryModel2.currentState))
+                               str(self.observatoryModel2.current_state))
 
         if winner_found:
             if not self.params.coadd_values:

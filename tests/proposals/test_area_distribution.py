@@ -2,18 +2,17 @@ import os
 import logging
 import unittest
 
+from lsst.ts.astrosky.model import AstronomicalSkyModel
+from lsst.ts.dateloc import ObservatoryLocation
 from lsst.ts.scheduler.kernel import read_conf_file, conf_file_path
 from lsst.ts.scheduler.proposals import AreaDistributionProposal
-from lsst.ts.scheduler.observatory_model import ObservatoryLocation
-from lsst.ts.scheduler.sky_model import AstronomicalSkyModel
 
 class AreaDistributionProposalTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        site_confdict = read_conf_file(conf_file_path(__name__, "../conf", "system", "site.conf"))
         location = ObservatoryLocation()
-        location.configure(site_confdict)
+        location.for_lsst()
         cls.skyModel = AstronomicalSkyModel(location)
 
     def setUp(self):

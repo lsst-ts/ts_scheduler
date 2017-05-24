@@ -28,11 +28,12 @@ from SALPY_scheduler import scheduler_sequencePropConfigC
 from SALPY_scheduler import scheduler_filterSwapC
 from SALPY_scheduler import scheduler_interestedProposalC
 
+from lsst.ts.dateloc import ObservatoryLocation
+from lsst.ts.observatory.model import ObservatoryModel, ObservatoryState
+from lsst.ts.observatory.model import Target
 from lsst.ts.scheduler.setup import TRACE, EXTENSIVE
 from lsst.ts.scheduler.kernel import read_conf_file, conf_file_path
 from lsst.ts.scheduler import Driver
-from lsst.ts.scheduler.kernel import Target
-from lsst.ts.scheduler.observatory_model import ObservatoryState
 
 __all__ = ["Main"]
 
@@ -163,8 +164,7 @@ class Main(object):
                     tf = time.time()
                     if (tf - lastconfigtime > 10.0):
                         self.log.info("run: site config timeout")
-                        config_file = conf_file_path(__name__, "conf", "system", "site.conf")
-                        config_dict = read_conf_file(config_file)
+                        config_dict = ObservatoryLocation.get_configure_dict()
                         waitconfig = False
                     time.sleep(self.sal_sleeper)
             self.schedulerDriver.configure_location(config_dict)
@@ -182,8 +182,7 @@ class Main(object):
                     tf = time.time()
                     if (tf - lastconfigtime > 10.0):
                         self.log.info("run: telescope config timeout")
-                        config_file = conf_file_path(__name__, "conf", "system", "observatory_model.conf")
-                        config_dict = read_conf_file(config_file)
+                        config_dict = ObservatoryModel.get_configure_dict()
                         waitconfig = False
                     time.sleep(self.sal_sleeper)
             self.schedulerDriver.configure_telescope(config_dict)
@@ -201,8 +200,7 @@ class Main(object):
                     tf = time.time()
                     if (tf - lastconfigtime > 10.0):
                         self.log.info("run: dome config timeout")
-                        config_file = conf_file_path(__name__, "conf", "system", "observatory_model.conf")
-                        config_dict = read_conf_file(config_file)
+                        config_dict = ObservatoryModel.get_configure_dict()
                         waitconfig = False
                     time.sleep(self.sal_sleeper)
             self.schedulerDriver.configure_dome(config_dict)
@@ -220,8 +218,7 @@ class Main(object):
                     tf = time.time()
                     if (tf - lastconfigtime > 10.0):
                         self.log.info("run: rotator config timeout")
-                        config_file = conf_file_path(__name__, "conf", "system", "observatory_model.conf")
-                        config_dict = read_conf_file(config_file)
+                        config_dict = ObservatoryModel.get_configure_dict()
                         waitconfig = False
                     time.sleep(self.sal_sleeper)
             self.schedulerDriver.configure_rotator(config_dict)
@@ -240,8 +237,7 @@ class Main(object):
                     if (tf - lastconfigtime > 10.0):
                         waitconfig = False
                         self.log.info("run: camera config timeout")
-                        config_file = conf_file_path(__name__, "conf", "system", "observatory_model.conf")
-                        config_dict = read_conf_file(config_file)
+                        config_dict = ObservatoryModel.get_configure_dict()
                         waitconfig = False
                     time.sleep(self.sal_sleeper)
             self.schedulerDriver.configure_camera(config_dict)
@@ -260,8 +256,7 @@ class Main(object):
                     if (tf - lastconfigtime > 10.0):
                         waitconfig = False
                         self.log.info("run: slew config timeout")
-                        config_file = conf_file_path(__name__, "conf", "system", "observatory_model.conf")
-                        config_dict = read_conf_file(config_file)
+                        config_dict = ObservatoryModel.get_configure_dict()
                         waitconfig = False
                     time.sleep(self.sal_sleeper)
             self.schedulerDriver.configure_slew(config_dict)
@@ -279,8 +274,7 @@ class Main(object):
                     tf = time.time()
                     if (tf - lastconfigtime > 10.0):
                         self.log.info("run: optics config timeout")
-                        config_file = conf_file_path(__name__, "conf", "system", "observatory_model.conf")
-                        config_dict = read_conf_file(config_file)
+                        config_dict = ObservatoryModel.get_configure_dict()
                         waitconfig = False
                     time.sleep(self.sal_sleeper)
             self.schedulerDriver.configure_optics(config_dict)
@@ -297,9 +291,8 @@ class Main(object):
                 else:
                     tf = time.time()
                     if (tf - lastconfigtime > 10.0):
-                        self.log.info("run: optics config timeout")
-                        config_file = conf_file_path(__name__, "conf", "system", "observatory_model.conf")
-                        config_dict = read_conf_file(config_file)
+                        self.log.info("run: park config timeout")
+                        config_dict = ObservatoryModel.get_configure_dict()
                         waitconfig = False
                     time.sleep(self.sal_sleeper)
             self.schedulerDriver.configure_park(config_dict)

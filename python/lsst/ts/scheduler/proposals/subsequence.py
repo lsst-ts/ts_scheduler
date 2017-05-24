@@ -1,4 +1,4 @@
-from lsst.ts.scheduler.kernel import Target
+from lsst.ts.observatory.model import Target
 
 SEQ_IDLE = 0
 SEQ_ACTIVE = 1

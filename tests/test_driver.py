@@ -2,6 +2,8 @@ import logging
 import os
 import unittest
 
+from lsst.ts.dateloc import ObservatoryLocation
+from lsst.ts.observatory.model import ObservatoryModel
 from lsst.ts.scheduler.kernel import conf_file_path, read_conf_file
 from lsst.ts.scheduler import Driver
 
@@ -13,13 +15,11 @@ class TestSchedulerDriver(unittest.TestCase):
         self.driver = Driver()
 
         driver_conf_file = os.path.join(conf_path, "scheduler", "driver.conf")
-        obs_site_conf_file = os.path.join(conf_path, "system", "site.conf")
-        obs_model_conf_file = os.path.join(conf_path, "system", "observatory_model.conf")
         survey_conf_file = os.path.join(conf_path, "survey", "test_survey.conf")
 
         driver_confdict = read_conf_file(driver_conf_file)
-        obs_site_confdict = read_conf_file(obs_site_conf_file)
-        obs_model_confdict = read_conf_file(obs_model_conf_file)
+        obs_site_confdict = ObservatoryLocation.get_configure_dict()
+        obs_model_confdict = ObservatoryModel.get_configure_dict()
 
         self.driver.configure(driver_confdict)
         self.driver.configure_location(obs_site_confdict)
