@@ -35,17 +35,17 @@ class TestSchedulerDriver(unittest.TestCase):
 
     def test_compute_slewtime_cost(self):
 
-        self.assertAlmostEquals(self.driver.compute_slewtime_cost(0), 0.000, delta=1e-3)
-        self.assertAlmostEquals(self.driver.compute_slewtime_cost(2), 0.013, delta=1e-3)
-        self.assertAlmostEquals(self.driver.compute_slewtime_cost(3), 0.020, delta=1e-3)
-        self.assertAlmostEquals(self.driver.compute_slewtime_cost(4), 0.026, delta=1e-3)
-        self.assertAlmostEquals(self.driver.compute_slewtime_cost(5), 0.033, delta=1e-3)
-        self.assertAlmostEquals(self.driver.compute_slewtime_cost(10), 0.066, delta=1e-3)
-        self.assertAlmostEquals(self.driver.compute_slewtime_cost(30), 0.198, delta=1e-3)
-        self.assertAlmostEquals(self.driver.compute_slewtime_cost(60), 0.398, delta=1e-3)
-        self.assertAlmostEquals(self.driver.compute_slewtime_cost(120), 0.798, delta=1e-3)
+        self.assertAlmostEquals(self.driver.compute_slewtime_cost(0), -0.034, delta=1e-3)
+        self.assertAlmostEquals(self.driver.compute_slewtime_cost(2), -0.020, delta=1e-3)
+        self.assertAlmostEquals(self.driver.compute_slewtime_cost(3), -0.014, delta=1e-3)
+        self.assertAlmostEquals(self.driver.compute_slewtime_cost(4), -0.007, delta=1e-3)
+        self.assertAlmostEquals(self.driver.compute_slewtime_cost(5),  0.000, delta=1e-3)
+        self.assertAlmostEquals(self.driver.compute_slewtime_cost(10), 0.034, delta=1e-3)
+        self.assertAlmostEquals(self.driver.compute_slewtime_cost(30), 0.171, delta=1e-3)
+        self.assertAlmostEquals(self.driver.compute_slewtime_cost(60), 0.377, delta=1e-3)
+        self.assertAlmostEquals(self.driver.compute_slewtime_cost(120), 0.791, delta=1e-3)
         self.assertAlmostEquals(self.driver.compute_slewtime_cost(150), 1.000, delta=1e-3)
-        self.assertAlmostEquals(self.driver.compute_slewtime_cost(200), 1.338, delta=1e-3)
+        self.assertAlmostEquals(self.driver.compute_slewtime_cost(200), 1.350, delta=1e-3)
 
     def test_startsurvey_startnight(self):
 

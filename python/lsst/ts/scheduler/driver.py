@@ -43,6 +43,10 @@ class DriverParameters(object):
         tref = confdict["ranking"]["timecost_time_ref"]
         cref = float(confdict["ranking"]["timecost_cost_ref"])
 
+        self.timecost_tmax = tmax
+        self.timecost_tref = tref
+        self.timecost_cref = cref
+
         self.timecost_dc = cref * (tmax - tref) / (tref - cref * tmax)
         self.timecost_dt = -tmax * (self.timecost_dc + 1.0)
         self.timecost_k = self.timecost_dc * self.timecost_dt
@@ -657,7 +661,8 @@ class Driver(object):
 
     def compute_slewtime_cost(self, slewtime):
 
-        cost = self.params.timecost_k / (slewtime + self.params.timecost_dt) - self.params.timecost_dc
+        cost = (self.params.timecost_k / (slewtime + self.params.timecost_dt) - self.params.timecost_dc - self.params.timecost_cref) / (1.0 - self.params.timecost_cref)
+        #cost = self.params.timecost_k / (slewtime + self.params.timecost_dt) - self.params.timecost_dc
 
         return cost
 
