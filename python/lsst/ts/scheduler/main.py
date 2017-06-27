@@ -12,7 +12,6 @@ from SALPY_scheduler import scheduler_cloudC
 from SALPY_scheduler import scheduler_seeingC
 from SALPY_scheduler import scheduler_observationC
 from SALPY_scheduler import scheduler_targetC
-from SALPY_scheduler import scheduler_fieldC
 from SALPY_scheduler import scheduler_schedulerConfigC
 from SALPY_scheduler import scheduler_driverConfigC
 from SALPY_scheduler import scheduler_obsSiteConfigC
@@ -67,7 +66,6 @@ class Main(object):
         self.topic_cloud = scheduler_cloudC()
         self.topic_seeing = scheduler_seeingC()
         self.topicObservation = scheduler_observationC()
-        self.topicField = scheduler_fieldC()
         self.topicTarget = scheduler_targetC()
         self.topicFilterSwap = scheduler_filterSwapC()
         self.tInterestedProposal = scheduler_interestedProposalC()
@@ -93,7 +91,6 @@ class Main(object):
         self.sal.salTelemetrySub("scheduler_cloud")
         self.sal.salTelemetrySub("scheduler_seeing")
         self.sal.salTelemetrySub("scheduler_observation")
-        self.sal.salTelemetryPub("scheduler_field")
         self.sal.salTelemetryPub("scheduler_target")
         self.sal.salTelemetryPub("scheduler_filterSwap")
         self.sal.salTelemetryPub("scheduler_interestedProposal")
@@ -369,24 +366,6 @@ class Main(object):
                         """
                         waitconfig = False
                     time.sleep(self.sal_sleeper)
-
-            field_dict = self.schedulerDriver.get_fields_dict()
-            if len(field_dict) > 0:
-                self.topicField.ID = -1
-                self.sal.putSample_field(self.topicField)
-                for fieldid in field_dict:
-                    self.topicField.ID = field_dict[fieldid].fieldid
-                    self.topicField.ra = math.degrees(field_dict[fieldid].ra_rad)
-                    self.topicField.dec = math.degrees(field_dict[fieldid].dec_rad)
-                    self.topicField.gl = math.degrees(field_dict[fieldid].gl_rad)
-                    self.topicField.gb = math.degrees(field_dict[fieldid].gb_rad)
-                    self.topicField.el = math.degrees(field_dict[fieldid].el_rad)
-                    self.topicField.eb = math.degrees(field_dict[fieldid].eb_rad)
-                    self.topicField.fov = math.degrees(field_dict[fieldid].fov_rad)
-                    self.sal.putSample_field(self.topicField)
-                    self.log.log(EXTENSIVE, "run: tx field %s" % (field_dict[fieldid]))
-                self.topicField.ID = -1
-                self.sal.putSample_field(self.topicField)
 
             waittime = True
             lasttimetime = time.time()
