@@ -341,7 +341,7 @@ class AreaDistributionProposal(Proposal):
                 # discard target if consecutive
                 if self.last_observation_was_for_this_proposal:
                     if (self.observation_fulfills_target(self.last_observation, target) and
-                       not self.params.accept_consecutive_visits):
+                            not self.params.accept_consecutive_visits):
                         discarded_targets_consecutive += 1
                         continue
 

@@ -579,7 +579,8 @@ class Driver(object):
                         targets_dict[fieldfilter][0].groupix_list.append(target.groupix)
                         targets_dict[fieldfilter][0].is_deep_drilling_list.append(target.is_deep_drilling)
                         targets_dict[fieldfilter][0].is_dd_firstvisit_list.append(target.is_dd_firstvisit)
-                        targets_dict[fieldfilter][0].remaining_dd_visits_list.append(target.remaining_dd_visits)
+                        targets_dict[fieldfilter][0].remaining_dd_visits_list.append(
+                            target.remaining_dd_visits)
                         targets_dict[fieldfilter][0].dd_exposures_list.append(target.dd_exposures)
                         targets_dict[fieldfilter][0].dd_filterchanges_list.append(target.dd_filterchanges)
                         targets_dict[fieldfilter][0].dd_exptime_list.append(target.dd_exptime)
@@ -661,7 +662,8 @@ class Driver(object):
 
     def compute_slewtime_cost(self, slewtime):
 
-        cost = (self.params.timecost_k / (slewtime + self.params.timecost_dt) - self.params.timecost_dc - self.params.timecost_cref) / (1.0 - self.params.timecost_cref)
+        cost = (self.params.timecost_k / (slewtime + self.params.timecost_dt) -
+                self.params.timecost_dc - self.params.timecost_cref) / (1.0 - self.params.timecost_cref)
         #cost = self.params.timecost_k / (slewtime + self.params.timecost_dt) - self.params.timecost_dc
 
         return cost
