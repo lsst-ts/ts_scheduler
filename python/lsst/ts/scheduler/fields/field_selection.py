@@ -1,3 +1,4 @@
+from builtins import object
 try:
     from itertools import zip_longest
 except ImportError:

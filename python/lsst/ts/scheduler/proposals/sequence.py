@@ -1,3 +1,4 @@
+from builtins import object
 from lsst.ts.scheduler.proposals.subsequence import Subsequence
 
 SEQ_IDLE = 0
