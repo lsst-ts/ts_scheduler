@@ -1,3 +1,4 @@
+from __future__ import print_function
 import sys
 import os
 import time
@@ -17,7 +18,7 @@ def create_fields_db(dbfilename="Fields.db"):
 
 if __name__ == "__main__":
     if len(sys.argv) != 1:
-        print "Usage: python create_fields_db.py"
+        print("Usage: python create_fields_db.py")
     else:
         create_fields_db()
     sys.exit(0)

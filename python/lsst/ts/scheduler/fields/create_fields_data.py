@@ -1,3 +1,4 @@
+from __future__ import print_function
 import palpy
 import numpy
 import sys
@@ -6,7 +7,7 @@ import math
 __all__ = ["create_fields_data"]
 
 def create_fields_data(tessellation_filename, fieldsdata_filename):
-    iy = 04
+    iy = 4
     im = 12
     id = 1
     mjd = palpy.caldj(iy, im, id)
@@ -42,8 +43,8 @@ def create_fields_data(tessellation_filename, fieldsdata_filename):
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
-        print "Usage: python create_fields_data.py <tessellationFileName> <fieldsDataFileName>"
-        print "The <tessellationFilename> should contain rows of ra dec values"
+        print("Usage: python create_fields_data.py <tessellationFileName> <fieldsDataFileName>")
+        print("The <tessellationFilename> should contain rows of ra dec values")
     else:
         create_fields_data(sys.argv[1], sys.argv[2])
 

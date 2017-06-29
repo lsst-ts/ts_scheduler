@@ -1,3 +1,4 @@
+from __future__ import print_function
 import numpy
 import sys
 import sqlite3
@@ -29,8 +30,8 @@ def ingest_fields_data(dbfilename, fieldsdatafilename):
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print "Usage: python CreateFieldTable.py <tessellationFieldsFile>"
-        print "The <tessellationFieldsFile> is the output of AddGalEcl script"
+        print("Usage: python CreateFieldTable.py <tessellationFieldsFile>")
+        print("The <tessellationFieldsFile> is the output of AddGalEcl script")
     else:
         ingest_fields_data(sys.argv[1])
 
