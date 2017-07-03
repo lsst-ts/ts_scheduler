@@ -1,5 +1,11 @@
+from collections import defaultdict
+try:
+    import configparser
+except ImportError:
+    import Configparser as configparser
 import os
 import pkg_resources
+import re
 
 __all__ = ["read_conf_file", "conf_file_path"]
 
@@ -36,14 +42,11 @@ def read_conf_file(filename):
     dict
         A dictionary from the configuration file.
     """
-    import ConfigParser as configparser
     config = configparser.SafeConfigParser()
     config.read(filename)
 
-    from collections import defaultdict
     config_dict = defaultdict(dict)
     math_ops = "+,-,*,/".split(',')
-    import re
     paren_match = re.compile(r'\(([^\)]+)\)')
 
     for section in config.sections():

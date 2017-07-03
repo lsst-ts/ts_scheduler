@@ -1,3 +1,4 @@
+from builtins import str
 import unittest
 
 from lsst.ts.scheduler.fields import FieldsDatabase

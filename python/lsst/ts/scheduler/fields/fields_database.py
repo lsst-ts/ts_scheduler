@@ -1,3 +1,4 @@
+from builtins import object
 import sqlite3
 
 from lsst.ts.scheduler.kernel.definitions import conf_file_path

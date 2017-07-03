@@ -1,3 +1,4 @@
+from builtins import object
 from lsst.ts.observatory.model import Target
 
 SEQ_IDLE = 0
