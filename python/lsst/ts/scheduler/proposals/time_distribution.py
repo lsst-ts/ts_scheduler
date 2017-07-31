@@ -30,6 +30,7 @@ class TimeDistributionProposalParameters(object):
         self.accept_consecutive_visits = confdict["scheduling"]["accept_consecutive_visits"]
         self.restart_lost_sequences = confdict["scheduling"]["restart_lost_sequences"]
         self.restart_complete_sequences = confdict["scheduling"]["restart_complete_sequences"]
+        self.max_visits_goal = int(confdict["scheduling"]["max_visits_goal"])
         self.airmass_bonus = confdict["scheduling"]["airmass_bonus"]
         self.hour_angle_bonus = confdict["scheduling"]["hour_angle_bonus"]
         self.hour_angle_max_rad = math.radians(confdict["scheduling"]["hour_angle_max"] * 15.0)
@@ -161,7 +162,7 @@ class TimeDistributionProposal(Proposal):
                 self.survey_filters_progress_dict[filter] = 0.0
 
         if self.survey_targets_goal > 0:
-            self.survey_targets_progress = float(self.survey_targets_visits) / self.survey_targets_goal
+            self.survey_targets_progress = float(self.survey_targets_visits) / min(self.survey_targets_goal, self.params.max_visits_goal)
         else:
             self.survey_targets_progress = 0.0
 
@@ -361,9 +362,11 @@ class TimeDistributionProposal(Proposal):
 
             return self.get_evaluated_target_list(1)
 
+        # not in deep drilling (yet)
         evaluated_fields = 0
         discarded_fields_airmass = 0
         discarded_fields_notargets = 0
+        discarded_targets_notallfilters = 0
         discarded_targets_consecutive = 0
         discarded_targets_nanbrightness = 0
         discarded_targets_lowbrightness = 0
@@ -407,12 +410,25 @@ class TimeDistributionProposal(Proposal):
             for name in sequence.enabled_subsequences_list:
                 target = sequence.get_next_target_subsequence(name)
                 filter = target.filter
+                filter_list = sequence.get_next_filter_list_subsequence(name)
 
-                if filter not in filters_evaluation_list:
+                # discard target with unavailable filters
+                any_filter_unavailable = False
+                for f in filter_list:
+                    if f not in filters_evaluation_list:
+                        any_filter_unavailable = True
+                        break
+                if any_filter_unavailable:
+                    discarded_targets_notallfilters += 1
                     continue
 
                 # discard target beyond seeing limit
-                if seeing > self.params.filter_max_seeing_dict[filter]:
+                any_filter_bad_seeing = False
+                for f in filter_list:
+                    if seeing > self.params.filter_max_seeing_dict[f]:
+                        any_filter_bad_seeing = True
+                        break
+                if any_filter_bad_seeing:
                     discarded_targets_seeing += 1
                     continue
 
@@ -429,17 +445,22 @@ class TimeDistributionProposal(Proposal):
                     sky_brightness = 0.0
                 else:
                     # discard target beyond sky brightness limits
-                    sky_brightness = mags_dict[fieldid][filter]
-                    if math.isnan(sky_brightness):
-                        discarded_targets_nanbrightness += 1
-                        continue
-
-                    if sky_brightness < self.params.filter_min_brig_dict[filter]:
-                        discarded_targets_lowbrightness += 1
-                        continue
-
-                    if sky_brightness > self.params.filter_max_brig_dict[filter]:
-                        discarded_targets_highbrightness += 1
+                    any_filter_bad_brightness = False
+                    for f in filter_list:
+                        sky_brightness = mags_dict[fieldid][f]
+                        if math.isnan(sky_brightness):
+                            any_filter_bad_brightness = True
+                            discarded_targets_nanbrightness += 1
+                            break
+                        if sky_brightness < self.params.filter_min_brig_dict[f]:
+                            any_filter_bad_brightness = True
+                            discarded_targets_lowbrightness += 1
+                            break
+                        if sky_brightness > self.params.filter_max_brig_dict[f]:
+                            any_filter_bad_brightness = True
+                            discarded_targets_highbrightness += 1
+                            break
+                    if any_filter_bad_brightness:
                         continue
 
                 # target is accepted
@@ -475,9 +496,10 @@ class TimeDistributionProposal(Proposal):
                      (len(id_list), evaluated_fields,
                       discarded_fields_airmass, discarded_fields_notargets))
         self.log.log(EXTENSIVE, "suggest_targets: evaluated targets=%i, discarded consecutive=%i "
-                     "seeing=%i "
+                     "notallfilters=%i seeing=%i "
                      "lowbright=%i highbright=%i nanbright=%i moondistance=%i" %
                      (evaluated_targets, discarded_targets_consecutive,
+                      discarded_targets_notallfilters,
                       discarded_targets_seeing,
                       discarded_targets_lowbrightness, discarded_targets_highbrightness,
                       discarded_targets_nanbrightness, discarded_moon_distance))
@@ -537,7 +559,7 @@ class TimeDistributionProposal(Proposal):
 
             self.survey_targets_visits += 1
             if self.survey_targets_goal > 0:
-                self.survey_targets_progress = float(self.survey_targets_visits) / self.survey_targets_goal
+                self.survey_targets_progress = float(self.survey_targets_visits) / min(self.survey_targets_goal, self.params.max_visits_goal)
             else:
                 self.survey_targets_progress = 0.0
             self.survey_filters_visits_dict[filter] += 1
@@ -557,10 +579,11 @@ class TimeDistributionProposal(Proposal):
 
     def evaluate_sequence_continuation(self, fieldid, text):
 
-        previous_goal = self.survey_sequences_dict[fieldid].goal
+        delta_goal = 0
         if self.survey_sequences_dict[fieldid].is_lost():
             self.log.debug("evaluate_sequence_continuation: sequence LOST field=%i %s" % (fieldid, text))
             if self.params.restart_lost_sequences:
+                delta_goal = self.survey_sequences_dict[fieldid].visits
                 self.survey_sequences_dict[fieldid].restart()
                 self.log.debug("evaluate_sequence_continuation: sequence RESTARTED field=%i" % (fieldid))
             else:
@@ -568,16 +591,16 @@ class TimeDistributionProposal(Proposal):
         elif self.survey_sequences_dict[fieldid].is_complete():
             self.log.debug("evaluate_sequence_continuation: sequence COMPLETE field=%i %s" % (fieldid, text))
             if self.params.restart_complete_sequences:
+                delta_goal = self.survey_sequences_dict[fieldid].visits
                 self.survey_sequences_dict[fieldid].restart()
                 self.log.debug("evaluate_sequence_continuation: sequence RESTARTED field=%i" % (fieldid))
             else:
                 self.remove_sequence(fieldid)
-        delta_goal = self.survey_sequences_dict[fieldid].goal - previous_goal
 
         if delta_goal > 0:
             # sequence was restarted and new goal of visits has increased
             self.survey_targets_goal += delta_goal
-            self.survey_targets_progress = float(self.survey_targets_visits) / self.survey_targets_goal
+            self.survey_targets_progress = float(self.survey_targets_visits) / min(self.survey_targets_goal, self.params.max_visits_goal)
 
     def remove_sequence(self, fieldid):
 

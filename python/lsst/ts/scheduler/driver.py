@@ -55,6 +55,7 @@ class DriverParameters(object):
         self.timecost_k = self.timecost_dc * self.timecost_dt
         self.timecost_weight = confdict["ranking"]["timecost_weight"]
         self.filtercost_weight = confdict["ranking"]["filtercost_weight"]
+        self.propboost_weight = confdict["ranking"]["propboost_weight"]
 
         self.night_boundary = confdict["constraints"]["night_boundary"]
         self.ignore_sky_brightness = confdict["constraints"]["ignore_sky_brightness"]
@@ -511,7 +512,7 @@ class Driver(object):
 
         for prop in self.science_proposal_list:
             propboost_dict[prop.propid] = \
-                propboost_dict[prop.propid] * len(self.science_proposal_list) / sumboost
+                (propboost_dict[prop.propid] * len(self.science_proposal_list) / sumboost) ** self.params.propboost_weight
 
             proptarget_list = prop.suggest_targets(self.time,
                                                    self.deep_drilling_target, constrained_filter,
