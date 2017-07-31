@@ -156,6 +156,12 @@ class Subsequence(object):
 
         return self.target
 
+    def get_next_filter_list(self):
+
+        filter_list = list(self.filter_list)
+
+        return filter_list
+
     def time_window(self, time):
 
         if self.state == SEQ_IDLE:

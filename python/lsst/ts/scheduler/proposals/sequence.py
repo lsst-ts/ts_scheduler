@@ -38,7 +38,6 @@ class Sequence(object):
             subsequence = self.subsequence_dict[name]
             subsequence.restart()
             self.enabled_subsequences_list.append(name)
-            self.goal += subsequence.goal
             for filter in subsequence.filters_goal_dict:
                 self.filters_goal_dict[filter] += subsequence.filters_goal_dict[filter]
 
@@ -49,6 +48,7 @@ class Sequence(object):
         all_idle = True
         all_complete = True
         any_lost = False
+        self.visits = 0
         for name in self.subsequence_name_list:
             subsequence = self.subsequence_dict[name]
             if not subsequence.is_idle():
@@ -57,6 +57,11 @@ class Sequence(object):
                 all_complete = False
             if subsequence.is_lost():
                 any_lost = True
+            self.visits += subsequence.num_obs_events
+        if self.goal > 0:
+            self.progress = float(self.visits) / self.goal
+        else:
+            self.progress = 0.0
 
         if any_lost:
             self.state = SEQ_LOST
@@ -101,6 +106,10 @@ class Sequence(object):
     def get_next_target_subsequence(self, name):
 
         return self.subsequence_dict[name].get_next_target()
+
+    def get_next_filter_list_subsequence(self, name):
+
+        return self.subsequence_dict[name].get_next_filter_list()
 
     def time_window_subsequence(self, name, time):
 

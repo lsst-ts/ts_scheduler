@@ -544,6 +544,7 @@ class Main(object):
         confdict["ranking"]["timecost_cost_ref"] = topic_driver_config.timecost_cost_ref
         confdict["ranking"]["timecost_weight"] = topic_driver_config.timecost_weight
         confdict["ranking"]["filtercost_weight"] = topic_driver_config.filtercost_weight
+        confdict["ranking"]["propboost_weight"] = 1.0
         confdict["constraints"] = {}
         confdict["constraints"]["night_boundary"] = topic_driver_config.night_boundary
         confdict["constraints"]["ignore_sky_brightness"] = topic_driver_config.ignore_sky_brightness
@@ -1015,6 +1016,7 @@ class Main(object):
         confdict["scheduling"]["accept_consecutive_visits"] = accept_consecutive_visits
         confdict["scheduling"]["restart_lost_sequences"] = topic_seqpropconf.restart_lost_sequences
         confdict["scheduling"]["restart_complete_sequences"] = topic_seqpropconf.restart_complete_sequences
+        confdict["scheduling"]["max_visits_goal"] = 250000
         confdict["scheduling"]["airmass_bonus"] = topic_seqpropconf.airmass_bonus
         confdict["scheduling"]["hour_angle_bonus"] = topic_seqpropconf.hour_angle_bonus
         confdict["scheduling"]["hour_angle_max"] = topic_seqpropconf.hour_angle_max
