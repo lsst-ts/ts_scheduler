@@ -1016,7 +1016,7 @@ class Main(object):
         confdict["scheduling"]["accept_consecutive_visits"] = accept_consecutive_visits
         confdict["scheduling"]["restart_lost_sequences"] = topic_seqpropconf.restart_lost_sequences
         confdict["scheduling"]["restart_complete_sequences"] = topic_seqpropconf.restart_complete_sequences
-        confdict["scheduling"]["max_visits_goal"] = 250000
+        confdict["scheduling"]["max_visits_goal"] = topic_seqpropconf.max_visits_goal
         confdict["scheduling"]["airmass_bonus"] = topic_seqpropconf.airmass_bonus
         confdict["scheduling"]["hour_angle_bonus"] = topic_seqpropconf.hour_angle_bonus
         confdict["scheduling"]["hour_angle_max"] = topic_seqpropconf.hour_angle_max

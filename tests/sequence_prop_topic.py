@@ -125,6 +125,7 @@ seqprop.accept_serendipity = False
 seqprop.accept_consecutive_visits = True
 seqprop.restart_lost_sequences = True
 seqprop.restart_complete_sequences = False
+seqprop.max_visits_goal = 250000
 seqprop.airmass_bonus = 0.5
 seqprop.hour_angle_bonus = 0.5
 seqprop.hour_angle_max = 5.0
