@@ -544,7 +544,7 @@ class Main(object):
         confdict["ranking"]["timecost_cost_ref"] = topic_driver_config.timecost_cost_ref
         confdict["ranking"]["timecost_weight"] = topic_driver_config.timecost_weight
         confdict["ranking"]["filtercost_weight"] = topic_driver_config.filtercost_weight
-        confdict["ranking"]["propboost_weight"] = 1.0
+        confdict["ranking"]["propboost_weight"] = topic_driver_config.propboost_weight
         confdict["constraints"] = {}
         confdict["constraints"]["night_boundary"] = topic_driver_config.night_boundary
         confdict["constraints"]["ignore_sky_brightness"] = topic_driver_config.ignore_sky_brightness
