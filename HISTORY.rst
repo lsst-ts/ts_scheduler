@@ -3,6 +3,48 @@
 History
 -------
 
+1.0.4   (2017-08-01)
+==================
+
+    Remove field sending.
+    New self-balancing control parameter, "propboost_weight".
+    Fixed filter availability verification before proposing deep-drilling sequences.
+    New filter seeing availability verification before proposing deep-drilling sequences.
+    New control paramenter for restarting deep-drilling sequences,
+    "max_visits_goal" to limit the number of visits promoted for the sequence proposals
+    through the self-balancing mechanism.
+
+1.0.3   (2017-05-30)
+==================
+
+    Wiring in option override for timeouts
+    Correcting dictionary call on condition check.
+    Non-coadd targets need driver state set.
+    Reducing the number of target copying. Did add one though.
+    Switching over to standalone packages.
+    Removing observatory and site config files.
+    modified slew time cost function
+
+
+1.0.2   (2017-04-12)
+==================
+
+    Adding parameters for sequence restarting.
+    Consider remaining tracking time to start deep drilling visits
+    Implemented restart lost and/or complete sequences feature
+    Improved goals computation when restarting sequences.
+
+
+1.0.1   (2017-03-29)
+==================
+
+    added end of night handling for running deep drilling
+    Added handling for deep drilling events interruptions
+    fixed allocating fields for active sequences only
+    Lengthening critical timeouts.
+    Fixed bug of removing a subsequence from the enabled list twice.
+
+
 1.0   (2017-02-28)
 ==================
 
