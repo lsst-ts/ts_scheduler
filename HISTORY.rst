@@ -3,6 +3,22 @@
 History
 -------
 
+
+1.0.5   (2017-08-10)
+====================
+
+#	modified:   python/lsst/ts/scheduler/driver.py
+    Added verification of remaining night time for deep drilling sequences.
+
+#	modified:   python/lsst/ts/scheduler/proposals/sequence.py
+    Added proper visits and goal counting per filter when restarting sequences,
+    to improve the self-balancing behavior with deep drilling.
+
+#	modified:   python/lsst/ts/scheduler/proposals/time_distribution.py
+    Improved progress calculation in the case of enabling restart of sequences,
+    to improve the self-balancing behavior with deep drilling.
+
+
 1.0.4   (2017-08-01)
 ==================
 

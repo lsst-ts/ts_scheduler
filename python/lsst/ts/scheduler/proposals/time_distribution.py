@@ -92,7 +92,6 @@ class TimeDistributionProposal(Proposal):
         self.survey_sequences_dict = {}
         self.survey_targets_goal = 0
         self.survey_targets_visits = 0
-        self.survey_targets_progress = 0.0
         self.survey_filters_goal_dict = {}
         self.survey_filters_visits_dict = {}
         self.survey_filters_progress_dict = {}
@@ -161,11 +160,6 @@ class TimeDistributionProposal(Proposal):
             else:
                 self.survey_filters_progress_dict[filter] = 0.0
 
-        if self.survey_targets_goal > 0:
-            self.survey_targets_progress = float(self.survey_targets_visits) / min(self.survey_targets_goal, self.params.max_visits_goal)
-        else:
-            self.survey_targets_progress = 0.0
-
         self.log.debug("start_night tonight fields=%i sequences=%i" %
                        (self.tonight_fields, self.tonight_sequences))
 
@@ -189,7 +183,7 @@ class TimeDistributionProposal(Proposal):
         self.log.info("end_night survey fields=%i sequences=%i goal=%i visits=%i progress=%.2f%%" %
                       (self.survey_fields, self.survey_sequences,
                        self.survey_targets_goal, self.survey_targets_visits,
-                       100 * self.survey_targets_progress))
+                       100 * self.get_progress()))
 
     def build_tonight_fields_list(self, timestamp, night):
 
@@ -210,7 +204,18 @@ class TimeDistributionProposal(Proposal):
 
     def get_progress(self):
 
-        return self.survey_targets_progress
+        if self.params.restart_lost_sequences or self.params.restart_complete_sequences:
+            if self.params.max_visits_goal > 0:
+                survey_targets_progress = float(self.survey_targets_visits) / self.params.max_visits_goal
+            else:
+                survey_targets_progress = 0.0
+        else:
+            if self.survey_targets_goal > 0:
+                survey_targets_progress = float(self.survey_targets_visits) / self.survey_targets_goal
+            else:
+                survey_targets_progress = 0.0
+
+        return survey_targets_progress
 
     def get_filter_visits(self, filter):
 
@@ -558,10 +563,6 @@ class TimeDistributionProposal(Proposal):
             self.in_deep_drilling = self.survey_sequences_dict[fieldid].is_in_deep_drilling()
 
             self.survey_targets_visits += 1
-            if self.survey_targets_goal > 0:
-                self.survey_targets_progress = float(self.survey_targets_visits) / min(self.survey_targets_goal, self.params.max_visits_goal)
-            else:
-                self.survey_targets_progress = 0.0
             self.survey_filters_visits_dict[filter] += 1
             if self.survey_filters_goal_dict[filter] > 0:
                 self.survey_filters_progress_dict[filter] = \
@@ -580,10 +581,16 @@ class TimeDistributionProposal(Proposal):
     def evaluate_sequence_continuation(self, fieldid, text):
 
         delta_goal = 0
+        delta_filters_goal_dict = {}
+        for filter in self.params.filter_list:
+            delta_filters_goal_dict[filter] = 0
+
         if self.survey_sequences_dict[fieldid].is_lost():
             self.log.debug("evaluate_sequence_continuation: sequence LOST field=%i %s" % (fieldid, text))
             if self.params.restart_lost_sequences:
                 delta_goal = self.survey_sequences_dict[fieldid].visits
+                for filter in self.params.filter_list:
+                    delta_filters_goal_dict[filter] += self.survey_sequences_dict[fieldid].filters_visits_dict[filter]
                 self.survey_sequences_dict[fieldid].restart()
                 self.log.debug("evaluate_sequence_continuation: sequence RESTARTED field=%i" % (fieldid))
             else:
@@ -592,15 +599,19 @@ class TimeDistributionProposal(Proposal):
             self.log.debug("evaluate_sequence_continuation: sequence COMPLETE field=%i %s" % (fieldid, text))
             if self.params.restart_complete_sequences:
                 delta_goal = self.survey_sequences_dict[fieldid].visits
+                for filter in self.params.filter_list:
+                    delta_filters_goal_dict[filter] += self.survey_sequences_dict[fieldid].filters_visits_dict[filter]
                 self.survey_sequences_dict[fieldid].restart()
                 self.log.debug("evaluate_sequence_continuation: sequence RESTARTED field=%i" % (fieldid))
             else:
                 self.remove_sequence(fieldid)
 
         if delta_goal > 0:
-            # sequence was restarted and new goal of visits has increased
+            # sequence was restarted and goal of visits has increased
             self.survey_targets_goal += delta_goal
-            self.survey_targets_progress = float(self.survey_targets_visits) / min(self.survey_targets_goal, self.params.max_visits_goal)
+            for filter in self.params.filter_list:
+                self.survey_filters_goal_dict[filter] += delta_filters_goal_dict[filter]
+            self.log.debug("evaluate_sequence_continuation: goal+ %i %ssequence" % (delta_goal, str(delta_filters_goal_dict)))
 
     def remove_sequence(self, fieldid):
 

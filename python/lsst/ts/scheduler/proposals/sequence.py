@@ -19,6 +19,7 @@ class Sequence(object):
         self.visits = 0
         self.progress = 0.0
         self.filters_goal_dict = {}
+        self.filters_visits_dict = {}
         for name in self.subsequence_name_list:
             subsequence = Subsequence(self.propid, self.field, name, params)
             self.subsequence_dict[name] = subsequence
@@ -28,6 +29,7 @@ class Sequence(object):
                 if filter not in self.filters_goal_dict:
                     self.filters_goal_dict[filter] = 0
                 self.filters_goal_dict[filter] += subsequence.filters_goal_dict[filter]
+                self.filters_visits_dict[filter] = 0
 
         self.update_state()
 
@@ -38,8 +40,8 @@ class Sequence(object):
             subsequence = self.subsequence_dict[name]
             subsequence.restart()
             self.enabled_subsequences_list.append(name)
-            for filter in subsequence.filters_goal_dict:
-                self.filters_goal_dict[filter] += subsequence.filters_goal_dict[filter]
+        for filter in subsequence.filters_goal_dict:
+            self.filters_visits_dict[filter] = 0
 
         self.update_state()
 
@@ -132,6 +134,8 @@ class Sequence(object):
                 self.subsequence_dict[name].register_observation(observation.time)
                 if not self.subsequence_dict[name].is_idle_or_active():
                     self.disable_subsequence(name)
+                self.filters_visits_dict[observation.filter] += 1
+                break
         self.update_state()
 
     def register_observation_subsequence(self, name, time):

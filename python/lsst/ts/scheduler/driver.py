@@ -618,18 +618,28 @@ class Driver(object):
             if winner_target.is_dd_firstvisit:
                 ttime = self.observatoryModel2.get_deep_drilling_time(winner_target)
             else:
-                ttime = 30.0
-            self.observatoryModel2.update_state(self.observatoryModel2.current_state.time + ttime)
-            if self.observatoryModel2.current_state.tracking:
-                self.targetid += 1
-                winner_target.targetid = self.targetid
-                winner_target.time = self.time
-                winner_found = True
+                ttime = 0.0
+            ntime = self.observatoryModel2.current_state.time + ttime + 30.0
+            if ntime < self.sunrise_timestamp:
+                self.observatoryModel2.update_state(ntime)
+                if self.observatoryModel2.current_state.tracking:
+                    self.targetid += 1
+                    winner_target.targetid = self.targetid
+                    winner_target.time = self.time
+                    winner_found = True
+                else:
+                    self.log.debug("select_next_target: target rejected ttime=%.1f %s" %
+                                   (ttime, str(winner_target)))
+                    self.log.debug("select_next_target: state rejected %s" %
+                                   str(self.observatoryModel2.current_state))
             else:
                 self.log.debug("select_next_target: target rejected ttime=%.1f %s" %
                                (ttime, str(winner_target)))
-                self.log.debug("select_next_target: state rejected %s" %
-                               str(self.observatoryModel2.current_state))
+                self.log.debug("select_next_target: rejected due to end of night")
+                if ttime == 0.0:
+                    # ttime == 0 means it is a regular visit (not DD)
+                    # if there is no time left for a single visit then quit
+                    break
 
         if winner_found:
             if not self.params.coadd_values:
