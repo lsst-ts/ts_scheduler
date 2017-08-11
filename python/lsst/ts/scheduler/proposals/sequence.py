@@ -40,7 +40,7 @@ class Sequence(object):
             subsequence = self.subsequence_dict[name]
             subsequence.restart()
             self.enabled_subsequences_list.append(name)
-        for filter in subsequence.filters_goal_dict:
+        for filter in self.filters_visits_dict:
             self.filters_visits_dict[filter] = 0
 
         self.update_state()
@@ -59,7 +59,7 @@ class Sequence(object):
                 all_complete = False
             if subsequence.is_lost():
                 any_lost = True
-            self.visits += subsequence.num_obs_events
+            self.visits += subsequence.target.visits
         if self.goal > 0:
             self.progress = float(self.visits) / self.goal
         else:

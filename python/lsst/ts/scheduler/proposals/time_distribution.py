@@ -580,28 +580,29 @@ class TimeDistributionProposal(Proposal):
 
     def evaluate_sequence_continuation(self, fieldid, text):
 
+        sequence = self.survey_sequences_dict[fieldid]
         delta_goal = 0
         delta_filters_goal_dict = {}
         for filter in self.params.filter_list:
             delta_filters_goal_dict[filter] = 0
 
-        if self.survey_sequences_dict[fieldid].is_lost():
+        if sequence.is_lost():
             self.log.debug("evaluate_sequence_continuation: sequence LOST field=%i %s" % (fieldid, text))
             if self.params.restart_lost_sequences:
-                delta_goal = self.survey_sequences_dict[fieldid].visits
+                delta_goal = sequence.visits
                 for filter in self.params.filter_list:
-                    delta_filters_goal_dict[filter] += self.survey_sequences_dict[fieldid].filters_visits_dict[filter]
-                self.survey_sequences_dict[fieldid].restart()
+                    delta_filters_goal_dict[filter] += sequence.filters_visits_dict[filter]
+                sequence.restart()
                 self.log.debug("evaluate_sequence_continuation: sequence RESTARTED field=%i" % (fieldid))
             else:
                 self.remove_sequence(fieldid)
-        elif self.survey_sequences_dict[fieldid].is_complete():
+        elif sequence.is_complete():
             self.log.debug("evaluate_sequence_continuation: sequence COMPLETE field=%i %s" % (fieldid, text))
             if self.params.restart_complete_sequences:
-                delta_goal = self.survey_sequences_dict[fieldid].visits
+                delta_goal = sequence.visits
                 for filter in self.params.filter_list:
-                    delta_filters_goal_dict[filter] += self.survey_sequences_dict[fieldid].filters_visits_dict[filter]
-                self.survey_sequences_dict[fieldid].restart()
+                    delta_filters_goal_dict[filter] += sequence.filters_visits_dict[filter]
+                sequence.restart()
                 self.log.debug("evaluate_sequence_continuation: sequence RESTARTED field=%i" % (fieldid))
             else:
                 self.remove_sequence(fieldid)
@@ -611,7 +612,7 @@ class TimeDistributionProposal(Proposal):
             self.survey_targets_goal += delta_goal
             for filter in self.params.filter_list:
                 self.survey_filters_goal_dict[filter] += delta_filters_goal_dict[filter]
-            self.log.debug("evaluate_sequence_continuation: goal+ %i %ssequence" % (delta_goal, str(delta_filters_goal_dict)))
+            self.log.debug("evaluate_sequence_continuation: goal+ %i %s" % (delta_goal, str(delta_filters_goal_dict)))
 
     def remove_sequence(self, fieldid):
 
