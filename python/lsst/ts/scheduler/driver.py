@@ -594,13 +594,13 @@ class Driver(object):
 
         filtercost = self.compute_filterchange_cost() * self.params.filtercost_weight
         for fieldfilter in targets_dict:
-	    #if a candidate target does not require a filter change, calculate slew time normally.
-	    if fieldfilter[1] == self.observatoryModel.current_state.filter:
-		slewtime = self.observatoryModel.get_slew_delay(targets_dict[fieldfilter][0])
-	    #if a filter change is needed, we assume this will eclipse the time all the other 
-	    #slewing operations take, so we don't bother calculating them.
-	    else:
-		slewtime = self.observatoryModel.params.filter_changetime
+            #if a candidate target does not require a filter change, calculate slew time normally.
+            if fieldfilter[1] == self.observatoryModel.current_state.filter:
+                slewtime = self.observatoryModel.get_slew_delay(targets_dict[fieldfilter][0])
+            #if a filter change is needed, we assume this will eclipse the time all the other
+            #slewing operations take, so we don't bother calculating them.
+            else:
+                slewtime = self.observatoryModel.params.filter_changetime
 
             if slewtime >= 0:
                 timecost = self.compute_slewtime_cost(slewtime) * self.params.timecost_weight

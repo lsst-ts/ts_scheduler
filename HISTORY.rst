@@ -3,6 +3,11 @@
 History
 -------
 
+1.1   (2017-09-22)
+====================
+
+#	modified:   python/lsst/ts/scheduler/driver.py
+    Avoid full slew time computation when filter change would be needed.
 
 1.0.5   (2017-08-11)
 ====================
