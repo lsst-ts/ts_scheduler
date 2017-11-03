@@ -35,13 +35,12 @@ from lsst.ts.observatory.model import ObservatoryModel, ObservatoryState
 from lsst.ts.observatory.model import Target
 from lsst.ts.scheduler.setup import TRACE, EXTENSIVE
 from lsst.ts.scheduler.kernel import read_conf_file, conf_file_path
-from lsst.ts.scheduler import Driver
 
 __all__ = ["Main"]
 
 class Main(object):
 
-    def __init__(self, options):
+    def __init__(self, options, driver):
         self.log = logging.getLogger("schedulerMain")
 
         main_confdict = read_conf_file(conf_file_path(__name__, "conf", "scheduler", "main.conf"))
@@ -73,7 +72,7 @@ class Main(object):
         self.topicFilterSwap = scheduler_filterSwapC()
         self.tInterestedProposal = scheduler_interestedProposalC()
 
-        self.schedulerDriver = Driver()
+        self.schedulerDriver = driver
 
     def sal_init(self):
         self.log.info("Starting pub/sub initialization")
