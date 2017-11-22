@@ -22,24 +22,25 @@ class AreaDistributionProposalTest(unittest.TestCase):
         (path, name_ext) = os.path.split(configfilepath)
         (name, ext) = os.path.splitext(name_ext)
         proposal_confdict = read_conf_file(configfilepath)
+        self.maxDiff = None
 
         self.areaprop = AreaDistributionProposal(1, name, proposal_confdict, self.skyModel)
 
     def test_init(self):
         self.assertEqual(self.areaprop.name, "areaProp1")
-        self.assertEqual(str(self.areaprop.params.filter_list),
-                         "['u', 'g', 'r', 'i', 'z', 'y']")
-        self.assertEqual(str(self.areaprop.params.filter_goal_dict),
-                         "{'g': 10.0, 'i': 25.0, 'r': 25.0, 'u': 7.0, 'y': 20.0, 'z': 20.0}")
-        self.assertEqual(str(self.areaprop.params.filter_min_brig_dict),
-                         "{'g': 21.0, 'i': 20.25, 'r': 20.5, 'u': 21.0, 'y': 17.5, 'z': 17.5}")
-        self.assertEqual(str(self.areaprop.params.filter_max_brig_dict),
-                         "{'g': 30.0, 'i': 30.0, 'r': 30.0, 'u': 30.0, 'y': 21.0, 'z': 21.0}")
-        self.assertEqual(str(self.areaprop.params.filter_max_seeing_dict),
-                         "{'g': 1.5, 'i': 0.8, 'r': 0.9, 'u': 1.5, 'y': 1.0, 'z': 1.3}")
-        self.assertEqual(str(self.areaprop.params.filter_exp_times_dict),
-                         "{'g': [15.0, 15.0], 'i': [15.0, 15.0], 'r': [15.0, 15.0], "
-                         "'u': [25.0, 25.0], 'y': [15.0, 15.0], 'z': [15.0, 15.0]}")
+        self.assertListEqual(self.areaprop.params.filter_list,
+                             ['u', 'g', 'r', 'i', 'z', 'y'])
+        self.assertDictEqual(self.areaprop.params.filter_goal_dict,
+                             {'g': 10.0, 'i': 25.0, 'r': 25.0, 'u': 7.0, 'y': 20.0, 'z': 20.0})
+        self.assertDictEqual(self.areaprop.params.filter_min_brig_dict,
+                             {'g': 21.0, 'i': 20.25, 'r': 20.5, 'u': 21.0, 'y': 17.5, 'z': 17.5})
+        self.assertDictEqual(self.areaprop.params.filter_max_brig_dict,
+                             {'g': 30.0, 'i': 30.0, 'r': 30.0, 'u': 30.0, 'y': 21.0, 'z': 21.0})
+        self.assertDictEqual(self.areaprop.params.filter_max_seeing_dict,
+                             {'g': 1.5, 'i': 0.8, 'r': 0.9, 'u': 1.5, 'y': 1.0, 'z': 1.3})
+        self.assertDictEqual(self.areaprop.params.filter_exp_times_dict,
+                             {'g': [15.0, 15.0], 'i': [15.0, 15.0], 'r': [15.0, 15.0],
+                              'u': [25.0, 25.0], 'y': [15.0, 15.0], 'z': [15.0, 15.0]})
         self.assertEqual(self.areaprop.params.max_airmass, 2.5)
         self.assertAlmostEqual(self.areaprop.params.min_alt, 23.578, delta=1e-3)
 

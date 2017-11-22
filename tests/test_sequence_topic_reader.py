@@ -35,9 +35,9 @@ class TestSequencePropTopicReader(unittest.TestCase):
         self.assertTrue(name in cdict)
         if not is_master:
             self.assertListEqual(cdict[name]["filters"], truths[0])
-            self.assertListEqual(cdict[name]["visits_per_filter"], truths[1])
+            self.assertListEqual(list(cdict[name]["visits_per_filter"]), truths[1])
         else:
-            self.assertListEqual(cdict[name]["nested_names"], truths[0])
+            self.assertListEqual(list(cdict[name]["nested_names"]), truths[0])
         self.assertEqual(cdict[name]["num_events"], truths[1 + offset])
         self.assertEqual(cdict[name]["num_max_missed"], truths[2 + offset])
         self.assertEqual(cdict[name]["time_interval"], truths[3 + offset])
@@ -54,14 +54,14 @@ class TestSequencePropTopicReader(unittest.TestCase):
         self.assertEquals(confdict["constraints"]["max_airmass"], 1.5)
         self.assertEquals(confdict["constraints"]["min_distance_moon"], 30.0)
         self.assertTrue(confdict["constraints"]["exclude_planets"])
-        self.assertListEqual(confdict["sky_region"]["user_regions"], [1, 20, 350, 4015])
+        self.assertListEqual(list(confdict["sky_region"]["user_regions"]), [1, 20, 350, 4015])
         self.assertEqual(confdict["sky_exclusions"]["dec_window"], 90.0)
-        self.assertListEqual(confdict["subsequences"]["names"], ["test1"])
+        self.assertListEqual(list(confdict["subsequences"]["names"]), ["test1"])
         self.check_subsequence(confdict, "subseq_test1", False,
                                ["g", "r", "i", "z", "y"], [20, 25, 30, 20, 27],
                                30, 2, 432000, 0.0, 1.0, 2.0, 1.0)
-        self.assertListEqual(confdict["master_subsequences"]["names"], ["master1", "master2"])
-        self.assertListEqual(confdict["master_subsequences"]["num_nested"], [2, 1])
+        self.assertListEqual(list(confdict["master_subsequences"]["names"]), ["master1", "master2"])
+        self.assertListEqual(list(confdict["master_subsequences"]["num_nested"]), [2, 1])
         self.check_subsequence(confdict, "msubseq_master1", True, ["nested1", "nested2"],
                                20, 1, 648000, 0.0, 1.0, 2.0, 1.0)
         self.check_subsequence(confdict, "msubseq_master2", True, ["nested3"],
