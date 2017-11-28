@@ -183,9 +183,12 @@ class AreaDistributionProposal(Proposal):
     def end_night(self, timestamp):
 
         Proposal.end_night(self, timestamp)
+        counter = 0
         for key in self.fieldsvisitedtonight:
             if self.fieldsvisitedtonight[key] > self.params.field_revisit_limit:
+                counter += 1
                 print(self.name + str(key) + " " + str(self.fieldsvisitedtonight[key]))
+        print(str(counter)+"/"+str(len(self.fieldsvisitedtonight)) + " fields exceeded the limit tonight.")
         
         self.fieldsvisitedtonight.clear()
         self.log.info("end_night survey fields=%i targets=%i goal=%i visits=%i progress=%.2f%%" %
@@ -472,7 +475,6 @@ class AreaDistributionProposal(Proposal):
             target.progress = float(target.visits) / target.goal
             target.last_visit_time = observation.time
             
-            print(target.fieldid == fieldid)
             if self.fieldsvisitedtonight[target.fieldid] >= self.params.field_revisit_limit:
                 # if we have hit the nightly field limit for this target, remove from tonight dict
                 self.remove_target(target, "nightly limit reached for this field")
