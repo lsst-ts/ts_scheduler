@@ -40,6 +40,7 @@ class AreaDistributionProposalParameters(object):
         self.time_window_max = confdict["scheduling"]["time_window_max"]
         self.time_window_end = confdict["scheduling"]["time_window_end"]
         self.time_weight = confdict["scheduling"]["time_weight"]
+        self.field_revisit_limit = confdict["scheduling"]["field_revisit_limit"]
 
         self.filter_list = []
         self.filter_goal_dict = {}
@@ -183,7 +184,7 @@ class AreaDistributionProposal(Proposal):
 
         Proposal.end_night(self, timestamp)
         for key in self.fieldsvisitedtonight:
-            if self.fieldsvisitedtonight[key] > 2:
+            if self.fieldsvisitedtonight[key] > self.field_revisit_limit:
                 print(self.name + str(key))
         
         self.fieldsvisitedtonight.clear()
@@ -472,7 +473,7 @@ class AreaDistributionProposal(Proposal):
             self.fieldsvisitedtonight.setdefault(fieldid,0)
             self.fieldsvisitedtonight[fieldid] += 1
             
-            if self.fieldsvisitedtonight[target.fieldid] >= 2:
+            if self.fieldsvisitedtonight[target.fieldid] >= self.field_revisit_limit:
                 # if we have hit the nightly field limit for this target, remove from tonight dict
                 self.remove_target(target, "nightly limit reached for this field")
             elif target.progress == 1.0:
