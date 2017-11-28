@@ -471,7 +471,7 @@ class AreaDistributionProposal(Proposal):
             target.progress = float(target.visits) / target.goal
             target.last_visit_time = observation.time
             self.fieldsvisitedtonight.setdefault(fieldid,0)
-            
+            self.fieldsvisitedtonight[fieldid] += 1
             
             if self.fieldsvisitedtonight[target.fieldid] >= self.params.field_revisit_limit:
                 # if we have hit the nightly field limit for this target, remove from tonight dict
@@ -485,7 +485,7 @@ class AreaDistributionProposal(Proposal):
                 else:
                     target.groupix += 1
 
-            self.fieldsvisitedtonight[fieldid] += 1
+            
             self.survey_targets_visits += 1
             if self.survey_targets_goal > 0:
                 self.survey_targets_progress = float(self.survey_targets_visits) / self.survey_targets_goal
