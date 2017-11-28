@@ -182,7 +182,6 @@ class AreaDistributionProposal(Proposal):
     def end_night(self, timestamp):
 
         Proposal.end_night(self, timestamp)
-        print(self.fieldsvisitedtonight)
         self.fieldsvisitedtonight.clear()
         self.log.info("end_night survey fields=%i targets=%i goal=%i visits=%i progress=%.2f%%" %
                       (self.survey_fields, self.survey_targets,
@@ -411,7 +410,7 @@ class AreaDistributionProposal(Proposal):
                       discarded_targets_seeing,
                       discarded_targets_lowbrightness, discarded_targets_highbrightness,
                       discarded_targets_nanbrightness, discarded_moon_distance))
-
+        
         return self.get_evaluated_target_list(num_targets_to_propose)
 
     def clear_evaluated_target_list(self):
@@ -468,7 +467,10 @@ class AreaDistributionProposal(Proposal):
             target.last_visit_time = observation.time
             self.fieldsvisitedtonight.setdefault(fieldid,0)
             self.fieldsvisitedtonight[fieldid] += 1
-
+            
+            if self.fieldsvisitedtonight[target.fieldid] <= 2:
+                # if we have hit the nightly field limit for this target, remove from tonight dict
+                self.remove_target(target, "nightly limit reached for this field")
             if target.progress == 1.0:
                 # target complete, remove from tonight dict
                 self.remove_target(target, "target complete")
