@@ -182,9 +182,9 @@ class AreaDistributionProposal(Proposal):
     def end_night(self, timestamp):
 
         Proposal.end_night(self, timestamp)
-        print(self.name)
-        print(self.fieldsvisitedtonight)
-        print()
+        for key in self.fieldsvisitedtonight:
+            if self.fieldsvisitedtonight[key] > 2:
+                print(self.name + str(key))
         
         self.fieldsvisitedtonight.clear()
         self.log.info("end_night survey fields=%i targets=%i goal=%i visits=%i progress=%.2f%%" %
