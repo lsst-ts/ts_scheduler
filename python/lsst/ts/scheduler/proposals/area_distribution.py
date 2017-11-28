@@ -453,8 +453,11 @@ class AreaDistributionProposal(Proposal):
 
         fieldid = observation.fieldid
         filter = observation.filter
-        self.fieldsvisitedtonight.setdefault(fieldid,0)
-        self.fieldsvisitedtonight[fieldid] += 1
+
+        if fieldid not in self.fieldsvisitedtonight:
+            self.fieldsvisitedtonight[fieldid] = 1
+        else:
+            self.fieldsvisitedtonight[fieldid] += 1
         tfound = None
         for target in self.winners_list:
             if self.observation_fulfills_target(observation, target):
