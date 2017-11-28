@@ -471,7 +471,6 @@ class AreaDistributionProposal(Proposal):
             
             if self.fieldsvisitedtonight[target.fieldid] <= 2:
                 # if we have hit the nightly field limit for this target, remove from tonight dict
-                print("attempting to remove target id" + str(target.fieldid) + " and filter " + str(target.filter))
                 self.remove_target(target, "nightly limit reached for this field")
             elif target.progress == 1.0:
                 # target complete, remove from tonight dict
@@ -515,11 +514,7 @@ class AreaDistributionProposal(Proposal):
         filter = target.filter
         self.log.log(EXTENSIVE, "remove_target: %s fieldid=%i filter=%s" %
                      (text, fieldid, filter))
-        try:
-            del self.tonight_targets_dict[fieldid][filter]
-        except KeyError:
-            print("tried to remove something that wasn't there")
-        
+        del self.tonight_targets_dict[fieldid][filter]
         if not self.tonight_targets_dict[fieldid]:
             # field with no targets, remove from tonight dict
             self.log.log(EXTENSIVE, "remove_target: fieldid=%i with no targets" % (fieldid))
