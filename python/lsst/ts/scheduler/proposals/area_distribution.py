@@ -473,7 +473,7 @@ class AreaDistributionProposal(Proposal):
                 # if we have hit the nightly field limit for this target, remove from tonight dict
                 print("attempting to remove target id" + str(target.fieldid) + " and filter " + str(target.filter))
                 self.remove_target(target, "nightly limit reached for this field")
-            if target.progress == 1.0:
+            elif target.progress == 1.0:
                 # target complete, remove from tonight dict
                 self.remove_target(target, "target complete")
             else:
