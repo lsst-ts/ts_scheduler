@@ -469,7 +469,7 @@ class AreaDistributionProposal(Proposal):
             self.fieldsvisitedtonight.setdefault(fieldid,0)
             self.fieldsvisitedtonight[fieldid] += 1
             
-            if self.fieldsvisitedtonight[target.fieldid] <= 2:
+            if self.fieldsvisitedtonight[target.fieldid] >= 2:
                 # if we have hit the nightly field limit for this target, remove from tonight dict
                 self.remove_target(target, "nightly limit reached for this field")
             elif target.progress == 1.0:
