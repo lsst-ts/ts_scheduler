@@ -111,7 +111,7 @@ class AreaDistributionProposal(Proposal):
     def start_night(self, timestamp, filters_mounted_tonight_list, night):
 
         Proposal.start_night(self, timestamp, filters_mounted_tonight_list, night)
-
+        self.fieldsvisitedtonight = {}
         self.tonight_filters_list = []
         self.tonight_targets = 0
         self.tonight_targets_dict = {}
@@ -182,7 +182,8 @@ class AreaDistributionProposal(Proposal):
     def end_night(self, timestamp):
 
         Proposal.end_night(self, timestamp)
-
+        print(self.fieldsvisitedtonight)
+        self.fieldsvisitedtonight.clear()
         self.log.info("end_night survey fields=%i targets=%i goal=%i visits=%i progress=%.2f%%" %
                       (self.survey_fields, self.survey_targets,
                        self.survey_targets_goal, self.survey_targets_visits,
@@ -465,6 +466,8 @@ class AreaDistributionProposal(Proposal):
             target.visits += 1
             target.progress = float(target.visits) / target.goal
             target.last_visit_time = observation.time
+            self.fieldsvisitedtonight.setdefault(fieldid,0)
+            self.fieldsvisitedtonight[fieldid] += 1
 
             if target.progress == 1.0:
                 # target complete, remove from tonight dict
