@@ -450,7 +450,8 @@ class AreaDistributionProposal(Proposal):
 
         fieldid = observation.fieldid
         filter = observation.filter
-
+        self.fieldsvisitedtonight.setdefault(fieldid,0)
+        self.fieldsvisitedtonight[fieldid] += 1
         tfound = None
         for target in self.winners_list:
             if self.observation_fulfills_target(observation, target):
@@ -470,9 +471,8 @@ class AreaDistributionProposal(Proposal):
             target.visits += 1
             target.progress = float(target.visits) / target.goal
             target.last_visit_time = observation.time
-            self.fieldsvisitedtonight.setdefault(fieldid,0)
-            self.fieldsvisitedtonight[fieldid] += 1
             
+            print(target.fieldid == fieldid)
             if self.fieldsvisitedtonight[target.fieldid] >= self.params.field_revisit_limit:
                 # if we have hit the nightly field limit for this target, remove from tonight dict
                 self.remove_target(target, "nightly limit reached for this field")
