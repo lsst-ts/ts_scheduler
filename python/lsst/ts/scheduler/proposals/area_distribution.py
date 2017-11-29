@@ -188,7 +188,7 @@ class AreaDistributionProposal(Proposal):
             if self.fieldsvisitedtonight[key] > self.params.field_revisit_limit:
                 counter += 1
                 print(self.name + str(key) + " " + str(self.fieldsvisitedtonight[key]))
-        print(str(counter)+"/"+str(len(self.fieldsvisitedtonight)) + " fields exceeded the limit tonight.")
+        if counter > 0: print(str(counter)+"/"+str(len(self.fieldsvisitedtonight)) + " fields exceeded the limit tonight.")
         
         self.fieldsvisitedtonight.clear()
         self.log.info("end_night survey fields=%i targets=%i goal=%i visits=%i progress=%.2f%%" %
@@ -528,10 +528,8 @@ class AreaDistributionProposal(Proposal):
         
         if removeallfilters:
             for fil in self.tonight_filters_list:
-                try:
+                if fil in self.tonight_targets_dict[fieldid]
                     del self.tonight_targets_dict[fieldid][fil]
-                except KeyError:
-                    print("no targets tonight in " + fil)
         else: del self.tonight_targets_dict[fieldid][filter]
 
         if not self.tonight_targets_dict[fieldid]:
