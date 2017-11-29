@@ -528,7 +528,7 @@ class AreaDistributionProposal(Proposal):
         
         if removeallfilters:
             for fil in self.tonight_filters_list:
-                if fil in self.tonight_targets_dict[fieldid]
+                if fil in self.tonight_targets_dict[fieldid]:
                     del self.tonight_targets_dict[fieldid][fil]
         else: del self.tonight_targets_dict[fieldid][filter]
 
