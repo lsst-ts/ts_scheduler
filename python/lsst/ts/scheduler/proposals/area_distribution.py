@@ -480,7 +480,7 @@ class AreaDistributionProposal(Proposal):
             
             if self.fieldsvisitedtonight[target.fieldid] >= self.params.field_revisit_limit:
                 # if we have hit the nightly field limit for this target, remove from tonight dict
-                self.remove_target(target, "nightly limit reached for this field")
+                self.remove_target(target, "nightly limit reached for this field", removeallfilters=True)
             elif target.progress == 1.0:
                 # target complete, remove from tonight dict
                 self.remove_target(target, "target complete")
@@ -518,13 +518,22 @@ class AreaDistributionProposal(Proposal):
         if self.params.restrict_grouped_visits:
             self.remove_target(target, text)
 
-    def remove_target(self, target, text):
+    def remove_target(self, target, text, removeallfilters=False):
 
         fieldid = target.fieldid
         filter = target.filter
         self.log.log(EXTENSIVE, "remove_target: %s fieldid=%i filter=%s" %
                      (text, fieldid, filter))
-        del self.tonight_targets_dict[fieldid][filter]
+        
+        
+        if removeallfilters:
+            for fil in self.tonight_filters_list:
+                try:
+                    del self.tonight_targets_dict[fieldid][fil]
+                except KeyError:
+                    print("no targets tonight in " + fil)
+        else: del self.tonight_targets_dict[fieldid][filter]
+
         if not self.tonight_targets_dict[fieldid]:
             # field with no targets, remove from tonight dict
             self.log.log(EXTENSIVE, "remove_target: fieldid=%i with no targets" % (fieldid))
