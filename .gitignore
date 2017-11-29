@@ -41,3 +41,4 @@ config_*
 .sconsign.dblite
 *.tests
 ups/*.cfgc
+pytest_session.txt
