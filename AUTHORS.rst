@@ -9,6 +9,9 @@ Development Lead
 
 Contributors
 ------------
+* Andrew Heyer <aheyer@lsst.org>
+
+* Colin Winslow <cwinslow@lsst.org>
 
 * Michael Reuter <mreuter@lsst.org>
 
