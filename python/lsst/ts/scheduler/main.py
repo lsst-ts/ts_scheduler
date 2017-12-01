@@ -855,6 +855,7 @@ class Main(object):
                 exp_index += 1
             confdict[filter_section]["exp_times"] = exp_times_list
             confdict[filter_section]["num_grouped_visits"] = topic_areapropconf.num_grouped_visits[k]
+            confdict[filter_section]["max_grouped_visits"] = topic_areapropconf.max_grouped_visits[k]
 
         confdict["scheduling"] = {}
         max_num_targets = topic_areapropconf.max_num_targets
