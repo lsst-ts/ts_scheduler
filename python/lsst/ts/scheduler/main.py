@@ -873,6 +873,7 @@ class Main(object):
         confdict["scheduling"]["time_window_max"] = topic_areapropconf.time_window_max
         confdict["scheduling"]["time_window_end"] = topic_areapropconf.time_window_end
         confdict["scheduling"]["time_weight"] = topic_areapropconf.time_weight
+        confdict["scheduling"]["field_revisit_limit"] = topic_areapropconf.field_revisit_limit
 
         return confdict
 
