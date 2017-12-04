@@ -516,15 +516,17 @@ class AreaDistributionProposal(Proposal):
 
         fieldid = target.fieldid
         filter = target.filter
-        self.log.log(EXTENSIVE, "remove_target: %s fieldid=%i filter=%s" %
-                     (text, fieldid, filter))
-        
         
         if removeallfilters:
             for fil in self.tonight_filters_list:
                 if fil in self.tonight_targets_dict[fieldid]:
                     del self.tonight_targets_dict[fieldid][fil]
-        else: del self.tonight_targets_dict[fieldid][filter]
+                    self.log.log(EXTENSIVE, "remove_target: %s fieldid=%i filter=%s" %
+                     (text, fieldid, fil))
+        else: 
+            del self.tonight_targets_dict[fieldid][filter]
+            self.log.log(EXTENSIVE, "remove_target: %s fieldid=%i filter=%s" %
+                     (text, fieldid, filter))
 
         if not self.tonight_targets_dict[fieldid]:
             # field with no targets, remove from tonight dict
