@@ -867,6 +867,7 @@ class Main(object):
         confdict["scheduling"]["airmass_bonus"] = topic_areapropconf.airmass_bonus
         confdict["scheduling"]["hour_angle_bonus"] = topic_areapropconf.hour_angle_bonus
         confdict["scheduling"]["hour_angle_max"] = topic_areapropconf.hour_angle_max
+        confdict["scheduling"]["field_revisit_limit"] = 2 #hardcoded for now
 
         confdict["scheduling"]["restrict_grouped_visits"] = topic_areapropconf.restrict_grouped_visits
         confdict["scheduling"]["time_interval"] = topic_areapropconf.time_interval

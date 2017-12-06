@@ -2,6 +2,15 @@
 
 History
 -------
+1.2   (2017-12-??)
+====================
+
+#   modified: python/lsst/ts/scheduler/proposals/area_distribution.py
+    Keep track of how many times each field is visited per night in any filter,
+    and added a parameter that lets field revisits be limited to an arbitrary
+    number.
+#   modified: python/lsst/ts/scheduler/main.py
+    added hard-coded field_revisit_limit variable as a placeholder.
 
 1.1   (2017-09-22)
 ====================
