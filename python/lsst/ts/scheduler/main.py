@@ -41,7 +41,7 @@ __all__ = ["Main"]
 
 class Main(object):
 
-    def __init__(self, options):
+    def __init__(self, options, driver=Driver()):
         self.log = logging.getLogger("schedulerMain")
 
         main_confdict = read_conf_file(conf_file_path(__name__, "conf", "scheduler", "main.conf"))
@@ -73,7 +73,7 @@ class Main(object):
         self.topicFilterSwap = scheduler_filterSwapC()
         self.tInterestedProposal = scheduler_interestedProposalC()
 
-        self.schedulerDriver = Driver()
+        self.schedulerDriver = driver
 
     def sal_init(self):
         self.log.info("Starting pub/sub initialization")
