@@ -16,6 +16,7 @@ class Proposal(object):
         self.sky = skymodel
         self.db = FieldsDatabase()
         self.field_select = FieldSelection()
+        self.winners_list = []
 
         self.night_boundary = 0.0
         self.ignore_sky_brightness = False
