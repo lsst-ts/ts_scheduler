@@ -17,7 +17,8 @@ class Proposal(object):
         self.db = FieldsDatabase()
         self.field_select = FieldSelection()
         self.winners_list = []
-
+        self.losers_list = []
+        
         self.night_boundary = 0.0
         self.ignore_sky_brightness = False
         self.ignore_airmass = False
