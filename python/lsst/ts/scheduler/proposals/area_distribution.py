@@ -230,8 +230,8 @@ class AreaDistributionProposal(Proposal):
         else:
             return 0.0
 
-    def suggest_targets(self, timestamp, deepdrilling_target, constrained_filter, cloud, seeing):
-
+    def suggest_targets(self, timestamp, deepdrilling_target, constrained_filter, cloud, seeing, lookahead=None):
+        
         Proposal.suggest_targets(self, timestamp)
 
         if self.ignore_clouds:
@@ -330,6 +330,8 @@ class AreaDistributionProposal(Proposal):
 
             for filter in self.tonight_targets_dict[fieldid]:
 
+                lookahead_rank = lookahead.lookup_opsim(fieldid,filter) * lookahead.bonus_weight
+
                 if filter not in filters_evaluation_list:
                     continue
 
@@ -387,7 +389,7 @@ class AreaDistributionProposal(Proposal):
                 if need_ratio > 0.0:
                     # target is needed
                     target.need = need_ratio
-                    target.bonus = airmass_rank + hour_angle_rank
+                    target.bonus = airmass_rank + hour_angle_rank + lookahead_rank
                     target.value = target.need + target.bonus
                     self.add_evaluated_target(target)
                 elif need_ratio < 0.0:

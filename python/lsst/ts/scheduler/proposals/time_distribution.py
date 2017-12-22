@@ -238,7 +238,7 @@ class TimeDistributionProposal(Proposal):
         else:
             return 0.0
 
-    def suggest_targets(self, timestamp, deepdrilling_target, constrained_filter, cloud, seeing):
+    def suggest_targets(self, timestamp, deepdrilling_target, constrained_filter, cloud, seeing, lookahead=None):
 
         Proposal.suggest_targets(self, timestamp)
 

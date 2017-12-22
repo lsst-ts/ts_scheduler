@@ -18,13 +18,14 @@ from lsst.ts.scheduler.kernel import Field
 from lsst.ts.scheduler.proposals import ScriptedProposal
 from lsst.ts.scheduler.proposals import AreaDistributionProposal, TimeDistributionProposal
 from lsst.ts.scheduler.fields import FieldsDatabase
+from lsst.ts.scheduler.lookahead import Lookahead
 
 __all__ = ["Driver"]
+
 
 class DriverParameters(object):
 
     def __init__(self):
-
         self.coadd_values = False
         self.timecost_weight = 0.0
         self.timecost_dc = 0.0
@@ -38,7 +39,6 @@ class DriverParameters(object):
         self.new_moon_phase_threshold = 0.0
 
     def configure(self, confdict):
-
         self.coadd_values = confdict["ranking"]["coadd_values"]
         self.time_balancing = confdict["ranking"]["time_balancing"]
 
@@ -56,6 +56,8 @@ class DriverParameters(object):
         self.timecost_weight = confdict["ranking"]["timecost_weight"]
         self.filtercost_weight = confdict["ranking"]["filtercost_weight"]
         self.propboost_weight = confdict["ranking"]["propboost_weight"]
+        self.lookahead_window_size = confdict['ranking']['lookahead_window_size']
+        self.lookahead_bonus_weight = confdict["ranking"]["lookahead_bonus_weight"]
 
         self.night_boundary = confdict["constraints"]["night_boundary"]
         self.ignore_sky_brightness = confdict["constraints"]["ignore_sky_brightness"]
@@ -63,6 +65,7 @@ class DriverParameters(object):
         self.ignore_clouds = confdict["constraints"]["ignore_clouds"]
         self.ignore_seeing = confdict["constraints"]["ignore_seeing"]
         self.new_moon_phase_threshold = confdict["darktime"]["new_moon_phase_threshold"]
+
 
 class Driver(object):
     def __init__(self):
@@ -118,6 +121,8 @@ class Driver(object):
 
         self.cloud = 0.0
         self.seeing = 0.0
+
+        self.lookahead = Lookahead()
 
     def configure_survey(self, survey_conf_file):
 
@@ -205,6 +210,9 @@ class Driver(object):
 
         for prop in self.science_proposal_list:
             prop.configure_constraints(self.params)
+
+        self.lookahead.window_size = self.params.lookahead_window_size
+        self.lookahead.bonus_weight = self.params.lookahead_bonus_weight
 
     def configure_location(self, confdict):
 
@@ -295,6 +303,7 @@ class Driver(object):
     def start_survey(self, timestamp, night):
 
         self.start_time = timestamp
+
         self.log.info("start_survey t=%.6f" % timestamp)
 
         self.survey_started = True
@@ -330,6 +339,8 @@ class Driver(object):
             prop.start_night(timestamp, self.observatoryModel.current_state.mountedfilters, night)
 
     def end_night(self, timestamp, night):
+
+        self.lookahead.end_night()
 
         timeprogress = (timestamp - self.start_time) / self.survey_duration_SECS
         self.log.info("end_night t=%.6f, night=%d timeprogress=%.2f%%" %
@@ -467,6 +478,7 @@ class Driver(object):
         return
 
     def select_next_target(self):
+
         if not self.isnight:
             return self.nulltarget
 
@@ -474,6 +486,10 @@ class Driver(object):
         ranked_targets_list = []
         propboost_dict = {}
         sumboost = 0.0
+
+        self.lookahead.date = self.observatoryModel.dateprofile.mjd
+        self.lookahead.start_night()  # will only run once per night
+        self.lookahead.calculate_bonus()
 
         timeprogress = (self.time - self.start_time) / self.survey_duration_SECS
         for prop in self.science_proposal_list:
@@ -511,13 +527,14 @@ class Driver(object):
 
         for prop in self.science_proposal_list:
             propboost_dict[prop.propid] = \
-                (propboost_dict[prop.propid] * len(self.science_proposal_list) / sumboost) ** self.params.propboost_weight
+                (propboost_dict[prop.propid] * len(
+                    self.science_proposal_list) / sumboost) ** self.params.propboost_weight
 
             proptarget_list = prop.suggest_targets(self.time,
                                                    self.deep_drilling_target, constrained_filter,
-                                                   self.cloud, self.seeing)
+                                                   self.cloud, self.seeing, lookahead=self.lookahead)
             self.log.log(EXTENSIVE, "select_next_target propid=%d name=%s "
-                         "targets=%d progress=%.2f%% propboost=%.3f" %
+                                    "targets=%d progress=%.2f%% propboost=%.3f" %
                          (prop.propid, prop.name,
                           len(proptarget_list), 100 * progress, propboost_dict[prop.propid]))
 
@@ -594,11 +611,11 @@ class Driver(object):
 
         filtercost = self.compute_filterchange_cost() * self.params.filtercost_weight
         for fieldfilter in targets_dict:
-            #if a candidate target does not require a filter change, calculate slew time normally.
+            # if a candidate target does not require a filter change, calculate slew time normally.
             if fieldfilter[1] == self.observatoryModel.current_state.filter:
                 slewtime = self.observatoryModel.get_slew_delay(targets_dict[fieldfilter][0])
-            #if a filter change is needed, we assume this will eclipse the time all the other
-            #slewing operations take, so we don't bother calculating them.
+            # if a filter change is needed, we assume this will eclipse the time all the other
+            # slewing operations take, so we don't bother calculating them.
             else:
                 slewtime = self.observatoryModel.params.filter_changetime
 
@@ -683,7 +700,7 @@ class Driver(object):
 
         cost = (self.params.timecost_k / (slewtime + self.params.timecost_dt) -
                 self.params.timecost_dc - self.params.timecost_cref) / (1.0 - self.params.timecost_cref)
-        #cost = self.params.timecost_k / (slewtime + self.params.timecost_dt) - self.params.timecost_dc
+        # cost = self.params.timecost_k / (slewtime + self.params.timecost_dt) - self.params.timecost_dc
 
         return cost
 
