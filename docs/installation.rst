@@ -2,7 +2,11 @@
 Installation
 ============
 
-At the command line::
+Using eups (recommended)::
+
+    $ eups distrib install ts_scheduler -t latest
+
+With easy_install::
 
     $ easy_install ts_scheduler
 
