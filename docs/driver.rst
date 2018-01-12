@@ -79,7 +79,71 @@ It is important to note that, the ``Proposals`` needs to be properly set for the
 Telemetry
 ---------------------
 
-NONONO
+A telemetry stream is available to the scheduler with crucial information regarding the state of the observatory
+(telescope, camera, etc), environment (seeing, wind, clouds, sky brightness, etc), data quality and so on. During
+real operations there is going to be a mix of real and simulated data that the scheduler uses. For instance, the
+scheduler has access to information about the current state of the observatory as well as to an updated observatory
+model that is capable of estimating slew times between different states. While the first is provided to the scheduler
+using the DDS/SAL telemetry stream, the later is computed internally and made available to the scheduling algorithm
+with an appropriate interface.
+
+The scheduler itself also produces telemetry information that needs to be sent to the system for proper logging. Part
+of it is done with using the :ref:`prop_sec` and :ref:`target_sec` interfaces but there is also others; some will be
+handled directly by Driver (like informing the OCS of any issue with the scheduler or the lack of some telemetry
+data), others have a default behaviour in the Driver and can be easily overwritten by the user algorithm (like
+requesting for the u band filter to be swapped in to the carousel).
+
+Here is a list of the current telemetry information available on the Driver and how to access it. This list will be
+updated in the future as more information is made available. Some of this information can/need to be used by the
+scheduling algorithm for target selection others may be for the scheduler internal logic.
+
+- ``location [lsst.ts.dateloc.ObservatoryLocation]``: The scheduler can access information regarding the site
+  location using.
+- ``sunset_timestamp [float]``: The current sunset time stamp. Can be converted to MJD using
+  ``lsst.ts.dateloc.DateProfile``.
+- ``sunrise_timestamp [float]``: The current sunrise time stamp. Can be converted to MJD using
+  ``lsst.ts.dateloc.DateProfile``.
+- ``observatoryState [lsst.ts.observatory.model.ObservatoryState]``: The state of the observatory gathers general
+  information about telescope position (alt/az), camera rotator angle, tracking and fail state, etc. This
+  represents the state of the actual observatory (regardless of it being a simulation or real operation).
+- ``observatoryModel [lsst.ts.observatory.model.ObservatoryModel]``: Inside Driver there are two distinct
+  models, a main model and a secondary model. This is the main observatory model and is always synchronized with the
+  actual observatory, thus providing information regarding available filters, slew time estimates from current state
+  to desired states and so on. This is the property that needs to be used for passing information to the scheduling
+  algorithm when building the telemetry stream. Some important methods of this object are:
+
+    - ``observatoryModel.dateprofile.mjd [float]``: Current MJD date.
+    - ``observatoryModel.dateprofile.lst_rad [float]``: Current LST in radians.
+    - ``observatoryModel.get_slew_delay(Target) [float]``: Compute slew time between current state and the state
+      required by Target.
+    - ``observatoryModel.get_approximate_slew_delay(ra, dec, filter) [np.array]``: Compute approximate slew time
+      between current state and (ra, dec, filter) combination (camera rotation is not considered yet).
+
+  Look at the class definition to see other methods available.
+
+- ``observatoryModel2 [lsst.ts.observatory.model.ObservatoryModel]``: The secondary observatory model available
+  to the scheduler. This one is used internally to check that a state is valid to be acquired and tracked for
+  a specified amount of time and, as such, may be unsynchronized with the observatory. For more information see
+  :ref:`prop_targets_sec` and :ref:`validate_targets_sec` sections.
+- ``seeing [float]``: This property provides the latest DIM seeing measurement in arcseconds. There's currently no
+  skymap for the seeing but on can compute and scale internally using some model.
+- ``cloud [float]``: The bulk cloud coverage measurement. There's currently no skymap for clouds available to the
+  scheduler.
+- ``wind []``: TBD
+- ``temperatures []``: TBD (needed?)
+- ``sky_brightness []``: TBD. There's currently no information regarding measured sky brightness to the scheduler, only
+  internal models.
+- ``sky [lsst.ts.astrosky.model.AstronomicalSkyModel]``: This property gives access to a sky model, including sun/moon
+  position and sky brightness model (using OpSim fields).
+
+The telemetry information required by the OCS to be produced by the scheduler is:
+
+- ``need_filter_swap [bool]``: Set to ``True`` when the scheduler requires a filter swap during daytime operations.
+- ``filter_to_unmount [str]``: In case a filter swap is needed, specifies which filter should be unmounted. Note that there
+  is a limit on the observatory to which filter can be unmounted (default to u, y and z).
+- ``filter_to_mount [str]``: In case a filter swap is needed, specifies which filter should be mounted.
+- ``select_next_target() [Target]``: Return a target to observe. See :ref:`target_sec`.
+- ``register_observation() [list]``: Validates targets and return list of successfully completed observations.
 
 .. _prop_sec:
 
@@ -88,6 +152,8 @@ Proposals
 ---------------------
 
 NONONO
+
+.. _target_sec:
 
 ---------------------
 Target
@@ -129,6 +195,14 @@ Proposing targets
 
 NONONO
 
+.. _validate_targets_sec:
+
 ------------------------------------------
 Validating targets
+------------------------------------------
+
+NONONO
+
+------------------------------------------
+Operation flow
 ------------------------------------------
