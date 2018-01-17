@@ -20,6 +20,8 @@ to ease the development of new algorithms.
 
 Before proceeding make sure you read and understand the :ref:`scheduler_label` section.
 
+.. _configuratin_sec:
+
 ---------------------
 Configuration
 ---------------------
@@ -69,11 +71,20 @@ assume no change will be made or will be required. The sequence of calls is as f
 The next step in the process is configuring the :ref:`prop_sec`. The procedure is designed to configure the current
 scheduler algorithm and does not consider or allow too much freedom in the process. To start with, there is one call
 to one of two different methods (``create_area_proposal`` or ``create_sequence_proposal``), for each proposal,
-depending on the proposal type (either General or Sequence), each using a different set of parameters. A more general
-approach would be to make a single call to a ``configure_proposals`` method responsible for setting up the entire
-process.
+depending on the proposal type (either General or Sequence), each using a different set of parameters. Right now this
+is one of the most critical parts on the development of the Driver-API. The main reason is
+that SOCS reads the configuration for each proposal and internally configures the proposals accordingly generating, for
+instance, a list of proposals and a list of fields per proposal. Then, the configuration is handled to the scheduler
+which should generate the same list of fields and so on.
 
-It is important to note that, the ``Proposals`` needs to be properly set for the scheduler to work.
+Our approach to the Drive-API configuration will be to make a single call to a ``configure_proposals`` method
+responsible for setting up the entire process. Then, (S)OCS will get the required information about the configured
+proposals using the middleware communication.
+
+It is important to note that, for this process to work, the ``Proposals`` needs to be properly set by the Driver.
+
+
+.. _telemetry_sec:
 
 ---------------------
 Telemetry
@@ -151,7 +162,27 @@ The telemetry information required by the OCS to be produced by the scheduler is
 Proposals
 ---------------------
 
-NONONO
+For the LSST Scheduler a Proposal represents the unity of a scientific project. It can be a survey of a region of the
+sky in a set of filters with a specific observational strategy, a set of fields or even targets of opportunity.
+Together with :ref:`target_sec` the Proposals are one of the main interfaces between the scheduler and the (S)OCS. They
+are used to inform (S)OCS about the science projects running on the telescope and to properly log the
+information required for each one of them. Optionally, they also store "project-wise" information such as weather and
+observational parameters. In order to enable these functionalities the Proposals needs to be properly set when
+configuring the Driver.
+
+Currently there are two different types of Proposals, ``AreaDistributionProposal`` and a ``Sequence`` proposal.
+But, they will be replaced by a single type of more general proposal.
+
+The minimum set of parameters needed for configuring a proposal are;
+
+- ``propid [int]``: A unique identifier that represents the proposal.
+- ``name [str]``: The name of the proposal.
+- ``confdict [dict]``: A dictionary with basic configuration parameters. The current structure of this dictionary is
+  pretty much used by the current scheduler. It will probably change a lot for the Driver API.
+- ``skymodel [SkyModel]``: This will probably be removed as it is unused by general algorithms.
+
+During the configuration procedure it is also important that the Proposals create a list of Fields that belong to it.
+
 
 .. _target_sec:
 
@@ -193,7 +224,50 @@ See :ref:`prop_targets_sec` section to check how this class needs to be populate
 Proposing targets
 ------------------------------------------
 
-NONONO
+Proposing a target to be observed by (S)OCS is done using a function call to `Driver.select_next_target()`. This
+function receives no argument and should return an object of the type ``Target``. Updating the timestamp and other
+internal telemetry information is done before a call to this function by (S)OCS. Check the :ref:`telemetry_sec` for
+information about available telemetry and :ref:`op_flow_sec` to see how this is updated.
+
+When using a custom made algorithm ``select_next_target()`` is responsible for organizing the telemetry in a way the
+algorithm understand, get an appropriate target for observation, convert that target to a :ref:`target_sec`
+object, make sure it can be observed and finally returning a valid :ref:`target_sec`.
+
+When generating the returned object the following information needs to be included.
+
+- ``targetid [int]``: This is a counter that needs to be incremented every time a target is successfully generated. If,
+  for any reason an observation is unsuccessful, it needs to be properly reset.
+- ``fieldid [int]``: The id of the field as in the OpSim database.
+- ``filter [str]``: The filter to be observed.
+- ``num_exp [int]``: The number of exposures.
+- ``exp_time [list]``: A list with the exposure time for each exposure (must match ``num_exp``.
+- ``ra_rad [float]``: RA of the observation in radians. It can be different from the original OpSim field, useful for
+  dithering patterns.
+- ``dec_rad [float]``: Dec of the observation in radians. It can be different from the original OpSim field, useful for
+  dithering patterns.
+- ``ang_rad [float]``: Position angle of the observation in radians.
+- ``prop_id [int]``: The proposal id for which this observation is part of.
+- ``slewtime [float]``: Estimated slew time in seconds.
+- ``skybrightness [float]``: Estimated sky brightness for this observation.
+- ``airmass [float]``: Estimated airmass.
+- ``seeing [float]``: Estimated seeing.
+- ``cloud [int]``: Estimated cloud.
+
+Once Target is setup with this basic information, it can be validated using the secondary observatory model. This is
+done with the following call::
+
+    self.observatoryModel2.set_state(self.observatoryState)
+    self.observatoryModel2.observe(target, use_telrot=True)
+
+What this does is to synchronize the secondary observatory model with the current observatory state (including the
+current timestamp) and them try to perform the observation. In case of success, ``target`` will be properly filled with
+information regarding the (estimated) telescope state. If if fails, ``target.slewtime`` will be set to ``-1`` and
+``observatoryModel2.current_state`` will harbor information regarding why it failed. One of the most common sources of
+failed observations is hitting a rotation angle limit. The ``Driver`` must be able to respond to this kind of
+behaviour and other sources of failed observations as well. If an invalid observation is send to the OCS, the
+observation will be skipped and the simulation stepped into the future. On the real case scenario there's probably be
+going to issue an alert to the operator and operation will be paused.
+
 
 .. _validate_targets_sec:
 
@@ -201,8 +275,46 @@ NONONO
 Validating targets
 ------------------------------------------
 
-NONONO
+Once a ``target`` is proposed to the (S)OCS it will try to acquire the observation. In the simulation environment, this
+basically involves a call to ``observe`` in its internal observatory model. On real operations, that will required a
+complete set of actual operations. Regardless of the operation mode, at the end, (S)OCS will validate the
+observation. This is done by a call to the function ``Driver.register_observation(observation)``, where ``observation``
+is of the type ``Target``. If (S)OCS could complete the observation successfully ``observation.targetid`` will be equal
+to the ``target.targetid`` of the proposed target. The observation failed otherwise (usually with
+``observation.targetid = -1``.
+
+The default behavior of validating a target performs internal logging on ``Driver`` and on ``Proposals``. If one
+requires custom operations it is important to also call the ``Driver``'s superclass function as well for proper
+operation.
+
+.. _op_flow_sec:
 
 ------------------------------------------
-Operation flow
+Operation workflow
 ------------------------------------------
+
+A high level representation of the operation workflow is given here. It is assumed that all configuration steps where
+successfully completed and that the scheduler is ready to start serving targets. The workflow is break down into
+different levels for better understanding. We start with the workflow from the (S)OCS point of view and then from the
+scheduler point of view and then a unified workflow.
+
+.. _driver_figure:
+
+.. figure:: _static/socs_workflow.jpg
+   :scale: 50 %
+   :alt: SOCS workflow
+   :align: center
+
+   Diagram showing (S)OCS operation workflow. A telephone and arrow indicates when there is a communication going on
+   through the DDS/SAL communication middleware layer. An up arrow indicates information being broadcast and an
+   arrow down information being read. 
+
+
+.. _scheduler_figure:
+
+.. figure:: _static/scheduler_workflow.jpg
+   :scale: 50 %
+   :alt: Scheduler workflow
+   :align: center
+
+   Diagram showing Scheduler operation workflow.

@@ -162,7 +162,7 @@ will be generalized to accommodate different algorithms. Also, right now there a
 with different sets of parameters (general and sequence proposals). In the future there will be a single kind of
 proposal and, likely, a string will be passed which can contain a configuration file (or other configuration method).
 
-There are the parameters currently used to configure a general proposal:
+These are the parameters currently used to configure a general proposal:
 
     * **name:** Name for the proposal.
     * sky_region: Sky region selection for the proposal.
