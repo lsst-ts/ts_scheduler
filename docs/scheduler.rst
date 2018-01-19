@@ -4,7 +4,7 @@
 LSST Scheduler
 ===================================
 
-The LSST Scheduler is a complex software that relies on a series of submodules for properly functioning. Some of them
+The LSST Scheduler is a complex software that relies on a series of submodules to properly function. Some of them
 provides the interface with the (S)OCS while others provides access to crucial telemetry information, about the system
 and the environment.
 
@@ -19,7 +19,7 @@ Scheduler submodules
 ----------------------
 
 Most of these submodules are configured at the initialization process and thus relies on the
-scheduler interface for properly functioning. A list of these submodules with initialization parameters is provided
+scheduler interface. A list of these submodules with initialization parameters is provided
 here. Some of these submodules are functional (a.k.a. the scheduler uses them as telemetry input or else) others are
 responsible for setting up the survey and scheduling algorithms.
 

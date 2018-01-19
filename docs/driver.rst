@@ -259,8 +259,8 @@ done with the following call::
     self.observatoryModel2.set_state(self.observatoryState)
     self.observatoryModel2.observe(target, use_telrot=True)
 
-What this does is to synchronize the secondary observatory model with the current observatory state (including the
-current timestamp) and them try to perform the observation. In case of success, ``target`` will be properly filled with
+What this does is synchronize the secondary observatory model with the current observatory state (including the
+current timestamp) and then try to perform the observation. In case of success, ``target`` will be properly filled with
 information regarding the (estimated) telescope state. If if fails, ``target.slewtime`` will be set to ``-1`` and
 ``observatoryModel2.current_state`` will harbor information regarding why it failed. One of the most common sources of
 failed observations is hitting a rotation angle limit. The ``Driver`` must be able to respond to this kind of
