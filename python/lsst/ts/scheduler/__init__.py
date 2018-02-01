@@ -6,3 +6,4 @@ __email__ = 'fdelgado@lsst.org'
 from .version import *
 from .driver import *
 from .main import *
+from .sal_utils import *
