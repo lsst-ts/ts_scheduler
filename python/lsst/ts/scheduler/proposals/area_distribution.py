@@ -40,6 +40,7 @@ class AreaDistributionProposalParameters(object):
         self.time_window_max = confdict["scheduling"]["time_window_max"]
         self.time_window_end = confdict["scheduling"]["time_window_end"]
         self.time_weight = confdict["scheduling"]["time_weight"]
+        self.field_revisit_limit = confdict["scheduling"]["field_revisit_limit"]
 
         self.filter_list = []
         self.filter_goal_dict = {}
@@ -111,7 +112,7 @@ class AreaDistributionProposal(Proposal):
     def start_night(self, timestamp, filters_mounted_tonight_list, night):
 
         Proposal.start_night(self, timestamp, filters_mounted_tonight_list, night)
-
+        self.fieldsvisitedtonight = {}
         self.tonight_filters_list = []
         self.tonight_targets = 0
         self.tonight_targets_dict = {}
@@ -182,7 +183,7 @@ class AreaDistributionProposal(Proposal):
     def end_night(self, timestamp):
 
         Proposal.end_night(self, timestamp)
-
+        self.fieldsvisitedtonight.clear()
         self.log.info("end_night survey fields=%i targets=%i goal=%i visits=%i progress=%.2f%%" %
                       (self.survey_fields, self.survey_targets,
                        self.survey_targets_goal, self.survey_targets_visits,
@@ -229,8 +230,8 @@ class AreaDistributionProposal(Proposal):
         else:
             return 0.0
 
-    def suggest_targets(self, timestamp, deepdrilling_target, constrained_filter, cloud, seeing):
-
+    def suggest_targets(self, timestamp, deepdrilling_target, constrained_filter, cloud, seeing, lookahead=None):
+        
         Proposal.suggest_targets(self, timestamp)
 
         if self.ignore_clouds:
@@ -329,6 +330,8 @@ class AreaDistributionProposal(Proposal):
 
             for filter in self.tonight_targets_dict[fieldid]:
 
+                lookahead_rank = lookahead.lookup_opsim(fieldid,filter) * lookahead.bonus_weight
+
                 if filter not in filters_evaluation_list:
                     continue
 
@@ -386,7 +389,7 @@ class AreaDistributionProposal(Proposal):
                 if need_ratio > 0.0:
                     # target is needed
                     target.need = need_ratio
-                    target.bonus = airmass_rank + hour_angle_rank
+                    target.bonus = airmass_rank + hour_angle_rank + lookahead_rank
                     target.value = target.need + target.bonus
                     self.add_evaluated_target(target)
                 elif need_ratio < 0.0:
@@ -410,7 +413,7 @@ class AreaDistributionProposal(Proposal):
                       discarded_targets_seeing,
                       discarded_targets_lowbrightness, discarded_targets_highbrightness,
                       discarded_targets_nanbrightness, discarded_moon_distance))
-
+        
         return self.get_evaluated_target_list(num_targets_to_propose)
 
     def clear_evaluated_target_list(self):
@@ -446,6 +449,10 @@ class AreaDistributionProposal(Proposal):
         fieldid = observation.fieldid
         filter = observation.filter
 
+        if fieldid not in self.fieldsvisitedtonight:
+            self.fieldsvisitedtonight[fieldid] = 1
+        else:
+            self.fieldsvisitedtonight[fieldid] += 1
         tfound = None
         for target in self.winners_list:
             if self.observation_fulfills_target(observation, target):
@@ -465,8 +472,12 @@ class AreaDistributionProposal(Proposal):
             target.visits += 1
             target.progress = float(target.visits) / target.goal
             target.last_visit_time = observation.time
-
-            if target.progress == 1.0:
+            
+            if self.fieldsvisitedtonight[target.fieldid] >= self.params.field_revisit_limit \
+            and self.params.field_revisit_limit > 0: #treat 0 as unlimited revisits
+                # if we have hit the nightly field limit for this target, remove from tonight dict
+                self.remove_target(target, "nightly limit reached for this field", removeallfilters=True)
+            elif target.progress == 1.0:
                 # target complete, remove from tonight dict
                 self.remove_target(target, "target complete")
             else:
@@ -475,6 +486,7 @@ class AreaDistributionProposal(Proposal):
                 else:
                     target.groupix += 1
 
+            
             self.survey_targets_visits += 1
             if self.survey_targets_goal > 0:
                 self.survey_targets_progress = float(self.survey_targets_visits) / self.survey_targets_goal
@@ -502,13 +514,22 @@ class AreaDistributionProposal(Proposal):
         if self.params.restrict_grouped_visits:
             self.remove_target(target, text)
 
-    def remove_target(self, target, text):
+    def remove_target(self, target, text, removeallfilters=False):
 
         fieldid = target.fieldid
         filter = target.filter
-        self.log.log(EXTENSIVE, "remove_target: %s fieldid=%i filter=%s" %
+        
+        if removeallfilters:
+            for fil in self.tonight_filters_list:
+                if fil in self.tonight_targets_dict[fieldid]:
+                    del self.tonight_targets_dict[fieldid][fil]
+                    self.log.log(EXTENSIVE, "remove_target: %s fieldid=%i filter=%s" %
+                     (text, fieldid, fil))
+        else: 
+            del self.tonight_targets_dict[fieldid][filter]
+            self.log.log(EXTENSIVE, "remove_target: %s fieldid=%i filter=%s" %
                      (text, fieldid, filter))
-        del self.tonight_targets_dict[fieldid][filter]
+
         if not self.tonight_targets_dict[fieldid]:
             # field with no targets, remove from tonight dict
             self.log.log(EXTENSIVE, "remove_target: fieldid=%i with no targets" % (fieldid))

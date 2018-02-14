@@ -43,7 +43,7 @@ class Proposal(object):
     def end_night(self, timestamp):
         return
 
-    def suggest_targets(self, time):
+    def suggest_targets(self, time, mjdstamp = None):
         return []
 
     def select_fields(self, timestamp, night, sky_region, sky_exclusions, sky_nightly_bounds):
