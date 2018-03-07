@@ -605,7 +605,7 @@ class SALUtils(SAL_scheduler):
         topic_target.filter = target.filter
         topic_target.request_time = target.time
         topic_target.ra = target.ra
-        topic_target.dec = target.dec
+        topic_target.decl = target.dec
         topic_target.angle = target.ang
         topic_target.num_exposures = target.num_exp
         for i, exptime in enumerate(target.exp_times):
@@ -654,7 +654,7 @@ class SALUtils(SAL_scheduler):
         for k in range(observation.num_props):
             observation.propid_list.append(topic_observation.proposal_Ids[k])
         observation.ra_rad = math.radians(topic_observation.ra)
-        observation.dec_rad = math.radians(topic_observation.dec)
+        observation.dec_rad = math.radians(topic_observation.decl)
         observation.ang_rad = math.radians(topic_observation.angle)
         observation.num_exp = topic_observation.num_exposures
         observation.exp_times = []
