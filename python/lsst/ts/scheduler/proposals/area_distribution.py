@@ -330,7 +330,8 @@ class AreaDistributionProposal(Proposal):
 
             for filter in self.tonight_targets_dict[fieldid]:
 
-                lookahead_rank = lookahead.lookup_opsim(fieldid,filter) * lookahead.bonus_weight
+                lookahead_rank = lookahead.lookup_opsim(fieldid, filter) * lookahead.bonus_weight \
+                    if lookahead is not None else 0.
 
                 if filter not in filters_evaluation_list:
                     continue
