@@ -66,7 +66,8 @@ class ScriptedProposal(Proposal):
             dec_list.append(target.dec_rad)
             filter_list.append(target.filter)
         self.sky.update(time)
-        sky_mags = self.sky.get_sky_brightness(numpy.array(id_list))
+        sky_mags = self.sky.get_sky_brightness(numpy.array(ra_list),
+                                               numpy.array(dec_list))
 
         target_list[0].sky_brightness = sky_mags[target.filter][0]
 
