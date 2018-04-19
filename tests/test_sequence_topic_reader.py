@@ -47,7 +47,7 @@ class TestSequencePropTopicReader(unittest.TestCase):
         self.assertEqual(cdict[name]["time_weight"], truths[7 + offset])
 
     def test_reader(self):
-        confdict = self.main.rtopic_seq_prop_config(seqprop)
+        confdict = self.main.sal.rtopic_seq_prop_config(seqprop)
         self.assertEquals(confdict["sky_nightly_bounds"]["twilight_boundary"], -18.0)
         self.assertEquals(confdict["sky_nightly_bounds"]["delta_lst"], 60.0)
         self.assertEquals(confdict["constraints"]["max_cloud"], 0.7)

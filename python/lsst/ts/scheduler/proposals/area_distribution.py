@@ -275,8 +275,8 @@ class AreaDistributionProposal(Proposal):
             dec_rad_list.append(field.dec_rad)
         if (len(id_list) > 0) and (not self.ignore_sky_brightness or not self.ignore_airmass):
             self.sky.update(timestamp)
-            sky_mags = self.sky.get_sky_brightness(numpy.array(id_list))
-            airmass = self.sky.get_airmass(numpy.array(id_list))
+            sky_mags = self.sky.get_sky_brightness(numpy.array(ra_rad_list), numpy.array(dec_rad_list))
+            airmass = self.sky.get_airmass(numpy.array(ra_rad_list), numpy.array(dec_rad_list))
             nra = numpy.array(ra_rad_list)
             moon_distance = self.sky.get_separation("moon", nra,
                                                     numpy.array(dec_rad_list))
@@ -330,7 +330,8 @@ class AreaDistributionProposal(Proposal):
 
             for filter in self.tonight_targets_dict[fieldid]:
 
-                lookahead_rank = lookahead.lookup_opsim(fieldid,filter) * lookahead.bonus_weight
+                lookahead_rank = lookahead.lookup_opsim(fieldid, filter) * lookahead.bonus_weight \
+                    if lookahead is not None else 0.
 
                 if filter not in filters_evaluation_list:
                     continue

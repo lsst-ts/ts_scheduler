@@ -158,9 +158,11 @@ class SALUtils(SAL_scheduler):
         confdict["dome"]["altitude_maxspeed"] = topic_dome_config.altitude_maxspeed
         confdict["dome"]["altitude_accel"] = topic_dome_config.altitude_accel
         confdict["dome"]["altitude_decel"] = topic_dome_config.altitude_decel
+        confdict["dome"]["altitude_freerange"] = topic_dome_config.altitude_freerange
         confdict["dome"]["azimuth_maxspeed"] = topic_dome_config.azimuth_maxspeed
         confdict["dome"]["azimuth_accel"] = topic_dome_config.azimuth_accel
         confdict["dome"]["azimuth_decel"] = topic_dome_config.azimuth_decel
+        confdict["dome"]["azimuth_freerange"] = topic_dome_config.azimuth_freerange
         confdict["dome"]["settle_time"] = topic_dome_config.settle_time
 
         return confdict

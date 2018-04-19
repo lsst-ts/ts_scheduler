@@ -613,7 +613,7 @@ class Driver(object):
         for fieldfilter in targets_dict:
             # if a candidate target does not require a filter change, calculate slew time normally.
             if fieldfilter[1] == self.observatoryModel.current_state.filter:
-                slewtime = self.observatoryModel.get_slew_delay(targets_dict[fieldfilter][0])
+                slewtime, slew_state = self.observatoryModel.get_slew_delay(targets_dict[fieldfilter][0])
             # if a filter change is needed, we assume this will eclipse the time all the other
             # slewing operations take, so we don't bother calculating them.
             else:
