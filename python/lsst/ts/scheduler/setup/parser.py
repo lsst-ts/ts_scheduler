@@ -27,5 +27,7 @@ def create_parser():
                         type=int, help="Specify the logging port for the Scheduler.")
     parser.add_argument("-t", "--timeout", dest="timeout", default=60.0, type=float,
                         help="Specify the timeout for the DDS messaging checks.")
+    parser.add_argument("-p", "--path_config", dest="path", default=None, type=str,
+                        help="Specify the path to the configuration directory.")
 
     return parser

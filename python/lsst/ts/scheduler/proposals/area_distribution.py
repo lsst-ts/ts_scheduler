@@ -73,6 +73,8 @@ class AreaDistributionProposal(Proposal):
 
         Proposal.__init__(self, propid, name, confdict, skymodel)
 
+        self.log.debug('AreaDistributionProposal - %s: %s' % (name, confdict))
+
         self.params = AreaDistributionProposalParameters(self.proposal_confdict)
         self.sky.configure(self.params.exclude_planets)
 
