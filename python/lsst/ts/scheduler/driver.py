@@ -14,7 +14,7 @@ from lsst.ts.observatory.model import ObservatoryState
 from lsst.ts.observatory.model import Target
 from lsst.ts.scheduler.setup import EXTENSIVE, WORDY
 from lsst.ts.scheduler.kernel import read_conf_file
-from lsst.ts.scheduler.kernel import Field
+from lsst.ts.scheduler.kernel import Field, SurveyTopology
 from lsst.ts.scheduler.proposals import ScriptedProposal
 from lsst.ts.scheduler.proposals import AreaDistributionProposal, TimeDistributionProposal
 from lsst.ts.scheduler.fields import FieldsDatabase
@@ -123,6 +123,43 @@ class Driver(object):
         self.seeing = 0.0
 
         self.lookahead = Lookahead()
+
+    def configure_scheduler(self, **kwargs):
+
+        # FIXME:
+        # This is extremely ugly I know, but the idea is that the user subclass this method to run
+        # their own configuration and return a survey topology.
+        from lsst.ts.scheduler.sal_utils import SALUtils
+        from SALPY_scheduler import scheduler_generalPropConfigC
+        from SALPY_scheduler import scheduler_sequencePropConfigC
+
+        config = kwargs['config']
+        self.propid_counter = 0
+        general_topic = scheduler_generalPropConfigC()
+        if config.science.general_props.active is not None:
+            for general_config in config.science.general_props.active:
+                set_topic = general_config.set_topic(general_topic)
+                conf_dict = SALUtils.rtopic_area_prop_config(set_topic)
+                self.log.debug('configure_scheduler [%s-%i]: %s' % (general_config.name, self.propid_counter,
+                                                                    conf_dict))
+                self.create_area_proposal(self.propid_counter+1, general_config.name, conf_dict)
+
+        seq_topic = scheduler_sequencePropConfigC()
+        if config.science.sequence_props.active is not None:
+            for sequence_props in config.science.sequence_props.active:
+                set_topic = sequence_props.set_topic(seq_topic)
+                conf_dict = SALUtils.rtopic_seq_prop_config(set_topic)
+                self.log.debug('configure_scheduler [%s-%i] : %s' % (sequence_props.name, self.propid_counter,
+                                                                     conf_dict))
+                self.create_sequence_proposal(self.propid_counter+1, sequence_props.name, conf_dict)
+
+        survey_topology = SurveyTopology()
+        survey_topology.num_general_props = len(config.science.general_proposals)
+        survey_topology.general_propos = config.science.general_proposals
+        survey_topology.num_seq_props = len(config.science.sequence_proposals)
+        survey_topology.sequence_propos = config.science.sequence_proposals
+
+        return survey_topology
 
     def configure_survey(self, survey_conf_file):
 
@@ -716,5 +753,5 @@ class Driver(object):
         return cost
 
     def observation_fulfills_target(self, observ, target):
-
-        return (observ.fieldid == target.fieldid) and (observ.filter == target.filter)
+        return (observ.targetid == target.targetid) and (observ.filter == target.filter)
+        # return (observ.fieldid == target.fieldid) and (observ.filter == target.filter)

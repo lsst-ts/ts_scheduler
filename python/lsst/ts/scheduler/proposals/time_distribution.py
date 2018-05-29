@@ -82,6 +82,8 @@ class TimeDistributionProposal(Proposal):
 
         Proposal.__init__(self, propid, name, confdict, skymodel)
 
+        self.log.debug('TimeDistributionProposal - %s: %s' % (name, confdict))
+
         self.params = TimeDistributionProposalParameters(self.proposal_confdict)
         self.sky.configure(self.params.exclude_planets)
 

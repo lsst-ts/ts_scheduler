@@ -1,17 +1,20 @@
 from builtins import object
 from builtins import str
+import os
 import logging
 import logging.handlers
 import sys
 import time
 import copy
+from git import Repo
 
-from lsst.ts.dateloc import ObservatoryLocation
-from lsst.ts.observatory.model import ObservatoryModel, ObservatoryState
 from lsst.ts.scheduler.setup import TRACE, EXTENSIVE
 from lsst.ts.scheduler.kernel import read_conf_file, conf_file_path
 from lsst.ts.scheduler.sal_utils import SALUtils
 from lsst.ts.scheduler import Driver
+from lsst.sims.ocs.configuration import SimulationConfig as SchedulerConfig
+
+from opsim4_config.constants import CONFIG_DIRECTORY, CONFIG_DIRECTORY_PATH
 
 __all__ = ["Main"]
 
@@ -23,12 +26,42 @@ class Main(object):
         main_confdict = read_conf_file(conf_file_path(__name__, "conf", "scheduler", "main.conf"))
         self.measinterval = main_confdict['log']['rate_meas_interval']
 
+        if options.path is None:
+            self.configuration_path = str(CONFIG_DIRECTORY)
+        else:
+            self.configuration_path = options.path
+
+        self.config_repo = Repo(str(CONFIG_DIRECTORY_PATH))
+
+        self.current_setting = ''
+        self.valid_settings = self.read_valid_settings()
+        self.log.debug('List of valid configurations:')
+        for setting in self.valid_settings:
+            if self.current_setting == setting[setting.find('/')+1:]:
+                self.log.debug('{} [current]'.format(setting))
+            else:
+                self.log.debug('{}'.format(setting))
+
         self.sal = SALUtils(options.timeout)
         self.schedulerDriver = driver
+        self.config = SchedulerConfig()
 
         self.meascount = 0
         self.visitcount = 0
         self.synccount = 0
+
+        self.summary_state_enum = {'DISABLE': 0,
+                                   'ENABLE': 1,
+                                   'FAULT': 2,
+                                   'OFFLINE': 3,
+                                   'STANDBY': 4}
+
+        self.cmd_state_transition = {'enterControl': 'STANDBY',
+                                     'start': 'DISABLE',
+                                     'enable': 'ENABLE'
+                                     }
+
+        self.state = 'OFFLINE'
 
         self.meastime = time.time()
 
@@ -42,6 +75,22 @@ class Main(object):
         timestamp = 0.0
 
         try:
+
+            self.broadcast_state()
+
+            if not self.wait_cmd("enterControl"):
+                raise Exception("Did not received enterControl command.")
+
+            self.broadcast_state()
+            self.broadcast_valid_settings()
+
+            if not self.wait_cmd("start"):
+                raise Exception("Did not received enterControl command.")
+
+            self.log.info("Received start command with configuration %s..." % self.topic.configuration)
+
+            self.load_configuration(self.topic.configuration)
+            # now run configuration, then publish state transition
 
             self.configure_driver()
 
@@ -61,7 +110,15 @@ class Main(object):
 
             self.configure_park()
 
-            self.configure_proposals()
+            self.configure_scheduler()
+
+            self.broadcast_state()
+
+            if not self.wait_cmd("enable"):
+                raise Exception("Did not received enterControl command.")
+
+            self.log.info("Enabling...")
+            self.broadcast_state()
 
             waittime = True
             lasttimetime = time.time()
@@ -81,6 +138,8 @@ class Main(object):
 
         except:
             self.log.exception("An exception was thrown in the Scheduler!")
+            self.state = 'FAULT'
+            self.broadcast_state()
 
         self.schedulerDriver.end_survey()
 
@@ -91,234 +150,93 @@ class Main(object):
     def configure_driver(self):
 
         # Configure survey duration
+        self.sal.topic_schedulerConfig.survey_duration = self.config.survey.duration
+        self.schedulerDriver.configure_duration(self.config.survey.full_duration)
+        self.sal.putSample_schedulerConfig(self.sal.topic_schedulerConfig)
 
-        survey_duration = 0.
-        waitconfig = True
-        lastconfigtime = time.time()
-
-        while waitconfig:
-            scode = self.sal.getNextSample_schedulerConfig(self.sal.topic_schedulerConfig)
-            if (scode == 0 and self.sal.topic_schedulerConfig.survey_duration > 0.0):
-                lastconfigtime = time.time()
-                survey_duration = self.sal.topic_schedulerConfig.survey_duration
-                self.log.info("run: rx scheduler config survey_duration=%.1f" % (survey_duration))
-                waitconfig = False
-            else:
-                tf = time.time()
-                if (tf - lastconfigtime > 20.0):
-                    self.log.info("run: scheduler config timeout")
-                    config_file = conf_file_path(__name__, "conf", "survey", "survey.conf")
-                    config_dict = read_conf_file(config_file)
-                    survey_duration = config_dict["survey"]["survey_duration"]
-                    waitconfig = False
-                time.sleep(self.sal.sal_sleeper)
-
-        self.schedulerDriver.configure_duration(survey_duration)
-
-        config_dict = {}
-        waitconfig = True
-        lastconfigtime = time.time()
-        while waitconfig:
-            scode = self.sal.getNextSample_driverConfig(self.sal.topic_driverConfig)
-            if (scode == 0 and self.sal.topic_driverConfig.timecost_time_max > 0):
-                lastconfigtime = time.time()
-                config_dict = self.sal.rtopic_driver_config(self.sal.topic_driverConfig)
-                self.log.info("run: rx driver config=%s" % (config_dict))
-                waitconfig = False
-            else:
-                tf = time.time()
-                if (tf - lastconfigtime > 10.0):
-                    self.log.info("run: driver config timeout")
-                    config_file = conf_file_path(__name__, "conf", "scheduler", "driver.conf")
-                    config_dict = read_conf_file(config_file)
-                    waitconfig = False
-                time.sleep(self.sal.sal_sleeper)
-        self.schedulerDriver.configure(config_dict)
+        # write configuration to topic
+        self.sal.wtopic_driver_config(self.sal.topic_driverConfig, self.config)
+        conf_dict = self.sal.rtopic_driver_config(self.sal.topic_driverConfig)
+        # configure driver
+        self.schedulerDriver.configure(conf_dict)
+        # publish driver configuration
+        self.sal.putSample_driverConfig(self.sal.topic_driverConfig)
 
     def configure_location(self):
 
-        config_dict = {}
-        waitconfig = True
-        lastconfigtime = time.time()
-
-        while waitconfig:
-            scode = self.sal.getNextSample_obsSiteConfig(self.sal.topic_obsSiteConfig)
-            if (scode == 0 and self.sal.topic_obsSiteConfig.name != ""):
-                lastconfigtime = time.time()
-                config_dict = self.sal.rtopic_location_config(self.sal.topic_obsSiteConfig)
-                self.log.info("run: rx site config=%s" % (config_dict))
-                waitconfig = False
-            else:
-                tf = time.time()
-                if (tf - lastconfigtime > 10.0):
-                    self.log.info("run: site config timeout")
-                    config_dict = ObservatoryLocation.get_configure_dict()
-                    waitconfig = False
-                time.sleep(self.sal.sal_sleeper)
+        config_dict = {'obs_site': self.config.observing_site.toDict()}
         self.schedulerDriver.configure_location(config_dict)
+        self.sal.wtopic_location_config(self.sal.topic_obsSiteConfig, self.config)
+        self.sal.putSample_obsSiteConfig(self.sal.topic_obsSiteConfig)
 
     def configure_telescope(self):
 
-        config_dict = {}
-        waitconfig = True
-        lastconfigtime = time.time()
-
-        while waitconfig:
-            scode = self.sal.getNextSample_telescopeConfig(self.sal.topic_telescopeConfig)
-            if (scode == 0 and self.sal.topic_telescopeConfig.altitude_minpos >= 0):
-                lastconfigtime = time.time()
-                config_dict = self.sal.rtopic_telescope_config(self.sal.topic_telescopeConfig)
-                self.log.info("run: rx telescope config=%s" % (config_dict))
-                waitconfig = False
-            else:
-                tf = time.time()
-                if (tf - lastconfigtime > 10.0):
-                    self.log.info("run: telescope config timeout")
-                    config_dict = ObservatoryModel.get_configure_dict()
-                    waitconfig = False
-                time.sleep(self.sal.sal_sleeper)
-        self.schedulerDriver.configure_telescope(config_dict)
+        self.schedulerDriver.configure_telescope(self.config.toDict()['observatory'])
+        self.sal.wtopic_telescope_config(self.sal.topic_telescopeConfig, self.config)
+        self.sal.putSample_telescopeConfig(self.sal.topic_telescopeConfig)
 
     def configure_dome(self):
 
-        config_dict = {}
-        waitconfig = True
-        lastconfigtime = time.time()
-
-        while waitconfig:
-            scode = self.sal.getNextSample_domeConfig(self.sal.topic_domeConfig)
-            if (scode == 0 and self.sal.topic_domeConfig.altitude_maxspeed >= 0):
-                lastconfigtime = time.time()
-                config_dict = self.sal.rtopic_dome_config(self.sal.topic_domeConfig)
-                self.log.info("run: rx dome config=%s" % (config_dict))
-                waitconfig = False
-            else:
-                tf = time.time()
-                if (tf - lastconfigtime > 10.0):
-                    self.log.info("run: dome config timeout")
-                    config_dict = ObservatoryModel.get_configure_dict()
-                    waitconfig = False
-                time.sleep(self.sal.sal_sleeper)
-        self.schedulerDriver.configure_dome(config_dict)
+        self.schedulerDriver.configure_dome(self.config.toDict()['observatory'])
+        self.sal.wtopic_dome_config(self.sal.topic_domeConfig, self.config)
+        self.sal.putSample_domeConfig(self.sal.topic_domeConfig)
 
     def configure_rotator(self):
 
-        config_dict = {}
-        waitconfig = True
-        lastconfigtime = time.time()
-
-        while waitconfig:
-            scode = self.sal.getNextSample_rotatorConfig(self.sal.topic_rotatorConfig)
-            if (scode == 0 and self.sal.topic_rotatorConfig.maxspeed >= 0):
-                lastconfigtime = time.time()
-                config_dict = self.sal.rtopic_rotator_config(self.sal.topic_rotatorConfig)
-                self.log.info("run: rx rotator config=%s" % (config_dict))
-                waitconfig = False
-            else:
-                tf = time.time()
-                if (tf - lastconfigtime > 10.0):
-                    self.log.info("run: rotator config timeout")
-                    config_dict = ObservatoryModel.get_configure_dict()
-                    waitconfig = False
-                time.sleep(self.sal.sal_sleeper)
-        self.schedulerDriver.configure_rotator(config_dict)
+        self.schedulerDriver.configure_rotator(self.config.toDict()['observatory'])
+        self.sal.wtopic_rotator_config(self.sal.topic_rotatorConfig, self.config)
+        self.sal.putSample_rotatorConfig(self.sal.topic_rotatorConfig)
 
     def configure_camera(self):
 
-        config_dict = {}
-        waitconfig = True
-        lastconfigtime = time.time()
-
-        while waitconfig:
-            scode = self.sal.getNextSample_cameraConfig(self.sal.topic_cameraConfig)
-            if (scode == 0 and self.sal.topic_cameraConfig.readout_time > 0):
-                lastconfigtime = time.time()
-                config_dict = self.sal.rtopic_camera_config(self.sal.topic_cameraConfig)
-                self.log.info("run: rx camera config=%s" % (config_dict))
-                waitconfig = False
-            else:
-                tf = time.time()
-                if (tf - lastconfigtime > 10.0):
-                    waitconfig = False
-                    self.log.info("run: camera config timeout")
-                    config_dict = ObservatoryModel.get_configure_dict()
-                    waitconfig = False
-                time.sleep(self.sal.sal_sleeper)
-        self.schedulerDriver.configure_camera(config_dict)
+        self.schedulerDriver.configure_camera(self.config.toDict()['observatory'])
+        self.sal.wtopic_camera_config(self.sal.topic_cameraConfig, self.config)
+        self.sal.putSample_cameraConfig(self.sal.topic_cameraConfig)
 
     def configure_slew(self):
 
-        config_dict = {}
-        waitconfig = True
-        lastconfigtime = time.time()
-
-        while waitconfig:
-            scode = self.sal.getNextSample_slewConfig(self.sal.topic_slewConfig)
-            if (scode == 0 and self.sal.topic_slewConfig.prereq_exposures != ""):
-                lastconfigtime = time.time()
-                config_dict = self.sal.rtopic_slew_config(self.sal.topic_slewConfig)
-                self.log.info("run: rx slew config=%s" % (config_dict))
-                waitconfig = False
-            else:
-                tf = time.time()
-                if (tf - lastconfigtime > 10.0):
-                    waitconfig = False
-                    self.log.info("run: slew config timeout")
-                    config_dict = ObservatoryModel.get_configure_dict()
-                    waitconfig = False
-                time.sleep(self.sal.sal_sleeper)
-        self.schedulerDriver.configure_slew(config_dict)
+        self.schedulerDriver.configure_slew(self.config.toDict()['observatory'])
+        self.log.debug("Sending slew configuration:")
+        self.log.debug(self.config)
+        self.sal.wtopic_slew_config(self.sal.topic_slewConfig, self.config)
+        self.sal.putSample_slewConfig(self.sal.topic_slewConfig)
 
     def configure_optics(self):
 
-        config_dict = {}
-        waitconfig = True
-        lastconfigtime = time.time()
-
-        while waitconfig:
-            scode = self.sal.getNextSample_opticsLoopCorrConfig(self.sal.topic_opticsConfig)
-            if (scode == 0 and self.sal.topic_opticsConfig.tel_optics_ol_slope > 0):
-                lastconfigtime = time.time()
-                config_dict = self.sal.rtopic_optics_config(self.sal.topic_opticsConfig)
-                self.log.info("run: rx optics config=%s" % (config_dict))
-                waitconfig = False
-            else:
-                tf = time.time()
-                if (tf - lastconfigtime > 10.0):
-                    self.log.info("run: optics config timeout")
-                    config_dict = ObservatoryModel.get_configure_dict()
-                    waitconfig = False
-                time.sleep(self.sal.sal_sleeper)
-        self.schedulerDriver.configure_optics(config_dict)
+        self.schedulerDriver.configure_optics(self.config.toDict()['observatory'])
+        self.sal.wtopic_optics_config(self.sal.topic_opticsConfig, self.config)
+        self.sal.putSample_opticsLoopCorrConfig(self.sal.topic_opticsConfig)
 
     def configure_park(self):
 
-        config_dict = {}
-        waitconfig = True
-        lastconfigtime = time.time()
+        self.schedulerDriver.configure_park(self.config.toDict()['observatory'])
+        self.sal.wtopic_park_config(self.sal.topic_parkConfig, self.config)
+        self.sal.putSample_parkConfig(self.sal.topic_parkConfig)
 
-        while waitconfig:
-            scode = self.sal.getNextSample_parkConfig(self.sal.topic_parkConfig)
-            if (scode == 0 and self.sal.topic_parkConfig.telescope_altitude > 0):
-                lastconfigtime = time.time()
-                config_dict = self.sal.rtopic_park_config(self.sal.topic_parkConfig)
-                self.log.info("run: rx park config=%s" % (config_dict))
-                waitconfig = False
-            else:
-                tf = time.time()
-                if (tf - lastconfigtime > 10.0):
-                    self.log.info("run: park config timeout")
-                    config_dict = ObservatoryModel.get_configure_dict()
-                    waitconfig = False
-                time.sleep(self.sal.sal_sleeper)
-        self.schedulerDriver.configure_park(config_dict)
+    def configure_scheduler(self):
+
+        # This method should be changed so it just pass some string to the driver.
+        # Right now I'm passing the configuration so it can setup the proposal based scheduler.
+        # Then, the scheduler should actually return a topology to be broadcast here
+        survey_topology = self.schedulerDriver.configure_scheduler(config=self.config,
+                                                                   config_path=self.configuration_path)
+        # self.sal.wtopic_scheduler_topology_config(self.sal.topic_schedulerTopology, self.config)
+        self.sal.topic_schedulerTopology = survey_topology.to_topic()
+        self.sal.putSample_surveyTopology(self.sal.topic_schedulerTopology)
 
     def configure_proposals(self):
+
+        if True:
+            raise DeprecationWarning("This method is deprecated")
+
         self.configure_area_distribution_proposals()
 
         self.configure_sequence_proposals()
 
     def configure_area_distribution_proposals(self):
+
+        if True:
+            raise DeprecationWarning("This method is deprecated")
 
         waitconfig = True
         lastconfigtime = time.time()
@@ -357,6 +275,10 @@ class Main(object):
                 time.sleep(self.sal.sal_sleeper)
 
     def configure_sequence_proposals(self):
+
+        if True:
+            raise DeprecationWarning("This method is deprecated")
+
 
         waitconfig = True
         lastconfigtime = time.time()
@@ -422,7 +344,7 @@ class Main(object):
 
                     self.sal.topicFilterSwap.need_swap = needswap
                     self.sal.topicFilterSwap.filter_to_unmount = filter2unmount
-                    self.sal.putSample_filterSwap(self.sal.topicFilterSwap)
+                    self.sal.logEvent_needFilterSwap(self.sal.topicFilterSwap, 2)
                     self.log.info("run: tx filter swap %s %s" % (needswap, filter2unmount))
                     waitstate = False
 
@@ -447,7 +369,7 @@ class Main(object):
 
                             self.sal.wtopic_target(self.sal.topicTarget, target, self.schedulerDriver.sky)
 
-                            self.sal.putSample_target(self.sal.topicTarget)
+                            self.sal.logEvent_target(self.sal.topicTarget, 1)
                             self.log.debug("run: tx target %s", str(target))
 
                             waitobservation = True
@@ -482,11 +404,11 @@ class Main(object):
         cloud = 0.0
 
         while waitcloud:
-            scode = self.sal.getNextSample_cloud(self.sal.topic_cloud)
+            scode = self.sal.getNextSample_bulkCloud(self.sal.topic_cloud)
             if scode == 0 and self.sal.topic_cloud.timestamp != 0:
                 lastcloudtime = time.time()
                 waitcloud = False
-                cloud = self.sal.topic_cloud.cloud
+                cloud = self.sal.topic_cloud.bulk_cloud
             else:
                 tf = time.time()
                 if (tf - lastcloudtime > 10.0):
@@ -526,7 +448,7 @@ class Main(object):
                 lastobstime = time.time()
                 self.meascount += 1
                 self.visitcount += 1
-                if self.sal.topicTarget.targetId == self.sal.topicObservation.targetId:
+                if self.sal.topicTarget.target_id == self.sal.topicObservation.targetId:
                     self.synccount += 1
 
                     obs = self.sal.rtopic_observation(self.sal.topicObservation)
@@ -558,3 +480,91 @@ class Main(object):
                               (rate, self.visitcount, self.synccount))
                 self.meastime = newtime
                 self.meascount = 0
+
+    def read_valid_settings(self):
+        """
+        Read valid settings from the configuration path.
+
+        :return:
+        """
+
+        if self.configuration_path is None:
+            self.current_setting = 'default'
+            return ['default']
+
+        self.current_setting = str(self.config_repo.active_branch)
+        remote_branches = []
+        for ref in self.config_repo.git.branch('-r').split('\n'):
+            if 'HEAD' not in ref:
+                remote_branches.append(ref)
+
+        return remote_branches
+
+    def load_configuration(self, config_name):
+
+        if self.configuration_path is None:
+            self.log.debug("No configuration path. Using default values.")
+            self.config.load(None)
+            # return
+        else:
+            valid_setting = False
+            for config in self.valid_settings:
+                if config_name == config[config.find('/') + 1:]:
+                    self.log.debug('Loading settings: %s [%s]' % (config, config_name))
+                    self.config_repo.git.checkout(config_name)
+                    self.current_setting = str(self.config_repo.active_branch)
+                    valid_setting = True
+                    break
+            if not valid_setting:
+                self.log.warning('Setting %s not valid! Using %s' % (config_name, self.current_setting))
+
+            config_file = self.configuration_path
+            self.log.debug('reading configuration from %s' % config_file)
+            self.config.load([config_file])
+        self.config.load_proposals()
+        self.log.info("{} proposals active.".format(self.config.num_proposals))
+        self.config.validate()
+
+    def broadcast_state(self):
+
+        self.sal.topic_summaryState.SummaryStateValue = self.summary_state_enum[self.state]
+        self.log.debug('Broadcasting state: %i ' % self.sal.topic_summaryState.SummaryStateValue)
+        self.sal.logEvent_SummaryState(self.sal.topic_summaryState, 1)
+
+    def broadcast_valid_settings(self):
+
+        # self.sal.topic_summaryState.SummaryStateValue = self.summary_state_enum[self.state]
+        valid_settings = ''
+        for setting in self.valid_settings[:-1]:
+            valid_settings += setting[setting.find('/') + 1:]
+            valid_settings += ','
+        valid_settings += self.valid_settings[-1][self.valid_settings[-1].find('/') + 1:]
+
+        self.sal.topicValidSettings.package_versions = valid_settings
+        self.sal.logEvent_validSettings(self.sal.topicValidSettings, 5)
+
+    def wait_cmd(self, cmd):
+
+        self.log.debug('Waiting for %s cmd' % cmd)
+        accept_command = getattr(self.sal, 'acceptCommand_{}'.format(cmd))
+        self.topic = getattr(self.sal, "topic_command_{}".format(cmd))
+        wait_start = time.time()
+
+        while True:
+            cmdId = accept_command(self.topic)
+            tc = time.time()
+            if cmdId > 0:
+                self.log.debug('Received %s cmd: State [%s -> %s]' % (cmd, self.state, self.cmd_state_transition[cmd]))
+                self.log.debug('Acknowledging cmd')
+                self.sal.salProcessor("scheduler_command_{}".format(cmd))
+
+                ackCommand = getattr(self.sal, 'ackCommand_{}'.format(cmd))
+                ackCommand(cmdId, 303, 0, "Done : OK")
+
+                self.state = self.cmd_state_transition[cmd]
+                return True
+            if (tc - wait_start) > self.sal.main_loop_timeouts:
+                self.log.debug("run: time timeout")
+                return False
+            time.sleep(self.sal.sal_sleeper)
+

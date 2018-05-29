@@ -9,6 +9,7 @@ import re
 
 __all__ = ["read_conf_file", "conf_file_path"]
 
+
 def read_conf_file(filename):
     """Read the new type of configuration file.
 
@@ -98,6 +99,7 @@ def read_conf_file(filename):
             config_dict[section][key] = value
 
     return config_dict
+
 
 def conf_file_path(resource, *paths):
     """Find a configuration file in the package.
