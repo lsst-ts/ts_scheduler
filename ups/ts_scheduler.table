@@ -1,6 +1,5 @@
 setupRequired(python)
 setupRequired(python_future)
-setupRequired(gitpython)
 setupRequired(sconsUtils)
 setupRequired(opsim4_config)
 setupRequired(ts_astrosky_model)
