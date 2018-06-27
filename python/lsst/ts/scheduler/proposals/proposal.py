@@ -1,6 +1,7 @@
 from builtins import object
 import logging
 import math
+import copy
 
 from lsst.ts.scheduler.fields import FieldsDatabase, FieldSelection
 
@@ -12,7 +13,7 @@ class Proposal(object):
         self.propid = propid
         self.name = name
         self.log = logging.getLogger("scheduler.proposals.%s" % self.name)
-        self.proposal_confdict = confdict
+        self.proposal_confdict = copy.deepcopy(confdict)
         self.sky = skymodel
         self.db = FieldsDatabase()
         self.field_select = FieldSelection()
