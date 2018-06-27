@@ -1,5 +1,6 @@
 setupRequired(python)
 setupRequired(python_future)
+setupRequired(gitpython)
 setupRequired(sconsUtils)
 setupRequired(ts_astrosky_model)
 setupRequired(ts_observatory_model)
