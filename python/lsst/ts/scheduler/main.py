@@ -6,7 +6,10 @@ import logging.handlers
 import sys
 import time
 import copy
-from git import Repo
+try:
+    from git import Repo
+except ImportError:
+    raise ImportError("gitpython not installed. Please install it with 'pip install gitpython' before proceeding.")
 
 from lsst.ts.scheduler.setup import TRACE, EXTENSIVE
 from lsst.ts.scheduler.kernel import read_conf_file, conf_file_path
