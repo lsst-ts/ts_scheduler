@@ -441,8 +441,8 @@ class AreaDistributionProposal(Proposal):
 
         return self.winners_list
 
-    def register_observation(self, observation):
-
+    def register_observation(self, observation, isColdStart=False):
+        #observation is actually a Target object. 
         self.last_observation = observation.get_copy()
         self.last_observation_was_for_this_proposal = False
 
@@ -457,15 +457,19 @@ class AreaDistributionProposal(Proposal):
         else:
             self.fieldsvisitedtonight[fieldid] += 1
         tfound = None
-        for target in self.winners_list:
-            if self.observation_fulfills_target(observation, target):
-                tfound = target
-                break
-        if tfound is None:
-            for target in self.losers_list:
+        if isColdStart:
+            tfound = observation
+            target = tfound
+        else:
+            for target in self.winners_list:
                 if self.observation_fulfills_target(observation, target):
                     tfound = target
                     break
+            if tfound is None:
+                for target in self.losers_list:
+                    if self.observation_fulfills_target(observation, target):
+                        tfound = target
+                        break
 
         if tfound is not None:
             self.log.log(EXTENSIVE, "register_observation: %s" % (target))

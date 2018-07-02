@@ -35,7 +35,7 @@ from SALPY_scheduler import scheduler_command_startC
 
 
 from lsst.ts.observatory.model import ObservatoryState
-from lsst.ts.observatory.model import Target
+from lsst.ts.observatory.model import Target, Observation
 
 __all__ = ["SALUtils"]
 
@@ -821,11 +821,16 @@ class SALUtils(SAL_scheduler):
 
     @staticmethod
     def rtopic_observation(topic_observation):
-
-        observation = Target()
-        observation.time = topic_observation.observation_start_time
+        observation = Observation()
+        #observation stuff
+        observation.observationid = topic_observation.observationId
+        observation.observation_start_time = topic_observation.observation_start_time
+        observation.observation_start_mjd = topic_observation.observation_start_mjd
+        observation.observation_start_lst = topic_observation.observation_start_lst
+        observation.night = topic_observation.night
         observation.targetid = topic_observation.targetId
         observation.fieldid = topic_observation.fieldId
+        observation.groupid = topic_observation.groupId
         observation.filter = topic_observation.filter
         observation.num_props = topic_observation.num_proposals
         observation.propid_list = []
@@ -834,10 +839,42 @@ class SALUtils(SAL_scheduler):
         observation.ra_rad = math.radians(topic_observation.ra)
         observation.dec_rad = math.radians(topic_observation.decl)
         observation.ang_rad = math.radians(topic_observation.angle)
+        observation.alt_rad = math.radians(topic_observation.altitude)
+        observation.az_rad = math.radians(topic_observation.azimuth)
         observation.num_exp = topic_observation.num_exposures
         observation.exp_times = []
         for k in range(topic_observation.num_exposures):
             observation.exp_times.append(topic_observation.exposure_times[k])
+        observation.visit_time = topic_observation.visit_time
+        observation.sky_brightness = topic_observation.sky_brightness
+        observation.airmass = topic_observation.airmass
+        observation.cloud = topic_observation.cloud
+        observation.seeing_fwhm_500 = topic_observation.seeing_fwhm_500
+        observation.seeing_fwhm_geom = topic_observation.seeing_fwhm_geom
+        observation.seeing_fwhm_eff = topic_observation.seeing_fwhm_eff
+        observation.five_sigma_depth = topic_observation.five_sigma_depth
+        observation.moon_ra = topic_observation.moon_ra
+        observation.moon_dec = topic_observation.moon_dec
+        observation.moon_alt = math.radians(topic_observation.moon_alt)
+        observation.moon_az = math.radians(topic_observation.moon_az)
+        observation.moon_phase = topic_observation.moon_phase
+        observation.moon_distance = topic_observation.moon_distance
+        observation.sun_alt = math.radians(topic_observation.sun_alt)
+        observation.sun_az = math.radians(topic_observation.sun_az)
+        observation.sun_ra = topic_observation.sun_ra
+        observation.sun_dec = topic_observation.sun_dec
+        observation.solar_elong = topic_observation.solar_elong
+        observation.slewTime = topic_observation.slewTime
+
+
+
+        #target stuff
+        
+        observation.time = topic_observation.observation_start_time
+
+        
+        
+        
 
         return observation
 
