@@ -1,10 +1,10 @@
 setupRequired(python)
 setupRequired(python_future)
 setupRequired(sconsUtils)
-setupRequired(opsim4_config)
+setupRequired(scheduler_config)
 setupRequired(ts_astrosky_model)
 setupRequired(ts_observatory_model)
-setupRequired(sims_schedulerConfig)
+setupRequired(ts_schedulerConfig)
 
 envPrepend(PYTHONPATH, ${PRODUCT_DIR}/python)
 envPrepend(PATH, ${PRODUCT_DIR}/scripts)
