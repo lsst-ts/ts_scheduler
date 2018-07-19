@@ -442,7 +442,6 @@ class AreaDistributionProposal(Proposal):
         return self.winners_list
 
     def register_observation(self, observation, isColdStart=False):
-        #observation is actually a Target object. 
         self.last_observation = observation.get_copy()
         self.last_observation_was_for_this_proposal = False
 

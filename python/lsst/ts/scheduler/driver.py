@@ -5,7 +5,6 @@ import os
 import math
 import numpy
 import logging
-import pickle
 from operator import itemgetter
 
 from lsst.ts.astrosky.model import AstronomicalSkyModel
@@ -357,7 +356,6 @@ class Driver(object):
 
         self.sunset_timestamp = sunset
         self.sunrise_timestamp = sunrise
-        
 
     def end_survey(self):
 
@@ -714,11 +712,6 @@ class Driver(object):
         return self.last_winner_target
 
     def register_observation(self, observation,isColdStart=False):
-        #if len(self.obsList) == 100:
-        #    f = open("first100pbs", "wb")
-        #    pickle.dump(self.obsList,f)
-        #    f.close()
-        #self.obsList.append(observation)
 
         target_list = []
         if observation.targetid > 0:
