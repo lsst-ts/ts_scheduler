@@ -1,8 +1,8 @@
 # Absolute folder path that contains all your databases
-DB_DIRECTORY = "/home/opsim/run_local/output/"
+DB_DIRECTORY = "/home/cwinslow/run_local/output/"
 
 # Absolute folder path that contains all your logs
-LOG_DIRECTORY = "/home/opsim/"
+LOG_DIRECTORY = "/home/cwinslow/run_local/"
 
 # Folder path which reports are written into, optional
 REPORT_DIRECTORY = "reports/"

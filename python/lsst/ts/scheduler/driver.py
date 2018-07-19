@@ -357,7 +357,7 @@ class Driver(object):
 
         self.sunset_timestamp = sunset
         self.sunrise_timestamp = sunrise
-        #self.cold_start()
+        
 
     def end_survey(self):
 
@@ -743,13 +743,13 @@ class Driver(object):
 
     def cold_start(self, obslist=None):
         """Rebuilds the state of the scheduler from a list of observations"""
-        print("Running coldstart (PBS)")
+        self.log.info("Running coldstart (PBS)")
         f = open("first100pbs","rb")
         obs_from_file = pickle.load(f)
 
         for obs in obs_from_file:
             self.register_observation(obs,isColdStart=True)
-        print("Coldstart finished")
+        self.log.info("Coldstart finished")
     
 
     def compute_slewtime_cost(self, slewtime):
