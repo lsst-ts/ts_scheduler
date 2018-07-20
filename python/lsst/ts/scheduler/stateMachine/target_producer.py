@@ -2,7 +2,7 @@ import time
 import threading
 import logging
 
-from SALPY_scheduler import *
+from SALPY_scheduler import SAL_scheduler, scheduler_logevent_targetC
 
  
 class TargetProducer(threading.Thread):
@@ -41,34 +41,34 @@ class TargetProducer(threading.Thread):
 
             # TODO: Get real targets produced by the scheduler from the model
             myData = scheduler_logevent_targetC()
-            myData.target_id=1
+            myData.targetId=1
             myData.ra=1.2
             myData.decl=1.3
-            myData.sky_angle=1.4
+            myData.skyAngle=1.4
             myData.filter="y"
-            myData.num_exposures=2
-            myData.exposure_times[0] = 9.9
-            myData.exposure_times[1] = 9.9
-            myData.exposure_times[2] = 9.9
-            myData.exposure_times[3] = 9.9
-            myData.exposure_times[4] = 9.9
-            myData.exposure_times[5] = 9.9
-            myData.exposure_times[6] = 9.9
-            myData.exposure_times[7] = 9.9
-            myData.exposure_times[8] = 9.9
-            myData.exposure_times[9] = 9.9
-            myData.slew_time=9.9
-            myData.offset_x=9.9
-            myData.offset_y=9.9
-            myData.proposal_id[0] = 2
-            myData.proposal_id[1] = 2
-            myData.proposal_id[2] = 2
-            myData.proposal_id[3] = 2
-            myData.proposal_id[4] = 2
-            myData.is_sequence=1
-            myData.sequence_n_visits=1
-            myData.sequence_visits=1
-            myData.sequence_duration=9.9
+            myData.numExposures=2
+            myData.exposureTimes[0] = 9.9
+            myData.exposureTimes[1] = 9.9
+            myData.exposureTimes[2] = 9.9
+            myData.exposureTimes[3] = 9.9
+            myData.exposureTimes[4] = 9.9
+            myData.exposureTimes[5] = 9.9
+            myData.exposureTimes[6] = 9.9
+            myData.exposureTimes[7] = 9.9
+            myData.exposureTimes[8] = 9.9
+            myData.exposureTimes[9] = 9.9
+            myData.slewTime=9.9
+            myData.offsetX=9.9
+            myData.offsetY=9.9
+            myData.proposalId[0] = 2
+            myData.proposalId[1] = 2
+            myData.proposalId[2] = 2
+            myData.proposalId[3] = 2
+            myData.proposalId[4] = 2
+            myData.isSequence=1
+            myData.sequenceNVisits=1
+            myData.sequenceVisits=1
+            myData.sequenceDuration=9.9
             myData.priority=1
             priority=1
             self.mgr.logEvent_target(myData, priority)
