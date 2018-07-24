@@ -90,9 +90,9 @@ class Main(object):
             if not self.wait_cmd("start"):
                 raise Exception("Did not received enterControl command.")
 
-            self.log.info("Received start command with configuration %s..." % self.topic.configuration)
+            self.log.info("Received start command with configuration %s..." % self.topic.settingsToApply)
 
-            self.load_configuration(self.topic.configuration)
+            self.load_configuration(self.topic.settingsToApply)
             # now run configuration, then publish state transition
 
             self.configure_driver()
@@ -530,13 +530,13 @@ class Main(object):
 
     def broadcast_state(self):
 
-        self.sal.topic_summaryState.SummaryStateValue = self.summary_state_enum[self.state]
-        self.log.debug('Broadcasting state: %i ' % self.sal.topic_summaryState.SummaryStateValue)
+        self.sal.topic_summaryState.summaryState = self.summary_state_enum[self.state]
+        self.log.debug('Broadcasting state: %i ' % self.sal.topic_summaryState.summaryState)
         self.sal.logEvent_SummaryState(self.sal.topic_summaryState, 1)
 
     def broadcast_valid_settings(self):
 
-        # self.sal.topic_summaryState.SummaryStateValue = self.summary_state_enum[self.state]
+        # self.sal.topic_summaryState.summaryState = self.summary_state_enum[self.state]
         valid_settings = ''
         for setting in self.valid_settings[:-1]:
             valid_settings += setting[setting.find('/') + 1:]
