@@ -121,8 +121,6 @@ class Driver(object):
     def configure_scheduler(self, **kwargs):
         pass
 
-    
-
     def configure_duration(self, survey_duration):
 
         self.survey_duration_DAYS = survey_duration
@@ -250,7 +248,6 @@ class Driver(object):
         self.sunrise_timestamp = sunrise
 
     def end_survey(self):
-
         self.log.info("end_survey")
 
 
@@ -263,74 +260,7 @@ class Driver(object):
         self.isnight = True
 
     def end_night(self, timestamp, night):
-
-        self.lookahead.end_night()
-
-        timeprogress = (timestamp - self.start_time) / self.survey_duration_SECS
-        self.log.info("end_night t=%.6f, night=%d timeprogress=%.2f%%" %
-                      (timestamp, night, 100 * timeprogress))
-
-        self.isnight = False
-
-        self.last_winner_target = self.nulltarget
-        self.deep_drilling_target = None
-
-        total_filter_visits_dict = {}
-        total_filter_goal_dict = {}
-        total_filter_progress_dict = {}
-        for filter in self.observatoryModel.filters:
-            if total_filter_goal_dict[filter] > 0:
-                total_filter_progress_dict[filter] = \
-                    float(total_filter_visits_dict[filter]) / total_filter_goal_dict[filter]
-            else:
-                total_filter_progress_dict[filter] = 0.0
-            self.log.info("end_night filter=%s progress=%.2f%%" %
-                          (filter, 100 * total_filter_progress_dict[filter]))
-
-        previous_midnight_moonphase = self.midnight_moonphase
-        self.sky.update(timestamp)
-        (sunset, sunrise) = self.sky.get_night_boundaries(self.params.night_boundary)
-        self.log.debug("end_night sunset=%.6f sunrise=%.6f" % (sunset, sunrise))
-
-        self.sunset_timestamp = sunset
-        self.sunrise_timestamp = sunrise
-        next_midnight = (sunset + sunrise) / 2
-        self.sky.update(next_midnight)
-        info = self.sky.get_moon_sun_info(numpy.array([0.0]), numpy.array([0.0]))
-        self.midnight_moonphase = info["moonPhase"]
-        self.log.info("end_night next moonphase=%.2f%%" % (self.midnight_moonphase))
-
-        self.need_filter_swap = False
-        self.filter_to_mount = ""
-        self.filter_to_unmount = ""
-        if self.darktime:
-            if self.midnight_moonphase > previous_midnight_moonphase:
-                self.log.info("end_night dark time waxing")
-                if self.midnight_moonphase > self.params.new_moon_phase_threshold:
-                    self.need_filter_swap = True
-                    self.filter_to_mount = self.unmounted_filter
-                    self.filter_to_unmount = self.mounted_filter
-                    self.darktime = False
-            else:
-                self.log.info("end_night dark time waning")
-        else:
-            if self.midnight_moonphase < previous_midnight_moonphase:
-                self.log.info("end_night bright time waning")
-                if self.midnight_moonphase < self.params.new_moon_phase_threshold:
-                    self.need_filter_swap = True
-                    self.filter_to_mount = self.observatoryModel.params.filter_darktime
-                    max_progress = -1.0
-                    for filter in self.observatoryModel.params.filter_removable_list:
-                        if total_filter_progress_dict[filter] > max_progress:
-                            self.filter_to_unmount = filter
-                            max_progress = total_filter_progress_dict[filter]
-                    self.darktime = True
-            else:
-                self.log.info("end_night bright time waxing")
-
-        if self.need_filter_swap:
-            self.log.debug("end_night filter swap %s=>cam=>%s" %
-                           (self.filter_to_mount, self.filter_to_unmount))
+        pass
 
     def swap_filter(self, filter_to_unmount, filter_to_mount):
 
@@ -344,22 +274,7 @@ class Driver(object):
         return
 
     def update_time(self, timestamp, night):
-
-        self.time = timestamp
-        self.observatoryModel.update_state(self.time)
-        if not self.survey_started:
-            self.start_survey(timestamp, night)
-
-        if self.isnight:
-            # if round(timestamp) >= round(self.sunrise_timestamp):
-            if timestamp >= self.sunrise_timestamp:
-                self.end_night(timestamp, night)
-        else:
-            # if round(timestamp) >= round(self.sunset_timestamp):
-            if timestamp >= self.sunset_timestamp:
-                self.start_night(timestamp, night)
-
-        return self.isnight
+        pass
 
     def get_need_filter_swap(self):
 
@@ -387,26 +302,3 @@ class Driver(object):
 
     def register_observation(self, observation):
         pass
-
-    def compute_slewtime_cost(self, slewtime):
-
-        cost = (self.params.timecost_k / (slewtime + self.params.timecost_dt) -
-                self.params.timecost_dc - self.params.timecost_cref) / (1.0 - self.params.timecost_cref)
-        # cost = self.params.timecost_k / (slewtime + self.params.timecost_dt) - self.params.timecost_dc
-
-        return cost
-
-    def compute_filterchange_cost(self):
-
-        t = self.observatoryModel.get_delta_last_filterchange()
-        T = self.observatoryModel.params.filter_max_changes_avg_interval
-        if t < T:
-            cost = 1.0 - t / T
-        else:
-            cost = 0.0
-
-        return cost
-
-    def observation_fulfills_target(self, observ, target):
-        return (observ.targetid == target.targetid) and (observ.filter == target.filter)
-        # return (observ.fieldid == target.fieldid) and (observ.filter == target.filter)
