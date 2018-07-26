@@ -15,8 +15,6 @@ from lsst.ts.observatory.model import Target
 from lsst.ts.scheduler.setup import EXTENSIVE, WORDY
 from lsst.ts.scheduler.kernel import read_conf_file
 from lsst.ts.scheduler.kernel import Field, SurveyTopology
-from lsst.ts.scheduler.proposals import ScriptedProposal
-from lsst.ts.scheduler.proposals import AreaDistributionProposal, TimeDistributionProposal
 from lsst.ts.scheduler.fields import FieldsDatabase
 from lsst.ts.scheduler.lookahead import Lookahead
 
@@ -55,7 +53,6 @@ class DriverParameters(object):
         self.timecost_k = self.timecost_dc * self.timecost_dt
         self.timecost_weight = confdict["ranking"]["timecost_weight"]
         self.filtercost_weight = confdict["ranking"]["filtercost_weight"]
-        self.propboost_weight = confdict["ranking"]["propboost_weight"]
         self.lookahead_window_size = confdict['ranking']['lookahead_window_size']
         self.lookahead_bonus_weight = confdict["ranking"]["lookahead_bonus_weight"]
 
@@ -86,7 +83,6 @@ class Driver(object):
         self.build_fields_dict()
 
         self.propid_counter = 0
-        self.science_proposal_list = []
 
         self.start_time = 0.0
         self.time = 0.0
@@ -106,12 +102,10 @@ class Driver(object):
         self.nulltarget.targetid = -1
         self.nulltarget.num_exp = 1
         self.nulltarget.exp_times = [0.0]
-        self.nulltarget.num_props = 1
-        self.nulltarget.propid_list = [0]
+
         self.nulltarget.need_list = [0.0]
         self.nulltarget.bonus_list = [0.0]
         self.nulltarget.value_list = [0.0]
-        self.nulltarget.propboost_list = [1.0]
         self.last_winner_target = self.nulltarget.get_copy()
         self.deep_drilling_target = None
 
@@ -125,92 +119,9 @@ class Driver(object):
         self.lookahead = Lookahead()
 
     def configure_scheduler(self, **kwargs):
+        pass
 
-        # FIXME:
-        # This is extremely ugly I know, but the idea is that the user subclass this method to run
-        # their own configuration and return a survey topology.
-        from lsst.ts.scheduler.sal_utils import SALUtils
-        from SALPY_scheduler import scheduler_generalPropConfigC
-        from SALPY_scheduler import scheduler_sequencePropConfigC
-
-        config = kwargs['config']
-        self.propid_counter = 0
-        general_topic = scheduler_generalPropConfigC()
-        if config.science.general_props.active is not None:
-            for general_config in config.science.general_props.active:
-                set_topic = general_config.set_topic(general_topic)
-                conf_dict = SALUtils.rtopic_area_prop_config(set_topic)
-                self.log.debug('configure_scheduler [%s-%i]: %s' % (general_config.name, self.propid_counter,
-                                                                    conf_dict))
-                self.create_area_proposal(self.propid_counter+1, general_config.name, conf_dict)
-
-        seq_topic = scheduler_sequencePropConfigC()
-        if config.science.sequence_props.active is not None:
-            for sequence_props in config.science.sequence_props.active:
-                set_topic = sequence_props.set_topic(seq_topic)
-                conf_dict = SALUtils.rtopic_seq_prop_config(set_topic)
-                self.log.debug('configure_scheduler [%s-%i] : %s' % (sequence_props.name, self.propid_counter,
-                                                                     conf_dict))
-                self.create_sequence_proposal(self.propid_counter+1, sequence_props.name, conf_dict)
-
-        survey_topology = SurveyTopology()
-        survey_topology.num_general_props = len(config.science.general_proposals)
-        survey_topology.general_propos = config.science.general_proposals
-        survey_topology.num_seq_props = len(config.science.sequence_proposals)
-        survey_topology.sequence_propos = config.science.sequence_proposals
-
-        return survey_topology
-
-    def configure_survey(self, survey_conf_file):
-
-        prop_conf_path = os.path.dirname(survey_conf_file)
-        confdict = read_conf_file(survey_conf_file)
-
-        self.survey_duration_DAYS = confdict["survey"]["survey_duration"]
-        self.survey_duration_SECS = self.survey_duration_DAYS * 24 * 60 * 60.0
-
-        self.propid_counter = 0
-        self.science_proposal_list = []
-
-        if 'scripted_propconf' in confdict["proposals"]:
-            scripted_propconflist = confdict["proposals"]["scripted_propconf"]
-        else:
-            scripted_propconflist = []
-        if not isinstance(scripted_propconflist, list):
-            # turn it into a list with one entry
-            propconf = scripted_propconflist
-            scripted_propconflist = []
-            scripted_propconflist.append(propconf)
-        self.log.info("configure_survey: scripted proposals %s" % (scripted_propconflist))
-        for k in range(len(scripted_propconflist)):
-            self.propid_counter += 1
-            scripted_prop = ScriptedProposal(self.propid_counter,
-                                             os.path.join(prop_conf_path,
-                                                          "{}".format(scripted_propconflist[k])),
-                                             self.sky)
-            self.science_proposal_list.append(scripted_prop)
-
-        if 'areadistribution_propconf' in confdict["proposals"]:
-            areadistribution_propconflist = confdict["proposals"]["areadistribution_propconf"]
-        else:
-            areadistribution_propconflist = []
-            self.log.info("areadistributionPropConf:%s default" % (areadistribution_propconflist))
-        if not isinstance(areadistribution_propconflist, list):
-            # turn it into a list with one entry
-            propconf = areadistribution_propconflist
-            areadistribution_propconflist = []
-            areadistribution_propconflist.append(propconf)
-        self.log.info("init: areadistribution proposals %s" % (areadistribution_propconflist))
-        for k in range(len(areadistribution_propconflist)):
-            self.propid_counter += 1
-            configfilepath = os.path.join(prop_conf_path, "{}".format(areadistribution_propconflist[k]))
-            (path, name_ext) = os.path.split(configfilepath)
-            (name, ext) = os.path.splitext(name_ext)
-            proposal_confdict = read_conf_file(configfilepath)
-            self.create_area_proposal(self.propid_counter, name, proposal_confdict)
-
-        for prop in self.science_proposal_list:
-            prop.configure_constraints(self.params)
+    
 
     def configure_duration(self, survey_duration):
 
@@ -218,7 +129,6 @@ class Driver(object):
         self.survey_duration_SECS = survey_duration * 24 * 60 * 60.0
 
     def configure(self, confdict):
-
         self.params.configure(confdict)
         self.log.log(WORDY,
                      "configure: coadd_values=%s" % (self.params.coadd_values))
@@ -245,8 +155,6 @@ class Driver(object):
         self.log.log(WORDY,
                      "configure: new_moon_phase_threshold=%.2f" % (self.params.new_moon_phase_threshold))
 
-        for prop in self.science_proposal_list:
-            prop.configure_constraints(self.params)
 
         self.lookahead.window_size = self.params.lookahead_window_size
         self.lookahead.bonus_weight = self.params.lookahead_bonus_weight
@@ -298,19 +206,6 @@ class Driver(object):
         self.observatoryModel.configure_park(confdict)
         self.observatoryModel2.configure_park(confdict)
 
-    def create_area_proposal(self, propid, name, config_dict):
-
-        self.propid_counter += 1
-        area_prop = AreaDistributionProposal(propid, name, config_dict, self.sky)
-        area_prop.configure_constraints(self.params)
-        self.science_proposal_list.append(area_prop)
-
-    def create_sequence_proposal(self, propid, name, config_dict):
-
-        self.propid_counter += 1
-        seq_prop = TimeDistributionProposal(propid, name, config_dict, self.sky)
-        seq_prop.configure_constraints(self.params)
-        self.science_proposal_list.append(seq_prop)
 
     def build_fields_dict(self):
 
@@ -344,9 +239,6 @@ class Driver(object):
         self.log.info("start_survey t=%.6f" % timestamp)
 
         self.survey_started = True
-        for prop in self.science_proposal_list:
-            prop.start_survey()
-
         self.sky.update(timestamp)
         (sunset, sunrise) = self.sky.get_night_boundaries(self.params.night_boundary)
         self.log.debug("start_survey sunset=%.6f sunrise=%.6f" % (sunset, sunrise))
@@ -361,8 +253,6 @@ class Driver(object):
 
         self.log.info("end_survey")
 
-        for prop in self.science_proposal_list:
-            prop.end_survey()
 
     def start_night(self, timestamp, night):
 
@@ -371,9 +261,6 @@ class Driver(object):
                       (timestamp, night, 100 * timeprogress))
 
         self.isnight = True
-
-        for prop in self.science_proposal_list:
-            prop.start_night(timestamp, self.observatoryModel.current_state.mountedfilters, night)
 
     def end_night(self, timestamp, night):
 
@@ -391,22 +278,6 @@ class Driver(object):
         total_filter_visits_dict = {}
         total_filter_goal_dict = {}
         total_filter_progress_dict = {}
-        for prop in self.science_proposal_list:
-            prop.end_night(timestamp)
-            filter_visits_dict = {}
-            filter_goal_dict = {}
-            filter_progress_dict = {}
-            for filter in self.observatoryModel.filters:
-                if filter not in total_filter_visits_dict:
-                    total_filter_visits_dict[filter] = 0
-                    total_filter_goal_dict[filter] = 0
-                filter_visits_dict[filter] = prop.get_filter_visits(filter)
-                filter_goal_dict[filter] = prop.get_filter_goal(filter)
-                filter_progress_dict[filter] = prop.get_filter_progress(filter)
-                total_filter_visits_dict[filter] += filter_visits_dict[filter]
-                total_filter_goal_dict[filter] += filter_goal_dict[filter]
-                self.log.debug("end_night propid=%d name=%s filter=%s progress=%.2f%%" %
-                               (prop.propid, prop.name, filter, 100 * filter_progress_dict[filter]))
         for filter in self.observatoryModel.filters:
             if total_filter_goal_dict[filter] > 0:
                 total_filter_progress_dict[filter] = \
@@ -500,9 +371,6 @@ class Driver(object):
             unmount = observatory_state.unmountedfilters[0]
             mount = self.observatoryModel.current_state.unmountedfilters[0]
             self.swap_filter(unmount, mount)
-            for prop in self.science_proposal_list:
-                prop.start_night(observatory_state.time, observatory_state.mountedfilters, night)
-
         self.time = observatory_state.time
         self.observatoryModel.set_state(observatory_state)
         self.observatoryState.set(observatory_state)
@@ -515,223 +383,10 @@ class Driver(object):
         return
 
     def select_next_target(self):
-
-        if not self.isnight:
-            return self.nulltarget
-
-        targets_dict = {}
-        ranked_targets_list = []
-        propboost_dict = {}
-        sumboost = 0.0
-
-        self.lookahead.date = self.observatoryModel.dateprofile.mjd
-        self.lookahead.start_night()  # will only run once per night
-        self.lookahead.calculate_bonus()
-
-        timeprogress = (self.time - self.start_time) / self.survey_duration_SECS
-        for prop in self.science_proposal_list:
-
-            progress = prop.get_progress()
-            if self.params.time_balancing:
-                if progress > 0.0:
-                    if timeprogress < 1.0:
-                        needindex = (1.0 - progress) / (1.0 - timeprogress)
-                    else:
-                        needindex = 0.0
-                    if timeprogress > 0.0:
-                        progressindex = progress / timeprogress
-                    else:
-                        progressindex = 1.0
-                    propboost_dict[prop.propid] = needindex / progressindex
-                else:
-                    propboost_dict[prop.propid] = 1.0
-            else:
-                propboost_dict[prop.propid] = 1.0
-            sumboost += propboost_dict[prop.propid]
-
-        if self.deep_drilling_target is not None:
-            self.log.debug("select_next_target: in deep drilling %s" % str(self.deep_drilling_target))
-
-        if self.observatoryModel.is_filter_change_allowed():
-            constrained_filter = None
-        else:
-            constrained_filter = self.observatoryModel.current_state.filter
-        num_filter_changes = self.observatoryModel.get_number_filter_changes()
-        delta_burst = self.observatoryModel.get_delta_filter_burst()
-        delta_avg = self.observatoryModel.get_delta_filter_avg()
-        self.log.debug("select_next_target: filter changes num=%i tburst=%.1f tavg=%.1f constrained=%s" %
-                       (num_filter_changes, delta_burst, delta_avg, constrained_filter))
-
-        for prop in self.science_proposal_list:
-            propboost_dict[prop.propid] = \
-                (propboost_dict[prop.propid] * len(
-                    self.science_proposal_list) / sumboost) ** self.params.propboost_weight
-
-            proptarget_list = prop.suggest_targets(self.time,
-                                                   self.deep_drilling_target, constrained_filter,
-                                                   self.cloud, self.seeing, lookahead=self.lookahead)
-            self.log.log(EXTENSIVE, "select_next_target propid=%d name=%s "
-                                    "targets=%d progress=%.2f%% propboost=%.3f" %
-                         (prop.propid, prop.name,
-                          len(proptarget_list), 100 * progress, propboost_dict[prop.propid]))
-
-            for target in proptarget_list:
-                target.num_props = 1
-                target.propboost = propboost_dict[prop.propid]
-                target.propid_list = [prop.propid]
-                target.need_list = [target.need]
-                target.bonus_list = [target.bonus]
-                target.value_list = [target.value]
-                target.propboost_list = [target.propboost]
-                target.sequenceid_list = [target.sequenceid]
-                target.subsequencename_list = [target.subsequencename]
-                target.groupid_list = [target.groupid]
-                target.groupix_list = [target.groupix]
-                target.is_deep_drilling_list = [target.is_deep_drilling]
-                target.is_dd_firstvisit_list = [target.is_dd_firstvisit]
-                target.remaining_dd_visits_list = [target.remaining_dd_visits]
-                target.dd_exposures_list = [target.dd_exposures]
-                target.dd_filterchanges_list = [target.dd_filterchanges]
-                target.dd_exptime_list = [target.dd_exptime]
-
-                fieldfilter = (target.fieldid, target.filter)
-                if fieldfilter in targets_dict:
-                    if self.params.coadd_values:
-                        targets_dict[fieldfilter][0] = targets_dict[fieldfilter][0].get_copy()
-                        targets_dict[fieldfilter][0].need += target.need
-                        targets_dict[fieldfilter][0].bonus += target.bonus
-                        targets_dict[fieldfilter][0].value += target.value
-                        targets_dict[fieldfilter][0].propboost += target.propboost
-                        if target.is_deep_drilling:
-                            # overrides to make the coadded target a consistent deep drilling
-                            targets_dict[fieldfilter][0].is_deep_drilling = target.is_deep_drilling
-                            targets_dict[fieldfilter][0].is_dd_firstvisit = target.is_dd_firstvisit
-                            targets_dict[fieldfilter][0].remaining_dd_visits = target.remaining_dd_visits
-                            targets_dict[fieldfilter][0].dd_exposures = target.dd_exposures
-                            targets_dict[fieldfilter][0].dd_filterchanges = target.dd_filterchanges
-                            targets_dict[fieldfilter][0].dd_exptime = target.dd_exptime
-                            targets_dict[fieldfilter][0].sequenceid = target.sequenceid
-                            targets_dict[fieldfilter][0].subsequencename = target.subsequencename
-                            targets_dict[fieldfilter][0].groupid = target.groupid
-                            targets_dict[fieldfilter][0].groupix = target.groupix
-                        else:
-                            # new target to coadd is not deep drilling
-                            if not targets_dict[fieldfilter][0].is_deep_drilling:
-                                # coadded target is not deep drilling
-                                # overrides with new sequence information
-                                targets_dict[fieldfilter][0].sequenceid = target.sequenceid
-                                targets_dict[fieldfilter][0].subsequencename = target.subsequencename
-                                targets_dict[fieldfilter][0].groupid = target.groupid
-                                targets_dict[fieldfilter][0].groupix = target.groupix
-                            # if coadded target is already deep drilling, don't override
-                        targets_dict[fieldfilter][0].num_props += 1
-                        targets_dict[fieldfilter][0].propid_list.append(prop.propid)
-                        targets_dict[fieldfilter][0].need_list.append(target.need)
-                        targets_dict[fieldfilter][0].bonus_list.append(target.bonus)
-                        targets_dict[fieldfilter][0].value_list.append(target.value)
-                        targets_dict[fieldfilter][0].propboost_list.append(target.propboost)
-                        targets_dict[fieldfilter][0].sequenceid_list.append(target.sequenceid)
-                        targets_dict[fieldfilter][0].subsequencename_list.append(target.subsequencename)
-                        targets_dict[fieldfilter][0].groupid_list.append(target.groupid)
-                        targets_dict[fieldfilter][0].groupix_list.append(target.groupix)
-                        targets_dict[fieldfilter][0].is_deep_drilling_list.append(target.is_deep_drilling)
-                        targets_dict[fieldfilter][0].is_dd_firstvisit_list.append(target.is_dd_firstvisit)
-                        targets_dict[fieldfilter][0].remaining_dd_visits_list.append(
-                            target.remaining_dd_visits)
-                        targets_dict[fieldfilter][0].dd_exposures_list.append(target.dd_exposures)
-                        targets_dict[fieldfilter][0].dd_filterchanges_list.append(target.dd_filterchanges)
-                        targets_dict[fieldfilter][0].dd_exptime_list.append(target.dd_exptime)
-                    else:
-                        targets_dict[fieldfilter].append(target)
-                else:
-                    targets_dict[fieldfilter] = [target]
-
-        filtercost = self.compute_filterchange_cost() * self.params.filtercost_weight
-        for fieldfilter in targets_dict:
-            # if a candidate target does not require a filter change, calculate slew time normally.
-            if fieldfilter[1] == self.observatoryModel.current_state.filter:
-                slewtime, slew_state = self.observatoryModel.get_slew_delay(targets_dict[fieldfilter][0])
-            # if a filter change is needed, we assume this will eclipse the time all the other
-            # slewing operations take, so we don't bother calculating them.
-            else:
-                slewtime = self.observatoryModel.params.filter_changetime
-
-            if slewtime >= 0:
-                timecost = self.compute_slewtime_cost(slewtime) * self.params.timecost_weight
-                for target in targets_dict[fieldfilter]:
-                    target.slewtime = slewtime
-                    if target.filter != self.observatoryModel.current_state.filter:
-                        target.cost = timecost + filtercost
-                    else:
-                        target.cost = timecost
-                    target.rank = (target.value * target.propboost) - target.cost
-                    ranked_targets_list.append((-target.rank, target))
-
-        sorted_list = sorted(ranked_targets_list, key=itemgetter(0))
-
-        winner_found = False
-        while len(sorted_list) > 0 and not winner_found:
-            winner_target = sorted_list.pop(0)[1]
-
-            self.observatoryModel2.set_state(self.observatoryState)
-            self.observatoryModel2.observe(winner_target)
-            if winner_target.is_dd_firstvisit:
-                ttime = self.observatoryModel2.get_deep_drilling_time(winner_target)
-            else:
-                ttime = 0.0
-            ntime = self.observatoryModel2.current_state.time + ttime + 30.0
-            if ntime < self.sunrise_timestamp:
-                self.observatoryModel2.update_state(ntime)
-                if self.observatoryModel2.current_state.tracking:
-                    self.targetid += 1
-                    winner_target.targetid = self.targetid
-                    winner_target.time = self.time
-                    winner_found = True
-                else:
-                    self.log.debug("select_next_target: target rejected ttime=%.1f %s" %
-                                   (ttime, str(winner_target)))
-                    self.log.debug("select_next_target: state rejected %s" %
-                                   str(self.observatoryModel2.current_state))
-            else:
-                self.log.debug("select_next_target: target rejected ttime=%.1f %s" %
-                               (ttime, str(winner_target)))
-                self.log.debug("select_next_target: rejected due to end of night")
-                if ttime == 0.0:
-                    # ttime == 0 means it is a regular visit (not DD)
-                    # if there is no time left for a single visit then quit
-                    break
-
-        if winner_found:
-            if not self.params.coadd_values:
-                first_target = targets_dict[(winner_target.fieldid, winner_target.filter)][0]
-                if first_target.propid != winner_target.propid:
-                    winner_target.copy_driver_state(first_target)
-            self.last_winner_target = winner_target.get_copy()
-        else:
-            self.last_winner_target = self.nulltarget
-        return self.last_winner_target
+        pass
 
     def register_observation(self, observation):
-
-        target_list = []
-        if observation.targetid > 0:
-            if self.observation_fulfills_target(observation, self.last_winner_target):
-                observation = self.last_winner_target
-            else:
-                self.log.info("register_observation: unexpected observation %s" % str(observation))
-
-            for prop in self.science_proposal_list:
-                target = prop.register_observation(observation)
-                if target is not None:
-                    target_list.append(target)
-
-        self.last_observation = observation.get_copy()
-        if self.last_observation.is_deep_drilling and (self.last_observation.remaining_dd_visits > 1):
-            self.deep_drilling_target = self.last_observation
-        else:
-            self.deep_drilling_target = None
-
-        return target_list
+        pass
 
     def compute_slewtime_cost(self, slewtime):
 
