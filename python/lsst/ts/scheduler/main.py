@@ -15,9 +15,9 @@ from lsst.ts.scheduler.setup import TRACE, EXTENSIVE
 from lsst.ts.scheduler.kernel import read_conf_file, conf_file_path
 from lsst.ts.scheduler.sal_utils import SALUtils
 from lsst.ts.scheduler import Driver
-from lsst.sims.ocs.configuration import SimulationConfig as SchedulerConfig
+from lsst.ts.schedulerConfig import SimulationConfig as SchedulerConfig
 
-from opsim4_config.constants import CONFIG_DIRECTORY, CONFIG_DIRECTORY_PATH
+from scheduler_config.constants import CONFIG_DIRECTORY, CONFIG_DIRECTORY_PATH
 
 __all__ = ["Main"]
 
