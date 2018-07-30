@@ -24,43 +24,13 @@ __all__ = ["Driver"]
 class DriverParameters(object):
 
     def __init__(self):
-        self.coadd_values = False
-        self.timecost_weight = 0.0
-        self.timecost_dc = 0.0
-        self.timecost_dt = 0.0
-        self.timecost_k = 0.0
         self.night_boundary = 0.0
-        self.ignore_sky_brightness = False
-        self.ignore_airmass = False
-        self.ignore_clouds = False
-        self.ignore_seeing = False
         self.new_moon_phase_threshold = 0.0
 
     def configure(self, confdict):
-        self.coadd_values = confdict["ranking"]["coadd_values"]
-        self.time_balancing = confdict["ranking"]["time_balancing"]
-
-        tmax = confdict["ranking"]["timecost_time_max"]
-        tref = confdict["ranking"]["timecost_time_ref"]
-        cref = float(confdict["ranking"]["timecost_cost_ref"])
-
-        self.timecost_tmax = tmax
-        self.timecost_tref = tref
-        self.timecost_cref = cref
-
-        self.timecost_dc = cref * (tmax - tref) / (tref - cref * tmax)
-        self.timecost_dt = -tmax * (self.timecost_dc + 1.0)
-        self.timecost_k = self.timecost_dc * self.timecost_dt
-        self.timecost_weight = confdict["ranking"]["timecost_weight"]
-        self.filtercost_weight = confdict["ranking"]["filtercost_weight"]
         self.lookahead_window_size = confdict['ranking']['lookahead_window_size']
         self.lookahead_bonus_weight = confdict["ranking"]["lookahead_bonus_weight"]
-
         self.night_boundary = confdict["constraints"]["night_boundary"]
-        self.ignore_sky_brightness = confdict["constraints"]["ignore_sky_brightness"]
-        self.ignore_airmass = confdict["constraints"]["ignore_airmass"]
-        self.ignore_clouds = confdict["constraints"]["ignore_clouds"]
-        self.ignore_seeing = confdict["constraints"]["ignore_seeing"]
         self.new_moon_phase_threshold = confdict["darktime"]["new_moon_phase_threshold"]
 
 
@@ -127,33 +97,9 @@ class Driver(object):
         self.survey_duration_SECS = survey_duration * 24 * 60 * 60.0
 
     def configure(self, confdict):
-        self.params.configure(confdict)
-        self.log.log(WORDY,
-                     "configure: coadd_values=%s" % (self.params.coadd_values))
-        self.log.log(WORDY,
-                     "configure: time_balancing=%s" % (self.params.time_balancing))
-        self.log.log(WORDY,
-                     "configure: timecost_dc=%.3f" % (self.params.timecost_dc))
-        self.log.log(WORDY,
-                     "configure: timecost_dt=%.3f" % (self.params.timecost_dt))
-        self.log.log(WORDY,
-                     "configure: timecost_k=%.3f" % (self.params.timecost_k))
-        self.log.log(WORDY,
-                     "configure: timecost_weight=%.3f" % (self.params.timecost_weight))
+        self.params.configure(confdict) 
         self.log.log(WORDY,
                      "configure: night_boundary=%.1f" % (self.params.night_boundary))
-        self.log.log(WORDY,
-                     "configure: ignore_sky_brightness=%s" % (self.params.ignore_sky_brightness))
-        self.log.log(WORDY,
-                     "configure: ignore_airmass=%s" % (self.params.ignore_airmass))
-        self.log.log(WORDY,
-                     "configure: ignore_clouds=%s" % (self.params.ignore_clouds))
-        self.log.log(WORDY,
-                     "configure: ignore_seeing=%s" % (self.params.ignore_seeing))
-        self.log.log(WORDY,
-                     "configure: new_moon_phase_threshold=%.2f" % (self.params.new_moon_phase_threshold))
-
-
         self.lookahead.window_size = self.params.lookahead_window_size
         self.lookahead.bonus_weight = self.params.lookahead_bonus_weight
 
@@ -331,6 +277,10 @@ class Driver(object):
 
         return
 
+    def cold_start(self, obs_list=None):
+       """Rebuilds the state of the scheduler from a list of observations"""
+       raise NotImplemented
+
     def select_next_target(self):
         '''
         Input Arguments: None
@@ -338,7 +288,13 @@ class Driver(object):
         Description: Picks a target and returns it as a target object.
         '''
 
-        pass
+        raise NotImplemented
 
     def register_observation(self, observation):
-        pass
+        '''
+        Input Arguments: Observation, or python list of observations.
+        Output: list of observations
+        Description: Validates observation and returns a list of successfully completed observations. 
+        '''
+
+        raise NotImplemented
