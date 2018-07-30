@@ -165,6 +165,12 @@ class Driver(object):
         self.sky.update_location(self.location)
 
     def configure_observatory(self, confdict):
+        '''
+        Input Arguments: confdict : dict() 
+        Output: N/A
+        Description: This method calls the configure()method in ObservatoryModel class, 
+        which configures all its submodules. When initializing one can issue a call to this method with a complete set of parameters on confdict.
+        '''
 
         self.observatoryModel.configure(confdict)
         self.observatoryModel2.configure(confdict)
@@ -231,6 +237,11 @@ class Driver(object):
         return self.fields_dict
 
     def start_survey(self, timestamp, night):
+        '''
+        Input Arguments: float timestamp, int night
+        Output: N/A
+        Description: Begins the survey
+        '''
 
         self.start_time = timestamp
 
@@ -248,11 +259,21 @@ class Driver(object):
         self.sunrise_timestamp = sunrise
 
     def end_survey(self):
+        '''
+        Input Arguments: N/A
+        Output: N/A
+        Description: Ends the survey
+        '''
         self.log.info("end_survey")
 
 
     def start_night(self, timestamp, night):
-
+        '''
+        Input Arguments: float timestamp, int night
+        Output: N/A
+        This method is called once per night before observations begin. 
+        It is not called if the observatory is undergoing downtime.
+        '''
         timeprogress = (timestamp - self.start_time) / self.survey_duration_SECS
         self.log.info("start_night t=%.6f, night=%d timeprogress=%.2f%%" %
                       (timestamp, night, 100 * timeprogress))
@@ -260,6 +281,11 @@ class Driver(object):
         self.isnight = True
 
     def end_night(self, timestamp, night):
+        '''
+        Input Arguments: float timestamp, int night
+        Output: N/A
+        Description: This method is called once per night after observing completes.
+        '''
         pass
 
     def swap_filter(self, filter_to_unmount, filter_to_mount):
@@ -277,6 +303,14 @@ class Driver(object):
         pass
 
     def get_need_filter_swap(self):
+        '''
+        Input Arguments: NA
+        Output: Python Tuple (bool need_filter_swap, string filter_to_unmount, string filter_to_mount)
+        Description: When scheduler determines that a filter swap is needed, 
+        this shall return a tuple where the first element is a TRUE value, 
+        and the second and third elements are single-character strings identifying
+        which filter to remove from the carousel, and which filter to add, respectively. 
+        '''
 
         return (self.need_filter_swap, self.filter_to_unmount, self.filter_to_mount)
 
@@ -298,6 +332,12 @@ class Driver(object):
         return
 
     def select_next_target(self):
+        '''
+        Input Arguments: None
+        Output: Target Object
+        Description: Picks a target and returns it as a target object.
+        '''
+
         pass
 
     def register_observation(self, observation):
