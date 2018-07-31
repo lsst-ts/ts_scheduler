@@ -28,8 +28,6 @@ class DriverParameters(object):
         self.new_moon_phase_threshold = 0.0
 
     def configure(self, confdict):
-        self.lookahead_window_size = confdict['ranking']['lookahead_window_size']
-        self.lookahead_bonus_weight = confdict["ranking"]["lookahead_bonus_weight"]
         self.night_boundary = confdict["constraints"]["night_boundary"]
         self.new_moon_phase_threshold = confdict["darktime"]["new_moon_phase_threshold"]
 
@@ -48,12 +46,6 @@ class Driver(object):
 
         self.sky = AstronomicalSkyModel(self.location)
 
-        self.db = FieldsDatabase()
-
-        self.build_fields_dict()
-
-        self.propid_counter = 0
-
         self.start_time = 0.0
         self.time = 0.0
         self.targetid = 0
@@ -68,14 +60,6 @@ class Driver(object):
         self.unmounted_filter = ""
         self.midnight_moonphase = 0.0
 
-        self.nulltarget = Target()
-        self.nulltarget.targetid = -1
-        self.nulltarget.num_exp = 1
-        self.nulltarget.exp_times = [0.0]
-
-        self.nulltarget.need_list = [0.0]
-        self.nulltarget.bonus_list = [0.0]
-        self.nulltarget.value_list = [0.0]
         self.last_winner_target = self.nulltarget.get_copy()
         self.deep_drilling_target = None
 
@@ -157,31 +141,6 @@ class Driver(object):
         self.observatoryModel2.configure_park(confdict)
 
 
-    def build_fields_dict(self):
-
-        sql = "select * from Field"
-        res = self.db.query(sql)
-
-        self.fields_dict = {}
-        for row in res:
-            field = Field()
-            fieldid = row[0]
-            field.fieldid = fieldid
-            field.fov_rad = math.radians(row[1])
-            field.ra_rad = math.radians(row[2])
-            field.dec_rad = math.radians(row[3])
-            field.gl_rad = math.radians(row[4])
-            field.gb_rad = math.radians(row[5])
-            field.el_rad = math.radians(row[6])
-            field.eb_rad = math.radians(row[7])
-            self.fields_dict[fieldid] = field
-            self.log.log(EXTENSIVE, "buildFieldsTable: %s" % (self.fields_dict[fieldid]))
-        self.log.info("buildFieldsTable: %d fields" % (len(self.fields_dict)))
-
-    def get_fields_dict(self):
-
-        return self.fields_dict
-
     def start_survey(self, timestamp, night):
         '''
         Input Arguments: float timestamp, int night
@@ -245,8 +204,22 @@ class Driver(object):
 
         return
 
-    def update_time(self, timestamp, night):
-        pass
+        def update_time(self, timestamp, night):
+            self.time = timestamp
+            self.observatoryModel.update_state(self.time)
+            if not self.survey_started:
+                self.start_survey(timestamp, night)
+
+            if self.isnight:
+                # if round(timestamp) >= round(self.sunrise_timestamp):
+                if timestamp >= self.sunrise_timestamp:
+                    self.end_night(timestamp, night)
+            else:
+                # if round(timestamp) >= round(self.sunset_timestamp):
+                if timestamp >= self.sunset_timestamp:
+                    self.start_night(timestamp, night)
+
+            return self.isnight
 
     def get_need_filter_swap(self):
         '''
