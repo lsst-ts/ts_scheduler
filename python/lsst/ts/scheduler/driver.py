@@ -298,6 +298,9 @@ class Driver(object):
         self.observatoryModel.configure_park(confdict)
         self.observatoryModel2.configure_park(confdict)
 
+    def cold_start(self, observations):
+        raise NotImplemented('Cold start not implemented.')
+
     def create_area_proposal(self, propid, name, config_dict):
 
         self.propid_counter += 1
