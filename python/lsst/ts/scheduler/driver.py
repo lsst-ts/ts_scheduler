@@ -46,6 +46,7 @@ class Driver(object):
 
         self.sky = AstronomicalSkyModel(self.location)
 
+        self.propid_counter = 0
         self.start_time = 0.0
         self.time = 0.0
         self.targetid = 0
@@ -55,10 +56,13 @@ class Driver(object):
         self.sunrise_timestamp = 0.0
         self.survey_duration_DAYS = 0.0
         self.survey_duration_SECS = self.survey_duration_DAYS * 24 * 60 * 60.0
-        self.darktime = False
+        self.darktime = False  
         self.mounted_filter = ""
         self.unmounted_filter = ""
         self.midnight_moonphase = 0.0
+
+        self.nulltarget = Target()
+        self.nulltarget.targetid = -1
 
         self.last_winner_target = self.nulltarget.get_copy()
         self.deep_drilling_target = None
@@ -84,8 +88,6 @@ class Driver(object):
         self.params.configure(confdict) 
         self.log.log(WORDY,
                      "configure: night_boundary=%.1f" % (self.params.night_boundary))
-        self.lookahead.window_size = self.params.lookahead_window_size
-        self.lookahead.bonus_weight = self.params.lookahead_bonus_weight
 
     def configure_location(self, confdict):
 
