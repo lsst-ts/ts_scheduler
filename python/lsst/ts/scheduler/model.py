@@ -32,15 +32,13 @@ class Model():
         # that the states contain no logic, all it does is call Model methods
         # TODO: Get real valid settings from the model
         mgr = SAL_scheduler()
-        mgr.salEventPub("scheduler_logevent_validSettings")
+        mgr.salEvent("scheduler_logevent_validSettings")
         myData = scheduler_logevent_validSettingsC()
-        myData.packages = "taco"
-        myData.package_versions[0] = 1
-        myData.package_versions[1] = 314
-        myData.aliases = "alias"
-        myData.priority = 1
-        priority = int(myData.priority)
-
+        myData.package="package"
+        myData.packageVersions="packageVersions"
+        myData.aliases="aliases"
+        myData.priority=1
+        priority=int(myData.priority)
         mgr.logEvent_validSettings(myData, priority)
         time.sleep(1)
         mgr.salShutdown()
