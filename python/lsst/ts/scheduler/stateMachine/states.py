@@ -1,8 +1,3 @@
-import threading
-import salpytools.states as csc_states
-
-from lsst.ts.scheduler.stateMachine import TargetProducer
-
 """ For more documentation on the Scheduler CSC states, visit 
 https://docs.google.com/document/d/1DTzgfP_HeBgQ8PC7klwInj4XehC03ckxc85KBW38kKY/edit
 
@@ -24,14 +19,17 @@ When transitioning from a state the following is called;
     we can ask mode.previous_state.
 """
 
-class OfflineState(csc_states.OfflineState):
+from lsst.ts.statemachine import states 
+from lsst.ts.scheduler.stateMachine import TargetProducer
+
+class OfflineState(states.OfflineState):
 
 
     def __init__(self, subsystem_tag):
         super(OfflineState, self).__init__(subsystem_tag)
 
 
-class StandbyState(csc_states.StandbyState):
+class StandbyState(states.StandbyState):
 
     def __init__(self, subsystem_tag):
         super(StandbyState, self).__init__(subsystem_tag)
@@ -42,13 +40,13 @@ class StandbyState(csc_states.StandbyState):
             model.send_valid_settings()
 
 
-class DisabledState(csc_states.DisabledState):
+class DisabledState(states.DisabledState):
 
     def __init__(self, subsystem_tag):
         super(DisabledState, self).__init__(subsystem_tag)
 
 
-class EnabledState(csc_states.EnabledState):
+class EnabledState(states.EnabledState):
 
     def __init__(self, subsystem_tag):
         super(EnabledState, self).__init__(subsystem_tag)
@@ -65,7 +63,7 @@ class EnabledState(csc_states.EnabledState):
         self.target_producer.pause()
 
 
-class FaultState(csc_states.FaultState):
+class FaultState(states.FaultState):
 
     def __init__(self, subsystem_tag):
         super(FaultState, self).__init__(subsystem_tag)
