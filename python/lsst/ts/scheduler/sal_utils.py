@@ -6,7 +6,7 @@ import logging.handlers
 
 
 from SALPY_scheduler import SAL_scheduler
-from SALPY_scheduler import scheduler_logevent_summaryStateC
+from SALPY_scheduler import scheduler_logevent_SummaryStateC
 from SALPY_scheduler import scheduler_logevent_needFilterSwapC
 from SALPY_scheduler import scheduler_logevent_targetC
 from SALPY_scheduler import scheduler_logevent_validSettingsC
