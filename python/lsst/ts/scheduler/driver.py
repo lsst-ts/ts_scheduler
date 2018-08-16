@@ -135,6 +135,8 @@ class Driver(object):
 
         config = kwargs['config']
         self.propid_counter = 0
+        survey_topology = SurveyTopology()
+
         general_topic = scheduler_generalPropConfigC()
         if config.science.general_props.active is not None:
             for general_config in config.science.general_props.active:
@@ -143,6 +145,8 @@ class Driver(object):
                 self.log.debug('configure_scheduler [%s-%i]: %s' % (general_config.name, self.propid_counter,
                                                                     conf_dict))
                 self.create_area_proposal(self.propid_counter+1, general_config.name, conf_dict)
+                survey_topology.num_general_props += 1
+                survey_topology.general_propos.append(general_config.name)
 
         seq_topic = scheduler_sequencePropConfigC()
         if config.science.sequence_props.active is not None:
@@ -152,12 +156,8 @@ class Driver(object):
                 self.log.debug('configure_scheduler [%s-%i] : %s' % (sequence_props.name, self.propid_counter,
                                                                      conf_dict))
                 self.create_sequence_proposal(self.propid_counter+1, sequence_props.name, conf_dict)
-
-        survey_topology = SurveyTopology()
-        survey_topology.num_general_props = len(config.science.general_proposals)
-        survey_topology.general_propos = config.science.general_proposals
-        survey_topology.num_seq_props = len(config.science.sequence_proposals)
-        survey_topology.sequence_propos = config.science.sequence_proposals
+                survey_topology.num_seq_props += 1
+                survey_topology.sequence_propos.append(sequence_props.name)
 
         return survey_topology
 
