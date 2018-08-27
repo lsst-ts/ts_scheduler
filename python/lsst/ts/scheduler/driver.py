@@ -18,7 +18,7 @@ from lsst.ts.scheduler.kernel import Field, SurveyTopology
 from lsst.ts.scheduler.fields import FieldsDatabase
 from lsst.ts.scheduler.lookahead import Lookahead
 
-__all__ = ["Driver"]
+__all__ = ["Driver", "DriverParameters"]
 
 
 class DriverParameters(object):
@@ -34,7 +34,6 @@ class DriverParameters(object):
 
 class Driver(object):
     def __init__(self):
-
         self.log = logging.getLogger("schedulerDriver")
 
         self.params = DriverParameters()
@@ -74,10 +73,10 @@ class Driver(object):
         self.cloud = 0.0
         self.seeing = 0.0
 
-        self.lookahead = Lookahead()
+        
 
     def configure_scheduler(self, **kwargs):
-        pass
+        raise NotImplemented
 
     def configure_duration(self, survey_duration):
 
@@ -206,7 +205,7 @@ class Driver(object):
 
         return
 
-        def update_time(self, timestamp, night):
+    def update_time(self, timestamp, night):
             self.time = timestamp
             self.observatoryModel.update_state(self.time)
             if not self.survey_started:
