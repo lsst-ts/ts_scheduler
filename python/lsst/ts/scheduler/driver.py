@@ -55,7 +55,7 @@ class Driver(object):
         self.sunrise_timestamp = 0.0
         self.survey_duration_DAYS = 0.0
         self.survey_duration_SECS = self.survey_duration_DAYS * 24 * 60 * 60.0
-        self.darktime = False  
+        self.darktime = False
         self.mounted_filter = ""
         self.unmounted_filter = ""
         self.midnight_moonphase = 0.0
