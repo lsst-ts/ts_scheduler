@@ -532,7 +532,7 @@ class Main(object):
 
         self.sal.topic_summaryState.summaryState = self.summary_state_enum[self.state]
         self.log.debug('Broadcasting state: %i ' % self.sal.topic_summaryState.summaryState)
-        self.sal.logEvent_SummaryState(self.sal.topic_summaryState, 1)
+        self.sal.logEvent_summaryState(self.sal.topic_summaryState, 1)
 
     def broadcast_valid_settings(self):
 
