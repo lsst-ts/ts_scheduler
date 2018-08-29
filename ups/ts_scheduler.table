@@ -5,6 +5,8 @@ setupRequired(scheduler_config)
 setupRequired(ts_astrosky_model)
 setupRequired(ts_observatory_model)
 setupRequired(ts_schedulerConfig)
+setupRequired(ts_statemachine)
+setupRequired(salpytools)
 
 envPrepend(PYTHONPATH, ${PRODUCT_DIR}/python)
 envPrepend(PATH, ${PRODUCT_DIR}/scripts)

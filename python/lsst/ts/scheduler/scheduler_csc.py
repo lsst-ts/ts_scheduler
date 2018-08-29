@@ -1,5 +1,7 @@
 from salpytools import salpylib
 
+from lsst.ts.statemachine import Context
+
 from lsst.ts.scheduler import Model
 from lsst.ts.scheduler.stateMachine import states
 
@@ -20,9 +22,9 @@ class Scheduler_CSC():
                        "DISABLED": states.DisabledState(self.subsystem_tag),
                        "FAULT"   : states.FaultState(self.subsystem_tag)}
 
-        self.context = salpylib.Context(self.subsystem_tag, self.model, states=self.states)
+        self.context = Context(self.subsystem_tag, self.model, states=self.states)
 
-        self.enter_control = salpylib.DDSController(self.context, 'enterControl')
+        self.enter_control = salpylib.DDSController(self.context, command='enterControl',topic='scheduler_command_enterControl')
         self.start = salpylib.DDSController(self.context, 'start')
         self.enable = salpylib.DDSController(self.context, 'enable')
         self.disable = salpylib.DDSController(self.context, 'disable')
