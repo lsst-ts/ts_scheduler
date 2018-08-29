@@ -139,6 +139,9 @@ class SALUtils(SAL_scheduler):
         confdict["constraints"]["ignore_seeing"] = topic_driver_config.ignore_seeing
         confdict["darktime"] = {}
         confdict["darktime"]["new_moon_phase_threshold"] = topic_driver_config.new_moon_phase_threshold
+        confdict["startup"] = {}
+        confdict["startup"]["type"] = topic_driver_config.startup_type
+        confdict["startup"]["database"] = topic_driver_config.startup_database
 
         return confdict
 
@@ -161,6 +164,8 @@ class SALUtils(SAL_scheduler):
         topic.ignore_seeing = config.sched_driver.ignore_seeing
         topic.lookahead_window_size = config.sched_driver.lookahead_window_size
         topic.lookahead_bonus_weight = config.sched_driver.lookahead_bonus_weight
+        topic.startup_type = config.sched_driver.startup_type
+        topic.startup_database = config.sched_driver.startup_database
 
     @staticmethod
     def rtopic_location_config(topic_location_config):

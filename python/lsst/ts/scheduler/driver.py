@@ -37,6 +37,8 @@ class DriverParameters(object):
         self.ignore_clouds = False
         self.ignore_seeing = False
         self.new_moon_phase_threshold = 0.0
+        self.startup_type = ''
+        self.startup_database = ''
 
     def configure(self, confdict):
         self.coadd_values = confdict["ranking"]["coadd_values"]
@@ -65,7 +67,8 @@ class DriverParameters(object):
         self.ignore_clouds = confdict["constraints"]["ignore_clouds"]
         self.ignore_seeing = confdict["constraints"]["ignore_seeing"]
         self.new_moon_phase_threshold = confdict["darktime"]["new_moon_phase_threshold"]
-
+        self.startup_type = confdict["startup"]["type"]
+        self.startup_database = confdict["startup"]["database"]
 
 class Driver(object):
     def __init__(self):
@@ -299,7 +302,18 @@ class Driver(object):
         self.observatoryModel2.configure_park(confdict)
 
     def cold_start(self, observations):
-        raise NotImplemented('Cold start not implemented.')
+        """
+        Configure cold start from a list of observations.
+
+        Parameters
+        ----------
+        observations: list(lsst.ts.observatory.model.Observations)
+
+        Returns
+        -------
+
+        """
+        raise NotImplementedError("Cold start not implemented.")
 
     def create_area_proposal(self, propid, name, config_dict):
 

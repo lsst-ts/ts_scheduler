@@ -227,40 +227,6 @@ class Main(object):
         self.sal.topic_schedulerTopology = survey_topology.to_topic()
         self.sal.putSample_surveyTopology(self.sal.topic_schedulerTopology)
 
-    def startup(self):
-        """
-        Run startup of the scheduler. This method will either do nothing (HOT START), perform a warm start or
-        cold start. Information is gathered from the configuration.
-
-        :return:
-        """
-
-        if self.config.sched_driver.startup_type == 'HOT':
-            # This is the regular startup, will just return without doing anything.
-            return
-        elif self.self.config.sched_driver.startup_type != 'HOT' and \
-                self.self.config.sched_driver.startup_database is None:
-            raise IOError('Startup database not defined for startup type {}'.format(
-                self.self.config.sched_driver.startup_type))
-        elif self.self.config.sched_driver.startup_type != 'WARM':
-            raise NotImplemented('Warm start not implemented yet.')
-        elif self.self.config.sched_driver.startup_type != 'COLD':
-            import pandas as pd
-            import sqlite3
-
-            self.log.debug('Running cold start from {}'.format(self.self.config.sched_driver.startup_database))
-
-            conn = sqlite3.connect(self.self.config.sched_driver.startup_database)
-            df = pd.read_sql_query("select * from ObsHistory;", conn)
-
-            from lsst.ts.observatory.model import Observation
-
-            list_observations = []
-            for iobs in len(df):
-                list_observations.append(Observation.make_copy(df.iloc[iobs]))
-
-            self.schedulerDriver.cold_start(df)
-
     def configure_proposals(self):
 
         if True:
