@@ -16,7 +16,6 @@ from lsst.ts.scheduler.setup import EXTENSIVE, WORDY
 from lsst.ts.scheduler.kernel import read_conf_file
 from lsst.ts.scheduler.kernel import Field, SurveyTopology
 from lsst.ts.scheduler.fields import FieldsDatabase
-from lsst.ts.scheduler.lookahead import Lookahead
 
 __all__ = ["Driver", "DriverParameters"]
 
@@ -62,6 +61,14 @@ class Driver(object):
 
         self.nulltarget = Target()
         self.nulltarget.targetid = -1
+        self.nulltarget.num_exp = 1
+        self.nulltarget.exp_times = [0.0]
+        self.nulltarget.num_props = 1
+        self.nulltarget.propid_list = [0]
+        self.nulltarget.need_list = [0.0]
+        self.nulltarget.bonus_list = [0.0]
+        self.nulltarget.value_list = [0.0]
+        self.nulltarget.propboost_list = [1.0]
 
         self.last_winner_target = self.nulltarget.get_copy()
         self.deep_drilling_target = None
