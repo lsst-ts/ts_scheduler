@@ -216,7 +216,7 @@ class Driver(object):
         self.isnight = True
 
     def end_night(self, timestamp, night):
-         """This method is called once per night after observing completes.
+        """This method is called once per night after observing completes.
 
         Parameters
         ----------
@@ -227,7 +227,7 @@ class Driver(object):
         -------
         None
         """
-        
+
         pass
 
     def swap_filter(self, filter_to_unmount, filter_to_mount):
