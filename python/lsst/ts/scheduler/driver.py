@@ -348,7 +348,7 @@ class Driver(object):
             prop.start_survey()
 
         self.sky.update(timestamp)
-        (sunset, sunrise) = self.sky.get_night_boundaries(self.params.night_boundary)
+        (sunset, sunrise) = self.sky.get_night_boundaries(self.params.night_boundary)   
         self.log.debug("start_survey sunset=%.6f sunrise=%.6f" % (sunset, sunrise))
         # if round(sunset) <= round(timestamp) < round(sunrise):
         if sunset <= timestamp < sunrise:
@@ -711,17 +711,18 @@ class Driver(object):
             self.last_winner_target = self.nulltarget
         return self.last_winner_target
 
-    def register_observation(self, observation):
+    def register_observation(self, observation,isColdStart=False):
 
         target_list = []
         if observation.targetid > 0:
             if self.observation_fulfills_target(observation, self.last_winner_target):
                 observation = self.last_winner_target
+            elif isColdStart: self.log.info("registered cold start observation %s" % str(observation))
             else:
                 self.log.info("register_observation: unexpected observation %s" % str(observation))
 
             for prop in self.science_proposal_list:
-                target = prop.register_observation(observation)
+                target = prop.register_observation(observation,isColdStart)
                 if target is not None:
                     target_list.append(target)
 
@@ -732,6 +733,17 @@ class Driver(object):
             self.deep_drilling_target = None
 
         return target_list
+
+    def cold_start(self, obslist=None):
+        """Rebuilds the state of the scheduler from a list of observations"""
+        self.log.info("Running coldstart (PBS)")
+        f = open("first100pbs","rb")
+        obs_from_file = pickle.load(f)
+
+        for obs in obs_from_file:
+            self.register_observation(obs,isColdStart=True)
+        self.log.info("Coldstart finished")
+    
 
     def compute_slewtime_cost(self, slewtime):
 
