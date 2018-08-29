@@ -830,7 +830,9 @@ class SALUtils(SAL_scheduler):
     def rtopic_observation(topic_observation):
 
         observation = Observation()
+
         observation.time = topic_observation.observation_start_time
+        observation.observation_start_mjd = topic_observation.observation_start_mjd
         observation.targetid = topic_observation.targetId
         observation.filter = topic_observation.filter
         observation.num_props = topic_observation.num_proposals
@@ -845,6 +847,17 @@ class SALUtils(SAL_scheduler):
         for k in range(topic_observation.num_exposures):
             observation.exp_times.append(topic_observation.exposure_times[k])
 
+        observation.airmass = topic_observation.airmass
+        observation.seeing_fwhm_eff = topic_observation.seeing_fwhm_eff
+        observation.seeing_fwhm_geom = topic_observation.seeing_fwhm_geom
+        observation.sky_brightness = topic_observation.sky_brightness
+        observation.night = topic_observation.night
+        observation.five_sigma_depth = topic_observation.five_sigma_depth
+        observation.alt_rad = topic_observation.altitude
+        observation.az_rad = topic_observation.azimuth
+        observation.cloud = topic_observation.cloud
+        observation.moon_alt = topic_observation.moon_alt
+        observation.sun_alt = topic_observation.sun_alt
         observation.slewtime = topic_observation.slew_time
         observation.note = topic_observation.note
 
