@@ -33,8 +33,8 @@ class SurveyTopology(object):
 
         topic = scheduler_surveyTopologyC()
 
-        topic.num_general_props = self.num_general_props
-        topic.num_seq_props = self.num_seq_props
+        topic.numGeneralProps = self.num_general_props
+        topic.numSeqProps = self.num_seq_props
 
         general_propos = ''
         for i,gen_prop in enumerate(self.general_propos):
@@ -42,7 +42,7 @@ class SurveyTopology(object):
             if i < self.num_general_props-1:
                 general_propos += ','
 
-        topic.general_propos = general_propos
+        topic.generalPropos = general_propos
 
         sequence_propos = ''
         for i, seq_prop in enumerate(self.sequence_propos):
@@ -50,6 +50,6 @@ class SurveyTopology(object):
             if i < self.num_seq_props-1:
                 sequence_propos += ','
 
-        topic.sequence_propos = sequence_propos
+        topic.sequencePropos = sequence_propos
 
         return topic
