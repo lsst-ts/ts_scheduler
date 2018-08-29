@@ -35,7 +35,7 @@ from SALPY_scheduler import scheduler_command_startC
 
 
 from lsst.ts.observatory.model import ObservatoryState
-from lsst.ts.observatory.model import Target
+from lsst.ts.observatory.model import Target, Observation
 
 __all__ = ["SALUtils"]
 
@@ -139,6 +139,9 @@ class SALUtils(SAL_scheduler):
         confdict["constraints"]["ignore_seeing"] = topic_driver_config.ignore_seeing
         confdict["darktime"] = {}
         confdict["darktime"]["new_moon_phase_threshold"] = topic_driver_config.new_moon_phase_threshold
+        confdict["startup"] = {}
+        confdict["startup"]["type"] = topic_driver_config.startup_type
+        confdict["startup"]["database"] = topic_driver_config.startup_database
 
         return confdict
 
@@ -161,6 +164,8 @@ class SALUtils(SAL_scheduler):
         topic.ignore_seeing = config.sched_driver.ignore_seeing
         topic.lookahead_window_size = config.sched_driver.lookahead_window_size
         topic.lookahead_bonus_weight = config.sched_driver.lookahead_bonus_weight
+        topic.startup_type = config.sched_driver.startup_type
+        topic.startup_database = config.sched_driver.startup_database
 
     @staticmethod
     def rtopic_location_config(topic_location_config):
@@ -797,6 +802,8 @@ class SALUtils(SAL_scheduler):
             topic_target.sun_dec = math.degrees(moon_sun["sunDec"])
             topic_target.solar_elong = math.degrees(moon_sun["solarElong"])
 
+        topic_target.note = target.note
+
     @staticmethod
     def wtopic_scheduler_topology_config(topic, config):
         topic.num_general_props = len(config.science.general_proposals)
@@ -822,10 +829,11 @@ class SALUtils(SAL_scheduler):
     @staticmethod
     def rtopic_observation(topic_observation):
 
-        observation = Target()
+        observation = Observation()
+
         observation.time = topic_observation.observation_start_time
+        observation.observation_start_mjd = topic_observation.observation_start_mjd
         observation.targetid = topic_observation.targetId
-        observation.fieldid = topic_observation.fieldId
         observation.filter = topic_observation.filter
         observation.num_props = topic_observation.num_proposals
         observation.propid_list = []
@@ -838,6 +846,20 @@ class SALUtils(SAL_scheduler):
         observation.exp_times = []
         for k in range(topic_observation.num_exposures):
             observation.exp_times.append(topic_observation.exposure_times[k])
+
+        observation.airmass = topic_observation.airmass
+        observation.seeing_fwhm_eff = topic_observation.seeing_fwhm_eff
+        observation.seeing_fwhm_geom = topic_observation.seeing_fwhm_geom
+        observation.sky_brightness = topic_observation.sky_brightness
+        observation.night = topic_observation.night
+        observation.five_sigma_depth = topic_observation.five_sigma_depth
+        observation.alt_rad = topic_observation.altitude
+        observation.az_rad = topic_observation.azimuth
+        observation.cloud = topic_observation.cloud
+        observation.moon_alt = topic_observation.moon_alt
+        observation.sun_alt = topic_observation.sun_alt
+        observation.slewtime = topic_observation.slew_time
+        observation.note = topic_observation.note
 
         return observation
 

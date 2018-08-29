@@ -25,11 +25,14 @@ class DriverParameters(object):
     def __init__(self):
         self.night_boundary = 0.0
         self.new_moon_phase_threshold = 0.0
+        self.startup_type = ''
+        self.startup_database = ''
 
     def configure(self, confdict):
         self.night_boundary = confdict["constraints"]["night_boundary"]
         self.new_moon_phase_threshold = confdict["darktime"]["new_moon_phase_threshold"]
-
+        self.startup_type = confdict["startup"]["type"]
+        self.startup_database = confdict["startup"]["database"]
 
 class Driver(object):
     def __init__(self):
@@ -153,7 +156,6 @@ class Driver(object):
 
         self.observatoryModel.configure_park(confdict)
         self.observatoryModel2.configure_park(confdict)
-
 
     def start_survey(self, timestamp, night):
         """This method begins the survey.
@@ -294,12 +296,12 @@ class Driver(object):
 
         return
 
-    def cold_start(self, obs_list=None):
+    def cold_start(self, observations):
         """Rebuilds the internal state of the scheduler from a list of observations.
 
         Parameters
         ----------
-        obs_list : list of Observation objects
+        observations : list of Observation objects
 
         Returns
         -------
