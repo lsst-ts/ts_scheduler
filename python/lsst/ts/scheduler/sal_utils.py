@@ -848,17 +848,17 @@ class SALUtils(SAL_scheduler):
             observation.exp_times.append(topic_observation.exposureTimes[k])
 
         observation.airmass = topic_observation.airmass
-        observation.seeing_fwhm_eff = topic_observation.seeing_fwhm_eff
-        observation.seeing_fwhm_geom = topic_observation.seeing_fwhm_geom
-        observation.sky_brightness = topic_observation.sky_brightness
+        observation.seeing_fwhm_eff = topic_observation.seeingFwhmEff
+        observation.seeing_fwhm_geom = topic_observation.seeingFwhmGeom
+        observation.sky_brightness = topic_observation.skyBrightness
         observation.night = topic_observation.night
-        observation.five_sigma_depth = topic_observation.five_sigma_depth
+        observation.five_sigma_depth = topic_observation.fiveSigmaDepth
         observation.alt_rad = topic_observation.altitude
         observation.az_rad = topic_observation.azimuth
         observation.cloud = topic_observation.cloud
-        observation.moon_alt = topic_observation.moon_alt
-        observation.sun_alt = topic_observation.sun_alt
-        observation.slewtime = topic_observation.slew_time
+        observation.moon_alt = topic_observation.moonAlt
+        observation.sun_alt = topic_observation.sunAlt
+        observation.slewtime = topic_observation.slewTime
         observation.note = topic_observation.note
 
         return observation
