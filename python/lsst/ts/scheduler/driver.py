@@ -48,6 +48,7 @@ class Driver(object):
         self.sky = AstronomicalSkyModel(self.location)
 
         self.propid_counter = 0
+        self.night = 0
         self.start_time = 0.0
         self.time = 0.0
         self.targetid = 0
@@ -82,8 +83,6 @@ class Driver(object):
 
         self.cloud = 0.0
         self.seeing = 0.0
-
-        
 
     def configure_scheduler(self, **kwargs):
         raise NotImplemented
