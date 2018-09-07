@@ -153,7 +153,7 @@ class Main(object):
     def configure_driver(self):
 
         # Configure survey duration
-        self.sal.topic_schedulerConfig.survey_duration = self.config.survey.duration
+        self.sal.topic_schedulerConfig.surveyDuration = self.config.survey.duration
         self.schedulerDriver.configure_duration(self.config.survey.full_duration)
         self.sal.putSample_schedulerConfig(self.sal.topic_schedulerConfig)
 
@@ -328,8 +328,8 @@ class Main(object):
         if scode == 0 and self.sal.topicTime.timestamp != 0:
             lasttimetime = time.time()
             nightstamp = self.sal.topicTime.night
-            is_down = self.sal.topicTime.is_down
-            down_duration = self.sal.topicTime.down_duration
+            is_down = self.sal.topicTime.isDown
+            down_duration = self.sal.topicTime.downDuration
             self.log.log(EXTENSIVE, "run: rx time=%.6f night=%i is_down=%s down_duration=%.1f" %
                          (self.sal.topicTime.timestamp, nightstamp, is_down, down_duration))
             if self.sal.topicTime.timestamp > timestamp:
@@ -345,8 +345,8 @@ class Main(object):
                     (needswap, filter2unmount, filter2mount) = \
                         self.schedulerDriver.get_need_filter_swap()
 
-                    self.sal.topicFilterSwap.need_swap = needswap
-                    self.sal.topicFilterSwap.filter_to_unmount = filter2unmount
+                    self.sal.topicFilterSwap.needSwap = needswap
+                    self.sal.topicFilterSwap.filterToUnmount = filter2unmount
                     self.sal.logEvent_needFilterSwap(self.sal.topicFilterSwap, 2)
                     self.log.info("run: tx filter swap %s %s" % (needswap, filter2unmount))
                     waitstate = False
@@ -411,7 +411,7 @@ class Main(object):
             if scode == 0 and self.sal.topic_cloud.timestamp != 0:
                 lastcloudtime = time.time()
                 waitcloud = False
-                cloud = self.sal.topic_cloud.bulk_cloud
+                cloud = self.sal.topic_cloud.bulkCloud
             else:
                 tf = time.time()
                 if (tf - lastcloudtime > 10.0):
@@ -451,7 +451,7 @@ class Main(object):
                 lastobstime = time.time()
                 self.meascount += 1
                 self.visitcount += 1
-                if self.sal.topicTarget.target_id == self.sal.topicObservation.targetId:
+                if self.sal.topicTarget.targetId == self.sal.topicObservation.targetId:
                     self.synccount += 1
 
                     obs = self.sal.rtopic_observation(self.sal.topicObservation)
@@ -532,7 +532,7 @@ class Main(object):
 
         self.sal.topic_summaryState.summaryState = self.summary_state_enum[self.state]
         self.log.debug('Broadcasting state: %i ' % self.sal.topic_summaryState.summaryState)
-        self.sal.logEvent_SummaryState(self.sal.topic_summaryState, 1)
+        self.sal.logEvent_summaryState(self.sal.topic_summaryState, 1)
 
     def broadcast_valid_settings(self):
 
@@ -543,7 +543,7 @@ class Main(object):
             valid_settings += ','
         valid_settings += self.valid_settings[-1][self.valid_settings[-1].find('/') + 1:]
 
-        self.sal.topicValidSettings.package_versions = valid_settings
+        self.sal.topicValidSettings.packageVersions = valid_settings
         self.sal.logEvent_validSettings(self.sal.topicValidSettings, 5)
 
     def wait_cmd(self, cmd):

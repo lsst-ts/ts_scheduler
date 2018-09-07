@@ -6,7 +6,7 @@ import logging.handlers
 
 
 from SALPY_scheduler import SAL_scheduler
-from SALPY_scheduler import scheduler_logevent_SummaryStateC
+from SALPY_scheduler import scheduler_logevent_summaryStateC
 from SALPY_scheduler import scheduler_logevent_needFilterSwapC
 from SALPY_scheduler import scheduler_logevent_targetC
 from SALPY_scheduler import scheduler_logevent_validSettingsC
@@ -52,7 +52,7 @@ class SALUtils(SAL_scheduler):
         self.sal_sleeper = 0.1
         self.main_loop_timeouts = timeout
 
-        self.topic_summaryState = scheduler_logevent_SummaryStateC()
+        self.topic_summaryState = scheduler_logevent_summaryStateC()
         self.topicTarget = scheduler_logevent_targetC()
         self.topicFilterSwap = scheduler_logevent_needFilterSwapC()
         self.topicValidSettings = scheduler_logevent_validSettingsC()
@@ -84,10 +84,10 @@ class SALUtils(SAL_scheduler):
     def start(self):
         self.log.info("Starting pub/sub initialization")
 
-        self.salEventPub("scheduler_logevent_SummaryState")
-        self.salEventPub("scheduler_logevent_target")
-        self.salEventPub("scheduler_logevent_needFilterSwap")
-        self.salEventPub("scheduler_logevent_validSettings")
+        self.salEvent("scheduler_logevent_summaryState")
+        self.salEvent("scheduler_logevent_target")
+        self.salEvent("scheduler_logevent_needFilterSwap")
+        self.salEvent("scheduler_logevent_validSettings")
 
         self.salProcessor("scheduler_command_enterControl")
         self.salProcessor("scheduler_command_enable")
@@ -121,51 +121,51 @@ class SALUtils(SAL_scheduler):
 
         confdict = {}
         confdict["ranking"] = {}
-        confdict["ranking"]["coadd_values"] = topic_driver_config.coadd_values
-        confdict["ranking"]["time_balancing"] = topic_driver_config.time_balancing
-        confdict["ranking"]["timecost_time_max"] = topic_driver_config.timecost_time_max
-        confdict["ranking"]["timecost_time_ref"] = topic_driver_config.timecost_time_ref
-        confdict["ranking"]["timecost_cost_ref"] = topic_driver_config.timecost_cost_ref
-        confdict["ranking"]["timecost_weight"] = topic_driver_config.timecost_weight
-        confdict["ranking"]["filtercost_weight"] = topic_driver_config.filtercost_weight
-        confdict["ranking"]["propboost_weight"] = topic_driver_config.propboost_weight
-        confdict["ranking"]["lookahead_window_size"] = topic_driver_config.lookahead_window_size
-        confdict["ranking"]["lookahead_bonus_weight"] = topic_driver_config.lookahead_bonus_weight
+        confdict["ranking"]["coadd_values"] = topic_driver_config.coaddValues
+        confdict["ranking"]["time_balancing"] = topic_driver_config.timeBalancing
+        confdict["ranking"]["timecost_time_max"] = topic_driver_config.timecostTimeMax
+        confdict["ranking"]["timecost_time_ref"] = topic_driver_config.timecostTimeRef
+        confdict["ranking"]["timecost_cost_ref"] = topic_driver_config.timecostCostRef
+        confdict["ranking"]["timecost_weight"] = topic_driver_config.timecostWeight
+        confdict["ranking"]["filtercost_weight"] = topic_driver_config.filtercostWeight
+        confdict["ranking"]["propboost_weight"] = topic_driver_config.propboostWeight
+        confdict["ranking"]["lookahead_window_size"] = topic_driver_config.lookaheadWindowSize
+        confdict["ranking"]["lookahead_bonus_weight"] = topic_driver_config.lookaheadBonusWeight
         confdict["constraints"] = {}
-        confdict["constraints"]["night_boundary"] = topic_driver_config.night_boundary
-        confdict["constraints"]["ignore_sky_brightness"] = topic_driver_config.ignore_sky_brightness
-        confdict["constraints"]["ignore_airmass"] = topic_driver_config.ignore_airmass
-        confdict["constraints"]["ignore_clouds"] = topic_driver_config.ignore_clouds
-        confdict["constraints"]["ignore_seeing"] = topic_driver_config.ignore_seeing
+        confdict["constraints"]["night_boundary"] = topic_driver_config.nightBoundary
+        confdict["constraints"]["ignore_sky_brightness"] = topic_driver_config.ignoreSkyBrightness
+        confdict["constraints"]["ignore_airmass"] = topic_driver_config.ignoreAirmass
+        confdict["constraints"]["ignore_clouds"] = topic_driver_config.ignoreClouds
+        confdict["constraints"]["ignore_seeing"] = topic_driver_config.ignoreSeeing
         confdict["darktime"] = {}
-        confdict["darktime"]["new_moon_phase_threshold"] = topic_driver_config.new_moon_phase_threshold
+        confdict["darktime"]["new_moon_phase_threshold"] = topic_driver_config.newMoonPhaseThreshold
         confdict["startup"] = {}
-        confdict["startup"]["type"] = topic_driver_config.startup_type
-        confdict["startup"]["database"] = topic_driver_config.startup_database
+        confdict["startup"]["type"] = topic_driver_config.startupType
+        confdict["startup"]["database"] = topic_driver_config.startupDatabase
 
         return confdict
 
     @staticmethod
     def wtopic_driver_config(topic, config):
 
-        topic.coadd_values = config.sched_driver.coadd_values
-        topic.time_balancing = config.sched_driver.time_balancing
-        topic.timecost_time_max = config.sched_driver.timecost_time_max
-        topic.timecost_time_ref = config.sched_driver.timecost_time_ref
-        topic.timecost_cost_ref = config.sched_driver.timecost_cost_ref
-        topic.timecost_weight = config.sched_driver.timecost_weight
-        topic.filtercost_weight = config.sched_driver.filtercost_weight
-        topic.propboost_weight = config.sched_driver.propboost_weight
-        topic.night_boundary = config.sched_driver.night_boundary
-        topic.new_moon_phase_threshold = config.sched_driver.new_moon_phase_threshold
-        topic.ignore_sky_brightness = config.sched_driver.ignore_sky_brightness
-        topic.ignore_airmass = config.sched_driver.ignore_airmass
-        topic.ignore_clouds = config.sched_driver.ignore_clouds
-        topic.ignore_seeing = config.sched_driver.ignore_seeing
-        topic.lookahead_window_size = config.sched_driver.lookahead_window_size
-        topic.lookahead_bonus_weight = config.sched_driver.lookahead_bonus_weight
-        topic.startup_type = config.sched_driver.startup_type
-        topic.startup_database = config.sched_driver.startup_database
+        topic.coaddValues = config.sched_driver.coadd_values
+        topic.timeBalancing = config.sched_driver.time_balancing
+        topic.timecostTimeMax = config.sched_driver.timecost_time_max
+        topic.timecostTimeRef = config.sched_driver.timecost_time_ref
+        topic.timecostCostRef = config.sched_driver.timecost_cost_ref
+        topic.timecostWeight = config.sched_driver.timecost_weight
+        topic.filtercostWeight = config.sched_driver.filtercost_weight
+        topic.propboostWeight = config.sched_driver.propboost_weight
+        topic.nightBoundary = config.sched_driver.night_boundary
+        topic.newMoonPhaseThreshold = config.sched_driver.new_moon_phase_threshold
+        topic.ignoreSkyBrightness = config.sched_driver.ignore_sky_brightness
+        topic.ignoreAirmass = config.sched_driver.ignore_airmass
+        topic.ignoreClouds = config.sched_driver.ignore_clouds
+        topic.ignoreSeeing = config.sched_driver.ignore_seeing
+        topic.lookaheadWindowSize = config.sched_driver.lookahead_window_size
+        topic.lookaheadBonusWeight = config.sched_driver.lookahead_bonus_weight
+        topic.startupType = config.sched_driver.startup_type
+        topic.startupDatabase = config.sched_driver.startup_database
 
     @staticmethod
     def rtopic_location_config(topic_location_config):
@@ -188,74 +188,74 @@ class SALUtils(SAL_scheduler):
         obs_site_conf.height = config.observing_site.height
         obs_site_conf.pressure = config.observing_site.pressure
         obs_site_conf.temperature = config.observing_site.temperature
-        obs_site_conf.relative_humidity = config.observing_site.relative_humidity
+        obs_site_conf.relativeHumidity = config.observing_site.relative_humidity
 
     @staticmethod
     def rtopic_telescope_config(topic_telescope_config):
 
         confdict = {}
         confdict["telescope"] = {}
-        confdict["telescope"]["altitude_minpos"] = topic_telescope_config.altitude_minpos
-        confdict["telescope"]["altitude_maxpos"] = topic_telescope_config.altitude_maxpos
-        confdict["telescope"]["azimuth_minpos"] = topic_telescope_config.azimuth_minpos
-        confdict["telescope"]["azimuth_maxpos"] = topic_telescope_config.azimuth_maxpos
-        confdict["telescope"]["altitude_maxspeed"] = topic_telescope_config.altitude_maxspeed
-        confdict["telescope"]["altitude_accel"] = topic_telescope_config.altitude_accel
-        confdict["telescope"]["altitude_decel"] = topic_telescope_config.altitude_decel
-        confdict["telescope"]["azimuth_maxspeed"] = topic_telescope_config.azimuth_maxspeed
-        confdict["telescope"]["azimuth_accel"] = topic_telescope_config.azimuth_accel
-        confdict["telescope"]["azimuth_decel"] = topic_telescope_config.azimuth_decel
-        confdict["telescope"]["altitude_minpos"] = topic_telescope_config.altitude_minpos
-        confdict["telescope"]["altitude_minpos"] = topic_telescope_config.altitude_minpos
-        confdict["telescope"]["altitude_minpos"] = topic_telescope_config.altitude_minpos
-        confdict["telescope"]["settle_time"] = topic_telescope_config.settle_time
+        confdict["telescope"]["altitude_minpos"] = topic_telescope_config.altitudeMinpos
+        confdict["telescope"]["altitude_maxpos"] = topic_telescope_config.altitudeMaxpos
+        confdict["telescope"]["azimuth_minpos"] = topic_telescope_config.azimuthMinpos
+        confdict["telescope"]["azimuth_maxpos"] = topic_telescope_config.azimuthMaxpos
+        confdict["telescope"]["altitude_maxspeed"] = topic_telescope_config.altitudeMaxspeed
+        confdict["telescope"]["altitude_accel"] = topic_telescope_config.altitudeAccel
+        confdict["telescope"]["altitude_decel"] = topic_telescope_config.altitudeDecel
+        confdict["telescope"]["azimuth_maxspeed"] = topic_telescope_config.azimuthMaxspeed
+        confdict["telescope"]["azimuth_accel"] = topic_telescope_config.azimuthAccel
+        confdict["telescope"]["azimuth_decel"] = topic_telescope_config.azimuthDecel
+        confdict["telescope"]["altitude_minpos"] = topic_telescope_config.altitudeMinpos
+        confdict["telescope"]["altitude_minpos"] = topic_telescope_config.altitudeMinpos
+        confdict["telescope"]["altitude_minpos"] = topic_telescope_config.altitudeMinpos
+        confdict["telescope"]["settle_time"] = topic_telescope_config.settleTime
 
         return confdict
 
     @staticmethod
     def wtopic_telescope_config(tel_conf, config):
 
-        tel_conf.altitude_minpos = config.observatory.telescope.altitude_minpos
-        tel_conf.altitude_maxpos = config.observatory.telescope.altitude_maxpos
-        tel_conf.altitude_maxspeed = config.observatory.telescope.altitude_maxspeed
-        tel_conf.altitude_accel = config.observatory.telescope.altitude_accel
-        tel_conf.altitude_decel = config.observatory.telescope.altitude_decel
-        tel_conf.azimuth_minpos = config.observatory.telescope.azimuth_minpos
-        tel_conf.azimuth_maxpos = config.observatory.telescope.azimuth_maxpos
-        tel_conf.azimuth_maxspeed = config.observatory.telescope.azimuth_maxspeed
-        tel_conf.azimuth_accel = config.observatory.telescope.azimuth_accel
-        tel_conf.azimuth_decel = config.observatory.telescope.azimuth_decel
-        tel_conf.settle_time = config.observatory.telescope.settle_time
+        tel_conf.altitudeMinpos = config.observatory.telescope.altitude_minpos
+        tel_conf.altitudeMaxpos = config.observatory.telescope.altitude_maxpos
+        tel_conf.altitudeMaxspeed = config.observatory.telescope.altitude_maxspeed
+        tel_conf.altitudeAccel = config.observatory.telescope.altitude_accel
+        tel_conf.altitudeDecel = config.observatory.telescope.altitude_decel
+        tel_conf.azimuthMinpos = config.observatory.telescope.azimuth_minpos
+        tel_conf.azimuthMaxpos = config.observatory.telescope.azimuth_maxpos
+        tel_conf.azimuthMaxspeed = config.observatory.telescope.azimuth_maxspeed
+        tel_conf.azimuthAccel = config.observatory.telescope.azimuth_accel
+        tel_conf.azimuthDecel = config.observatory.telescope.azimuth_decel
+        tel_conf.settleTime = config.observatory.telescope.settle_time
 
     @staticmethod
     def rtopic_dome_config(topic_dome_config):
 
         confdict = {}
         confdict["dome"] = {}
-        confdict["dome"]["altitude_maxspeed"] = topic_dome_config.altitude_maxspeed
-        confdict["dome"]["altitude_accel"] = topic_dome_config.altitude_accel
-        confdict["dome"]["altitude_decel"] = topic_dome_config.altitude_decel
-        confdict["dome"]["altitude_freerange"] = topic_dome_config.altitude_freerange
-        confdict["dome"]["azimuth_maxspeed"] = topic_dome_config.azimuth_maxspeed
-        confdict["dome"]["azimuth_accel"] = topic_dome_config.azimuth_accel
-        confdict["dome"]["azimuth_decel"] = topic_dome_config.azimuth_decel
-        confdict["dome"]["azimuth_freerange"] = topic_dome_config.azimuth_freerange
-        confdict["dome"]["settle_time"] = topic_dome_config.settle_time
+        confdict["dome"]["altitude_maxspeed"] = topic_dome_config.altitudeMaxspeed
+        confdict["dome"]["altitude_accel"] = topic_dome_config.altitudeAccel
+        confdict["dome"]["altitude_decel"] = topic_dome_config.altitudeDecel
+        confdict["dome"]["altitude_freerange"] = topic_dome_config.altitudeFreerange
+        confdict["dome"]["azimuth_maxspeed"] = topic_dome_config.azimuthMaxspeed
+        confdict["dome"]["azimuth_accel"] = topic_dome_config.azimuthAccel
+        confdict["dome"]["azimuth_decel"] = topic_dome_config.azimuthDecel
+        confdict["dome"]["azimuth_freerange"] = topic_dome_config.azimuthFreerange
+        confdict["dome"]["settle_time"] = topic_dome_config.settleTime
 
         return confdict
 
     @staticmethod
     def wtopic_dome_config(dome_conf, config):
 
-        dome_conf.altitude_maxspeed = config.observatory.dome.altitude_maxspeed
-        dome_conf.altitude_accel = config.observatory.dome.altitude_accel
-        dome_conf.altitude_decel = config.observatory.dome.altitude_decel
-        dome_conf.altitude_freerange = config.observatory.dome.altitude_freerange
-        dome_conf.azimuth_maxspeed = config.observatory.dome.azimuth_maxspeed
-        dome_conf.azimuth_accel = config.observatory.dome.azimuth_accel
-        dome_conf.azimuth_decel = config.observatory.dome.azimuth_decel
-        dome_conf.azimuth_freerange = config.observatory.dome.azimuth_freerange
-        dome_conf.settle_time = config.observatory.dome.settle_time
+        dome_conf.altitudeMaxspeed = config.observatory.dome.altitude_maxspeed
+        dome_conf.altitudeAccel = config.observatory.dome.altitude_accel
+        dome_conf.altitudeDecel = config.observatory.dome.altitude_decel
+        dome_conf.altitudeFreerange = config.observatory.dome.altitude_freerange
+        dome_conf.azimuthMaxspeed = config.observatory.dome.azimuth_maxspeed
+        dome_conf.azimuthAccel = config.observatory.dome.azimuth_accel
+        dome_conf.azimuthDecel = config.observatory.dome.azimuth_decel
+        dome_conf.azimuthFreerange = config.observatory.dome.azimuth_freerange
+        dome_conf.settleTime = config.observatory.dome.settle_time
 
     @staticmethod
     def rtopic_rotator_config(topic_rotator_config):
@@ -267,9 +267,9 @@ class SALUtils(SAL_scheduler):
         confdict["rotator"]["maxspeed"] = topic_rotator_config.maxspeed
         confdict["rotator"]["accel"] = topic_rotator_config.accel
         confdict["rotator"]["decel"] = topic_rotator_config.decel
-        confdict["rotator"]["filter_change_pos"] = topic_rotator_config.filter_change_pos
+        confdict["rotator"]["filter_change_pos"] = topic_rotator_config.filterChangePos
         confdict["rotator"]["follow_sky"] = topic_rotator_config.followsky
-        confdict["rotator"]["resume_angle"] = topic_rotator_config.resume_angle
+        confdict["rotator"]["resume_angle"] = topic_rotator_config.resumeAngle
 
         return confdict
 
@@ -278,26 +278,26 @@ class SALUtils(SAL_scheduler):
 
         rot_conf.minpos = config.observatory.rotator.minpos
         rot_conf.maxpos = config.observatory.rotator.maxpos
-        rot_conf.filter_change_pos = config.observatory.rotator.filter_change_pos
+        rot_conf.filterChangePos = config.observatory.rotator.filter_change_pos
         rot_conf.maxspeed = config.observatory.rotator.maxspeed
         rot_conf.accel = config.observatory.rotator.accel
         rot_conf.decel = config.observatory.rotator.decel
         rot_conf.followsky = config.observatory.rotator.follow_sky
-        rot_conf.resume_angle = config.observatory.rotator.resume_angle
+        rot_conf.resumeAngle = config.observatory.rotator.resume_angle
 
     @staticmethod
     def rtopic_optics_config(topic_optics_config):
 
         tel_optics_cl_alt_limit = []
         for k in range(3):
-            tel_optics_cl_alt_limit.append(topic_optics_config.tel_optics_cl_alt_limit[k])
+            tel_optics_cl_alt_limit.append(topic_optics_config.telOpticsClAltLimit[k])
         tel_optics_cl_delay = []
         for k in range(2):
-            tel_optics_cl_delay.append(topic_optics_config.tel_optics_cl_delay[k])
+            tel_optics_cl_delay.append(topic_optics_config.telOpticsClDelay[k])
 
         confdict = {}
         confdict["optics_loop_corr"] = {}
-        confdict["optics_loop_corr"]["tel_optics_ol_slope"] = topic_optics_config.tel_optics_ol_slope
+        confdict["optics_loop_corr"]["tel_optics_ol_slope"] = topic_optics_config.telOpticsOlSlope
         confdict["optics_loop_corr"]["tel_optics_cl_alt_limit"] = tel_optics_cl_alt_limit
         confdict["optics_loop_corr"]["tel_optics_cl_delay"] = tel_optics_cl_delay
 
@@ -306,38 +306,38 @@ class SALUtils(SAL_scheduler):
     @staticmethod
     def wtopic_optics_config(olc_conf, config):
 
-        olc_conf.tel_optics_ol_slope = config.observatory.optics_loop_corr.tel_optics_ol_slope
-        config.observatory.optics_loop_corr.set_array(olc_conf, "tel_optics_cl_alt_limit")
-        config.observatory.optics_loop_corr.set_array(olc_conf, "tel_optics_cl_delay")
+        olc_conf.telOpticsOlSlope = config.observatory.optics_loop_corr.tel_optics_ol_slope
+        config.observatory.optics_loop_corr.set_array(olc_conf, "telOpticsClAltLimit")
+        config.observatory.optics_loop_corr.set_array(olc_conf, "telOpticsClDelay")
 
     @staticmethod
     def rtopic_camera_config(topic_camera_config):
 
         confdict = {}
         confdict["camera"] = {}
-        confdict["camera"]["readout_time"] = topic_camera_config.readout_time
-        confdict["camera"]["shutter_time"] = topic_camera_config.shutter_time
-        confdict["camera"]["filter_change_time"] = topic_camera_config.filter_change_time
+        confdict["camera"]["readout_time"] = topic_camera_config.readoutTime
+        confdict["camera"]["shutter_time"] = topic_camera_config.shutterTime
+        confdict["camera"]["filter_change_time"] = topic_camera_config.filterChangeTime
         confdict["camera"]["filter_max_changes_burst_num"] = \
-            topic_camera_config.filter_max_changes_burst_num
+            topic_camera_config.filterMaxChangesBurstNum
         confdict["camera"]["filter_max_changes_burst_time"] = \
-            topic_camera_config.filter_max_changes_burst_time
+            topic_camera_config.filterMaxChangesBurstTime
         confdict["camera"]["filter_max_changes_avg_num"] = \
-            topic_camera_config.filter_max_changes_avg_num
+            topic_camera_config.filterMaxChangesAvgNum
         confdict["camera"]["filter_max_changes_avg_time"] = \
-            topic_camera_config.filter_max_changes_avg_time
-        if topic_camera_config.filter_removable != "":
-            confdict["camera"]["filter_removable"] = topic_camera_config.filter_removable.split(",")
+            topic_camera_config.filterMaxChangesAvgTime
+        if topic_camera_config.filterRemovable != "":
+            confdict["camera"]["filter_removable"] = topic_camera_config.filterRemovable.split(",")
         else:
             confdict["camera"]["filter_removable"] = []
 
-        if topic_camera_config.filter_mounted != "":
-            confdict["camera"]["filter_mounted"] = topic_camera_config.filter_mounted.split(",")
+        if topic_camera_config.filterMounted != "":
+            confdict["camera"]["filter_mounted"] = topic_camera_config.filterMounted.split(",")
         else:
             confdict["camera"]["filter_mounted"] = []
 
-        if topic_camera_config.filter_unmounted != "":
-            confdict["camera"]["filter_unmounted"] = topic_camera_config.filter_unmounted.split(",")
+        if topic_camera_config.filterUnmounted != "":
+            confdict["camera"]["filter_unmounted"] = topic_camera_config.filterUnmounted.split(",")
         else:
             confdict["camera"]["filter_unmounted"] = []
 
@@ -346,20 +346,20 @@ class SALUtils(SAL_scheduler):
     @staticmethod
     def wtopic_camera_config(cam_conf, config):
 
-        cam_conf.readout_time = config.observatory.camera.readout_time
-        cam_conf.shutter_time = config.observatory.camera.shutter_time
-        cam_conf.filter_mount_time = config.observatory.camera.filter_mount_time
-        cam_conf.filter_change_time = config.observatory.camera.filter_change_time
-        cam_conf.filter_max_changes_burst_num = \
+        cam_conf.readoutTime = config.observatory.camera.readout_time
+        cam_conf.shutterTime = config.observatory.camera.shutter_time
+        cam_conf.filterMountTime = config.observatory.camera.filter_mount_time
+        cam_conf.filterChangeTime = config.observatory.camera.filter_change_time
+        cam_conf.filterMaxChangesBurstNum = \
             config.observatory.camera.filter_max_changes_burst_num
-        cam_conf.filter_max_changes_burst_time = \
+        cam_conf.filterMaxChangesBurstTime = \
             config.observatory.camera.filter_max_changes_burst_time
-        cam_conf.filter_max_changes_avg_num = config.observatory.camera.filter_max_changes_avg_num
-        cam_conf.filter_max_changes_avg_time = config.observatory.camera.filter_max_changes_avg_time
-        cam_conf.filter_mounted = config.observatory.camera.filter_mounted_str
-        cam_conf.filter_pos = config.observatory.camera.filter_pos
-        cam_conf.filter_removable = config.observatory.camera.filter_removable_str
-        cam_conf.filter_unmounted = config.observatory.camera.filter_unmounted_str
+        cam_conf.filterMaxChangesAvgNum = config.observatory.camera.filter_max_changes_avg_num
+        cam_conf.filterMaxChangesAvgTime = config.observatory.camera.filter_max_changes_avg_time
+        cam_conf.filterMounted = config.observatory.camera.filter_mounted_str
+        cam_conf.filterPos = config.observatory.camera.filter_pos
+        cam_conf.filterRemovable = config.observatory.camera.filter_removable_str
+        cam_conf.filterUnmounted = config.observatory.camera.filter_unmounted_str
 
     @staticmethod
     def rtopic_slew_config(topic_slew_config):
@@ -367,73 +367,73 @@ class SALUtils(SAL_scheduler):
         confdict = {}
         confdict["slew"] = {}
 
-        prereq_str = topic_slew_config.prereq_domalt
+        prereq_str = topic_slew_config.prereqDomalt
         if prereq_str != "":
             confdict["slew"]["prereq_domalt"] = prereq_str.split(",")
         else:
             confdict["slew"]["prereq_domalt"] = []
 
-        prereq_str = topic_slew_config.prereq_domaz
+        prereq_str = topic_slew_config.prereqDomaz
         if prereq_str != "":
             confdict["slew"]["prereq_domaz"] = prereq_str.split(",")
         else:
             confdict["slew"]["prereq_domaz"] = []
 
-        prereq_str = topic_slew_config.prereq_domazsettle
+        prereq_str = topic_slew_config.prereqDomazSettle
         if prereq_str != "":
             confdict["slew"]["prereq_domazsettle"] = prereq_str.split(",")
         else:
             confdict["slew"]["prereq_domazsettle"] = []
 
-        prereq_str = topic_slew_config.prereq_telalt
+        prereq_str = topic_slew_config.prereqTelalt
         if prereq_str != "":
             confdict["slew"]["prereq_telalt"] = prereq_str.split(",")
         else:
             confdict["slew"]["prereq_telalt"] = []
 
-        prereq_str = topic_slew_config.prereq_telaz
+        prereq_str = topic_slew_config.prereqTelaz
         if prereq_str != "":
             confdict["slew"]["prereq_telaz"] = prereq_str.split(",")
         else:
             confdict["slew"]["prereq_telaz"] = []
 
-        prereq_str = topic_slew_config.prereq_telopticsopenloop
+        prereq_str = topic_slew_config.prereqTelOpticsOpenLoop
         if prereq_str != "":
             confdict["slew"]["prereq_telopticsopenloop"] = prereq_str.split(",")
         else:
             confdict["slew"]["prereq_telopticsopenloop"] = []
 
-        prereq_str = topic_slew_config.prereq_telopticsclosedloop
+        prereq_str = topic_slew_config.prereqTelOpticsClosedLoop
         if prereq_str != "":
             confdict["slew"]["prereq_telopticsclosedloop"] = prereq_str.split(",")
         else:
             confdict["slew"]["prereq_telopticsclosedloop"] = []
 
-        prereq_str = topic_slew_config.prereq_telsettle
+        prereq_str = topic_slew_config.prereqTelSettle
         if prereq_str != "":
             confdict["slew"]["prereq_telsettle"] = prereq_str.split(",")
         else:
             confdict["slew"]["prereq_telsettle"] = []
 
-        prereq_str = topic_slew_config.prereq_telrot
+        prereq_str = topic_slew_config.prereqTelRot
         if prereq_str != "":
             confdict["slew"]["prereq_telrot"] = prereq_str.split(",")
         else:
             confdict["slew"]["prereq_telrot"] = []
 
-        prereq_str = topic_slew_config.prereq_filter
+        prereq_str = topic_slew_config.prereqFilter
         if prereq_str != "":
             confdict["slew"]["prereq_filter"] = prereq_str.split(",")
         else:
             confdict["slew"]["prereq_filter"] = []
 
-        prereq_str = topic_slew_config.prereq_exposures
+        prereq_str = topic_slew_config.prereqExposures
         if prereq_str != "":
             confdict["slew"]["prereq_exposures"] = prereq_str.split(",")
         else:
             confdict["slew"]["prereq_exposures"] = []
 
-        prereq_str = topic_slew_config.prereq_readout
+        prereq_str = topic_slew_config.prereqReadout
         if prereq_str != "":
             confdict["slew"]["prereq_readout"] = prereq_str.split(",")
         else:
@@ -444,48 +444,48 @@ class SALUtils(SAL_scheduler):
     @staticmethod
     def wtopic_slew_config(slew_conf, config):
 
-        slew_conf.prereq_domalt = config.observatory.slew.get_string_rep("prereq_domalt")
-        slew_conf.prereq_domaz = config.observatory.slew.get_string_rep("prereq_domaz")
-        slew_conf.prereq_telalt = config.observatory.slew.get_string_rep("prereq_telalt")
-        slew_conf.prereq_telaz = config.observatory.slew.get_string_rep("prereq_telaz")
-        slew_conf.prereq_telopticsopenloop = \
+        slew_conf.prereqDomalt = config.observatory.slew.get_string_rep("prereq_domalt")
+        slew_conf.prereqDomaz = config.observatory.slew.get_string_rep("prereq_domaz")
+        slew_conf.prereqTelalt = config.observatory.slew.get_string_rep("prereq_telalt")
+        slew_conf.prereqTelaz = config.observatory.slew.get_string_rep("prereq_telaz")
+        slew_conf.prereqTelOpticsOpenLoop = \
             config.observatory.slew.get_string_rep("prereq_telopticsopenloop")
-        slew_conf.prereq_telopticsclosedloop = \
+        slew_conf.prereqTelOpticsClosedLoop = \
             config.observatory.slew.get_string_rep("prereq_telopticsclosedloop")
-        slew_conf.prereq_telrot = config.observatory.slew.get_string_rep("prereq_telrot")
-        slew_conf.prereq_filter = config.observatory.slew.get_string_rep("prereq_filter")
-        slew_conf.prereq_adc = config.observatory.slew.get_string_rep("prereq_adc")
-        slew_conf.prereq_ins_optics = config.observatory.slew.get_string_rep("prereq_ins_optics")
-        slew_conf.prereq_guider_pos = config.observatory.slew.get_string_rep("prereq_guider_pos")
-        slew_conf.prereq_guider_adq = config.observatory.slew.get_string_rep("prereq_guider_adq")
-        slew_conf.prereq_telsettle = config.observatory.slew.get_string_rep("prereq_telsettle")
-        slew_conf.prereq_domazsettle = config.observatory.slew.get_string_rep("prereq_domazsettle")
-        slew_conf.prereq_exposures = config.observatory.slew.get_string_rep("prereq_exposures")
-        slew_conf.prereq_readout = config.observatory.slew.get_string_rep("prereq_readout")
+        slew_conf.prereqTelRot = config.observatory.slew.get_string_rep("prereq_telrot")
+        slew_conf.prereqFilter = config.observatory.slew.get_string_rep("prereq_filter")
+        slew_conf.prereqAdc = config.observatory.slew.get_string_rep("prereq_adc")
+        slew_conf.prereqInsOptics = config.observatory.slew.get_string_rep("prereq_ins_optics")
+        slew_conf.prereqGuiderPos = config.observatory.slew.get_string_rep("prereq_guider_pos")
+        slew_conf.prereqGuiderAdq = config.observatory.slew.get_string_rep("prereq_guider_adq")
+        slew_conf.prereqTelSettle = config.observatory.slew.get_string_rep("prereq_telsettle")
+        slew_conf.prereqDomazSettle = config.observatory.slew.get_string_rep("prereq_domazsettle")
+        slew_conf.prereqExposures = config.observatory.slew.get_string_rep("prereq_exposures")
+        slew_conf.prereqReadout = config.observatory.slew.get_string_rep("prereq_readout")
 
     @staticmethod
     def rtopic_park_config(topic_park_config):
 
         confdict = {}
         confdict["park"] = {}
-        confdict["park"]["telescope_altitude"] = topic_park_config.telescope_altitude
-        confdict["park"]["telescope_azimuth"] = topic_park_config.telescope_azimuth
-        confdict["park"]["telescope_rotator"] = topic_park_config.telescope_rotator
-        confdict["park"]["dome_altitude"] = topic_park_config.dome_altitude
-        confdict["park"]["dome_azimuth"] = topic_park_config.dome_azimuth
-        confdict["park"]["filter_position"] = topic_park_config.filter_position
+        confdict["park"]["telescope_altitude"] = topic_park_config.telescopeAltitude
+        confdict["park"]["telescope_azimuth"] = topic_park_config.telescopeAzimuth
+        confdict["park"]["telescope_rotator"] = topic_park_config.telescopeRotator
+        confdict["park"]["dome_altitude"] = topic_park_config.domeAltitude
+        confdict["park"]["dome_azimuth"] = topic_park_config.domeAzimuth
+        confdict["park"]["filter_position"] = topic_park_config.filterPosition
 
         return confdict
 
     @staticmethod
     def wtopic_park_config(park_conf, config):
 
-        park_conf.telescope_altitude = config.observatory.park.telescope_altitude
-        park_conf.telescope_azimuth = config.observatory.park.telescope_azimuth
-        park_conf.telescope_rotator = config.observatory.park.telescope_rotator
-        park_conf.dome_altitude = config.observatory.park.dome_altitude
-        park_conf.dome_azimuth = config.observatory.park.dome_azimuth
-        park_conf.filter_position = config.observatory.park.filter_position
+        park_conf.telescopeAltitude = config.observatory.park.telescope_altitude
+        park_conf.telescopeAzimuth = config.observatory.park.telescope_azimuth
+        park_conf.telescopeRotator = config.observatory.park.telescope_rotator
+        park_conf.domeAltitude = config.observatory.park.dome_altitude
+        park_conf.domeAzimuth = config.observatory.park.dome_azimuth
+        park_conf.filterPosition = config.observatory.park.filter_position
 
     @staticmethod
     def rtopic_area_prop_config(topic_areapropconf):
@@ -493,18 +493,18 @@ class SALUtils(SAL_scheduler):
         confdict = {}
 
         confdict["sky_nightly_bounds"] = {}
-        confdict["sky_nightly_bounds"]["twilight_boundary"] = topic_areapropconf.twilight_boundary
-        confdict["sky_nightly_bounds"]["delta_lst"] = topic_areapropconf.delta_lst
+        confdict["sky_nightly_bounds"]["twilight_boundary"] = topic_areapropconf.twilightBoundary
+        confdict["sky_nightly_bounds"]["delta_lst"] = topic_areapropconf.deltaLst
 
         confdict["constraints"] = {}
-        confdict["constraints"]["max_airmass"] = topic_areapropconf.max_airmass
-        confdict["constraints"]["max_cloud"] = topic_areapropconf.max_cloud
-        confdict["constraints"]["min_distance_moon"] = topic_areapropconf.min_distance_moon
-        confdict["constraints"]["exclude_planets"] = topic_areapropconf.exclude_planets
+        confdict["constraints"]["max_airmass"] = topic_areapropconf.maxAirmass
+        confdict["constraints"]["max_cloud"] = topic_areapropconf.maxCloud
+        confdict["constraints"]["min_distance_moon"] = topic_areapropconf.minDistanceMoon
+        confdict["constraints"]["exclude_planets"] = topic_areapropconf.excludePlanets
 
         confdict["sky_region"] = {}
-        num_region_selections = topic_areapropconf.num_region_selections
-        region_types = topic_areapropconf.region_types
+        num_region_selections = topic_areapropconf.numRegionSelections
+        region_types = topic_areapropconf.regionTypes
         if region_types == "":
             region_types_list = []
         else:
@@ -512,13 +512,13 @@ class SALUtils(SAL_scheduler):
 
         region_list = []
         for k in range(num_region_selections):
-            region_minimum = topic_areapropconf.region_minimums[k]
-            region_maximum = topic_areapropconf.region_maximums[k]
-            region_bound = topic_areapropconf.region_bounds[k]
+            region_minimum = topic_areapropconf.regionMinimums[k]
+            region_maximum = topic_areapropconf.regionMaximums[k]
+            region_bound = topic_areapropconf.regionBounds[k]
 
             region = (region_types_list[k], region_minimum, region_maximum, region_bound)
             region_list.append(region)
-        region_combiners = topic_areapropconf.region_combiners
+        region_combiners = topic_areapropconf.regionCombiners
         if region_combiners == "":
             region_combiners_list = []
         else:
@@ -526,18 +526,18 @@ class SALUtils(SAL_scheduler):
         confdict["sky_region"]["cuts"] = region_list
         confdict["sky_region"]["combiners"] = region_combiners_list
 
-        num_time_ranges = topic_areapropconf.num_time_ranges
+        num_time_ranges = topic_areapropconf.numTimeRanges
         if num_time_ranges:
             time_range_list = []
             selection_mappings = []
             selection_index = 0
             for k in range(num_time_ranges):
-                time_range_list.append((topic_areapropconf.time_range_starts[k],
-                                        topic_areapropconf.time_range_ends[k]))
-                num_selection_mappings = topic_areapropconf.num_selection_mappings[k]
+                time_range_list.append((topic_areapropconf.timeRangeStarts[k],
+                                        topic_areapropconf.timeRangeEnds[k]))
+                num_selection_mappings = topic_areapropconf.numSelectionMappings[k]
                 selection_map = []
                 for m in range(num_selection_mappings):
-                    selection_map.append(topic_areapropconf.selection_mappings[selection_index])
+                    selection_map.append(topic_areapropconf.selectionMappings[selection_index])
                     selection_index += 1
                 selection_mappings.append(selection_map)
 
@@ -545,67 +545,67 @@ class SALUtils(SAL_scheduler):
             confdict["sky_region"]["selection_mappings"] = selection_mappings
 
         confdict["sky_exclusions"] = {}
-        num_exclusion_selections = topic_areapropconf.num_exclusion_selections
-        exclusion_types = topic_areapropconf.exclusion_types
+        num_exclusion_selections = topic_areapropconf.numExclusionSelections
+        exclusion_types = topic_areapropconf.exclusionTypes
         if exclusion_types == "":
             exclusion_types_list = []
         else:
             exclusion_types_list = exclusion_types.split(",")
         exclusion_list = []
         for k in range(num_exclusion_selections):
-            exclusion_minimum = topic_areapropconf.exclusion_minimums[k]
-            exclusion_maximum = topic_areapropconf.exclusion_maximums[k]
-            exclusion_bound = topic_areapropconf.exclusion_bounds[k]
+            exclusion_minimum = topic_areapropconf.exclusionMinimums[k]
+            exclusion_maximum = topic_areapropconf.exclusionMaximums[k]
+            exclusion_bound = topic_areapropconf.exclusionBounds[k]
 
             exclusion = (exclusion_types_list[k], exclusion_minimum,
                          exclusion_maximum, exclusion_bound)
             exclusion_list.append(exclusion)
 
         confdict["sky_exclusions"]["cuts"] = exclusion_list
-        dec_window = topic_areapropconf.dec_window
+        dec_window = topic_areapropconf.decWindow
         confdict["sky_exclusions"]["dec_window"] = dec_window
 
-        num_filters = topic_areapropconf.num_filters
-        filter_names = topic_areapropconf.filter_names
+        num_filters = topic_areapropconf.numFilters
+        filter_names = topic_areapropconf.filterNames
         filter_list = filter_names.split(",")
         exp_index = 0
         for k in range(num_filters):
             filter = filter_list[k]
             filter_section = "filter_%s" % filter
             confdict[filter_section] = {}
-            confdict[filter_section]["visits"] = topic_areapropconf.num_visits[k]
+            confdict[filter_section]["visits"] = topic_areapropconf.numVisits[k]
             confdict[filter_section]["min_brig"] = \
-                topic_areapropconf.bright_limit[k]
-            confdict[filter_section]["max_brig"] = topic_areapropconf.dark_limit[k]
-            confdict[filter_section]["max_seeing"] = topic_areapropconf.max_seeing[k]
-            num_exp = topic_areapropconf.num_filter_exposures[k]
+                topic_areapropconf.brightLimit[k]
+            confdict[filter_section]["max_brig"] = topic_areapropconf.darkLimit[k]
+            confdict[filter_section]["max_seeing"] = topic_areapropconf.maxSeeing[k]
+            num_exp = topic_areapropconf.numFilterExposures[k]
             exp_times_list = []
             for n in range(num_exp):
                 exp_times_list.append(topic_areapropconf.exposures[exp_index])
                 exp_index += 1
             confdict[filter_section]["exp_times"] = exp_times_list
-            confdict[filter_section]["num_grouped_visits"] = topic_areapropconf.num_grouped_visits[k]
-            confdict[filter_section]["max_grouped_visits"] = topic_areapropconf.max_grouped_visits[k]
+            confdict[filter_section]["num_grouped_visits"] = topic_areapropconf.numGroupedVisits[k]
+            confdict[filter_section]["max_grouped_visits"] = topic_areapropconf.maxGroupedVisits[k]
 
         confdict["scheduling"] = {}
-        max_num_targets = topic_areapropconf.max_num_targets
-        accept_serendipity = topic_areapropconf.accept_serendipity
-        accept_consecutive_visits = topic_areapropconf.accept_consecutive_visits
+        max_num_targets = topic_areapropconf.maxNumTargets
+        accept_serendipity = topic_areapropconf.acceptSerendipity
+        accept_consecutive_visits = topic_areapropconf.acceptConsecutiveVisits
         confdict["scheduling"]["max_num_targets"] = max_num_targets
         confdict["scheduling"]["accept_serendipity"] = accept_serendipity
         confdict["scheduling"]["accept_consecutive_visits"] = accept_consecutive_visits
-        confdict["scheduling"]["airmass_bonus"] = topic_areapropconf.airmass_bonus
-        confdict["scheduling"]["hour_angle_bonus"] = topic_areapropconf.hour_angle_bonus
-        confdict["scheduling"]["hour_angle_max"] = topic_areapropconf.hour_angle_max
+        confdict["scheduling"]["airmass_bonus"] = topic_areapropconf.airmassBonus
+        confdict["scheduling"]["hour_angle_bonus"] = topic_areapropconf.hourAngleBonus
+        confdict["scheduling"]["hour_angle_max"] = topic_areapropconf.hourAngleMax
         confdict["scheduling"]["field_revisit_limit"] = 2 #hardcoded for now
 
-        confdict["scheduling"]["restrict_grouped_visits"] = topic_areapropconf.restrict_grouped_visits
-        confdict["scheduling"]["time_interval"] = topic_areapropconf.time_interval
-        confdict["scheduling"]["time_window_start"] = topic_areapropconf.time_window_start
-        confdict["scheduling"]["time_window_max"] = topic_areapropconf.time_window_max
-        confdict["scheduling"]["time_window_end"] = topic_areapropconf.time_window_end
-        confdict["scheduling"]["time_weight"] = topic_areapropconf.time_weight
-        confdict["scheduling"]["field_revisit_limit"] = topic_areapropconf.field_revisit_limit
+        confdict["scheduling"]["restrict_grouped_visits"] = topic_areapropconf.restrictGroupedVisits
+        confdict["scheduling"]["time_interval"] = topic_areapropconf.timeInterval
+        confdict["scheduling"]["time_window_start"] = topic_areapropconf.timeWindowStart
+        confdict["scheduling"]["time_window_max"] = topic_areapropconf.timeWindowMax
+        confdict["scheduling"]["time_window_end"] = topic_areapropconf.timeWindowEnd
+        confdict["scheduling"]["time_weight"] = topic_areapropconf.timeWeight
+        confdict["scheduling"]["field_revisit_limit"] = topic_areapropconf.fieldRevisitLimit
 
         return confdict
 
@@ -615,58 +615,58 @@ class SALUtils(SAL_scheduler):
         confdict = {}
 
         confdict["sky_nightly_bounds"] = {}
-        confdict["sky_nightly_bounds"]["twilight_boundary"] = topic_seqpropconf.twilight_boundary
-        confdict["sky_nightly_bounds"]["delta_lst"] = topic_seqpropconf.delta_lst
+        confdict["sky_nightly_bounds"]["twilight_boundary"] = topic_seqpropconf.twilightBoundary
+        confdict["sky_nightly_bounds"]["delta_lst"] = topic_seqpropconf.deltaLst
 
         confdict["constraints"] = {}
-        confdict["constraints"]["max_airmass"] = topic_seqpropconf.max_airmass
-        confdict["constraints"]["max_cloud"] = topic_seqpropconf.max_cloud
-        confdict["constraints"]["min_distance_moon"] = topic_seqpropconf.min_distance_moon
-        confdict["constraints"]["exclude_planets"] = topic_seqpropconf.exclude_planets
+        confdict["constraints"]["max_airmass"] = topic_seqpropconf.maxAirmass
+        confdict["constraints"]["max_cloud"] = topic_seqpropconf.maxCloud
+        confdict["constraints"]["min_distance_moon"] = topic_seqpropconf.minDistanceMoon
+        confdict["constraints"]["exclude_planets"] = topic_seqpropconf.excludePlanets
 
         confdict["sky_region"] = {}
-        num_user_regions = topic_seqpropconf.num_user_regions
+        num_user_regions = topic_seqpropconf.numUserRegions
         region_list = []
         for k in range(num_user_regions):
-            region_list.append(topic_seqpropconf.user_region_ids[k])
+            region_list.append(topic_seqpropconf.userRegionIds[k])
 
         confdict["sky_region"]["user_regions"] = region_list
 
         confdict["sky_exclusions"] = {}
-        confdict["sky_exclusions"]["dec_window"] = topic_seqpropconf.dec_window
+        confdict["sky_exclusions"]["dec_window"] = topic_seqpropconf.decWindow
 
-        num_sub_sequences = topic_seqpropconf.num_sub_sequences
+        num_sub_sequences = topic_seqpropconf.numSubSequences
         if num_sub_sequences:
             confdict["subsequences"] = {}
-            sub_sequence_names = topic_seqpropconf.sub_sequence_names.split(',')
+            sub_sequence_names = topic_seqpropconf.subSequenceNames.split(',')
             confdict["subsequences"]["names"] = sub_sequence_names
-            sub_sequence_filters = topic_seqpropconf.sub_sequence_filters.split(',')
-            sub_sequence_visits_per_filter = topic_seqpropconf.num_sub_sequence_filter_visits
+            sub_sequence_filters = topic_seqpropconf.subSequenceFilters.split(',')
+            sub_sequence_visits_per_filter = topic_seqpropconf.numSubSequenceFilterVisits
             index = 0
             for k, sname in enumerate(sub_sequence_names):
                 sub_seq_section = "subseq_{}".format(sname)
                 confdict[sub_seq_section] = {}
-                num_sub_sequence_filters = topic_seqpropconf.num_sub_sequence_filters[k]
+                num_sub_sequence_filters = topic_seqpropconf.numSubSequenceFilters[k]
                 confdict[sub_seq_section]["filters"] = \
                     sub_sequence_filters[index:index + num_sub_sequence_filters]
                 confdict[sub_seq_section]["visits_per_filter"] = \
                     sub_sequence_visits_per_filter[index:index + num_sub_sequence_filters]
                 index += num_sub_sequence_filters
-                confdict[sub_seq_section]["num_events"] = topic_seqpropconf.num_sub_sequence_events[k]
-                confdict[sub_seq_section]["num_max_missed"] = topic_seqpropconf.num_sub_sequence_max_missed[k]
-                confdict[sub_seq_section]["time_interval"] = topic_seqpropconf.sub_sequence_time_intervals[k]
+                confdict[sub_seq_section]["num_events"] = topic_seqpropconf.numSubSequenceEvents[k]
+                confdict[sub_seq_section]["num_max_missed"] = topic_seqpropconf.numSubSequenceMaxMissed[k]
+                confdict[sub_seq_section]["time_interval"] = topic_seqpropconf.subSequenceTimeIntervals[k]
                 confdict[sub_seq_section]["time_window_start"] = \
-                    topic_seqpropconf.sub_sequence_time_window_starts[k]
+                    topic_seqpropconf.subSequenceTimeWindowStarts[k]
                 confdict[sub_seq_section]["time_window_max"] = \
-                    topic_seqpropconf.sub_sequence_time_window_maximums[k]
+                    topic_seqpropconf.subSequenceTimeWindowMaximums[k]
                 confdict[sub_seq_section]["time_window_end"] = \
-                    topic_seqpropconf.sub_sequence_time_window_ends[k]
-                confdict[sub_seq_section]["time_weight"] = topic_seqpropconf.sub_sequence_time_weights[k]
+                    topic_seqpropconf.subSequenceTimeWindowEnds[k]
+                confdict[sub_seq_section]["time_weight"] = topic_seqpropconf.subSequenceTimeWeights[k]
 
-        num_master_sub_sequences = topic_seqpropconf.num_master_sub_sequences
+        num_master_sub_sequences = topic_seqpropconf.numMasterSubSequences
         if num_master_sub_sequences:
             confdict["master_subsequences"] = {}
-            master_sub_sequence_names = topic_seqpropconf.master_sub_sequence_names.split(',')
+            master_sub_sequence_names = topic_seqpropconf.masterSubSequenceNames.split(',')
 
             confdict["master_subsequences"]["names"] = master_sub_sequence_names
             confdict["master_subsequences"]["num_nested"] = \
@@ -723,18 +723,18 @@ class SALUtils(SAL_scheduler):
 
                 index += num_nested_sub_sequences
 
-        num_filters = topic_seqpropconf.num_filters
-        filter_names = topic_seqpropconf.filter_names
+        num_filters = topic_seqpropconf.numFilters
+        filter_names = topic_seqpropconf.filterNames
         filter_list = filter_names.split(",")
         exp_index = 0
         for k in range(num_filters):
             filter_section = "filter_%s" % filter_list[k]
             confdict[filter_section] = {}
             confdict[filter_section]["min_brig"] = \
-                topic_seqpropconf.bright_limit[k]
-            confdict[filter_section]["max_brig"] = topic_seqpropconf.dark_limit[k]
-            confdict[filter_section]["max_seeing"] = topic_seqpropconf.max_seeing[k]
-            num_exp = topic_seqpropconf.num_filter_exposures[k]
+                topic_seqpropconf.brightLimit[k]
+            confdict[filter_section]["max_brig"] = topic_seqpropconf.darkLimit[k]
+            confdict[filter_section]["max_seeing"] = topic_seqpropconf.maxSeeing[k]
+            num_exp = topic_seqpropconf.numFilterExposures[k]
             exp_times_list = []
             for n in range(num_exp):
                 exp_times_list.append(topic_seqpropconf.exposures[exp_index])
@@ -742,45 +742,45 @@ class SALUtils(SAL_scheduler):
             confdict[filter_section]["exp_times"] = exp_times_list
 
         confdict["scheduling"] = {}
-        max_num_targets = topic_seqpropconf.max_num_targets
-        accept_serendipity = topic_seqpropconf.accept_serendipity
-        accept_consecutive_visits = topic_seqpropconf.accept_consecutive_visits
+        max_num_targets = topic_seqpropconf.maxNumTargets
+        accept_serendipity = topic_seqpropconf.acceptSerendipity
+        accept_consecutive_visits = topic_seqpropconf.acceptConsecutiveVisits
         confdict["scheduling"]["max_num_targets"] = max_num_targets
         confdict["scheduling"]["accept_serendipity"] = accept_serendipity
         confdict["scheduling"]["accept_consecutive_visits"] = accept_consecutive_visits
-        confdict["scheduling"]["restart_lost_sequences"] = topic_seqpropconf.restart_lost_sequences
-        confdict["scheduling"]["restart_complete_sequences"] = topic_seqpropconf.restart_complete_sequences
-        confdict["scheduling"]["max_visits_goal"] = topic_seqpropconf.max_visits_goal
-        confdict["scheduling"]["airmass_bonus"] = topic_seqpropconf.airmass_bonus
-        confdict["scheduling"]["hour_angle_bonus"] = topic_seqpropconf.hour_angle_bonus
-        confdict["scheduling"]["hour_angle_max"] = topic_seqpropconf.hour_angle_max
+        confdict["scheduling"]["restart_lost_sequences"] = topic_seqpropconf.restartLostSequences
+        confdict["scheduling"]["restart_complete_sequences"] = topic_seqpropconf.restartCompleteSequences
+        confdict["scheduling"]["max_visits_goal"] = topic_seqpropconf.maxVisitsGoal
+        confdict["scheduling"]["airmass_bonus"] = topic_seqpropconf.airmassBonus
+        confdict["scheduling"]["hour_angle_bonus"] = topic_seqpropconf.hourAngleBonus
+        confdict["scheduling"]["hour_angle_max"] = topic_seqpropconf.hourAngleMax
 
         return confdict
 
     @staticmethod
     def wtopic_target(topic_target, target, sky):
 
-        topic_target.target_id = target.targetid
+        topic_target.targetId = target.targetid
         # topic_target.groupId = target.groupid
         # topic_target.fieldId = target.fieldid
         topic_target.filter = target.filter
-        topic_target.request_time = target.time
+        topic_target.requestTime = target.time
         topic_target.ra = target.ra
         topic_target.decl = target.dec
-        topic_target.sky_angle = target.ang
-        topic_target.num_exposures = target.num_exp
+        topic_target.skyAngle = target.ang
+        topic_target.numExposures = target.num_exp
         for i, exptime in enumerate(target.exp_times):
-            topic_target.exposure_times[i] = int(exptime)
+            topic_target.exposureTimes[i] = int(exptime)
         topic_target.airmass = target.airmass
-        topic_target.sky_brightness = target.sky_brightness
+        topic_target.skyBrightness = target.sky_brightness
         topic_target.cloud = target.cloud
         topic_target.seeing = target.seeing
-        topic_target.slew_time = target.slewtime
+        topic_target.slewTime = target.slewtime
         # topic_target.cost = target.cost
         # topic_target.rank = target.rank
-        topic_target.num_proposals = target.num_props
+        topic_target.numProposals = target.num_props
         for i, prop_id in enumerate(target.propid_list):
-            topic_target.proposal_id[i] = prop_id
+            topic_target.proposalId[i] = prop_id
         # for i, prop_value in enumerate(target.value_list):
         #     topic_target.proposal_values[i] = prop_value
         # for i, prop_need in enumerate(target.need_list):
@@ -790,23 +790,23 @@ class SALUtils(SAL_scheduler):
 
         moon_sun = sky.get_moon_sun_info(numpy.array([target.ra_rad]), numpy.array([target.dec_rad]))
         if moon_sun["moonRA"] is not None:
-            topic_target.moon_ra = math.degrees(moon_sun["moonRA"])
-            topic_target.moon_dec = math.degrees(moon_sun["moonDec"])
-            topic_target.moon_alt = math.degrees(moon_sun["moonAlt"])
-            topic_target.moon_az = math.degrees(moon_sun["moonAz"])
-            topic_target.moon_phase = moon_sun["moonPhase"]
-            topic_target.moon_distance = math.degrees(moon_sun["moonDist"])
-            topic_target.sun_alt = math.degrees(moon_sun["sunAlt"])
-            topic_target.sun_az = math.degrees(moon_sun["sunAz"])
-            topic_target.sun_ra = math.degrees(moon_sun["sunRA"])
-            topic_target.sun_dec = math.degrees(moon_sun["sunDec"])
-            topic_target.solar_elong = math.degrees(moon_sun["solarElong"])
+            topic_target.moonRa = math.degrees(moon_sun["moonRA"])
+            topic_target.moonDec = math.degrees(moon_sun["moonDec"])
+            topic_target.moonAlt = math.degrees(moon_sun["moonAlt"])
+            topic_target.moonAz = math.degrees(moon_sun["moonAz"])
+            topic_target.moonPhase = moon_sun["moonPhase"]
+            topic_target.moonDistance = math.degrees(moon_sun["moonDist"])
+            topic_target.sunAlt = math.degrees(moon_sun["sunAlt"])
+            topic_target.sunAz = math.degrees(moon_sun["sunAz"])
+            topic_target.sunRa = math.degrees(moon_sun["sunRA"])
+            topic_target.sunDec = math.degrees(moon_sun["sunDec"])
+            topic_target.solarElong = math.degrees(moon_sun["solarElong"])
 
         topic_target.note = target.note
 
     @staticmethod
     def wtopic_scheduler_topology_config(topic, config):
-        topic.num_general_props = len(config.science.general_proposals)
+        topic.numGeneralProps = len(config.science.general_proposals)
 
         general_props = ''
         for i, gen_prop in enumerate(config.science.general_proposals):
@@ -814,9 +814,9 @@ class SALUtils(SAL_scheduler):
             if i < topic.num_general_props-1:
                 general_props += ','
 
-        topic.general_propos = general_props
+        topic.generalPropos = general_props
 
-        topic.num_seq_props = len(config.science.sequence_proposals)
+        topic.numSeqProps = len(config.science.sequence_proposals)
 
         sequence_props = ''
         for i, seq_prop in enumerate(config.science.sequence_proposals):
@@ -824,41 +824,41 @@ class SALUtils(SAL_scheduler):
             if i < topic.num_seq_props-1:
                 sequence_props += ','
 
-        topic.sequence_propos = sequence_props
+        topic.sequencePropos = sequence_props
 
     @staticmethod
     def rtopic_observation(topic_observation):
 
         observation = Observation()
 
-        observation.time = topic_observation.observation_start_time
-        observation.observation_start_mjd = topic_observation.observation_start_mjd
+        observation.time = topic_observation.observationStartTime
+        observation.observation_start_mjd = topic_observation.observationStartMjd
         observation.targetid = topic_observation.targetId
         observation.filter = topic_observation.filter
-        observation.num_props = topic_observation.num_proposals
+        observation.num_props = topic_observation.numProposals
         observation.propid_list = []
         for k in range(observation.num_props):
-            observation.propid_list.append(topic_observation.proposal_Ids[k])
+            observation.propid_list.append(topic_observation.proposalIds[k])
         observation.ra_rad = math.radians(topic_observation.ra)
         observation.dec_rad = math.radians(topic_observation.decl)
         observation.ang_rad = math.radians(topic_observation.angle)
-        observation.num_exp = topic_observation.num_exposures
+        observation.num_exp = topic_observation.numExposures
         observation.exp_times = []
-        for k in range(topic_observation.num_exposures):
-            observation.exp_times.append(topic_observation.exposure_times[k])
+        for k in range(topic_observation.numExposures):
+            observation.exp_times.append(topic_observation.exposureTimes[k])
 
         observation.airmass = topic_observation.airmass
-        observation.seeing_fwhm_eff = topic_observation.seeing_fwhm_eff
-        observation.seeing_fwhm_geom = topic_observation.seeing_fwhm_geom
-        observation.sky_brightness = topic_observation.sky_brightness
+        observation.seeing_fwhm_eff = topic_observation.seeingFwhmEff
+        observation.seeing_fwhm_geom = topic_observation.seeingFwhmGeom
+        observation.sky_brightness = topic_observation.skyBrightness
         observation.night = topic_observation.night
-        observation.five_sigma_depth = topic_observation.five_sigma_depth
+        observation.five_sigma_depth = topic_observation.fiveSigmaDepth
         observation.alt_rad = topic_observation.altitude
         observation.az_rad = topic_observation.azimuth
         observation.cloud = topic_observation.cloud
-        observation.moon_alt = topic_observation.moon_alt
-        observation.sun_alt = topic_observation.sun_alt
-        observation.slewtime = topic_observation.slew_time
+        observation.moon_alt = topic_observation.moonAlt
+        observation.sun_alt = topic_observation.sunAlt
+        observation.slewtime = topic_observation.slewTime
         observation.note = topic_observation.note
 
         return observation
@@ -869,22 +869,22 @@ class SALUtils(SAL_scheduler):
         state = ObservatoryState()
 
         state.time = topic_state.timestamp
-        state.ra_rad = math.radians(topic_state.pointing_ra)
-        state.dec_rad = math.radians(topic_state.pointing_dec)
-        state.ang_rad = math.radians(topic_state.pointing_angle)
-        state.filter = topic_state.filter_position
+        state.ra_rad = math.radians(topic_state.pointingRa)
+        state.dec_rad = math.radians(topic_state.pointingDec)
+        state.ang_rad = math.radians(topic_state.pointingAngle)
+        state.filter = topic_state.filterPosition
         state.tracking = topic_state.tracking
-        state.alt_rad = math.radians(topic_state.pointing_altitude)
-        state.az_rad = math.radians(topic_state.pointing_azimuth)
-        state.pa_rad = math.radians(topic_state.pointing_pa)
-        state.rot_rad = math.radians(topic_state.pointing_rot)
-        state.telalt_rad = math.radians(topic_state.telescope_altitude)
-        state.telaz_rad = math.radians(topic_state.telescope_azimuth)
-        state.telrot_rad = math.radians(topic_state.telescope_rotator)
-        state.domalt_rad = math.radians(topic_state.dome_altitude)
-        state.domaz_rad = math.radians(topic_state.dome_azimuth)
-        state.mountedfilters = topic_state.filter_mounted.split(",")
-        state.unmountedfilters = topic_state.filter_unmounted.split(",")
+        state.alt_rad = math.radians(topic_state.pointingAltitude)
+        state.az_rad = math.radians(topic_state.pointingAzimuth)
+        state.pa_rad = math.radians(topic_state.pointingPa)
+        state.rot_rad = math.radians(topic_state.pointingRot)
+        state.telalt_rad = math.radians(topic_state.telescopeAltitude)
+        state.telaz_rad = math.radians(topic_state.telescopeAzimuth)
+        state.telrot_rad = math.radians(topic_state.telescopeRotator)
+        state.domalt_rad = math.radians(topic_state.domeAltitude)
+        state.domaz_rad = math.radians(topic_state.domeAzimuth)
+        state.mountedfilters = topic_state.filterMounted.split(",")
+        state.unmountedfilters = topic_state.filterUnmounted.split(",")
 
         return state
 
@@ -892,24 +892,24 @@ class SALUtils(SAL_scheduler):
     def wtopic_interestedProposal(topic, targetId, target_list):
 
         topic.observationId = targetId
-        topic.num_proposals = len(target_list)
+        topic.numProposals = len(target_list)
         propid_list = []
         need_list = []
         bonus_list = []
         value_list = []
         propboost_list = []
-        for k in range(topic.num_proposals):
-            topic.proposal_Ids[k] = target_list[k].propid
-            topic.proposal_needs[k] = target_list[k].need
-            topic.proposal_bonuses[k] = target_list[k].bonus
-            topic.proposal_values[k] = target_list[k].value
-            topic.proposal_boosts[k] = target_list[k].propboost
+        for k in range(topic.numProposals):
+            topic.proposalIds[k] = target_list[k].propid
+            topic.proposalNeeds[k] = target_list[k].need
+            topic.proposalBonuses[k] = target_list[k].bonus
+            topic.proposalValues[k] = target_list[k].value
+            topic.proposalBoosts[k] = target_list[k].propboost
             propid_list.append(target_list[k].propid)
             need_list.append(target_list[k].need)
             bonus_list.append(target_list[k].bonus)
             value_list.append(target_list[k].value)
             propboost_list.append(target_list[k].propboost)
         logstr = ("obsId=%i numprops=%i propid=%s need=%s bonus=%s value=%s propboost=%s" %
-                  (targetId, topic.num_proposals,
+                  (targetId, topic.numProposals,
                    propid_list, need_list, bonus_list, value_list, propboost_list))
         return logstr
