@@ -11,7 +11,7 @@ class Model():
     algorithms as long as they can interact with the Driver. Most of the methods
     called on this class are called by the state machine, assuming we are in
     operations mode. In order for any model to interact with the state machine
-    from salpytools it must have an attribute "state". The "state" attribute is
+    from ts_statemachine it must have an attribute "state". The "state" attribute is
     used to store the current state of the state machine.
     """
 

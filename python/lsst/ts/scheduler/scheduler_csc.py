@@ -1,9 +1,10 @@
-from salpytools import salpylib
-
+from lsst.ts.salpytools import salpylib
 from lsst.ts.statemachine import Context
-
 from lsst.ts.scheduler import Model
 from lsst.ts.scheduler.stateMachine import states
+
+__all__ = ['Scheduler_CSC']
+
 
 class Scheduler_CSC():
     """The Scheduler_CSC ties together the Context and our modelself.
@@ -24,7 +25,8 @@ class Scheduler_CSC():
 
         self.context = Context(self.subsystem_tag, self.model, states=self.states)
 
-        self.enter_control = salpylib.DDSController(self.context, command='enterControl',topic='scheduler_command_enterControl')
+        self.enter_control = salpylib.DDSController(self.context, command='enterControl',
+                                                    topic='scheduler_command_enterControl')
         self.start = salpylib.DDSController(self.context, 'start')
         self.enable = salpylib.DDSController(self.context, 'enable')
         self.disable = salpylib.DDSController(self.context, 'disable')
