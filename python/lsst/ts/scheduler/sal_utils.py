@@ -853,8 +853,8 @@ class SALUtils(SAL_scheduler):
         observation.sky_brightness = topic_observation.sky_brightness
         observation.night = topic_observation.night
         observation.five_sigma_depth = topic_observation.five_sigma_depth
-        observation.alt_rad = topic_observation.altitude
-        observation.az_rad = topic_observation.azimuth
+        observation.alt_rad = math.radians(topic_observation.altitude)
+        observation.az_rad = math.radians(topic_observation.azimuth)
         observation.cloud = topic_observation.cloud
         observation.moon_alt = topic_observation.moon_alt
         observation.sun_alt = topic_observation.sun_alt
