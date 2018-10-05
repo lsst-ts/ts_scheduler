@@ -315,31 +315,31 @@ class SALUtils(SAL_scheduler):
 
         confdict = {}
         confdict["camera"] = {}
-        # confdict["camera"]["readout_time"] = topic_camera_config.readoutTime
-        # confdict["camera"]["shutter_time"] = topic_camera_config.shutterTime
-        # confdict["camera"]["filter_change_time"] = topic_camera_config.filterChangeTime
-        # confdict["camera"]["filter_max_changes_burst_num"] = \
-        #     topic_camera_config.filterMaxChangesBurstNum
-        # confdict["camera"]["filter_max_changes_burst_time"] = \
-        #     topic_camera_config.filterMaxChangesBurstTime
-        # confdict["camera"]["filter_max_changes_avg_num"] = \
-        #     topic_camera_config.filterMaxChangesAvgNum
-        # confdict["camera"]["filter_max_changes_avg_time"] = \
-        #     topic_camera_config.filterMaxChangesAvgTime
-        # if topic_camera_config.filterRemovable != "":
-        #     confdict["camera"]["filter_removable"] = topic_camera_config.filterRemovable.split(",")
-        # else:
-        #     confdict["camera"]["filter_removable"] = []
+        confdict["camera"]["readout_time"] = topic_camera_config.readoutTime
+        confdict["camera"]["shutter_time"] = topic_camera_config.shutterTime
+        confdict["camera"]["filter_change_time"] = topic_camera_config.filterChangeTime
+        confdict["camera"]["filter_max_changes_burst_num"] = \
+            topic_camera_config.filterMaxChangesBurstNum
+        confdict["camera"]["filter_max_changes_burst_time"] = \
+            topic_camera_config.filterMaxChangesBurstTime
+        confdict["camera"]["filter_max_changes_avg_num"] = \
+            topic_camera_config.filterMaxChangesAvgNum
+        confdict["camera"]["filter_max_changes_avg_time"] = \
+            topic_camera_config.filterMaxChangesAvgTime
+        if topic_camera_config.filterRemovable != "":
+            confdict["camera"]["filter_removable"] = topic_camera_config.filterRemovable.split(",")
+        else:
+            confdict["camera"]["filter_removable"] = []
 
-        # if topic_camera_config.filterMounted != "":
-        #     confdict["camera"]["filter_mounted"] = topic_camera_config.filterMounted.split(",")
-        # else:
-        #     confdict["camera"]["filter_mounted"] = []
+        if topic_camera_config.filterMounted != "":
+            confdict["camera"]["filter_mounted"] = topic_camera_config.filterMounted.split(",")
+        else:
+            confdict["camera"]["filter_mounted"] = []
 
-        # if topic_camera_config.filterUnmounted != "":
-        #     confdict["camera"]["filter_unmounted"] = topic_camera_config.filterUnmounted.split(",")
-        # else:
-        #     confdict["camera"]["filter_unmounted"] = []
+        if topic_camera_config.filterUnmounted != "":
+            confdict["camera"]["filter_unmounted"] = topic_camera_config.filterUnmounted.split(",")
+        else:
+            confdict["camera"]["filter_unmounted"] = []
 
         return confdict
 
@@ -347,19 +347,19 @@ class SALUtils(SAL_scheduler):
     def wtopic_camera_config(cam_conf, config):
 
         cam_conf.readoutTime = config.observatory.camera.readout_time
-        # cam_conf.shutterTime = config.observatory.camera.shutter_time
-        # cam_conf.filterMountTime = config.observatory.camera.filter_mount_time
-        # cam_conf.filterChangeTime = config.observatory.camera.filter_change_time
-        # cam_conf.filterMaxChangesBurstNum = \
-        #     config.observatory.camera.filter_max_changes_burst_num
-        # cam_conf.filterMaxChangesBurstTime = \
-        #     config.observatory.camera.filter_max_changes_burst_time
-        # cam_conf.filterMaxChangesAvgNum = config.observatory.camera.filter_max_changes_avg_num
-        # cam_conf.filterMaxChangesAvgTime = config.observatory.camera.filter_max_changes_avg_time
-        # cam_conf.filterMounted = config.observatory.camera.filter_mounted_str
-        # cam_conf.filterPos = config.observatory.camera.filter_pos
-        # cam_conf.filterRemovable = config.observatory.camera.filter_removable_str
-        # cam_conf.filterUnmounted = config.observatory.camera.filter_unmounted_str
+        cam_conf.shutterTime = config.observatory.camera.shutter_time
+        cam_conf.filterMountTime = config.observatory.camera.filter_mount_time
+        cam_conf.filterChangeTime = config.observatory.camera.filter_change_time
+        cam_conf.filterMaxChangesBurstNum = \
+            config.observatory.camera.filter_max_changes_burst_num
+        cam_conf.filterMaxChangesBurstTime = \
+            config.observatory.camera.filter_max_changes_burst_time
+        cam_conf.filterMaxChangesAvgNum = config.observatory.camera.filter_max_changes_avg_num
+        cam_conf.filterMaxChangesAvgTime = config.observatory.camera.filter_max_changes_avg_time
+        cam_conf.filterMounted = config.observatory.camera.filter_mounted_str
+        cam_conf.filterPos = config.observatory.camera.filter_pos
+        cam_conf.filterRemovable = config.observatory.camera.filter_removable_str
+        cam_conf.filterUnmounted = config.observatory.camera.filter_unmounted_str
 
     @staticmethod
     def rtopic_slew_config(topic_slew_config):
