@@ -209,7 +209,7 @@ bellow.
 
 .. _target-figure:
 
-.. figure:: _static/target.jpg
+.. figure:: _static/Target.jpg
    :scale: 50 %
    :alt: Target diagram
    :align: center

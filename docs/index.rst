@@ -30,11 +30,13 @@ Contents:
 
 Class Documentation
 -------------------
+.. toctree::
+    model
+
 
 .. autosummary::
     :toctree: api
 
-    lsst.ts.scheduler
 
 Indices and tables
 ==================
@@ -42,5 +44,3 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
-
-
