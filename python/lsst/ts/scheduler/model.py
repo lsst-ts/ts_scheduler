@@ -15,12 +15,24 @@ except ImportError:
 DEFAULT_STATE = "OFFLINE"
 
 class Model():
-    """The model contains all business logic related to the scheduler.
+    """A class that contains that contains the necessary attributes and methods
+    for a statemachine to control the Scheduling algorith.
 
-    The purpose of the model is to wrap all functionality that the Scheduler
-    Commandable Sal Component (Scheduler CSC) needs. This is so that in our 
-    State machine we are not importing an arbitrary amount of packages an
-    libraries. Rather we import this Model class and obtain all functionality.
+    Parameters
+    ----------
+    driver : ``module``
+        Optional driver for the Model to use. This allows external developers
+        to plug in thier own scheduling algorithms. External Driver's must
+        comply with the the Driver interface here 
+        https://docs.google.com/document/d/1wQ467QGqVP2e4iXOKcW2slLMgOzI_1Qk284b1gDGqaI
+
+    Notes
+    -----
+    The Model is the highest level interface for the State Machine to interact
+    with. The Scheduler State Machine has multiple states. Rather than having
+    to import many objects from different locations we import this Model object.
+    Allowing the Scheduler State Machine one unified object to make all its
+    calls from.
     """
 
     def __init__(self, driver = Driver()):
