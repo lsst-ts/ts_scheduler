@@ -9,27 +9,6 @@ collecting 3 items
 
 collected 3 items 
 
-test_model.py ..F
+test_model.py ...
 
-====================================================== FAILURES ======================================================
-____________________________________ TestSchedulerModel.test_send_valid_settings _____________________________________
-
-self = <tests.model.test_model.TestSchedulerModel testMethod=test_send_valid_settings>
-
-    def test_send_valid_settings(self):
-    
-        m = Model()
-    
->       m.sal_start()
-
-test_model.py:35: 
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
-
-self = <lsst.ts.scheduler.model.Model object at 0x7f17f52810f0>
-
-    def sal_start(self):
->       self.sal.start()
-E       AttributeError: 'NoneType' object has no attribute 'start'
-
-../../python/lsst/ts/scheduler/model.py:38: AttributeError
-========================================= 1 failed, 2 passed in 1.29 seconds =========================================
+============================================== 3 passed in 6.52 seconds ==============================================
