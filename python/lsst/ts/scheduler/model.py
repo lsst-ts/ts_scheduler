@@ -17,65 +17,48 @@ DEFAULT_STATE = "OFFLINE"
 class Model():
     """The model contains all business logic related to the scheduler.
 
-    The Model class is designed to solely interact with an interface object
-    called Driver. This is so that we can "plug and play" different scheduling
-    algorithms as long as they can interact with the Driver. Most of the methods
-    called on this class are called by the state machine, assuming we are in
-    operations mode. In order for any model to interact with the state machine
-    from salpytools it must have an attribute "state". The "state" attribute is
-    used to store the current state of the state machine.
+    The purpose of the model is to wrap all functionality that the Scheduler
+    Commandable Sal Component (Scheduler CSC) needs. This is so that in our 
+    State machine we are not importing an arbitrary amount of packages an
+    libraries. Rather we import this Model class and obtain all functionality. 
     """
 
-    def __init__(self, options=None, driver = Driver()):
-        self.log = logging.getLogger("schedulerModel")
-
-        self.sal = None
-
+    def __init__(self, driver = Driver()):
         self._current_state = DEFAULT_STATE
         self._previous_state = DEFAULT_STATE
 
-        self.configuration_path = None
-        self.configuration_repo = None
-        self.current_setting = None
-        self.valid_settings = None
-        
-        if options is None:
-            self.initialize_with_default()
-        else:
-            self.initialize_with_options(options)
-
-        self.sal.start()
-
-    def initialize_with_default(self):
+        self.log = logging.getLogger("schedulerModel")
         self.sal = SALUtils(2000)
         self.configuration_path = str(CONFIG_DIRECTORY)
         self.configuration_repo = Repo(str(CONFIG_DIRECTORY_PATH))
         self.current_setting = str(self.configuration_repo.active_branch)
-        
+        self.valid_settings = self.read_valid_settings()
+
+    def sal_start(self):
+        self.sal.start()
+
+    def read_valid_settings(self):
+        self.current_setting = str(self.configuration_repo.active_branch)
         remote_branches = []
         for ref in self.configuration_repo.git.branch('-r').split('\n'):
             if 'HEAD' not in ref:
                 remote_branches.append(ref)
 
-        self.valid_settings = remote_branches
-
-    def initialize_with_options(self, options):
-        self.sal = SALUtils(options.timeout)
-        self.current_setting = "default"
+        return remote_branches
 
     @property
     def current_state(self):
         return self._current_state
 
-    @property
-    def previous_state(self):
-        return self._previous_state
-    
-    @current_state.setter()
-    def _current_state(self, state):
+    @current_state.setter
+    def current_state(self, state):
         # TODO: Some actual handing on the state changing mechanism. 
         self._previous_state = self._current_state
         self._current_state = state
+
+    @property
+    def previous_state(self):
+        return self._previous_state
 
     def send_valid_settings(self):
         valid_settings = ''
