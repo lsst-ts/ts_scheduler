@@ -4,20 +4,32 @@ rootdir: /home/aheyer/py3-opsim/gitdir/ts_scheduler, inifile:
 plugins: session2file-0.1.9, forked-0.2, xdist-1.20.1, flake8-0.9.1
 
 collecting 0 items
-collecting 0 items / 1 errors
+collecting 3 items
+collecting 3 items
 
-collected 0 items / 1 errors 
+collected 3 items 
 
-======================================================= ERRORS =======================================================
-_____________________________________ ERROR collecting tests/model/test_model.py _____________________________________
-test_model.py:5: in <module>
-    from lsst.ts.scheduler import Model
-../../python/lsst/ts/scheduler/__init__.py:10: in <module>
-    from .model import *
-../../python/lsst/ts/scheduler/model.py:17: in <module>
-    class Model():
-../../python/lsst/ts/scheduler/model.py:74: in Model
-    @property.setter()
-E   TypeError: descriptor 'setter' of 'property' object needs an argument
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Interrupted: 1 errors during collection !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-============================================== 1 error in 1.27 seconds ===============================================
+test_model.py ..F
+
+====================================================== FAILURES ======================================================
+____________________________________ TestSchedulerModel.test_send_valid_settings _____________________________________
+
+self = <tests.model.test_model.TestSchedulerModel testMethod=test_send_valid_settings>
+
+    def test_send_valid_settings(self):
+    
+        m = Model()
+    
+>       m.sal_start()
+
+test_model.py:35: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <lsst.ts.scheduler.model.Model object at 0x7f17f52810f0>
+
+    def sal_start(self):
+>       self.sal.start()
+E       AttributeError: 'NoneType' object has no attribute 'start'
+
+../../python/lsst/ts/scheduler/model.py:38: AttributeError
+========================================= 1 failed, 2 passed in 1.29 seconds =========================================
