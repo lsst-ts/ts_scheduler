@@ -1,15 +1,19 @@
 from builtins import object
 from builtins import str
-import os
+import warnings
 import logging
 import logging.handlers
 import sys
 import time
 import copy
+_gitpython = True
 try:
     from git import Repo
 except ImportError:
-    raise ImportError("gitpython not installed. Please install it with 'pip install gitpython' before proceeding.")
+    _gitpython = False
+    warnings.warn('Warning: gitpython is not installed. '
+                  'Setting the configuration branch via git within the scheduler is not available. '
+                  'Please install gitpython via "pip install gitpython" if this is necessary.')
 
 from lsst.ts.scheduler.setup import TRACE, EXTENSIVE
 from lsst.ts.scheduler.kernel import read_conf_file, conf_file_path
@@ -34,7 +38,10 @@ class Main(object):
         else:
             self.configuration_path = options.path
 
-        self.config_repo = Repo(str(CONFIG_DIRECTORY_PATH))
+        if _gitpython:
+            self.config_repo = Repo(str(CONFIG_DIRECTORY_PATH))
+        else:
+            self.config_repo = None
 
         self.current_setting = ''
         self.valid_settings = self.read_valid_settings()
@@ -227,96 +234,6 @@ class Main(object):
         self.sal.topic_schedulerTopology = survey_topology.to_topic()
         self.sal.putSample_surveyTopology(self.sal.topic_schedulerTopology)
 
-    def configure_proposals(self):
-
-        if True:
-            raise DeprecationWarning("This method is deprecated")
-
-        self.configure_area_distribution_proposals()
-
-        self.configure_sequence_proposals()
-
-    def configure_area_distribution_proposals(self):
-
-        if True:
-            raise DeprecationWarning("This method is deprecated")
-
-        waitconfig = True
-        lastconfigtime = time.time()
-
-        while waitconfig:
-            scode = self.sal.getNextSample_generalPropConfig(self.sal.topic_areaDistPropConfig)
-            if (scode == 0 and self.sal.topic_areaDistPropConfig.name != ""):
-                lastconfigtime = time.time()
-                name = self.sal.topic_areaDistPropConfig.name
-                prop_id = self.sal.topic_areaDistPropConfig.prop_id
-                if (prop_id == -1 and name == "NULL"):
-                    self.log.info("run: area prop config null")
-                    waitconfig = False
-                else:
-                    config_dict = self.sal.rtopic_area_prop_config(self.sal.topic_areaDistPropConfig)
-                    self.log.info("run: rx area prop id=%i name=%s config=%s" % (prop_id, name,
-                                                                                 config_dict))
-                    self.schedulerDriver.create_area_proposal(prop_id, name, config_dict)
-                    waitconfig = True
-                good_config = True
-            else:
-                tf = time.time()
-                if tf - lastconfigtime > 10.0:
-                    self.log.info("run: area prop config timeout")
-                    """
-                    if not good_config:
-                        area_proposals = ["north_ecliptic_spur.conf", "south_celestial_pole.conf",
-                                          "wide_fast_deep.conf", "galactic_plane.conf"]
-                        for prop_id, prop_config in enumerate(area_proposals):
-                            config_file = conf_file_path(__name__, "conf", "survey", prop_config)
-                            config_dict = read_conf_file(config_file)
-                            name = "".join([x.capitalize() for x in prop_config.split('.')[0].split('_')])
-                            self.schedulerDriver.create_area_proposal(prop_id, name, config_dict)
-                    """
-                    waitconfig = False
-                time.sleep(self.sal.sal_sleeper)
-
-    def configure_sequence_proposals(self):
-
-        if True:
-            raise DeprecationWarning("This method is deprecated")
-
-
-        waitconfig = True
-        lastconfigtime = time.time()
-
-        while waitconfig:
-            scode = self.sal.getNextSample_sequencePropConfig(self.sal.topic_sequencePropConfig)
-            if (scode == 0 and self.sal.topic_sequencePropConfig.name != ""):
-                lastconfigtime = time.time()
-                name = self.sal.topic_sequencePropConfig.name
-                prop_id = self.sal.topic_sequencePropConfig.prop_id
-                if (prop_id == -1 and name == "NULL"):
-                    self.log.info("run: seq prop config null")
-                    waitconfig = False
-                else:
-                    config_dict = self.sal.rtopic_seq_prop_config(self.sal.topic_sequencePropConfig)
-                    self.log.info("run: rx seq prop id=%i name=%s config=%s" % (prop_id, name,
-                                                                                config_dict))
-                    self.schedulerDriver.create_sequence_proposal(prop_id, name, config_dict)
-                    waitconfig = True
-                good_config = True
-            else:
-                tf = time.time()
-                if tf - lastconfigtime > 10.0:
-                    self.log.info("run: seq prop config timeout")
-                    """
-                    if not good_config:
-                        seq_proposals = ["deep_drilling_cosmology1.conf"]
-                        for prop_id, prop_config in enumerate(seq_proposals):
-                            config_file = conf_file_path(__name__, "conf", "survey", prop_config)
-                            config_dict = read_conf_file(config_file)
-                            name = "".join([x.capitalize() for x in prop_config.split('.')[0].split('_')])
-                            self.schedulerDriver.create_sequence_proposal(prop_id, name, config_dict)
-                    """
-                    waitconfig = False
-                time.sleep(self.sal.sal_sleeper)
 
     def main_loop(self, i_timestamp, i_lasttimetime):
 
@@ -495,6 +412,11 @@ class Main(object):
             self.current_setting = 'default'
             return ['default']
 
+        # if gitpython is not available, we cannot search for branches.
+        if not _gitpython or self.config_repo is None:
+            self.current_setting = self.configuration_path
+            return [self.current_setting]
+
         self.current_setting = str(self.config_repo.active_branch)
         remote_branches = []
         for ref in self.config_repo.git.branch('-r').split('\n'):
@@ -508,7 +430,19 @@ class Main(object):
         if self.configuration_path is None:
             self.log.debug("No configuration path. Using default values.")
             self.config.load(None)
-            # return
+        elif _gitpython is False:
+            config_info = '%s ' % self.configuration_path
+            config_file = self.configuration_path
+            import subprocess
+            try:
+                label = subprocess.check_output(["git", "describe"]).strip().decode
+                config_info += ' (%s)' % (label)
+            except subprocess.CalledProcessError:
+                pass
+            self.log.debug('Gitpython is not available. Using config settings '
+                           'on disk at %s' % (config_info))
+            self.log.debug('reading configuration from %s' % config_file)
+            self.config.load([config_file])
         else:
             valid_setting = False
             for config in self.valid_settings:

@@ -1,21 +1,12 @@
 from builtins import object
-from builtins import range
-from builtins import str
-import os
-import math
-import numpy
 import logging
-from operator import itemgetter
 
 from lsst.ts.astrosky.model import AstronomicalSkyModel
 from lsst.ts.dateloc import ObservatoryLocation
 from lsst.ts.observatory.model import ObservatoryModel
 from lsst.ts.observatory.model import ObservatoryState
 from lsst.ts.observatory.model import Target
-from lsst.ts.scheduler.setup import EXTENSIVE, WORDY
-from lsst.ts.scheduler.kernel import read_conf_file
-from lsst.ts.scheduler.kernel import Field, SurveyTopology
-from lsst.ts.scheduler.fields import FieldsDatabase
+from lsst.ts.scheduler.setup import WORDY
 
 __all__ = ["Driver", "DriverParameters"]
 
@@ -33,6 +24,7 @@ class DriverParameters(object):
         self.new_moon_phase_threshold = confdict["darktime"]["new_moon_phase_threshold"]
         self.startup_type = confdict["startup"]["type"]
         self.startup_database = confdict["startup"]["database"]
+
 
 class Driver(object):
     def __init__(self):
@@ -93,7 +85,7 @@ class Driver(object):
         self.survey_duration_SECS = survey_duration * 24 * 60 * 60.0
 
     def configure(self, confdict):
-        self.params.configure(confdict) 
+        self.params.configure(confdict)
         self.log.log(WORDY,
                      "configure: night_boundary=%.1f" % (self.params.night_boundary))
 
@@ -105,19 +97,18 @@ class Driver(object):
         self.sky.update_location(self.location)
 
     def configure_observatory(self, confdict):
-        """This method calls the configure()method in ObservatoryModel class, 
-        which configures all its submodules. When initializing one can issue 
+        """This method calls the configure()method in ObservatoryModel class,
+        which configures all its submodules. When initializing one can issue
         a call to this method with a complete set of parameters on confdict.
 
         Parameters
         ----------
         confdict : dict()
-        
+
         Returns
         -------
         None
         """
-
         self.observatoryModel.configure(confdict)
         self.observatoryModel2.configure(confdict)
 
@@ -163,12 +154,11 @@ class Driver(object):
         ----------
         timestamp : float
         night : int
-        
+
         Returns
         -------
         None
         """
-
         self.start_time = timestamp
 
         self.log.info("start_survey t=%.6f" % timestamp)
@@ -190,16 +180,15 @@ class Driver(object):
         Parameters
         ----------
         None
-        
+
         Returns
         -------
         None
         """
         self.log.info("end_survey")
 
-
     def start_night(self, timestamp, night):
-        """This method is called once per night before observations begin. 
+        """This method is called once per night before observations begin.
         It is not called if the observatory is undergoing downtime.
         Parameters
         ----------
@@ -228,7 +217,6 @@ class Driver(object):
         -------
         None
         """
-
         pass
 
     def swap_filter(self, filter_to_unmount, filter_to_mount):
@@ -256,12 +244,11 @@ class Driver(object):
                 # if round(timestamp) >= round(self.sunset_timestamp):
                 if timestamp >= self.sunset_timestamp:
                     self.start_night(timestamp, night)
-
             return self.isnight
 
     def get_need_filter_swap(self):
-        """When scheduler determines that a filter swap is needed, 
-        this shall return a tuple where the first element is a TRUE value, 
+        """When scheduler determines that a filter swap is needed,
+        this shall return a tuple where the first element is a TRUE value,
         and the second and third elements are single-character strings identifying
         which filter to remove from the carousel, and which filter to add, respectively.
 
@@ -272,10 +259,7 @@ class Driver(object):
         Returns
         -------
         Tuple (bool, str, str)
-        
         """
-        
-
         return (self.need_filter_swap, self.filter_to_unmount, self.filter_to_mount)
 
     def update_internal_conditions(self, observatory_state, night):
@@ -323,7 +307,7 @@ class Driver(object):
         raise NotImplemented
 
     def register_observation(self, observation):
-        """Validates observation and returns a list of successfully completed observations. 
+        """Validates observation and returns a list of successfully completed observations.
 
         Parameters
         ----------
