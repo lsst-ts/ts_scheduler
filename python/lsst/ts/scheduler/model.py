@@ -56,7 +56,7 @@ class Model():
         self._previous_state = DEFAULT_STATE
 
         self.log = logging.getLogger("schedulerModel")
-        self.sal = SALUtils(2000)
+        self.sal = SALUtils(2000) #FIXME options arg removed from init, hardcoded value to be set with method in future release.
         self.configuration_path = str(CONFIG_DIRECTORY)
         self.configuration_repo = Repo(str(CONFIG_DIRECTORY_PATH))
         self.current_setting = str(self.configuration_repo.active_branch)
