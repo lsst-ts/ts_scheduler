@@ -34,8 +34,7 @@ class TestSchedulerModel(unittest.TestCase):
         assert m.send_valid_settings().find('master') != -1
 
     def test_init_models(self):
-        """
-        This unit test will check that the basic models are initialized by the model.
+        """This unit test will check that the basic models are initialized by the model.
 
         Returns
         -------
@@ -55,6 +54,21 @@ class TestSchedulerModel(unittest.TestCase):
         for telemetry in telemetry_list:
             assert telemetry in m.raw_telemetry
 
+    def test_configure(self):
+        """Test that it is possible to configure model.
+
+        Returns
+        -------
+
+        """
+        m = Model()
+
+        m.configure('master')
+
+        assert m.current_setting == 'master'
+        assert m.driver is not None
+
+        # TODO: One could now check that all the settings available are valid.
 
 if __name__ == '__main__':
     unittest.main()

@@ -1,8 +1,13 @@
+import os
 import time
 import logging
+from importlib import import_module
+import inspect
 
 from lsst.ts.scheduler.sal_utils import SALUtils
+from lsst.ts.scheduler.conf.conf_utils import load_override_configuration
 from lsst.ts.scheduler.setup import WORDY
+from lsst.ts.scheduler.driver import Driver
 from lsst.ts.dateloc import ObservatoryLocation
 from lsst.ts.observatory.model import ObservatoryModel
 from lsst.ts.observatory.model import ObservatoryState
@@ -21,7 +26,18 @@ except ImportError:
 
 DEFAULT_STATE = "OFFLINE"
 
-__all__ = ['Model']
+import lsst.pex.config as pexConfig
+
+__all__ = ['Model', 'ModelParameters']
+
+
+class ModelParameters(pexConfig.Config):
+    """Configuration of the LSST Scheduler's Model.
+    """
+    driver_type = pexConfig.Field("Choose a driver to use. This should be an import string that is passed to "
+                                  "`importlib.import_module()`. Model will look for a subclass of Driver "
+                                  "class inside the module.", str,
+                                  default='lsst.ts.scheduler.driver')
 
 
 class Model:
@@ -55,15 +71,16 @@ class Model:
             calls from.
 
         """
+        self.log = logging.getLogger("schedulerModel")
+
+        self.params = ModelParameters()
         self._current_state = DEFAULT_STATE
         self._previous_state = DEFAULT_STATE
 
-        self.log = logging.getLogger("schedulerModel")
         # FIXME options arg removed from init, hardcoded value to be set with method in future release.
         self.sal = SALUtils(2000)  # FIXME: This is probably going away with salobj
         self.configuration_path = str(CONFIG_DIRECTORY)
         self.configuration_repo = Repo(str(CONFIG_DIRECTORY_PATH))
-        self.current_setting = str(self.configuration_repo.active_branch)
         self.valid_settings = self.read_valid_settings()
 
         self.models = {}  # Dictionary to host all the available models.
@@ -96,6 +113,16 @@ class Model:
                 remote_branches.append(ref)
 
         return remote_branches
+
+    @property
+    def current_setting(self):
+        """str: The current setting.
+
+        Returns
+        -------
+
+        """
+        return str(self.configuration_repo.active_branch)
 
     @property
     def current_state(self):
@@ -135,6 +162,7 @@ class Model:
             valid_settings += ','
         valid_settings += self.valid_settings[-1][self.valid_settings[-1].find('/') + 1:]
 
+        # FIXME: Update to use salobj
         self.sal.topicValidSettings.packageVersions = valid_settings
         self.sal.logEvent_validSettings(self.sal.topicValidSettings, 5)
 
@@ -193,7 +221,7 @@ class Model:
         """
         pass
 
-    def configure(self, setting):
+    def configure(self, setting=None):
         """This method is responsible for configuring the scheduler models and the scheduler algorithm, given the
         input setting. It will raise an exception if the input setting is not valid.
 
@@ -206,7 +234,19 @@ class Model:
         None
 
         """
-        pass
+        # Prepare configuration repository by checking out the selected setting.
+        if setting is None:
+            self.log.debug('Loading current setting: %s', self.current_setting)
+            self.load_configuration(self.current_setting)
+        else:
+            self.log.debug('Loading setting: %s', setting)
+            self.load_configuration(setting)
+
+        # Now, configure modules in the proper order
+
+        self.configure_driver()
+
+        self.configure_scheduler()
 
     def configure_driver(self):
         """Load driver for selected scheduler and configure its basic parameters.
@@ -215,7 +255,28 @@ class Model:
         -------
 
         """
-        pass
+        if self.driver is not None:
+            self.log.warning('Driver already defined. Overwriting driver.')
+            # TODO: It is probably a good idea to tell driver to save its state before overwriting. So
+            # it is possible to recover.
+
+        self.log.debug('Loading driver from %s', self.params.driver_type)
+        driver_lib = import_module(self.params.driver_type)
+        members_of_driver_lib = inspect.getmembers(driver_lib)
+
+        driver_type = None
+        for member in members_of_driver_lib:
+            if issubclass(member[1], Driver):
+                self.log.debug('Found driver %s%s', member[0], member[1])
+                driver_type = member[1]
+                break
+
+        if driver_type is None:
+            raise ImportError("Could not find Driver on module %s" % self.params.driver_type)
+
+        self.driver = driver_type(models=self.models, raw_telemetry=self.raw_telemetry)
+
+        load_override_configuration(self.driver.params, self.configuration_path)
 
     def configure_scheduler(self):
         """Configure driver scheduler and publish survey topology.
@@ -224,12 +285,36 @@ class Model:
         -------
 
         """
-        survey_topology = self.driver.configure_scheduler(config=self.config,
-                                                          config_path=self.configuration_path)
+        # Note that driver does not pass any informatino to configure_scheduler. If there is any information needed
+        # Driver should define that on the DriverParameters, which are loaded on configure_driver().
+        survey_topology = self.driver.configure_scheduler()
 
         # FIXME: use salobj to publish survey topology
-        # self.sal.topic_schedulerTopology = survey_topology.to_topic()
-        # self.sal.putSample_surveyTopology(self.sal.topic_schedulerTopology)
+
+    def load_configuration(self, config_name):
+        """Load configuration by checking out the selected branch.
+
+        Parameters
+        ----------
+        config_name: str: The name of the selected configuration.
+
+        Returns
+        -------
+
+        """
+
+        if self.configuration_path is None:
+            self.log.debug("No configuration path. Using default values.")
+        else:
+            valid_setting = False
+            for config in self.valid_settings:
+                if config_name == config[config.find('/') + 1:]:
+                    self.log.debug('Loading settings: %s [%s]' % (config, config_name))
+                    self.configuration_repo.git.checkout(config_name)
+                    valid_setting = True
+                    break
+            if not valid_setting:
+                self.log.warning('Setting %s not valid! Using %s' % (config_name, self.current_setting))
 
     def run(self):
         """ This is the method that runs when the system is in enable state. It is responsible for the target

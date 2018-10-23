@@ -27,7 +27,8 @@ __all__ = ["Main"]
 
 class Main(object):
 
-    def __init__(self, options, driver=Driver()):
+    def __init__(self, options, driver=None):
+        warnings.warn('DeprecationWarning! Use of Main will be deprecated. Use Model instead')
         self.log = logging.getLogger("schedulerMain")
 
         main_confdict = read_conf_file(conf_file_path(__name__, "conf", "scheduler", "main.conf"))
@@ -53,7 +54,10 @@ class Main(object):
                 self.log.debug('{}'.format(setting))
 
         self.sal = SALUtils(options.timeout)
-        self.schedulerDriver = driver
+        if driver is None:
+            self.schedulerDriver = Driver({}, {})
+        else:
+            self.schedulerDriver = driver
         self.config = SchedulerConfig()
 
         self.meascount = 0
