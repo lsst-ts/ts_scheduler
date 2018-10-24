@@ -38,6 +38,27 @@ class ModelParameters(pexConfig.Config):
                                   "`importlib.import_module()`. Model will look for a subclass of Driver "
                                   "class inside the module.", str,
                                   default='lsst.ts.scheduler.driver')
+    night_boundary = pexConfig.Field('Solar altitude (degrees) when it is considered night.', float)
+    new_moon_phase_threshold = pexConfig.Field('New moon phase threshold for swapping to dark time filter.',
+                                               float)
+    startup_type = pexConfig.ChoiceField("The method used to startup the scheduler.", str,
+                                         default='HOT',
+                                         allowed={"HOT": "Hot start, this means the scheduler is started up from "
+                                                         "scratch",
+                                                  "WARM": "Reads the scheduler state from a previously saved "
+                                                          "internal state.",
+                                                  "COLD": "Rebuilds scheduler state from observation database.", })
+    startup_database = pexConfig.Field("Path to the file holding scheduler state or observation database "
+                                       "to be used on WARM or COLD start.", str, default='')
+
+    def setDefaults(self):
+        """Set defaults for the LSST Scheduler's Driver.
+        """
+        self.driver_type = 'lsst.ts.scheduler.driver'
+        self.night_boundary = -12.0
+        self.new_moon_phase_threshold = 20.0
+        self.startup_type = 'HOT'
+        self.startup_database = ''
 
 
 class Model:
