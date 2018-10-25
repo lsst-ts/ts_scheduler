@@ -2,10 +2,9 @@ import logging
 from importlib import import_module
 import inspect
 
-from . import base_csc
+from salobj import base_csc
 import SALPY_Scheduler
 
-from lsst.ts.scheduler.sal_utils import SALUtils
 from lsst.ts.scheduler.conf.conf_utils import load_override_configuration
 from lsst.ts.scheduler.setup import WORDY
 from lsst.ts.scheduler.driver import Driver
@@ -34,6 +33,7 @@ __all__ = ['SchedulerCSC', 'SchedulerCscParameters']
 class SchedulerCscParameters(pexConfig.Config):
     """Configuration of the LSST Scheduler's Model.
     """
+    recommended_settings_version = pexConfig.Field("Name of the recommended settings.", str, default='master')
     driver_type = pexConfig.Field("Choose a driver to use. This should be an import string that is passed to "
                                   "`importlib.import_module()`. Model will look for a subclass of Driver "
                                   "class inside the module.", str,
@@ -54,6 +54,7 @@ class SchedulerCscParameters(pexConfig.Config):
     def setDefaults(self):
         """Set defaults for the LSST Scheduler's Driver.
         """
+        self.recommended_settings_version = 'master'
         self.driver_type = 'lsst.ts.scheduler.driver'
         self.night_boundary = -12.0
         self.new_moon_phase_threshold = 20.0
@@ -72,7 +73,7 @@ class SchedulerCSC(base_csc.BaseCsc):
         self.log = logging.getLogger("SchedulerCSC")
 
         super().__init__(SALPY_Scheduler, index)
-        self.summary_state = base_csc.State.STANDBY
+        self.summary_state = base_csc.State.OFFLINE
 
         self.params = SchedulerCscParameters()
 
@@ -84,6 +85,52 @@ class SchedulerCSC(base_csc.BaseCsc):
         self.raw_telemetry = {}  # Dictionary to host all required telemetry from the models.
 
         self.driver = None  # This will be setup during the configuration procedure
+
+    def do_enterControl(self, id_data):
+        """Transition from `State.OFFLINE` to `State.STANDBY`.
+
+        Parameters
+        ----------
+        id_data : `salobj.CommandIdData`
+            Command ID and data
+        """
+        self._do_change_state(id_data, "enterControl", [base_csc.State.OFFLINE], base_csc.State.STANDBY)
+
+    def begin_enterControl(self, id_data):
+        """Begin do_enterControl; called before state changes.
+
+        Parameters
+        ----------
+        id_data : `salobj.CommandIdData`
+            Command ID and data
+        """
+        pass
+
+    def end_enterControl(self, id_data):
+        """End do_enterControl; called after state changes
+         but before command acknowledged.
+
+         Parameters
+         ----------
+         id_data : `salobj.CommandIdData`
+             Command ID and data
+         """
+        self.send_valid_settings()  # Send valid settings once we are done
+
+    async def do_start(self, id_data):
+        """Override superclass method to transition from `State.STANDBY` to `State.DISABLED`. This is the step where
+        we configure the models, driver and scheduler, which can take some time. So here we acknowledge that the
+        task started, start working on the configuration and then make the state transition.
+
+        Parameters
+        ----------
+        id_data : `salobj.CommandIdData`
+            Command ID and data
+        """
+
+        self.assert_enabled("start")
+
+        self._do_change_state(id_data, "start", [State.STANDBY], State.DISABLED)
 
     def read_valid_settings(self):
         """Reads the branches on the configuration repo and preps them.
@@ -126,8 +173,11 @@ class SchedulerCSC(base_csc.BaseCsc):
         valid_settings += self.valid_settings[-1][self.valid_settings[-1].find('/') + 1:]
 
         # FIXME: Update to use salobj
-        self.sal.topicValidSettings.packageVersions = valid_settings
-        self.sal.logEvent_validSettings(self.sal.topicValidSettings, 5)
+        topic = self.evt_settingVersions.DataType()
+        topic.recommendedSettingsLabels = valid_settings
+        topic.recommendedSettingsVersion = self.params.recommended_settings_version
+
+        self.evt_settingVersions.put(topic)
 
         return valid_settings
 
