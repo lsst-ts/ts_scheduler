@@ -63,12 +63,59 @@ class SchedulerCscParameters(pexConfig.Config):
 
 
 class SchedulerCSC(base_csc.BaseCsc):
-    """The Scheduler_CSC...
+    """This class is a reactive component which is SAL aware and delegates work.
 
+    The SchedulerCSC is the only layer that is exposed to SAL communication. All
+    commands recieved are by the SchedulerCSC then delegated to the repsonible
+    objects. Along with this the SchedulerCSC maintains a statemachine which is
+    taken care of by the inherited class `base_csc.BaseCsc`. 
+
+    Attributes
+    ----------
+    log : logging.Log
+        Logging mechanism for the SchedulerCSC.
+    summary_state : `salobj.base_csc.State`
+        Enume type, OFFLINE = 4 STANDBY = 5 DISABLED = 1 ENABLED = 2 FAULT = 3.
+    params: `lsst.ts.scheduler.scheduler_csc.SchedulerCscParameters` 
+        Object to contain parameter values to configure the SchedulerCSC.
+    configuration_path: `str` 
+        Absolute path to the configuration location for the validSettings event.
+    configuration_repo: `str`
+        String of comma delimated Git repos that exist at configuration_path.
+        ex; "origin/master,origin/develop"
+    valid_settings: `list` of `str`
+        Shortened and listed names of configuration_repo. ex; [master, develop].
+    models: `dict`
+        Dictionary of the models necessary for the SchedulerCSC to fulfill SAL
+        commands.
+        - ``location`` : lsst.ts.datelo.ObservatoryLocation
+        - ``observatory_model`` : lsst.ts.observatory.model.ObservatoryModel
+        - ``observatory_state`` : lsst.ts.observatory.model.ObservatoryState
+        - ``sky`` : lsst.ts.astrosky.model.AstronomicalSkyModel
+        - ``seeing`` : lsst.sims.seeingModel.SeeingModel
+        - ``scheduled_downtime`` : lsst.sims.downtimeModel.ScheduleDowntime
+        - ``unscheduled_downtime`` : lsst.sims.downtimeModel.UnschedulerDowntime
+    raw_telemetry: {`str`: :object:}
+        Raw, as in unparsed data that is recieved over SAL. The SchedulerCSC 
+        parses self.raw_telemtry and formats the data into self.models.
+    driver: `lsst.ts.scheduler.driver.Driver`
+        A worker class that does much of the lower level computation called by
+        the SchedulerCSC.
     """
     def __init__(self, index):
-        """Add Docstring
+        """Initialized many of the class attributes.
 
+        The __init__ method initializes the minimal amount of setup needed for
+        the SchedulerCSC to be able to change state.
+
+        Parameters
+        ----------
+        index : int
+            We can create multiple CSC's based from the same XML explained here
+            https://confluence.lsstcorp.org/display/~aheyer/CSC+Name+Guidlines.
+            This index value refers to the Enumeration value specified in the
+            ts_xml/sal_interfaces/SALSubsystem.xml file. Under the Scheduler
+            tag.  
         """
         self.log = logging.getLogger("SchedulerCSC")
 
@@ -81,10 +128,10 @@ class SchedulerCSC(base_csc.BaseCsc):
         self.configuration_repo = Repo(str(CONFIG_DIRECTORY_PATH))
         self.valid_settings = self.read_valid_settings()
 
-        self.models = {}  # Dictionary to host all the available models.
-        self.raw_telemetry = {}  # Dictionary to host all required telemetry from the models.
+        self.models = {}
+        self.raw_telemetry = {}
 
-        self.driver = None  # This will be setup during the configuration procedure
+        self.driver = None
 
     def do_enterControl(self, id_data):
         """Transition from `State.OFFLINE` to `State.STANDBY`.
@@ -117,20 +164,17 @@ class SchedulerCSC(base_csc.BaseCsc):
          """
         self.send_valid_settings()  # Send valid settings once we are done
 
-    async def do_start(self, id_data):
-        """Override superclass method to transition from `State.STANDBY` to `State.DISABLED`. This is the step where
-        we configure the models, driver and scheduler, which can take some time. So here we acknowledge that the
-        task started, start working on the configuration and then make the state transition.
-
-        Parameters
-        ----------
-        id_data : `salobj.CommandIdData`
-            Command ID and data
-        """
-
-        self.assert_enabled("start")
-
-        self._do_change_state(id_data, "start", [State.STANDBY], State.DISABLED)
+    # async def do_start(self, id_data):
+    #     """Override superclass method to transition from `State.STANDBY` to `State.DISABLED`. This is the step where
+    #     we configure the models, driver and scheduler, which can take some time. So here we acknowledge that the
+    #     task started, start working on the configuration and then make the state transition.
+    #
+    #     Parameters
+    #     ----------
+    #     id_data : `salobj.CommandIdData`
+    #         Command ID and data
+    #     """
+    #     self._do_change_state(id_data, "start", [base_csc.State.STANDBY], base_csc.State.DISABLED)
 
     def read_valid_settings(self):
         """Reads the branches on the configuration repo and preps them.
@@ -153,17 +197,22 @@ class SchedulerCSC(base_csc.BaseCsc):
 
         Returns
         -------
+        str
+            Unshortened name of the activet branch in the 
+            self.configuration_path location. For ex; "origin/develop".
 
         """
         return str(self.configuration_repo.active_branch)
 
     def send_valid_settings(self):
-        """Publish valid settings over SAL and return a string with a list of valid settings.
+        """Publish valid settings over SAL & return a string of valid settings.
 
         Returns
         -------
-            valid_settings: string: Comma delimited string of available branches for configuring.
-                This contains the short branch name. For example 'master' rather than 'origin/master'.
+        str
+            Comma delimited string of available Git repos withing the 
+            self.configuration_path location. For ex; 
+            "origin/develop,origin/master".
 
         """
         valid_settings = ''
@@ -182,7 +231,7 @@ class SchedulerCSC(base_csc.BaseCsc):
         return valid_settings
 
     def init_models(self):
-        """Initialize scheduler models. They will be initialized but not configured.
+        """Initialize but not configure needed models. 
 
         Returns
         -------

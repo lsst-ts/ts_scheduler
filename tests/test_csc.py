@@ -9,7 +9,7 @@ index_gen = salobj.index_generator()
 
 class Harness:
     def __init__(self, initial_state):
-        index = next(index_gen)
+        index = 0 #next(index_gen)
         salobj.test_utils.set_random_lsst_dds_domain()
         self.csc = SchedulerCSC(index=index)
         self.remote = salobj.Remote(SALPY_Scheduler, index)
