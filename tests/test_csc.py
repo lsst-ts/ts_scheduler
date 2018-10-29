@@ -1,22 +1,30 @@
 import unittest
 import pytest
+import asyncio
+import salobj
+from lsst.ts.scheduler import SchedulerCSC
+import SALPY_Scheduler
 
-from lsst.ts.scheduler import Model
+index_gen = salobj.index_generator()
 
-class TestSchedulerModel(unittest.TestCase):
+class Harness:
+    def __init__(self, initial_state):
+        index = 0 #next(index_gen)
+        salobj.test_utils.set_random_lsst_dds_domain()
+        self.csc = SchedulerCSC(index=index)
+        self.remote = salobj.Remote(SALPY_Scheduler, index)
 
-    def test_init(self):
-        m = Model()
-        
-        assert m.current_state == "OFFLINE"
-        assert m.previous_state == "OFFLINE"
-        assert m.configuration_path != None
-        assert m.valid_settings != None
+# FIXME: probably need to take care of LSST_DDS_DOMAIN
+
+class TestSchedulerCSC(unittest.TestCase):
 
     def test_change_state(self):
-        m = Model()
-        
-        m.current_state = "STANDBY"
+        harness = Harness()
+
+        # CSC must start in OFFLINE
+        assert harness.csc.current_state == salobj.base_csc.State.OFFLINE
+
+
         assert m.current_state == "STANDBY"
         assert m.previous_state == "OFFLINE"
 
@@ -29,7 +37,7 @@ class TestSchedulerModel(unittest.TestCase):
 
     def test_send_valid_settings(self):
         m = Model()
-        
+
         m.sal_start()
         assert m.send_valid_settings().find('master') != -1
 
@@ -69,6 +77,7 @@ class TestSchedulerModel(unittest.TestCase):
         assert m.driver is not None
 
         # TODO: One could now check that all the settings available are valid.
+
 
 if __name__ == '__main__':
     unittest.main()
