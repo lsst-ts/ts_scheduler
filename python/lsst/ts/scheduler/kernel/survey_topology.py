@@ -27,12 +27,17 @@ class SurveyTopology(object):
         self.general_propos = topic.general_propos.split(',')
         self.sequence_propos = topic.sequence_propos.split(',')
 
-    def to_topic(self):
+    def to_topic(self, topic):
+        """
 
-        from SALPY_scheduler import scheduler_surveyTopologyC
+        Parameters
+        ----------
+        topic
 
-        topic = scheduler_surveyTopologyC()
+        Returns
+        -------
 
+        """
         topic.numGeneralProps = self.num_general_props
         topic.numSeqProps = self.num_seq_props
 

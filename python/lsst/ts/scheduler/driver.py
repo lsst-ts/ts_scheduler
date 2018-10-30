@@ -20,7 +20,7 @@ class DriverParameters(pexConfig.Config):
     pass
 
 class Driver(object):
-    def __init__(self, models, raw_telemetry, params=None):
+    def __init__(self, models, raw_telemetry, parameters=None):
         """Initialize base scheduler driver.
 
         Parameters
@@ -30,10 +30,10 @@ class Driver(object):
         """
         self.log = logging.getLogger("schedulerDriver")
 
-        if params is None:
-            self.params = DriverParameters()
+        if parameters is None:
+            self.parameters = DriverParameters()
         else:
-            self.params = params
+            self.parameters = parameters
         self.models = models
         self.raw_telemetry = raw_telemetry
 

@@ -1,8 +1,9 @@
 import unittest
 import pytest
 
-from lsst.ts.scheduler import Model
+# from lsst.ts.scheduler import Model
 
+@unittest.skip('Model has been deprecated')
 class TestSchedulerModel(unittest.TestCase):
 
     def test_init(self):
