@@ -30,6 +30,8 @@ def generate_logfile(basename="scheduler"):
     """
     timestr = time.strftime("%Y-%m-%d_%H:%M:%S")
     log_path = pkg_resources.resource_filename(__name__, "../../log")
+    if not os.path.exists(log_path):
+        os.makedirs(log_path)
     logfilename = os.path.join(log_path, "%s.%s.log" % (basename, timestr))
     return logfilename
 
