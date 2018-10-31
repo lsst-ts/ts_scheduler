@@ -1,21 +1,30 @@
 import logging
 from importlib import import_module
 import inspect
+import asyncio
+import concurrent
+import time
 
-from salobj import base_csc
+from salobj import base_csc, base
 import SALPY_Scheduler
 
 from lsst.ts.scheduler.conf.conf_utils import load_override_configuration
 from lsst.ts.scheduler.setup import WORDY
 from lsst.ts.scheduler.driver import Driver
 from lsst.ts.dateloc import ObservatoryLocation
+from lsst.ts.dateloc import version as dateloc_version
 from lsst.ts.observatory.model import ObservatoryModel
+from lsst.ts.observatory.model import version as obs_mod_version
 from lsst.ts.observatory.model import ObservatoryState
 from lsst.ts.astrosky.model import AstronomicalSkyModel
+from lsst.ts.astrosky.model import version as astrosky_version
 
 from lsst.sims.seeingModel import SeeingModel
+from lsst.sims.seeingModel import version as seeing_version
 from lsst.sims.cloudModel import CloudModel
+from lsst.sims.cloudModel import version as cloud_version
 from lsst.sims.downtimeModel import ScheduledDowntime, UnscheduledDowntime
+from lsst.sims.downtimeModel import version as downtime_version
 
 import lsst.pex.config as pexConfig
 
@@ -76,7 +85,7 @@ class SchedulerCSC(base_csc.BaseCsc):
         Logging mechanism for the SchedulerCSC.
     summary_state : `salobj.base_csc.State`
         Enume type, OFFLINE = 4 STANDBY = 5 DISABLED = 1 ENABLED = 2 FAULT = 3.
-    params: `lsst.ts.scheduler.scheduler_csc.SchedulerCscParameters` 
+    parameters: `lsst.ts.scheduler.scheduler_csc.SchedulerCscParameters` 
         Object to contain parameter values to configure the SchedulerCSC.
     configuration_path: `str` 
         Absolute path to the configuration location for the validSettings event.
@@ -122,11 +131,10 @@ class SchedulerCSC(base_csc.BaseCsc):
         super().__init__(SALPY_Scheduler, index)
         self.summary_state = base_csc.State.OFFLINE
 
-        self.params = SchedulerCscParameters()
+        self.parameters = SchedulerCscParameters()
 
         self.configuration_path = str(CONFIG_DIRECTORY)
         self.configuration_repo = Repo(str(CONFIG_DIRECTORY_PATH))
-        self.valid_settings = self.read_valid_settings()
 
         self.models = {}
         self.raw_telemetry = {}
@@ -164,30 +172,90 @@ class SchedulerCSC(base_csc.BaseCsc):
          """
         self.send_valid_settings()  # Send valid settings once we are done
 
-    # async def do_start(self, id_data):
-    #     """Override superclass method to transition from `State.STANDBY` to `State.DISABLED`. This is the step where
-    #     we configure the models, driver and scheduler, which can take some time. So here we acknowledge that the
-    #     task started, start working on the configuration and then make the state transition.
-    #
-    #     Parameters
-    #     ----------
-    #     id_data : `salobj.CommandIdData`
-    #         Command ID and data
-    #     """
-    #     self._do_change_state(id_data, "start", [base_csc.State.STANDBY], base_csc.State.DISABLED)
+    def do_exitControl(self, id_data):
+        """Transition from `State.STANDBY` to `State.OFFLINE` and quit.
 
-    def read_valid_settings(self):
-        """Reads the branches on the configuration repo and preps them.
+        Parameters
+        ----------
+        id_data : `salobj.CommandIdData`
+            Command ID and data
+        """
+        self._do_change_state(id_data, "exitControl", [base_csc.State.STANDBY], base_csc.State.OFFLINE)
 
-        Returns:
-            List of branches on the configuration repository. A single branch
-            represents a valid setting.
+    async def do_start(self, id_data):
+        """Override superclass method to transition from `State.STANDBY` to `State.DISABLED`. This is the step where
+        we configure the models, driver and scheduler, which can take some time. So here we acknowledge that the
+        task started, start working on the configuration and then make the state transition.
+
+        Parameters
+        ----------
+        id_data : `salobj.CommandIdData`
+            Command ID and data
+        """
+        if self.summary_state != base_csc.State.STANDBY:
+            raise base.ExpectedError(f"Start not allowed in state {self.summary_state}")
+
+        settings_to_apply = id_data.data.settingsToApply
+
+        # check settings_to_apply
+        if len(settings_to_apply) == 0:
+            self.log.warning("No settings selected. Using current one: %s", self.current_setting)
+            settings_to_apply = self.current_setting
+
+        is_valid = False
+        for valid_setting in self.valid_settings:
+            await asyncio.sleep(0)  # give control to the event loop for responsiveness
+            if 'origin/%s' % settings_to_apply == valid_setting:
+                is_valid = True
+                break
+
+        if not is_valid:
+            raise base.ExpectedError(f"{settings_to_apply} is not a valid settings. "
+                                     f"Choose one of: {self.valid_settings}.")
+
+        self.log.debug("Configuring the scheduler with setting '%s'", settings_to_apply)
+
+        await asyncio.sleep(0)  # give control to the event loop for responsiveness
+
+        executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+
+        await  self.run_configuration(settings_to_apply, executor)
+
+        self._do_change_state(id_data, "start", [base_csc.State.STANDBY], base_csc.State.DISABLED)
+
+    async def run_configuration(self, setting, executor):
+        """This coroutine is responsible for executing the entire configuration set in a worker so the event loop
+        will not block.
+
+        Parameters
+        ----------
+        setting: str: The selected setting.
+        executor: concurrent.futures.ThreadPoolExecutor: The executor where the task will run.
+
+        Returns
+        -------
+        None
 
         """
+        loop = asyncio.get_event_loop()
+
+        # Run configure method on the executer thus, not blocking the event loop.
+        await loop.run_in_executor(executor, self.configure, setting)
+
+    @property
+    def valid_settings(self):
+        """Reads the branches on the configuration repo and preps them.
+
+        Returns
+        -------
+        valid_setting: list(str): List of branches on the configuration repository. A single branch
+            represents a valid setting.
+        """
+
         remote_branches = []
         for ref in self.configuration_repo.git.branch('-r').split('\n'):
             if 'HEAD' not in ref:
-                remote_branches.append(ref)
+                remote_branches.append(ref.replace(' ', ''))
 
         return remote_branches
 
@@ -224,7 +292,7 @@ class SchedulerCSC(base_csc.BaseCsc):
         # FIXME: Update to use salobj
         topic = self.evt_settingVersions.DataType()
         topic.recommendedSettingsLabels = valid_settings
-        topic.recommendedSettingsVersion = self.params.recommended_settings_version
+        topic.recommendedSettingsVersion = self.parameters.recommended_settings_version
 
         self.evt_settingVersions.put(topic)
 
@@ -306,9 +374,44 @@ class SchedulerCSC(base_csc.BaseCsc):
 
         # Now, configure modules in the proper order
 
+        # Configuring Models
+        if len(self.models) == 0:
+            self.log.warning("Models are not initialized. Initializing...")
+            self.init_models()
+
+        for model in self.models:
+            # TODO: This check will give us time to implement the required changes on the models.
+            if hasattr(self.models[model], "parameters"):
+                self.log.debug('Loading overwrite parameters for %s', model)
+                load_override_configuration(self.models[model].parameters, self.configuration_path)
+            else:
+                self.log.warning('Model %s does not have a parameter class.' % model)
+
+        # Configuring Driver and Scheduler
+
         self.configure_driver()
 
         self.configure_scheduler()
+
+        # Publish settingsApplied and appliedSettingsMatchStart
+
+        match_start_topic = self.evt_appliedSettingsMatchStart.DataType()
+        match_start_topic.appliedSettingsMatchStartIsTrue = True
+        self.evt_appliedSettingsMatchStart.put(match_start_topic)
+
+        settings_applied = self.evt_settingsApplied.DataType()
+        # Most configurations comes from this single commit hash. I think the other modules could host the
+        # version for each one of them
+        settings_applied.version = self.configuration_repo.head.object.hexsha
+        settings_applied.scheduler = self.parameters.driver_type  # maybe add version?
+        settings_applied.observatoryModel = obs_mod_version.__version__
+        settings_applied.observatoryLocation = dateloc_version.__version__
+        settings_applied.seeingModel = seeing_version.__version__
+        settings_applied.cloudModel = cloud_version.__version__
+        settings_applied.skybrightnessModel = astrosky_version.__version__
+        settings_applied.downtimeModel = downtime_version.__version__
+
+        self.evt_settingsApplied.put(settings_applied)
 
     def configure_driver(self):
         """Load driver for selected scheduler and configure its basic parameters.
@@ -322,8 +425,8 @@ class SchedulerCSC(base_csc.BaseCsc):
             # TODO: It is probably a good idea to tell driver to save its state before overwriting. So
             # it is possible to recover.
 
-        self.log.debug('Loading driver from %s', self.params.driver_type)
-        driver_lib = import_module(self.params.driver_type)
+        self.log.debug('Loading driver from %s', self.parameters.driver_type)
+        driver_lib = import_module(self.parameters.driver_type)
         members_of_driver_lib = inspect.getmembers(driver_lib)
 
         driver_type = None
@@ -334,24 +437,26 @@ class SchedulerCSC(base_csc.BaseCsc):
                 break
 
         if driver_type is None:
-            raise ImportError("Could not find Driver on module %s" % self.params.driver_type)
+            raise ImportError("Could not find Driver on module %s" % self.parameters.driver_type)
 
         self.driver = driver_type(models=self.models, raw_telemetry=self.raw_telemetry)
 
-        load_override_configuration(self.driver.params, self.configuration_path)
+        # load_override_configuration(self.driver.parameters, self.configuration_path)
 
     def configure_scheduler(self):
         """Configure driver scheduler and publish survey topology.
+
+        Note that driver does not pass any information to configure_scheduler. If there is any information needed
+        Driver should define that on the DriverParameters, which are loaded on configure_driver().
 
         Returns
         -------
 
         """
-        # Note that driver does not pass any informatino to configure_scheduler. If there is any information needed
-        # Driver should define that on the DriverParameters, which are loaded on configure_driver().
         survey_topology = self.driver.configure_scheduler()
 
-        # FIXME: use salobj to publish survey topology
+        # Publish topology
+        self.tel_surveyTopology.put(survey_topology.to_topic(self.tel_surveyTopology.DataType()))
 
     def load_configuration(self, config_name):
         """Load configuration by checking out the selected branch.
@@ -366,7 +471,7 @@ class SchedulerCSC(base_csc.BaseCsc):
         """
 
         if self.configuration_path is None:
-            self.log.debug("No configuration path. Using default values.")
+            self.log.warning("No configuration path. Using default values.")
         else:
             valid_setting = False
             for config in self.valid_settings:
