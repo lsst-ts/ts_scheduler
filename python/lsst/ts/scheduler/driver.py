@@ -19,6 +19,7 @@ class DriverParameters(pexConfig.Config):
     """
     pass
 
+
 class Driver(object):
     def __init__(self, models, raw_telemetry, parameters=None):
         """Initialize base scheduler driver.
