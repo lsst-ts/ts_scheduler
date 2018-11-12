@@ -160,6 +160,130 @@ class TestSchedulerCSC(unittest.TestCase):
         # with pytest.raises(AttributeError):
         #     m.previous_state = "ENABLED"
 
+    def test_every_fault_transition(self):
+        """Test standard CSC Fault transitions.
+         Returns
+        -------
+        The initial state is STANDBY.
+        The standard commands and associated state transitions are:
+         * enterControl: OFFLINE to STANDBY
+        * start: STANDBY to DISABLED
+        * enable: DISABLED to ENABLED
+         * disable: ENABLED to DISABLED
+        * standby: DISABLED to STANDBY
+        * exitControl: STANDBY, FAULT to OFFLINE (quit)
+        """
+        
+        async def doit():
+            harness = Harness()
+            self.assertEqual(harness.csc.summary_state, salobj.State.OFFLINE)
+
+            # send enterControl; new state is STANDBY
+            cmd_attr = getattr(harness.remote, f"cmd_enterControl")
+            state_coro = harness.remote.evt_summaryState.next(timeout=1.)
+            id_ack = await cmd_attr.start(cmd_attr.DataType(), timeout=1.)
+            state = await state_coro
+            self.assertEqual(id_ack.ack.ack, harness.remote.salinfo.lib.SAL__CMD_COMPLETE)
+            self.assertEqual(id_ack.ack.error, 0)
+            self.assertEqual(harness.csc.summary_state, salobj.State.STANDBY)
+            self.assertEqual(state.summaryState, salobj.State.STANDBY)
+            # set to FAULT; new state is FAULT
+            harness.csc._summary_state = salobj.State.FAULT
+            state_coro = harness.remote.evt_summaryState.next(timeout=1.)
+            harness.csc.report_summary_state()
+            state = await state_coro
+            self.assertEqual(harness.csc.summary_state, salobj.State.FAULT)
+            self.assertEqual(state.summaryState, salobj.State.FAULT)
+
+
+            # send standby; new state is STANDBY
+            cmd_attr = getattr(harness.remote, f"cmd_standby")
+            state_coro = harness.remote.evt_summaryState.next(timeout=1.)
+            id_ack = await cmd_attr.start(cmd_attr.DataType(), timeout=1.)
+            state = await state_coro
+            self.assertEqual(id_ack.ack.ack, harness.remote.salinfo.lib.SAL__CMD_COMPLETE)
+            self.assertEqual(id_ack.ack.error, 0)
+            self.assertEqual(harness.csc.summary_state, salobj.State.STANDBY)
+            self.assertEqual(state.summaryState, salobj.State.STANDBY)
+            # send start; new state is DISABLED 
+            cmd_attr = getattr(harness.remote, f"cmd_start")
+            state_coro = harness.remote.evt_summaryState.next(timeout=1.)
+            id_ack = await cmd_attr.start(cmd_attr.DataType(), timeout=1.)
+            state = await state_coro
+            self.assertEqual(id_ack.ack.ack, harness.remote.salinfo.lib.SAL__CMD_COMPLETE)
+            self.assertEqual(id_ack.ack.error, 0)
+            self.assertEqual(harness.csc.summary_state, salobj.State.DISABLED)
+            self.assertEqual(state.summaryState, salobj.State.DISABLED)
+            # set to FAULT; new state is FAULT
+            harness.csc._summary_state = salobj.State.FAULT
+            state_coro = harness.remote.evt_summaryState.next(timeout=1.)
+            harness.csc.report_summary_state()
+            state = await state_coro
+            self.assertEqual(harness.csc.summary_state, salobj.State.FAULT)
+            self.assertEqual(state.summaryState, salobj.State.FAULT)
+            
+
+            # send standby; new state is STANDBY
+            cmd_attr = getattr(harness.remote, f"cmd_standby")
+            state_coro = harness.remote.evt_summaryState.next(timeout=1.)
+            id_ack = await cmd_attr.start(cmd_attr.DataType(), timeout=1.)
+            state = await state_coro
+            self.assertEqual(id_ack.ack.ack, harness.remote.salinfo.lib.SAL__CMD_COMPLETE)
+            self.assertEqual(id_ack.ack.error, 0)
+            self.assertEqual(harness.csc.summary_state, salobj.State.STANDBY)
+            self.assertEqual(state.summaryState, salobj.State.STANDBY)
+            # send start; new state is DISABLED 
+            cmd_attr = getattr(harness.remote, f"cmd_start")
+            state_coro = harness.remote.evt_summaryState.next(timeout=1.)
+            id_ack = await cmd_attr.start(cmd_attr.DataType(), timeout=1.)
+            state = await state_coro
+            self.assertEqual(id_ack.ack.ack, harness.remote.salinfo.lib.SAL__CMD_COMPLETE)
+            self.assertEqual(id_ack.ack.error, 0)
+            self.assertEqual(harness.csc.summary_state, salobj.State.DISABLED)
+            self.assertEqual(state.summaryState, salobj.State.DISABLED)
+            # send enable; new state is ENABLED 
+            cmd_attr = getattr(harness.remote, f"cmd_enable")
+            state_coro = harness.remote.evt_summaryState.next(timeout=1.)
+            id_ack = await cmd_attr.start(cmd_attr.DataType(), timeout=1.)
+            state = await state_coro
+            self.assertEqual(id_ack.ack.ack, harness.remote.salinfo.lib.SAL__CMD_COMPLETE)
+            self.assertEqual(id_ack.ack.error, 0)
+            self.assertEqual(harness.csc.summary_state, salobj.State.ENABLED)
+            self.assertEqual(state.summaryState, salobj.State.ENABLED)
+            # set to FAULT; new state is FAULT
+            harness.csc._summary_state = salobj.State.FAULT
+            state_coro = harness.remote.evt_summaryState.next(timeout=1.)
+            harness.csc.report_summary_state()
+            state = await state_coro
+            self.assertEqual(harness.csc.summary_state, salobj.State.FAULT)
+            self.assertEqual(state.summaryState, salobj.State.FAULT)
+         
+        asyncio.get_event_loop().run_until_complete(doit())
+
+
+    def test_heartbeat_count(self):
+        """Count the number of hearbeats for 5s of enabled SchedulerCSC.
+        """
+        self.count = 0
+    
+        def count_heartbeats(self, evt_data):
+            self.count += 1
+
+
+        async def doit():
+            harness = Harness()
+            
+            harness.remote.evt_heartbeat.callback = self.count_heartbeats()
+
+            # cmd_attr = getattr(harness.remote, f"cmd_enterControl")
+            # state_coro = harness.remote.evt_summaryState.next(timeout=1.)
+            # id_ack = await cmd_attr.start(cmd_attr.DataType(), timeout=1.)
+            # state = await state_coro
+        
+
+         
+        asyncio.get_event_loop().run_until_complete(doit())
+
     # def test_send_valid_settings(self):
     #     m = Model()
     #
