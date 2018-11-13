@@ -221,7 +221,7 @@ class TestSchedulerCSC(unittest.TestCase):
             state = await state_coro
             self.assertEqual(harness.csc.summary_state, salobj.State.FAULT)
             self.assertEqual(state.summaryState, salobj.State.FAULT)
-            
+
 
             # send standby; new state is STANDBY
             cmd_attr = getattr(harness.remote, f"cmd_standby")
@@ -257,32 +257,9 @@ class TestSchedulerCSC(unittest.TestCase):
             state = await state_coro
             self.assertEqual(harness.csc.summary_state, salobj.State.FAULT)
             self.assertEqual(state.summaryState, salobj.State.FAULT)
-         
+
         asyncio.get_event_loop().run_until_complete(doit())
 
-
-    def test_heartbeat_count(self):
-        """Count the number of hearbeats for 5s of enabled SchedulerCSC.
-        """
-        self.count = 0
-    
-        def count_heartbeats(self, evt_data):
-            self.count += 1
-
-
-        async def doit():
-            harness = Harness()
-            
-            harness.remote.evt_heartbeat.callback = self.count_heartbeats()
-
-            # cmd_attr = getattr(harness.remote, f"cmd_enterControl")
-            # state_coro = harness.remote.evt_summaryState.next(timeout=1.)
-            # id_ack = await cmd_attr.start(cmd_attr.DataType(), timeout=1.)
-            # state = await state_coro
-        
-
-         
-        asyncio.get_event_loop().run_until_complete(doit())
 
     # def test_send_valid_settings(self):
     #     m = Model()
