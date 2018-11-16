@@ -50,7 +50,7 @@ def configure_logging(options, logfilename=None, log_port=logging.handlers.DEFAU
     console_detail, file_detail = set_log_levels(options.verbose)
     main_level = max(console_detail, file_detail)
 
-    log_format = "%(asctime)s - %(levelname)s - %(name)s - %(message)s"
+    log_format = "%(asctime)s - %(levelname)s - %(name)s [%(filename)s:%(lineno)d]: %(message)s"
     if options.console_format is None:
         console_format = log_format
     else:

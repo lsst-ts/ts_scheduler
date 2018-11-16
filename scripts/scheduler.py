@@ -16,7 +16,7 @@ def main(args):
     logger = logging.getLogger("scheduler")
     logger.info("logfile=%s" % logfilename)
 
-    csc = SchedulerCSC(0)  # FIXME: Index should come from args
+    csc = SchedulerCSC(1)  # FIXME: Index should come from args
 
     loop = asyncio.get_event_loop()
 

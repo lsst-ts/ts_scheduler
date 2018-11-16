@@ -14,6 +14,7 @@ class Harness:
         index = 0  # next(index_gen)
         salobj.test_utils.set_random_lsst_dds_domain()
         self.csc = SchedulerCSC(index=index)
+        self.csc.parameters.mode = 'DRY'  # need to set this to allow tests
         self.remote = salobj.Remote(SALPY_Scheduler, index)
 
 # FIXME: probably need to take care of LSST_DDS_DOMAIN

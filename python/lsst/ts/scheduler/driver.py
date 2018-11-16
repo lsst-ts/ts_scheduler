@@ -1,13 +1,63 @@
 from builtins import object
 import logging
+import time
+import yaml
 
 from lsst.ts.scheduler.kernel import SurveyTopology
+from lsst.ts.scheduler.setup import WORDY
 
 from lsst.ts.observatory.model import Target
 
 import lsst.pex.config as pexConfig
 
 __all__ = ["Driver", "DriverParameters"]
+
+
+class DriverTarget(Target):
+    def __init__(self, targetid=0, fieldid=0, band_filter="",
+                 ra_rad=0.0, dec_rad=0.0, ang_rad=0.0,
+                 num_exp=0, exp_times=[]):
+        """Initialize the class.
+
+        Parameters
+        ----------
+        targetid : int
+            A unique identifier for the given target.
+        fieldid : int
+            The ID of the associated OpSim field for the target.
+        band_filter : str
+            The single character name of the associated band filter.
+        ra_rad : float
+            The right ascension (radians) of the target.
+        dec_rad : float
+            The declination (radians) of the target.
+        ang_rad : float
+            The sky angle (radians) of the target.
+        num_exp : int
+            The number of requested exposures for the target.
+        exp_times : list[float]
+            The set of exposure times for the target. Needs to length
+            of num_exp.
+        """
+        super().__init__(targetid=targetid, fieldid=fieldid, band_filter=band_filter, ra_rad=ra_rad,
+                         dec_rad=dec_rad, ang_rad=ang_rad, num_exp=num_exp, exp_times=exp_times)
+
+    def get_script_config(self):
+        """Returns an yaml string with the configuration to be used for the observing script.
+
+        Returns
+        -------
+        config_str: str
+        """
+        script_config = {'targetid': self.targetid,
+                         'band_filter': self.filter,
+                         'ra': self.ra,
+                         'dec': self.dec,
+                         'ang': self.ang,
+                         'num_exp': self.num_exp,
+                         'exp_times': self.exp_times}
+
+        return yaml.safe_dump(script_config)
 
 
 class DriverParameters(pexConfig.Config):
@@ -37,6 +87,7 @@ class Driver(object):
             self.parameters = parameters
         self.models = models
         self.raw_telemetry = raw_telemetry
+        self.targetid = 0
 
     def configure_scheduler(self):
         """
@@ -93,14 +144,17 @@ class Driver(object):
         -------
         Target
         """
+        self.log.log(WORDY, 'Selecting next target.')
+        target = DriverTarget()
 
-        target = Target()
-
-        target.targetid = 0
+        self.targetid += 1
+        target.targetid = self.targetid
         target.num_exp = 2
         target.exp_times = [15.0, 15.0]
         target.num_props = 1
         target.propid_list = [0]
+
+        time.sleep(1.0)
 
         return target
 
@@ -115,5 +169,6 @@ class Driver(object):
         -------
         Python list of one or more Observations
         """
+        self.log.log(WORDY, 'Registering observation %s.', observation)
 
         return [observation]
