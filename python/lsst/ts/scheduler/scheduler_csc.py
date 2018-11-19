@@ -221,7 +221,8 @@ class SchedulerCSC(base_csc.BaseCsc):
         id_data : `salobj.CommandIdData`
             Command ID and data
         """
-        self._do_change_state(id_data, "exitControl", [base_csc.State.STANDBY], base_csc.State.OFFLINE)
+        self._do_change_state(id_data, "exitControl", [base_csc.State.FAULT,
+                                                       base_csc.State.STANDBY], base_csc.State.OFFLINE)
 
     async def do_start(self, id_data):
         """Override superclass method to transition from `State.STANDBY` to `State.DISABLED`. This is the step where
@@ -485,6 +486,11 @@ class SchedulerCSC(base_csc.BaseCsc):
             self.log.log(WORDY, 'Putting target %i on the queue', target.targetid)
             add_task = await self.queue_remote.cmd_add.start(load_script_topic, timeout=self.parameters.cmd_timeout)
 
+            target_topic = self.evt_target.DataType()
+            target.fill_topic(target_topic)
+
+            self.evt_target.put(target_topic)  # publishes target event
+
             if add_task.ack.ack != self.queue_remote.salinfo.lib.SAL__CMD_COMPLETE:
                 raise IOError("Could not put target on queue.")
 
@@ -534,14 +540,20 @@ class SchedulerCSC(base_csc.BaseCsc):
         return script_ids
 
     async def get_script_info(self, index):
-        """
+        """Utility method to get information about a script sent to the queue.
 
         Parameters
         ----------
-        index
+        index: int
+            SalIndex of the script.
 
         Returns
         -------
+        info_coro: SALPY_ScriptQueue.ScriptQueue_logevent_scriptC
+
+        Raises
+        ------
+        base.AckError
 
         """
         info_coro = self.queue_remote.evt_script.next(timeout=10.)
@@ -752,10 +764,13 @@ class SchedulerCSC(base_csc.BaseCsc):
             return queue
 
     async def check_scheduled(self):
-        """ Loop through the target list and tell driver of completed observations.
+        """ Loop through the scheduled targets list, check status and tell driver of completed observations.
 
         Returns
         -------
+        bool
+            `True` if all checked scripts where Done or in non-final state. `False` if no scheduled targets to check or
+            if one or more scripts ended up a failed or unrecognized state.
 
         """
         ntargets = len(self.raw_telemetry['scheduled_targets'])
@@ -813,9 +828,6 @@ class SchedulerCSC(base_csc.BaseCsc):
         NOTE: This method may either run in the main event loop or in an event loop of a thread. If it is the first
         case, we need to make sure long running tasks are sent to a thread or a process. If the latter, then it
         should be ok to simple execute long running tasks and block the thread event loop.
-
-        Returns
-        -------
 
         """
 

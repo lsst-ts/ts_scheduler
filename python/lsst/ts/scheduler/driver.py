@@ -59,6 +59,33 @@ class DriverTarget(Target):
 
         return yaml.safe_dump(script_config)
 
+    def fill_topic(self, topic_target):
+        """ Fill in information on a given SAL topic.
+
+        Parameters
+        ----------
+        topic: SALPY_Scheduler.Scheduler_logevent_targetC
+
+        """
+        topic_target.targetId = self.targetid
+        topic_target.filter = self.filter
+        topic_target.requestTime = self.time
+        topic_target.ra = self.ra
+        topic_target.decl = self.dec
+        topic_target.skyAngle = self.ang
+        topic_target.numExposures = self.num_exp
+        for i, exptime in enumerate(self.exp_times):
+            topic_target.exposureTimes[i] = int(exptime)
+        topic_target.airmass = self.airmass
+        topic_target.skyBrightness = self.sky_brightness
+        topic_target.cloud = self.cloud
+        topic_target.seeing = self.seeing
+        topic_target.slewTime = self.slewtime
+        topic_target.numProposals = self.num_props
+        for i, prop_id in enumerate(self.propid_list):
+            topic_target.proposalId[i] = prop_id
+        topic_target.note = self.note
+
 
 class DriverParameters(pexConfig.Config):
     """Actual global driver configuration parameters.
