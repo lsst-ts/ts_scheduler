@@ -9,12 +9,19 @@ import numpy as np
 import SALPY_ScriptQueue
 import SALPY_Scheduler
 import lsst.ts.salobj as salobj
-from lsst.ts import scriptqueue
 from lsst.ts.scheduler import SchedulerCSC
+
+try:
+    with_scriptqueue = True
+    from lsst.ts import scriptqueue
+except ModuleNotFoundError:
+    with_scriptqueue = False
+    pass
 
 I0 = scriptqueue.script_queue.SCRIPT_INDEX_MULT  # initial Script SAL index
 
 
+@unittest.skipIf(not with_scriptqueue, "Could not import scriptqueue.")
 class SimpleTargetLoopTestCase(unittest.TestCase):
     """This unit test is designed to test the interaction of the simple target production loop of the Scheduler CSC
     with the LSST Queue.
