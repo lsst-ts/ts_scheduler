@@ -22,7 +22,9 @@ class EFDParameters():
     TEST_USER : str
         User name of the test EFD.
     TEST_PW : str
-        Password of the test EFD database. 
+        Password of the test EFD database.
+    MAX_RECONNECTION_ATTEMPTS : int
+        Number of attempts to reconnect a database before raising an error. 
     """
     def __init__(self):
 
@@ -44,6 +46,8 @@ class EFDParameters():
         # self.FOO_USER = 
         # self.FOO_PW =  
 
+        self.MAX_RECONNECTION_ATTEMPTS
+
 
 class EFDReader():
     """Manages a data structure populated by the EFD.
@@ -55,9 +59,14 @@ class EFDReader():
     Attributes
     ----------
     parameters : lsst.ts.scheduler.EFDParameters()
-        Class that contains the parameters to various EFD databases. 
+        Class that contains the parameters to various EFD databases and default 
+        attribute values for the EFDReader. 
     efd_telemetry : dict
-        Data structure to hold data retrieved from the EFD. 
+        Data structure to hold data retrieved from the EFD.
+    max_reconnection_attempts : int
+        Number of attempts to reconnect a database before raising an error.
+    connection : mysql.connector.connect()
+        Connection to the database the EFDReader() is polling data from.
     """
     def __init__(self, efd_telemetry=None, max_reconnection_attempts=None): 
         """Initialize EFDReader & relevent objects.
@@ -75,13 +84,21 @@ class EFDReader():
         
         if efd_telemetry == None:
             self.efd_telemetry = {}
-
         if not isinstance(self.efd_telemetry, dict):
             raise ValueError("efd_telemetry must be of type dictionary") 
 
-    def connect_to_db(self):
-        """Connects to database currently connecting to default.
+        if max_reconnection_attempts == None:
+            self.max_reconnection_attempts = EFDParameters.MAX_RECONNECTION_ATTEMPTS
+        if not isinstance(self.efd_telemetry, int):
+            raise ValueError("max_reconnection_attempts must be of type dictionary") 
 
+        self.connection = None
+        
+
+    def connect_to_db(self):
+        """Connects to database.
+
+        Currently connecting to a test bench EFD residing in Daves office.
         """
         host = self.parameters.TEST_HOST
         db = self.parameters.TEST_DB
@@ -91,9 +108,20 @@ class EFDReader():
         db_connection = mysql.connector.connect(host=host, database=db, 
                                                 user=user, password=pw)
 
-        df = pd.read_sql_query("SELECT * FROM scheduler_target", db_connection)        
-
-
-
     def update_efd_telemetry(self):
-        pass
+        """Updates the self.efd_telemetry data structure with relevant data.
+        
+        The self.efd_telemetry is a mapping from a a string name of the table,
+        to a pandas dataframe of that table. { name : pandas.datafream, ...}.
+
+        Returns
+        ----------
+        True if updated sucessfully, otherwise False
+        """ 
+        df = pd.read_sql_query("SELECT * FROM scheduler_target", db_connection)        
+        self.raw_telemetry["scheduler_target"] = df
+
+        # TODO: add all the other relevant tables and map them
+        # df = pd.read_sql_query("SELECT * FROM scheduler_*", db_connection)        
+        # self.raw_telemetry["scheduler_*"] = df
+        
