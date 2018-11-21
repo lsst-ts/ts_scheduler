@@ -9,7 +9,6 @@ setupRequired(sims_downtimeModel)
 setupRequired(ts_astrosky_model)
 setupRequired(ts_observatory_model)
 setupRequired(ts_schedulerConfig)
-setupRequired(ts_statemachine)
 setupRequired(ts_salobj)
 setupOptional(ts_scriptqueue)
 
