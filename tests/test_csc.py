@@ -5,7 +5,11 @@ import pytest
 import asyncio
 import salobj
 from lsst.ts.scheduler import SchedulerCSC
-import SALPY_Scheduler
+try:
+    import SALPY_Scheduler
+    run_test = True
+except ImportError:
+    run_test = False
 
 index_gen = salobj.index_generator()
 
@@ -19,6 +23,8 @@ class Harness:
 
 # FIXME: probably need to take care of LSST_DDS_DOMAIN
 
+
+@unittest.skipIf(run_test, "Could not import SALPY_Scheduler.")
 class TestSchedulerCSC(unittest.TestCase):
 
     def test_heartbeat(self):

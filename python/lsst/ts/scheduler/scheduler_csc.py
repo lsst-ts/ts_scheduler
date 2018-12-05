@@ -158,15 +158,15 @@ class SchedulerCSC(base_csc.BaseCsc):
             https://confluence.lsstcorp.org/display/~aheyer/CSC+Name+Guidlines.
             This index value refers to the Enumeration value specified in the
             ts_xml/sal_interfaces/SALSubsystem.xml file. Under the Scheduler
-            tag.  
+            tag. The scheduler will create a remote to communicate with the queue
+            with the same index.
         """
         self.log = logging.getLogger("SchedulerCSC")
 
         super().__init__(SALPY_Scheduler, index)
         self.summary_state = base_csc.State.OFFLINE
 
-        # Communication channel with OCS queue. This must probably be indexed as we will have a queue for the
-        # main telescope and one for auxtel.
+        # Communication channel with OCS queue.
         self.queue_remote = Remote(SALPY_ScriptQueue, index)
 
         self.parameters = SchedulerCscParameters()

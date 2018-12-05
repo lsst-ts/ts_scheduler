@@ -29,5 +29,8 @@ def create_parser():
                         help="Specify the timeout for the DDS messaging checks.")
     parser.add_argument("-p", "--path_config", dest="path", default=None, type=str,
                         help="Specify the path to the configuration directory.")
+    parser.add_argument("--index", dest="index", default=1, type=int,
+                        help="The Scheduler SAL index. This parameter basically defines which telescope the scheduler"
+                             "will be controlling, by matching the index of the scheduler and the queue.")
 
     return parser
