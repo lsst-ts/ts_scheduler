@@ -17,10 +17,11 @@ class Harness:
         self.csc.parameters.mode = 'DRY'  # need to set this to allow tests
         self.remote = salobj.Remote(SALPY_Scheduler, index)
 
-# FIXME: probably need to take care of LSST_DDS_DOMAIN
-
 
 class TestSchedulerCSC(unittest.TestCase):
+
+    def setUp(self):
+        salobj.set_random_lsst_dds_domain()
 
     def test_heartbeat(self):
         async def doit():
@@ -52,6 +53,11 @@ class TestSchedulerCSC(unittest.TestCase):
             commands = ("start", "enable", "disable", "exitControl", "standby")
 
             self.assertEqual(harness.csc.summary_state, salobj.State.STANDBY)
+
+            # Check that settingVersions was published
+
+            settings = harness.remote.evt_settingVersions.get()
+            self.assertIsNotNone(settings, "No settingVersions event published.")
 
             for bad_command in commands:
                 if bad_command in ("start", "exitControl"):
@@ -118,9 +124,13 @@ class TestSchedulerCSC(unittest.TestCase):
             self.assertEqual(id_ack.ack.error, 0)
             self.assertEqual(harness.csc.summary_state, salobj.State.DISABLED)
 
+            # Check that new settings is published afterwards
+            settings_coro = harness.remote.evt_settingVersions.next(flush=True, timeout=1)
             # send standby; new state is STANDBY
             cmd_attr = getattr(harness.remote, f"cmd_standby")
             id_ack = await cmd_attr.start(cmd_attr.DataType(), timeout=1.)
+            settings = await settings_coro
+            self.assertIsNotNone(settings)
             self.assertEqual(id_ack.ack.ack, harness.remote.salinfo.lib.SAL__CMD_COMPLETE)
             self.assertEqual(id_ack.ack.error, 0)
             self.assertEqual(harness.csc.summary_state, salobj.State.STANDBY)
