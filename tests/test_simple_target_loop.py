@@ -53,16 +53,9 @@ class SimpleTargetLoopTestCase(unittest.TestCase):
     async def enable_scheduler(self):
         """ Utility method to enable the scheduler CSC. """
 
-        # send enterControl; new state is STANDBY
-        state_coro = self.scheduler_remote.evt_summaryState.next(timeout=1.)
-        cmd_attr = getattr(self.scheduler_remote, f"cmd_enterControl")
-        await cmd_attr.start(cmd_attr.DataType(), timeout=1.)
-        state = await state_coro
-        self.assertEqual(state.summaryState, salobj.State.STANDBY,
-                         "Scheduler in %s, expected STANDBY. " % salobj.State(state.summaryState))
-
         # send start; new state is DISABLED
-        state_coro = self.scheduler_remote.evt_summaryState.next(timeout=1.)
+
+        state_coro = self.scheduler_remote.evt_summaryState.next(flush=True, timeout=1)
         cmd_attr = getattr(self.scheduler_remote, f"cmd_start")
         start_topic = cmd_attr.DataType()
         start_topic.settingsToApply = 'master'  # use master branch on configuration for unit tests.
@@ -72,11 +65,12 @@ class SimpleTargetLoopTestCase(unittest.TestCase):
                          "Scheduler in %s, expected DISABLE. " % salobj.State(state.summaryState))
 
         # send enable; new state is ENABLED
-        state_coro = self.scheduler_remote.evt_summaryState.next(timeout=1.)
+
         cmd_attr = getattr(self.scheduler_remote, f"cmd_enable")
+        state_coro = self.scheduler_remote.evt_summaryState.next(flush=False, timeout=1)
         await cmd_attr.start(cmd_attr.DataType(), timeout=1.)
 
-        self.assertEqual(self.scheduler.summary_state, salobj.State.ENABLED)
+        # self.assertEqual(self.scheduler.summary_state, salobj.State.ENABLED)
 
         state = await state_coro
         self.assertEqual(state.summaryState, salobj.State.ENABLED,
@@ -90,15 +84,19 @@ class SimpleTargetLoopTestCase(unittest.TestCase):
 
         self.assertEqual(self.queue.summary_state, salobj.State.ENABLED)
 
-    def test_simple_loop(self):
-        """Test the simple target production loop."""
+    def test_simple_loop_no_queue(self):
+        """Test the simple target production loop.
+
+        This test makes sure the scheduler will go to a fault state if it is enabled and the
+        queue is not disable.
+        """
 
         async def doit():
 
             # Test 1 - Enable scheduler Queue is not enable. Scheduler should go to ENABLE and then to FAULT
             # It may take some time for the scheduler to go to FAULT state.
 
-            state_coro = self.scheduler_remote.evt_summaryState.next(timeout=1.)
+            state_coro = self.scheduler_remote.evt_summaryState.next(flush=True, timeout=1.)
             await self.enable_scheduler()
 
             self.assertEqual(self.scheduler.summary_state, salobj.State.ENABLED,
@@ -112,14 +110,25 @@ class SimpleTargetLoopTestCase(unittest.TestCase):
             self.assertEqual(self.scheduler.summary_state, salobj.State.FAULT,
                              "Scheduler in %s, expected FAULT. " % salobj.State(state.summaryState))
 
-            # recover from fault state sending it to OFFLINE
-            cmd_attr = getattr(self.scheduler_remote, f"cmd_exitControl")
+            # recover from fault state sending it to STANDBY
+            cmd_attr = getattr(self.scheduler_remote, f"cmd_standby")
             await cmd_attr.start(cmd_attr.DataType(), timeout=1.)
 
-            self.assertEqual(self.scheduler.summary_state, salobj.State.OFFLINE,
-                             "Scheduler in %s, expected OFFLINE. " % salobj.State(self.scheduler.summary_state))
+            self.assertEqual(self.scheduler.summary_state, salobj.State.STANDBY,
+                             "Scheduler in %s, expected STANDBY. " % salobj.State(self.scheduler.summary_state))
 
-            # now enable queue...
+        asyncio.get_event_loop().run_until_complete(doit())
+
+    def test_simple_loop_with_queue(self):
+        """Test the simple target production loop.
+
+        This test makes sure the scheduler is capable of interacting with the queue and will produce
+        targets when both are enabled.
+        """
+
+        async def doit():
+
+            # enable queue...
             await self.enable_queue()
 
             # ...and try again. This time the scheduler should stay in enable and publish targets to the queue.
@@ -164,7 +173,7 @@ class SimpleTargetLoopTestCase(unittest.TestCase):
             cmd_attr = getattr(self.scheduler_remote, f"cmd_disable")
             await cmd_attr.start(cmd_attr.DataType())
 
-            # Scheduler should be in OFFLINE state.
+            # Scheduler should be in DISABLED state.
             self.assertEqual(self.scheduler.summary_state, salobj.State.DISABLED,
                              'Scheduler in %s, expected %s' % (self.scheduler.summary_state,
                                                                salobj.State.DISABLED))

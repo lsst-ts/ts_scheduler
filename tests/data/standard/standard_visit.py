@@ -3,7 +3,7 @@ __all__ = ["StandardVisit"]
 
 import asyncio
 
-from lsst.ts.scriptqueue.base_script import BaseScript
+from lsst.ts.scriptqueue import BaseScript
 
 
 class StandardVisit(BaseScript):

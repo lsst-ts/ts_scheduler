@@ -10,7 +10,7 @@ setupRequired(ts_astrosky_model)
 setupRequired(ts_observatory_model)
 setupRequired(ts_schedulerConfig)
 setupRequired(ts_salobj)
-setupOptional(ts_scriptqueue)
+setupRequired(ts_scriptqueue)
 
 envPrepend(PYTHONPATH, ${PRODUCT_DIR}/python)
 envPrepend(PATH, ${PRODUCT_DIR}/scripts)
