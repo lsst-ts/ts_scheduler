@@ -5,9 +5,7 @@ import logging
 import sys
 
 from lsst.ts.scheduler import SchedulerCSC
-# from lsst.ts.scheduler import Main
 from lsst.ts.scheduler.setup import configure_logging, create_parser, generate_logfile
-# from lsst.ts.scheduler import Driver
 
 def main(args):
     logfilename = generate_logfile()
@@ -16,25 +14,17 @@ def main(args):
     logger = logging.getLogger("scheduler")
     logger.info("logfile=%s" % logfilename)
 
-    csc = SchedulerCSC(0)  # FIXME: Index should come from args
+    csc = SchedulerCSC(args.index)
 
     loop = asyncio.get_event_loop()
 
     try:
         logger.info('Running CSC (Control+C to stop it)...')
-        loop.run_forever()
+        loop.run_until_complete(csc.done_task)
     except KeyboardInterrupt as e:
         logger.info('Stopping %s CSC.', args.subsystem_tag)
     finally:
         loop.close()
-
-    # scheduler = Main(args, Driver())
-    # scheduler.sal_init()
-    # with open('.scheduler_{}'.format(args.log_port), 'w'):
-    #     pass
-    # scheduler.run()
-    #
-    # sys.exit(0)
 
 
 if __name__ == '__main__':
