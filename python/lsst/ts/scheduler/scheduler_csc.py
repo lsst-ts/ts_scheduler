@@ -215,7 +215,7 @@ class SchedulerCSC(base_csc.BaseCsc):
         # Publish valid settings
         self.send_valid_settings()
 
-    def end_standby(self, id_data):
+    async def end_standby(self, id_data):
         """End do_standby.
 
         Called after state transition from `State.DISABLED` or `State.FAULT` to `State.STANDBY`
@@ -269,7 +269,7 @@ class SchedulerCSC(base_csc.BaseCsc):
 
         self._do_change_state(id_data, "start", [base_csc.State.STANDBY], base_csc.State.DISABLED)
 
-    def begin_enable(self, id_data):
+    async def begin_enable(self, id_data):
         """Begin do_enable.
 
         Called before state transition from `State.DISABLED` to `State.ENABLED`. This method will
