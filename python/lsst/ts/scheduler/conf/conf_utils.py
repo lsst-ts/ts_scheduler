@@ -2,7 +2,8 @@ import os
 
 
 def load_override_configuration(config, path):
-    """A utility method to load the pexConfig override configuration given a path.
+    """A utility method to load the pexConfig override configuration given a
+    path.
 
     Parameters
     ----------
@@ -23,5 +24,3 @@ def load_override_configuration(config, path):
         except AssertionError:
             # Not the right configuration file, so do nothing.
             pass
-
-
