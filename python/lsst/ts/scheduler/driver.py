@@ -1,25 +1,25 @@
 from builtins import object
 import logging
-import time
 import yaml
 
+import numpy as np
+
 from lsst.ts.scheduler.kernel import SurveyTopology
-from lsst.ts.scheduler.setup import WORDY
 
 from lsst.ts.observatory.model import Target
 
 import lsst.pex.config as pexConfig
 
-from SALPY_Scheduler import Scheduler_logevent_targetC
-
 __all__ = ["Driver", "DriverParameters"]
+
+WORDY = logging.DEBUG - 5
 
 
 class DriverTarget(Target):
-    """This class provides a wrapper around `lsst.ts.observatory.model.Target` to add utility
-    methods used by the Scheduler. The base class itself provides utility methods to interface
-    with the observatory model. The methods added here are scheduler-specific, hence the need
-    to subclass.
+    """This class provides a wrapper around `lsst.ts.observatory.model.Target`
+    to add utility methods used by the Scheduler. The base class itself
+    provides utility methods to interface with the observatory model. The
+    methods added here are scheduler-specific, hence the need to subclass.
 
     Parameters
     ----------
@@ -49,12 +49,12 @@ class DriverTarget(Target):
         super().__init__(targetid=targetid, fieldid=fieldid, band_filter=band_filter, ra_rad=ra_rad,
                          dec_rad=dec_rad, ang_rad=ang_rad, num_exp=num_exp, exp_times=exp_times)
 
-        # TODO: This method might need to be expanded in the future. Keeping it here as
-        # placeholder for now.
+        # TODO: This method might need to be expanded in the future.
+        # Keeping it here as placeholder for now.
 
     def get_script_config(self):
-        """Returns a yaml string representation of a dictionary with the configuration to be
-        used for the observing script.
+        """Returns a yaml string representation of a dictionary with the
+        configuration to be used for the observing script.
 
         Returns
         -------
@@ -70,34 +70,36 @@ class DriverTarget(Target):
 
         return yaml.safe_dump(script_config)
 
-    def as_evt_topic(self):
+    def as_evt_topic(self, exposure_times_size=10, proposal_id_size=5):
         """Returns a SAL target topic with the Target information.
 
         Returns
         -------
-        topic_target: `SALPY_Scheduler.Scheduler_logevent_targetC`
+        topic_target: `Scheduler_logevent_target`
 
         """
-        topic_target = Scheduler_logevent_targetC()
+        topic_target = dict()
 
-        topic_target.targetId = self.targetid
-        topic_target.filter = self.filter
-        topic_target.requestTime = self.time
-        topic_target.ra = self.ra
-        topic_target.decl = self.dec
-        topic_target.skyAngle = self.ang
-        topic_target.numExposures = self.num_exp
+        topic_target['targetId'] = self.targetid
+        topic_target["filter"] = self.filter
+        topic_target["requestTime"] = self.time
+        topic_target["ra"] = self.ra
+        topic_target["decl"] = self.dec
+        topic_target["skyAngle"] = self.ang
+        topic_target["numExposures"] = self.num_exp
+        topic_target["exposureTimes"] = np.zeros(exposure_times_size)
         for i, exptime in enumerate(self.exp_times):
-            topic_target.exposureTimes[i] = int(exptime)
-        topic_target.airmass = self.airmass
-        topic_target.skyBrightness = self.sky_brightness
-        topic_target.cloud = self.cloud
-        topic_target.seeing = self.seeing
-        topic_target.slewTime = self.slewtime
-        topic_target.numProposals = self.num_props
+            topic_target["exposureTimes"][i] = exptime
+        topic_target["airmass"] = self.airmass
+        topic_target["skyBrightness"] = self.sky_brightness
+        topic_target["cloud"] = self.cloud
+        topic_target["seeing"] = self.seeing
+        topic_target["slewTime"] = self.slewtime
+        topic_target["numProposals"] = self.num_props
+        topic_target["proposalId"] = np.zeros(proposal_id_size, dtype=int)
         for i, prop_id in enumerate(self.propid_list):
-            topic_target.proposalId[i] = prop_id
-        topic_target.note = self.note
+            topic_target["proposalId"][i] = int(prop_id)
+        topic_target["note"] = self.note
 
         return topic_target
 
@@ -105,26 +107,29 @@ class DriverTarget(Target):
 class DriverParameters(pexConfig.Config):
     """Actual global driver configuration parameters.
 
-    This can be expanded for other scheduler drivers. For instance, if your scheduler uses a certain
-    configuration file it is possible to subclass this and add the required parameters (e.g. file paths
-    or else). Then, replace `self.params` on the Driver by the subclassed configuration.
+    This can be expanded for other scheduler drivers. For instance, if your
+    scheduler uses a certain configuration file it is possible to subclass
+    this and add the required parameters (e.g. file paths or else). Then,
+    replace `self.params` on the Driver by the subclassed configuration.
     """
     pass
 
 
 class Driver(object):
-    """The Scheduler Driver is the module that normalizes the interface between any scheduling algorithm
-    to the LSST Scheduler CSC. The interface implements three main behaviours; configure an underlying
-    algorithm, request targets and register successful observations.
+    """The Scheduler Driver is the module that normalizes the interface between
+    any scheduling algorithm to the LSST Scheduler CSC. The interface
+    implements three main behaviours; configure an underlying algorithm,
+    request targets and register successful observations.
 
-    If the Scheduler algorithm requires a specific set of parameters the user must subclass
-    `DriverParameters`, in the same module as the `Driver`, and add the appropriate parameters using
-    the LSST pexConfig module.
+    If the Scheduler algorithm requires a specific set of parameters the user
+    must subclass `DriverParameters`, in the same module as the `Driver`, and
+    add the appropriate parameters using the LSST pexConfig module.
 
-    Access to the telemetry stream and models are also interfaced by `Driver`. The full list of default
-    available telemetry data is shown in the scheduler_csc module. Nevertheless, the full list of telemetry
-    may vary depending on the models used. The user has control over this while configuring the
-    Scheduler CSC.
+    Access to the telemetry stream and models are also interfaced by `Driver`.
+    The full list of default available telemetry data is shown in the
+    scheduler_csc module. Nevertheless, the full list of telemetry may vary
+    depending on the models used. The user has control over this while
+    configuring the Scheduler CSC.
 
     Parameters
     ----------
@@ -145,8 +150,9 @@ class Driver(object):
         self.targetid = 0
 
     def configure_scheduler(self):
-        """This method is responsible for running the scheduler configuration and returning the
-        survey topology, which specifies the number, name and type of projects running by the scheduler.
+        """This method is responsible for running the scheduler configuration
+        and returning the survey topology, which specifies the number, name
+        and type of projects running by the scheduler.
 
         By default it will just return a test survey topology.
 
@@ -165,14 +171,15 @@ class Driver(object):
         return survey_topology
 
     def cold_start(self, observations):
-        """Rebuilds the internal state of the scheduler from a list of observations.
+        """Rebuilds the internal state of the scheduler from a list of
+        observations.
 
         Parameters
         ----------
         observations : list of Observation objects
 
         """
-        raise NotImplemented
+        raise NotImplementedError("Cold start is not implemented.")
 
     def update_conditions(self):
         """
@@ -206,7 +213,8 @@ class Driver(object):
         return target
 
     def register_observation(self, observation):
-        """Validates observation and returns a list of successfully completed observations.
+        """Validates observation and returns a list of successfully completed
+        observations.
 
         Parameters
         ----------

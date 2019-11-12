@@ -1,12 +1,8 @@
 import logging
-import os
 import unittest
 
-from lsst.ts.dateloc import ObservatoryLocation
-from lsst.ts.observatory.model import ObservatoryModel
-from lsst.ts.scheduler.kernel import conf_file_path, read_conf_file
 from lsst.ts.scheduler import Driver
-from lsst.ts.observatory.model import Target, Observation
+from lsst.ts.observatory.model import Target
 from lsst.ts.scheduler.kernel import SurveyTopology
 
 
@@ -15,21 +11,7 @@ class TestSchedulerDriver(unittest.TestCase):
     def setUp(self):
         logging.getLogger().setLevel(logging.WARN)
 
-        # Initialize driver with empty models of raw_telemetry
         self.driver = Driver(models={}, raw_telemetry={})
-
-        # driver_conf_file = os.path.join(conf_path, "scheduler", "driver.conf")
-        # survey_conf_file = os.path.join(conf_path, "survey", "test_survey.conf")
-
-        # driver_confdict = read_conf_file(driver_conf_file)
-        # obs_site_confdict = ObservatoryLocation.get_configure_dict()
-        # obs_model_confdict = ObservatoryModel.get_configure_dict()
-
-        # self.driver.configure(driver_confdict)
-        # self.driver.configure_location(obs_site_confdict)
-        # self.driver.configure_observatory(obs_model_confdict)
-        #
-        # self.driver.configure_survey(survey_conf_file)
 
     def test_configure_scheduler(self):
         survey_topology = self.driver.configure_scheduler()

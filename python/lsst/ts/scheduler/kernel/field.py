@@ -3,6 +3,7 @@ import math
 
 __all__ = ["Field"]
 
+
 class Field(object):
 
     def __init__(self,
@@ -84,4 +85,5 @@ class Field(object):
             The instance containing the database row information.
         """
         return cls(row[0], math.radians(row[2]), math.radians(row[3]), math.radians(row[4]),
-                   math.radians(row[5]), math.radians(row[6]), math.radians(row[7]), math.radians(row[1]))
+                   math.radians(row[5]), math.radians(row[6]), math.radians(row[7]),
+                   math.radians(row[1]))

@@ -3,11 +3,12 @@ __all__ = ["StandardVisit"]
 
 import asyncio
 
-from lsst.ts.scriptqueue import BaseScript
+from lsst.ts.salobj import BaseScript
 
 
 class StandardVisit(BaseScript):
-    """A dummy standard visit script to test the scheduler interaction with the queue.
+    """A dummy standard visit script to test the scheduler interaction with
+    the queue.
 
     Parameters
     ----------

@@ -42,7 +42,7 @@ class SurveyTopology(object):
         topic.numSeqProps = self.num_seq_props
 
         general_propos = ''
-        for i,gen_prop in enumerate(self.general_propos):
+        for i, gen_prop in enumerate(self.general_propos):
             general_propos += gen_prop
             if i < self.num_general_props-1:
                 general_propos += ','
