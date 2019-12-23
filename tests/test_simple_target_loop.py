@@ -79,24 +79,24 @@ class SimpleTargetLoopTestCase(asynctest.TestCase):
 
         # Enable Scheduler
         await salobj.set_summary_state(self.scheduler_remote,
-                                       salobj.State.ENABLED,
-                                       settingsToApply='master')
+                                       salobj.State.ENABLED)
 
-        self.assertEqual(self.scheduler.summary_state, salobj.State.ENABLED,
-                         "Scheduler in %s, expected ENABLED. " % salobj.State(
-                             self.scheduler.summary_state))
+        # Wait until summary state is FAULT or Timeout
+        state = None
+        while True:
+            try:
+                evt_state = await self.scheduler_remote.evt_summaryState.next(flush=False,
+                                                                              timeout=STD_TIMEOUT)
+                state = salobj.State(evt_state.summaryState)
+                if state == salobj.State.FAULT:
+                    break
+            except asyncio.TimeoutError:
+                break
 
-        self.scheduler_remote.evt_summaryState.flush()
-        state = await self.scheduler_remote.evt_summaryState.next(flush=False, timeout=STD_TIMEOUT)
-
-        if state.summaryState == salobj.State.ENABLED:
-            state = await self.scheduler_remote.evt_summaryState.next(flush=False,
-                                                                      timeout=STD_TIMEOUT*2.)
-
-        self.assertEqual(state.summaryState, salobj.State.FAULT,
-                         "Scheduler in %s, expected FAULT. " % salobj.State(state.summaryState))
+        self.assertEqual(state, salobj.State.FAULT,
+                         f"Scheduler in {state}, expected FAULT. ")
         self.assertEqual(self.scheduler.summary_state, salobj.State.FAULT,
-                         "Scheduler in %s, expected FAULT. " % salobj.State(state.summaryState))
+                         f"Scheduler in {state}, expected FAULT. ")
 
         # recover from fault state sending it to STANDBY
         await self.scheduler_remote.cmd_standby.start(timeout=STD_TIMEOUT)
@@ -119,7 +119,7 @@ class SimpleTargetLoopTestCase(asynctest.TestCase):
         # ...and try again. This time the scheduler should stay in enable and
         # publish targets to the queue.
 
-        def assertEnable(data):
+        def assert_enable(data):
             """Callback function to make sure scheduler is enabled"""
             self.assertEqual(data.summaryState, salobj.State.ENABLED,
                              "Scheduler unexpectedly transitioned from "
@@ -138,10 +138,9 @@ class SimpleTargetLoopTestCase(asynctest.TestCase):
         self.scheduler_remote.evt_heartbeat.callback = count_heartbeats
 
         await salobj.set_summary_state(self.scheduler_remote,
-                                       salobj.State.ENABLED,
-                                       settingsToApply='master')
+                                       salobj.State.ENABLED)
 
-        self.scheduler_remote.evt_summaryState.callback = assertEnable
+        self.scheduler_remote.evt_summaryState.callback = assert_enable
 
         # Need to time this test and timeout if it takes took long
         start_time = time.time()
@@ -170,12 +169,12 @@ class SimpleTargetLoopTestCase(asynctest.TestCase):
                                 'Got %i of %i' % (self.received_targets,
                                                   self.expected_targets))
 
-        expected_heartbeats = int((end_time - start_time)/salobj.base_csc.HEARTBEAT_INTERVAL)
-        tolerance_heartbeats = int(np.floor(expected_heartbeats*self.heartbeats_tol))
-        self.assertGreaterEqual(self.heartbeats, expected_heartbeats-tolerance_heartbeats,
+        expected_heartbeats = int((end_time - start_time) / salobj.base_csc.HEARTBEAT_INTERVAL)
+        tolerance_heartbeats = int(np.floor(expected_heartbeats * self.heartbeats_tol))
+        self.assertGreaterEqual(self.heartbeats, expected_heartbeats - tolerance_heartbeats,
                                 'Scheduler responsiveness compromised. Received %i heartbeats, '
                                 'expected >%i' % (self.heartbeats,
-                                                  expected_heartbeats-tolerance_heartbeats))
+                                                  expected_heartbeats - tolerance_heartbeats))
 
 
 if __name__ == "__main__":

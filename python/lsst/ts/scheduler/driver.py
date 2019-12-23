@@ -8,7 +8,7 @@ from lsst.ts.scheduler.kernel import SurveyTopology
 
 from lsst.ts.observatory.model import Target
 
-import lsst.pex.config as pexConfig
+import lsst.pex.config as pex_config
 
 __all__ = ["Driver", "DriverParameters"]
 
@@ -104,7 +104,7 @@ class DriverTarget(Target):
         return topic_target
 
 
-class DriverParameters(pexConfig.Config):
+class DriverParameters(pex_config.Config):
     """Actual global driver configuration parameters.
 
     This can be expanded for other scheduler drivers. For instance, if your
@@ -149,12 +149,17 @@ class Driver(object):
         self.raw_telemetry = raw_telemetry
         self.targetid = 0
 
-    def configure_scheduler(self):
+    def configure_scheduler(self, config=None):
         """This method is responsible for running the scheduler configuration
         and returning the survey topology, which specifies the number, name
         and type of projects running by the scheduler.
 
         By default it will just return a test survey topology.
+
+        Parameters
+        ----------
+        config : `types.SimpleNamespace`
+            Configuration, as described by ``schema/Scheduler.yaml``
 
         Returns
         -------

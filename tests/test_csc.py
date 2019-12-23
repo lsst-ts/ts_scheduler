@@ -1,17 +1,26 @@
+import os
+import glob
+import time
+import pathlib
 import unittest
 import asynctest
-import time
+
 from lsst.ts import salobj
 from lsst.ts.scheduler import SchedulerCSC
 
 index_gen = salobj.index_generator()
 
+SHORT_TIMEOUT = 5.
+LONG_TIMEOUT = 30.
+LONG_LONG_TIMEOUT = 120.
+TEST_CONFIG_DIR = pathlib.Path(__file__).parents[1].joinpath("tests", "data", "config")
+
 
 class Harness:
-    def __init__(self):
+    def __init__(self, config_dir=None):
         index = 0  # next(index_gen)
         salobj.test_utils.set_random_lsst_dds_domain()
-        self.csc = SchedulerCSC(index=index)
+        self.csc = SchedulerCSC(index=index, config_dir=config_dir)
         self.csc.parameters.mode = 'DRY'  # need to set this to allow tests
         self.remote = salobj.Remote(self.csc.domain, "Scheduler", index=index)
 
@@ -61,7 +70,7 @@ class TestSchedulerCSC(asynctest.TestCase):
 
             # Check that settingVersions was published
 
-            settings = harness.remote.evt_settingVersions.get()
+            settings = await harness.remote.evt_settingVersions.aget(timeout=SHORT_TIMEOUT)
             self.assertIsNotNone(settings, "No settingVersions event published.")
 
             for bad_command in commands:
@@ -70,7 +79,7 @@ class TestSchedulerCSC(asynctest.TestCase):
                 with self.subTest(bad_command=bad_command):
                     cmd_attr = getattr(harness.remote, f"cmd_{bad_command}")
                     with self.assertRaises(salobj.AckError):
-                        id_ack = await cmd_attr.start(timeout=1.)
+                        id_ack = await cmd_attr.start(timeout=SHORT_TIMEOUT)
                         self.assertEqual(id_ack.ack.ack,
                                          salobj.SalRetCode.CMD_FAILED)
                         self.assertNotEqual(id_ack.ack.error, 0)
@@ -80,8 +89,7 @@ class TestSchedulerCSC(asynctest.TestCase):
             harness.remote.evt_summaryState.flush()
 
             # this one takes longer to execute
-            id_ack = await harness.remote.cmd_start.set_start(settingsToApply='master',
-                                                              timeout=120)
+            id_ack = await harness.remote.cmd_start.set_start(timeout=LONG_LONG_TIMEOUT)
             state = await harness.remote.evt_summaryState.next(flush=False, timeout=10.)
 
             self.assertEqual(id_ack.ack, salobj.SalRetCode.CMD_COMPLETE)
@@ -99,7 +107,7 @@ class TestSchedulerCSC(asynctest.TestCase):
                 with self.subTest(bad_command=bad_command):
                     cmd_attr = getattr(harness.remote, f"cmd_{bad_command}")
                     with self.assertRaises(salobj.AckError):
-                        id_ack = await cmd_attr.start(timeout=1.)
+                        id_ack = await cmd_attr.start(timeout=SHORT_TIMEOUT)
                         self.assertEqual(id_ack.ack,
                                          salobj.SalRetCode.CMD_COMPLETE)
                         self.assertNotEqual(id_ack.error, 0)
@@ -108,8 +116,8 @@ class TestSchedulerCSC(asynctest.TestCase):
             # send enable; new state is ENABLED
             harness.remote.evt_summaryState.flush()
 
-            id_ack = await harness.remote.cmd_enable.start(timeout=1.)
-            state = await harness.remote.evt_summaryState.next(flush=False, timeout=1.)
+            id_ack = await harness.remote.cmd_enable.start(timeout=SHORT_TIMEOUT)
+            state = await harness.remote.evt_summaryState.next(flush=False, timeout=SHORT_TIMEOUT)
 
             self.assertEqual(id_ack.ack, salobj.SalRetCode.CMD_COMPLETE)
             self.assertEqual(id_ack.error, 0)
@@ -122,7 +130,7 @@ class TestSchedulerCSC(asynctest.TestCase):
                 with self.subTest(bad_command=bad_command):
                     cmd_attr = getattr(harness.remote, f"cmd_{bad_command}")
                     with self.assertRaises(salobj.AckError):
-                        id_ack = await cmd_attr.start(cmd_attr.DataType(), timeout=1.)
+                        id_ack = await cmd_attr.start(cmd_attr.DataType(), timeout=SHORT_TIMEOUT)
                         self.assertEqual(id_ack.ack.ack,
                                          salobj.SalRetCode.CMD_FAILED)
                         self.assertNotEqual(id_ack.ack.error, 0)
@@ -131,24 +139,47 @@ class TestSchedulerCSC(asynctest.TestCase):
             # send disable; new state is DISABLED
             harness.remote.evt_summaryState.flush()
 
-            id_ack = await harness.remote.cmd_disable.start(timeout=1.)
-            state = await harness.remote.evt_summaryState.next(flush=False, timeout=1.)
+            id_ack = await harness.remote.cmd_disable.start(timeout=LONG_LONG_TIMEOUT)
+            state = await harness.remote.evt_summaryState.next(flush=False, timeout=SHORT_TIMEOUT)
             self.assertEqual(id_ack.ack, salobj.SalRetCode.CMD_COMPLETE)
             self.assertEqual(id_ack.error, 0)
             self.assertEqual(harness.csc.summary_state, salobj.State.DISABLED)
-            self.assertEqual(state.summaryState, salobj.State.DISABLED)
+            self.assertEqual(salobj.State(state.summaryState), salobj.State.DISABLED)
 
             # Check that new settings is published afterwards
             harness.remote.evt_settingVersions.flush()
 
             # send standby; new state is STANDBY
 
-            id_ack = await harness.remote.cmd_standby.start(timeout=1.)
+            id_ack = await harness.remote.cmd_standby.start(timeout=SHORT_TIMEOUT)
             settings = await harness.remote.evt_settingVersions.next(flush=False, timeout=1)
             self.assertIsNotNone(settings)
             self.assertEqual(id_ack.ack, salobj.SalRetCode.CMD_COMPLETE)
             self.assertEqual(id_ack.error, 0)
             self.assertEqual(harness.csc.summary_state, salobj.State.STANDBY)
+
+    async def test_configuration(self):
+        """Test basic configuration.
+        """
+        async with Harness(config_dir=TEST_CONFIG_DIR) as harness:
+            self.assertEqual(harness.csc.summary_state, salobj.State.STANDBY)
+            state = await harness.remote.evt_summaryState.next(flush=False, timeout=LONG_TIMEOUT)
+            self.assertEqual(state.summaryState, salobj.State.STANDBY)
+
+            invalid_files = glob.glob(os.path.join(TEST_CONFIG_DIR, "invalid_*.yaml"))
+            bad_config_names = [os.path.basename(name) for name in invalid_files]
+            bad_config_names.append("no_such_file.yaml")
+            for bad_config_name in bad_config_names:
+                with self.subTest(bad_config_name=bad_config_name):
+                    harness.remote.cmd_start.set(settingsToApply=bad_config_name)
+                    with salobj.test_utils.assertRaisesAckError():
+                        await harness.remote.cmd_start.start(timeout=SHORT_TIMEOUT)
+
+            harness.remote.cmd_start.set(settingsToApply="all_fields")
+            await harness.remote.cmd_start.start(timeout=SHORT_TIMEOUT)
+            self.assertEqual(harness.csc.summary_state, salobj.State.DISABLED)
+            state = await harness.remote.evt_summaryState.next(flush=False, timeout=SHORT_TIMEOUT)
+            self.assertEqual(state.summaryState, salobj.State.DISABLED)
 
 
 if __name__ == '__main__':
