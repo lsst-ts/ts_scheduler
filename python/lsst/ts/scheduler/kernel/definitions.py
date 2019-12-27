@@ -1,8 +1,5 @@
 from collections import defaultdict
-try:
-    import configparser
-except ImportError:
-    import Configparser as configparser
+import configparser
 import os
 import pkg_resources
 import re

@@ -15,7 +15,7 @@ class SurveyTopology(object):
 
     @property
     def num_props(self):
-        return self.num_seq_props+self.num_general_props
+        return self.num_seq_props + self.num_general_props
 
     def from_topic(self, topic):
 
@@ -44,7 +44,7 @@ class SurveyTopology(object):
         general_propos = ''
         for i, gen_prop in enumerate(self.general_propos):
             general_propos += gen_prop
-            if i < self.num_general_props-1:
+            if i < self.num_general_props - 1:
                 general_propos += ','
 
         topic.generalPropos = general_propos
@@ -52,7 +52,7 @@ class SurveyTopology(object):
         sequence_propos = ''
         for i, seq_prop in enumerate(self.sequence_propos):
             sequence_propos += seq_prop
-            if i < self.num_seq_props-1:
+            if i < self.num_seq_props - 1:
                 sequence_propos += ','
 
         topic.sequencePropos = sequence_propos
