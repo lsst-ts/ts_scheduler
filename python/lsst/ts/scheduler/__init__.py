@@ -8,5 +8,5 @@ try:
 except ModuleNotFoundError:
     __version__ = "?"
 
-from .driver import *
+from .driver.driver import *
 from .scheduler_csc import *

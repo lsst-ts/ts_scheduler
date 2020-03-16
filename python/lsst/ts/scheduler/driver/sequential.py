@@ -24,7 +24,7 @@ class SequentialTarget(DriverTarget):
         config_str: str
         """
 
-        return self.config
+        return yaml.safe_dump(self.config)
 
 
 class SequentialParameters(DriverParameters):
@@ -102,6 +102,9 @@ class SequentialScheduler(Driver):
         survey_topology: `lsst.ts.scheduler.kernel.SurveyTopology`
 
         """
+
+        if not hasattr(config, "observing_list"):
+            raise RuntimeError("No observing list provided in configuration.")
 
         if not os.path.exists(config.observing_list):
             raise RuntimeError(f"Observing list {config.observing_list} not found.")

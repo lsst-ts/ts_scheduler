@@ -1,7 +1,7 @@
 import logging
 import unittest
 
-from lsst.ts.scheduler import Driver
+from lsst.ts.scheduler.driver import Driver
 from lsst.ts.observatory.model import Target
 from lsst.ts.scheduler.kernel import SurveyTopology
 

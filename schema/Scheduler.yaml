@@ -4,7 +4,7 @@ $id: https://github.com/lsst-ts/ts_scheduler/blob/master/schema/Scheduler.yaml
 title: Scheduler v1
 description: Schema for Scheduler configuration files
 type: object
-additionalProperties: false
+additionalProperties: true
 properties:
   driver_type:
     description: >-

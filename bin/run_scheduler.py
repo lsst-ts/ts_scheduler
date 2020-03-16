@@ -22,6 +22,10 @@
 
 """Run scheduler CSC"""
 
+import logging
+
 from lsst.ts.scheduler import SchedulerCSC
+
+logging.basicConfig(level=logging.DEBUG)
 
 SchedulerCSC.main(index=True)
