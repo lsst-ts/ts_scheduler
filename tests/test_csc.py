@@ -2,6 +2,7 @@ import os
 import glob
 import time
 import pathlib
+import logging
 import unittest
 import asynctest
 
@@ -9,6 +10,9 @@ from lsst.ts import salobj
 from lsst.ts.scheduler import SchedulerCSC
 
 index_gen = salobj.index_generator()
+
+logger = logging.getLogger()
+logger.level = logging.DEBUG
 
 SHORT_TIMEOUT = 5.
 LONG_TIMEOUT = 30.

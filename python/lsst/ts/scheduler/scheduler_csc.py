@@ -5,7 +5,6 @@ import inspect
 import asyncio
 import time
 import traceback
-from collections import namedtuple
 
 from lsst.ts import salobj
 from lsst.ts.idl.enums import ScriptQueue
@@ -65,7 +64,7 @@ class SchedulerCscParameters(pex_config.Config):
     driver_type = pex_config.Field("Choose a driver to use. This should be an import string that "
                                    "is passed to `importlib.import_module()`. Model will look for "
                                    "a subclass of Driver class inside the module.", str,
-                                   default='lsst.ts.scheduler.driver')
+                                   default='lsst.ts.scheduler.driver.driver')
     night_boundary = pex_config.Field('Solar altitude (degrees) when it is considered night.',
                                       float)
     new_moon_phase_threshold = pex_config.Field("New moon phase threshold for swapping to dark "
@@ -116,7 +115,7 @@ class SchedulerCscParameters(pex_config.Config):
     def set_defaults(self):
         """Set defaults for the LSST Scheduler's Driver.
         """
-        self.driver_type = 'lsst.ts.scheduler.driver'
+        self.driver_type = 'lsst.ts.scheduler.driver.driver'
         self.startup_type = 'HOT'
         self.startup_database = ''
         self.mode = 'SIMPLE'
@@ -526,10 +525,13 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         driver_type = None
         for member in members_of_driver_lib:
-            if issubclass(member[1], Driver):
-                self.log.debug('Found driver %s%s', member[0], member[1])
-                driver_type = member[1]
-                break
+            try:
+                if issubclass(member[1], Driver):
+                    self.log.debug('Found driver %s%s', member[0], member[1])
+                    driver_type = member[1]
+                    # break
+            except TypeError:
+                pass
 
         if driver_type is None:
             raise RuntimeError("Could not find Driver on module %s" % config.driver_type)
@@ -768,13 +770,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         # cannot create copies of topics. So instead, it parse the topic into
         # a named tuple so it is possible to access the data the same way if
         # the topic itself was stored.
-        content = {}
-        for item in dir(data):
-            if not item.startswith('__'):
-                content[item] = getattr(data, item)
-        Topic = namedtuple("Topic", content)
 
-        self.script_info[data.salIndex] = Topic(**content)
+        self.script_info[data.salIndex] = data
 
         # Make sure the size of script info is smaller then the maximum allowed
         script_info_size = len(self.script_info)
