@@ -1,4 +1,4 @@
-driver_type: "lsst.ts.scheduler.driver"
+driver_type: "lsst.ts.scheduler.driver.driver"
 startup_type: "HOT"
 startup_database: " "
 mode: "SIMPLE"

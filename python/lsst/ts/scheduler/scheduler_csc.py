@@ -64,7 +64,7 @@ class SchedulerCscParameters(pex_config.Config):
     driver_type = pex_config.Field("Choose a driver to use. This should be an import string that "
                                    "is passed to `importlib.import_module()`. Model will look for "
                                    "a subclass of Driver class inside the module.", str,
-                                   default='lsst.ts.scheduler.driver')
+                                   default='lsst.ts.scheduler.driver.driver')
     night_boundary = pex_config.Field('Solar altitude (degrees) when it is considered night.',
                                       float)
     new_moon_phase_threshold = pex_config.Field("New moon phase threshold for swapping to dark "
@@ -115,7 +115,7 @@ class SchedulerCscParameters(pex_config.Config):
     def set_defaults(self):
         """Set defaults for the LSST Scheduler's Driver.
         """
-        self.driver_type = 'lsst.ts.scheduler.driver'
+        self.driver_type = 'lsst.ts.scheduler.driver.driver'
         self.startup_type = 'HOT'
         self.startup_database = ''
         self.mode = 'SIMPLE'

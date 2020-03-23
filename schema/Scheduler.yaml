@@ -12,7 +12,7 @@ properties:
       to `importlib.import_module()`. Model will look for a subclass of Driver
       class inside the module.
     type: string
-    default: "lsst.ts.scheduler.driver"
+    default: "lsst.ts.scheduler.driver.driver"
   startup_type:
     description: The method used to startup the scheduler.
     type: string

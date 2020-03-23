@@ -12,7 +12,7 @@ __all__ = ["SequentialParameters", "SequentialScheduler"]
 class SequentialTarget(DriverTarget):
 
     def __init__(self, config, targetid=0):
-        super().__init__(targetid=targetid)
+        super().__init__(targetid=targetid, num_exp=1, exp_times=[0.])
         self.config = config
 
     def get_script_config(self):
