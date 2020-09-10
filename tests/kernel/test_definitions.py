@@ -3,6 +3,7 @@ import unittest
 
 from lsst.ts.scheduler.kernel import conf_file_path, read_conf_file
 
+
 class DefinitionsTest(unittest.TestCase):
 
     def test_conf_file_path(self):

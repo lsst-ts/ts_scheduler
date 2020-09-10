@@ -1,8 +1,5 @@
 from collections import defaultdict
-try:
-    import configparser
-except ImportError:
-    import Configparser as configparser
+import configparser
 import os
 import pkg_resources
 import re
@@ -13,9 +10,10 @@ __all__ = ["read_conf_file", "conf_file_path"]
 def read_conf_file(filename):
     """Read the new type of configuration file.
 
-    This function reads the new type of configuration file that contains sections. It also
-    has the capability to take parameters as math expressions and lists. String entries in
-    list parameters do not need to be surrounded by quotes. An example file is shown below:
+    This function reads the new type of configuration file that contains
+    sections. It also has the capability to take parameters as math expressions
+    and lists. String entries in list parameters do not need to be surrounded
+    by quotes. An example file is shown below:
 
     [section]
     # Floating point parameter
@@ -104,7 +102,8 @@ def read_conf_file(filename):
 def conf_file_path(resource, *paths):
     """Find a configuration file in the package.
 
-    This function uses internal knowledge to determine the correct path of a given
+    This function uses internal knowledge to determine the correct path of a
+    given
     configuration file.
 
     Parameters
@@ -112,7 +111,8 @@ def conf_file_path(resource, *paths):
     resource : str
         The name of a module. Usually passed via __name__.
     paths : set of strs
-        A variable length set of strings giving the sub-directories and finally the file name.
+        A variable length set of strings giving the sub-directories and
+        finally the file name.
 
     Returns
     -------

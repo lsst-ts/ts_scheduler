@@ -1,0 +1,28 @@
+target1:
+  ra: 12:00:00
+  dec: -10:00:00
+  name: tile1
+  exptimes:
+    - 15.
+    - 15.
+  filters:
+    - r
+    - r
+target2:
+  ra: 12:00:00
+  dec: -13:30:00
+  name: tile2
+  exptimes:
+    - 15.
+    - 15.
+  filters:
+    - r
+    - r
+target3:
+  name: m104
+  exptimes:
+    - 15.
+    - 15.
+  filters:
+    - r
+    - r
