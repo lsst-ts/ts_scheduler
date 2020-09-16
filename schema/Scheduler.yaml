@@ -69,10 +69,17 @@ properties:
     default: 100
   location:
     type: object
+    default:
+      obs_site:
+        name: Vera Rubin Observatory
     properties:
       obs_site:
         type: object
         properties:
+          name:
+            description: Name of the observatory.
+            type: string
+            default: Vera Rubin Observatory
           latitude:
             description: Observatory Latitude (degree).
             type: number
@@ -89,6 +96,19 @@ properties:
     additionalProperties: false
   observatory_model:
     type: object
+    default:
+      telescope:
+        altitude_minpos: 20.0
+        altitude_maxpos: 86.5
+        azimuth_minpos: -270.0
+        azimuth_maxpos: 270.0
+        altitude_maxspeed: 3.5
+        altitude_accel: 3.5
+        altitude_decel: 3.5
+        azimuth_maxspeed: 7.0
+        azimuth_accel: 7.0
+        azimuth_decel: 7.0
+        settle_time: 3.0
     properties:
       telescope:
         type: object

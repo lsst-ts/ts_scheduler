@@ -1,10 +1,31 @@
+# This file is part of ts_scheduler
+#
+# Developed for the LSST Telescope and Site Systems.
+# This product includes software developed by the LSST Project
+# (https://www.lsst.org).
+# See the COPYRIGHT file at the top-level directory of this distribution
+# for details of code ownership.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+
+import os
 from builtins import object
 import logging
 import yaml
 
 import numpy as np
 
-from lsst.ts.scheduler.kernel import SurveyTopology
+from .survey_topology import SurveyTopology
 
 from lsst.ts.observatory.model import Target
 
@@ -42,12 +63,30 @@ class DriverTarget(Target):
         of num_exp.
 
     """
-    def __init__(self, sal_index=0, targetid=0, fieldid=0, band_filter="",
-                 ra_rad=0.0, dec_rad=0.0, ang_rad=0.0,
-                 num_exp=0, exp_times=[]):
+
+    def __init__(
+        self,
+        sal_index=0,
+        targetid=0,
+        fieldid=0,
+        band_filter="",
+        ra_rad=0.0,
+        dec_rad=0.0,
+        ang_rad=0.0,
+        num_exp=0,
+        exp_times=[],
+    ):
         self.sal_index = sal_index
-        super().__init__(targetid=targetid, fieldid=fieldid, band_filter=band_filter, ra_rad=ra_rad,
-                         dec_rad=dec_rad, ang_rad=ang_rad, num_exp=num_exp, exp_times=exp_times)
+        super().__init__(
+            targetid=targetid,
+            fieldid=fieldid,
+            band_filter=band_filter,
+            ra_rad=ra_rad,
+            dec_rad=dec_rad,
+            ang_rad=ang_rad,
+            num_exp=num_exp,
+            exp_times=exp_times,
+        )
 
         # TODO: This method might need to be expanded in the future.
         # Keeping it here as placeholder for now.
@@ -60,13 +99,15 @@ class DriverTarget(Target):
         -------
         config_str: str
         """
-        script_config = {'targetid': self.targetid,
-                         'band_filter': self.filter,
-                         'ra': self.ra,
-                         'dec': self.dec,
-                         'ang': self.ang,
-                         'num_exp': self.num_exp,
-                         'exp_times': self.exp_times}
+        script_config = {
+            "targetid": self.targetid,
+            "band_filter": self.filter,
+            "ra": self.ra,
+            "dec": self.dec,
+            "ang": self.ang,
+            "num_exp": self.num_exp,
+            "exp_times": self.exp_times,
+        }
 
         return yaml.safe_dump(script_config)
 
@@ -80,7 +121,7 @@ class DriverTarget(Target):
         """
         topic_target = dict()
 
-        topic_target['targetId'] = self.targetid
+        topic_target["targetId"] = self.targetid
         topic_target["filter"] = self.filter
         topic_target["requestTime"] = self.time
         topic_target["ra"] = self.ra
@@ -112,6 +153,7 @@ class DriverParameters(pex_config.Config):
     this and add the required parameters (e.g. file paths or else). Then,
     replace `self.params` on the Driver by the subclassed configuration.
     """
+
     pass
 
 
@@ -138,8 +180,12 @@ class Driver(object):
     raw_telemetry: `dict`
         A dictionary with available raw telemetry.
     """
-    def __init__(self, models, raw_telemetry, parameters=None):
-        self.log = logging.getLogger("schedulerDriver")
+
+    def __init__(self, models, raw_telemetry, parameters=None, log=None):
+        if log is None:
+            self.log = logging.getLogger(type(self).__name__)
+        else:
+            self.log = log.getChild(type(self).__name__)
 
         if parameters is None:
             self.parameters = DriverParameters()
@@ -205,7 +251,7 @@ class Driver(object):
         Target
 
         """
-        self.log.log(WORDY, 'Selecting next target.')
+        self.log.log(WORDY, "Selecting next target.")
 
         self.targetid += 1
         target = DriverTarget(targetid=self.targetid)
@@ -229,6 +275,31 @@ class Driver(object):
         -------
         Python list of one or more Observations
         """
-        self.log.log(WORDY, 'Registering observation %s.', observation)
+        self.log.log(WORDY, "Registering observation %s.", observation)
 
         return [observation]
+
+    def load(self, config):
+        """Load a modifying configuration.
+
+        The input is a file that the Driver must be able to parse. It should
+        contain that the driver can parse to reconfigure the current scheduler
+        algorithm. For instance, it could contain new targets to add to a queue
+        or project.
+
+        Each Driver must implement its own load method. This method just checks
+        that the file exists.
+
+        Parameters
+        ----------
+        config : `str`
+            Configuration to load
+
+        Raises
+        ------
+        RuntimeError:
+            If input configuration file does not exists.
+
+        """
+        if not os.path.exists(config):
+            raise RuntimeError(f"Input configuration file {config} does not exist.")
