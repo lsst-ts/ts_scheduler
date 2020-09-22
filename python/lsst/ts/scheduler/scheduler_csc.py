@@ -27,7 +27,7 @@ from lsst.sims.downtimeModel import version as downtime_version
 
 import lsst.pex.config as pex_config
 
-__all__ = ['SchedulerCSC', 'SchedulerCscParameters']
+__all__ = ["SchedulerCSC", "SchedulerCscParameters"]
 
 NO_QUEUE = 300
 """Could not connect to the queue (`int`).
@@ -51,9 +51,13 @@ call to `Driver.select_next_target` this error code will, most likely, be
 issued (along with the traceback message).
 """
 
-NonFinalStates = frozenset((ScriptQueue.ScriptProcessState.LOADING.value,
-                            ScriptQueue.ScriptProcessState.CONFIGURED.value,
-                            ScriptQueue.ScriptProcessState.RUNNING.value))
+NonFinalStates = frozenset(
+    (
+        ScriptQueue.ScriptProcessState.LOADING.value,
+        ScriptQueue.ScriptProcessState.CONFIGURED.value,
+        ScriptQueue.ScriptProcessState.RUNNING.value,
+    )
+)
 """Stores all non final state for scripts submitted to the queue.
 """
 
@@ -61,69 +65,94 @@ NonFinalStates = frozenset((ScriptQueue.ScriptProcessState.LOADING.value,
 class SchedulerCscParameters(pex_config.Config):
     """Configuration of the LSST Scheduler's Model.
     """
-    driver_type = pex_config.Field("Choose a driver to use. This should be an import string that "
-                                   "is passed to `importlib.import_module()`. Model will look for "
-                                   "a subclass of Driver class inside the module.", str,
-                                   default='lsst.ts.scheduler.driver.driver')
-    night_boundary = pex_config.Field('Solar altitude (degrees) when it is considered night.',
-                                      float)
-    new_moon_phase_threshold = pex_config.Field("New moon phase threshold for swapping to dark "
-                                                "time filter.",
-                                                float)
-    startup_type = pex_config.ChoiceField("The method used to startup the scheduler.", str,
-                                          default='HOT',
-                                          allowed={"HOT": "Hot start, this means the scheduler is "
-                                                          "started up from scratch",
-                                                   "WARM": "Reads the scheduler state from a "
-                                                           "previously saved internal state.",
-                                                   "COLD": "Rebuilds scheduler state from "
-                                                           "observation database.", })
-    startup_database = pex_config.Field("Path to the file holding scheduler state or observation "
-                                        "database to be used on WARM or COLD start.",
-                                        str, default='')
-    mode = pex_config.ChoiceField("The mode of operation of the scheduler. This basically chooses "
-                                  "one of the available target production loops. ",
-                                  str,
-                                  default='SIMPLE',
-                                  allowed={"SIMPLE": "The Scheduler will publish one target at a "
-                                                     "time, no next target published in advance "
-                                                     "and no predicted schedule.",
-                                           "ADVANCE": "The Scheduler will pre-compute a predicted "
-                                                      "schedule that is published as an event and "
-                                                      "will fill the queue with a specified "
-                                                      "number of targets. The scheduler will then "
-                                                      "monitor the telemetry stream, recompute the "
-                                                      "queue and change next target up to a "
-                                                      "certain lead time.",
-                                           "DRY": "Once the Scheduler is enabled it won't do "
-                                                  "anything. Useful for testing",
-                                           }
-                                  )
-    n_targets = pex_config.Field('Number of targets to put in the queue ahead of time.', int,
-                                 default=1)
-    predicted_scheduler_window = pex_config.Field('Size of predicted scheduler window, in hours.',
-                                                  float, default=2.)
-    loop_sleep_time = pex_config.Field('How long should the target production loop wait when '
-                                       'there is a wait event. Unit = seconds.', float, default=1.)
-    cmd_timeout = pex_config.Field('Global command timeout. Unit = seconds.', float, default=60.)
-    observing_script = pex_config.Field("Name of the observing script.", str,
-                                        default='standard_visit.py')
-    observing_script_is_standard = pex_config.Field("Is observing script standard?", bool,
-                                                    default=True)
-    max_scripts = pex_config.Field('Maximum number of scripts to keep track of.', int, default=100)
+
+    driver_type = pex_config.Field(
+        "Choose a driver to use. This should be an import string that "
+        "is passed to `importlib.import_module()`. Model will look for "
+        "a subclass of Driver class inside the module.",
+        str,
+        default="lsst.ts.scheduler.driver.driver",
+    )
+    night_boundary = pex_config.Field(
+        "Solar altitude (degrees) when it is considered night.", float
+    )
+    new_moon_phase_threshold = pex_config.Field(
+        "New moon phase threshold for swapping to dark " "time filter.", float
+    )
+    startup_type = pex_config.ChoiceField(
+        "The method used to startup the scheduler.",
+        str,
+        default="HOT",
+        allowed={
+            "HOT": "Hot start, this means the scheduler is " "started up from scratch",
+            "WARM": "Reads the scheduler state from a "
+            "previously saved internal state.",
+            "COLD": "Rebuilds scheduler state from " "observation database.",
+        },
+    )
+    startup_database = pex_config.Field(
+        "Path to the file holding scheduler state or observation "
+        "database to be used on WARM or COLD start.",
+        str,
+        default="",
+    )
+    mode = pex_config.ChoiceField(
+        "The mode of operation of the scheduler. This basically chooses "
+        "one of the available target production loops. ",
+        str,
+        default="SIMPLE",
+        allowed={
+            "SIMPLE": "The Scheduler will publish one target at a "
+            "time, no next target published in advance "
+            "and no predicted schedule.",
+            "ADVANCE": "The Scheduler will pre-compute a predicted "
+            "schedule that is published as an event and "
+            "will fill the queue with a specified "
+            "number of targets. The scheduler will then "
+            "monitor the telemetry stream, recompute the "
+            "queue and change next target up to a "
+            "certain lead time.",
+            "DRY": "Once the Scheduler is enabled it won't do "
+            "anything. Useful for testing",
+        },
+    )
+    n_targets = pex_config.Field(
+        "Number of targets to put in the queue ahead of time.", int, default=1
+    )
+    predicted_scheduler_window = pex_config.Field(
+        "Size of predicted scheduler window, in hours.", float, default=2.0
+    )
+    loop_sleep_time = pex_config.Field(
+        "How long should the target production loop wait when "
+        "there is a wait event. Unit = seconds.",
+        float,
+        default=1.0,
+    )
+    cmd_timeout = pex_config.Field(
+        "Global command timeout. Unit = seconds.", float, default=60.0
+    )
+    observing_script = pex_config.Field(
+        "Name of the observing script.", str, default="standard_visit.py"
+    )
+    observing_script_is_standard = pex_config.Field(
+        "Is observing script standard?", bool, default=True
+    )
+    max_scripts = pex_config.Field(
+        "Maximum number of scripts to keep track of.", int, default=100
+    )
 
     def set_defaults(self):
         """Set defaults for the LSST Scheduler's Driver.
         """
-        self.driver_type = 'lsst.ts.scheduler.driver.driver'
-        self.startup_type = 'HOT'
-        self.startup_database = ''
-        self.mode = 'SIMPLE'
+        self.driver_type = "lsst.ts.scheduler.driver.driver"
+        self.startup_type = "HOT"
+        self.startup_database = ""
+        self.mode = "SIMPLE"
         self.n_targets = 1
-        self.predicted_scheduler_window = 2.
-        self.loop_sleep_time = 1.
-        self.cmd_timeout = 60.
-        self.observing_script = 'standard_visit.py'
+        self.predicted_scheduler_window = 2.0
+        self.loop_sleep_time = 1.0
+        self.cmd_timeout = 60.0
+        self.observing_script = "standard_visit.py"
         self.observing_script_is_standard = True
         self.max_scripts = 100
 
@@ -172,9 +201,10 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         A worker class that does much of the lower level computation called by
         the SchedulerCSC.
     """
-    def __init__(self, index,
-                 config_dir=None,
-                 initial_state=salobj.base_csc.State.STANDBY):
+
+    def __init__(
+        self, index, config_dir=None, initial_state=salobj.base_csc.State.STANDBY
+    ):
         """Initialized many of the class attributes.
 
         The __init__ method initializes the minimal amount of setup needed for
@@ -190,11 +220,18 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             tag. The scheduler will create a remote to communicate with the
             queue with the same index.
         """
-        schema_path = pathlib.Path(__file__).parents[4].joinpath("schema", "Scheduler.yaml")
+        schema_path = (
+            pathlib.Path(__file__).parents[4].joinpath("schema", "Scheduler.yaml")
+        )
 
-        super().__init__(name="Scheduler", schema_path=schema_path, config_dir=config_dir,
-                         index=index, initial_state=initial_state,
-                         initial_simulation_mode=0)
+        super().__init__(
+            name="Scheduler",
+            schema_path=schema_path,
+            config_dir=config_dir,
+            index=index,
+            initial_state=initial_state,
+            simulation_mode=0,
+        )
 
         # Communication channel with OCS queue.
         self.queue_remote = salobj.Remote(self.domain, "ScriptQueue", index=index)
@@ -202,15 +239,19 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         self.parameters = SchedulerCscParameters()
 
         # How long to wait for target loop to stop before killing it
-        self.loop_die_timeout = 5.
+        self.loop_die_timeout = 5.0
 
         self.models = {}
         self.raw_telemetry = {}
-        self.script_info = {}  # Dictionary to store information about the scripts put on the queue
+        self.script_info = (
+            {}
+        )  # Dictionary to store information about the scripts put on the queue
 
         self.driver = None
 
-        self.target_production_task = None  # Stores the coroutine for the target production.
+        self.target_production_task = (
+            None  # Stores the coroutine for the target production.
+        )
         self.run_loop = False  # A flag to indicate that the event loop is running
 
         # Add callback to script info
@@ -275,19 +316,21 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             Command ID and data
         """
 
-        if self.parameters.mode == 'SIMPLE':
+        if self.parameters.mode == "SIMPLE":
 
-            self.target_production_task = asyncio.ensure_future(
-                self.simple_target_production_loop())
+            self.target_production_task = asyncio.create_task(
+                self.simple_target_production_loop()
+            )
 
-        elif self.parameters.mode == 'ADVANCE':
+        elif self.parameters.mode == "ADVANCE":
 
             self.target_production_task = None
             # This will just reject the command
-            raise NotImplementedError('ADVANCE target production loop not '
-                                      'implemented.')
+            raise NotImplementedError(
+                "ADVANCE target production loop not " "implemented."
+            )
 
-        elif self.parameters.mode == 'DRY':
+        elif self.parameters.mode == "DRY":
 
             self.target_production_task = None
 
@@ -310,14 +353,16 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         try:
             if self.target_production_task is None:
                 # Nothing to do, just transition
-                self.log.warning('No target production loop running.')
+                self.log.warning("No target production loop running.")
             else:
                 # need to cancel target production task before changing state.
                 # Note if we are here we must be in enable state. The target
                 # production task should always be None if we are not enabled.
                 # self.target_production_task.cancel()
-                self.log.debug("Setting run loop flag to False and waiting for "
-                               "target loop to finish...")
+                self.log.debug(
+                    "Setting run loop flag to False and waiting for "
+                    "target loop to finish..."
+                )
                 # Will set flag to False so the loop will stop at the earliest
                 # convenience
                 self.run_loop = False
@@ -325,17 +370,19 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 while not self.target_production_task.done():
                     await asyncio.sleep(self.parameters.loop_sleep_time)
                     elapsed = time.time() - wait_start
-                    self.log.debug(f"Waiting target loop to finish (elapsed: {elapsed} s, "
-                                   f"timeout: {self.parameters.cmd_timeout} s)...")
+                    self.log.debug(
+                        f"Waiting target loop to finish (elapsed: {elapsed} s, "
+                        f"timeout: {self.parameters.cmd_timeout} s)..."
+                    )
                     if elapsed > self.loop_die_timeout:
-                        self.log.warning('Target loop not stopping, cancelling it...')
+                        self.log.warning("Target loop not stopping, cancelling it...")
                         self.target_production_task.cancel()
                         break
 
                 try:
                     await self.target_production_task
                 except asyncio.CancelledError:
-                    self.log.info('Target production task cancelled...')
+                    self.log.info("Target production task cancelled...")
                 except Exception as e:
                     # Something else may have happened. I still want to
                     # disable as this will stop the loop on the
@@ -371,26 +418,32 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         -------
 
         """
-        self.models['location'] = ObservatoryLocation()
-        self.models['observatory_model'] = ObservatoryModel(self.models['location'], logging.DEBUG)
-        self.models['observatory_state'] = ObservatoryState()
-        self.models['sky'] = AstronomicalSkyModel(self.models['location'])
-        self.models['seeing'] = SeeingModel()
-        self.models['cloud'] = CloudModel()
-        self.models['downtime'] = DowntimeModel()
+        self.models["location"] = ObservatoryLocation()
+        self.models["observatory_model"] = ObservatoryModel(
+            self.models["location"], logging.DEBUG
+        )
+        self.models["observatory_state"] = ObservatoryState()
+        self.models["sky"] = AstronomicalSkyModel(self.models["location"])
+        self.models["seeing"] = SeeingModel()
+        self.models["cloud"] = CloudModel()
+        self.models["downtime"] = DowntimeModel()
 
         # FIXME: The list of raw telemetry should be something that the models
         # return, plus some additional standard telemetry like time.
         # Observatory Time. This is NOT observation time. Observation time
         # will be derived from observatory time by the scheduler and will
         # aways be in the future.
-        self.raw_telemetry['timeHandler'] = None
-        self.raw_telemetry['scheduled_targets'] = None  # List of scheduled targets and script ids
-        self.raw_telemetry['observing_queue'] = None  # List of things on the observatory queue
-        self.raw_telemetry['observatoryState'] = None  # Observatory State
-        self.raw_telemetry['bulkCloud'] = None  # Transparency measurement
-        self.raw_telemetry['seeing'] = None  # Seeing measurement
-        self.raw_telemetry['seeing'] = None  # Seeing measurement
+        self.raw_telemetry["timeHandler"] = None
+        self.raw_telemetry[
+            "scheduled_targets"
+        ] = None  # List of scheduled targets and script ids
+        self.raw_telemetry[
+            "observing_queue"
+        ] = None  # List of things on the observatory queue
+        self.raw_telemetry["observatoryState"] = None  # Observatory State
+        self.raw_telemetry["bulkCloud"] = None  # Transparency measurement
+        self.raw_telemetry["seeing"] = None  # Seeing measurement
+        self.raw_telemetry["seeing"] = None  # Seeing measurement
 
     def update_telemetry(self):
         """ Update data on all the telemetry values.
@@ -416,13 +469,17 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         """
 
         for target in targets:
-            self.queue_remote.cmd_add.set(path=self.parameters.observing_script,
-                                          config=target.get_script_config(),
-                                          isStandard=self.parameters.observing_script_is_standard,
-                                          location=ScriptQueue.Location.LAST)
+            self.queue_remote.cmd_add.set(
+                path=self.parameters.observing_script,
+                config=target.get_script_config(),
+                isStandard=self.parameters.observing_script_is_standard,
+                location=ScriptQueue.Location.LAST,
+            )
 
             self.log.debug(f"Putting target {target.targetid} on the queue.")
-            add_task = await self.queue_remote.cmd_add.start(timeout=self.parameters.cmd_timeout)
+            add_task = await self.queue_remote.cmd_add.start(
+                timeout=self.parameters.cmd_timeout
+            )
 
             self.evt_target.set_put(**target.as_evt_topic())  # publishes target event
 
@@ -456,7 +513,9 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         self.parameters.loop_sleep_time = config.loop_sleep_time
         self.parameters.cmd_timeout = config.cmd_timeout
         self.parameters.observing_script = config.observing_script
-        self.parameters.observing_script_is_standard = config.observing_script_is_standard
+        self.parameters.observing_script_is_standard = (
+            config.observing_script_is_standard
+        )
         self.parameters.max_scripts = config.max_scripts
 
         # Configuring Models
@@ -478,25 +537,30 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         survey_topology = self.configure_driver(config)
 
         # Publish topology
-        self.tel_surveyTopology.put(survey_topology.to_topic(self.tel_surveyTopology.DataType()))
+        self.tel_surveyTopology.put(
+            survey_topology.to_topic(self.tel_surveyTopology.DataType())
+        )
 
         # Publish settingsApplied and appliedSettingsMatchStart
 
-        self.evt_appliedSettingsMatchStart.set_put(appliedSettingsMatchStartIsTrue=True,
-                                                   force_output=True)
+        self.evt_appliedSettingsMatchStart.set_put(
+            appliedSettingsMatchStartIsTrue=True, force_output=True
+        )
 
         # Most configurations comes from this single commit hash. I think the
         # other modules could host the version for each one of them
         if hasattr(self, "evt_dependenciesVersions"):
-            self.evt_dependenciesVersions.set_put(version='',
-                                                  scheduler=self.parameters.driver_type,
-                                                  observatoryModel=obs_mod_version.__version__,
-                                                  observatoryLocation=dateloc_version.__version__,
-                                                  seeingModel=seeing_version.__version__,
-                                                  cloudModel=cloud_version.__version__,
-                                                  skybrightnessModel=astrosky_version.__version__,
-                                                  downtimeModel=downtime_version.__version__,
-                                                  force_output=True)
+            self.evt_dependenciesVersions.set_put(
+                version="",
+                scheduler=self.parameters.driver_type,
+                observatoryModel=obs_mod_version.__version__,
+                observatoryLocation=dateloc_version.__version__,
+                seeingModel=seeing_version.__version__,
+                cloudModel=cloud_version.__version__,
+                skybrightnessModel=astrosky_version.__version__,
+                downtimeModel=downtime_version.__version__,
+                force_output=True,
+            )
         else:
             self.log.warning("No 'dependenciesVersions' event.")
 
@@ -515,11 +579,11 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         """
         if self.driver is not None:
-            self.log.warning('Driver already defined. Overwriting driver.')
+            self.log.warning("Driver already defined. Overwriting driver.")
             # TODO: It is probably a good idea to tell driver to save its state
             # before overwriting. So it is possible to recover.
 
-        self.log.debug('Loading driver from %s', config.driver_type)
+        self.log.debug("Loading driver from %s", config.driver_type)
         driver_lib = import_module(config.driver_type)
         members_of_driver_lib = inspect.getmembers(driver_lib)
 
@@ -527,14 +591,16 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         for member in members_of_driver_lib:
             try:
                 if issubclass(member[1], Driver):
-                    self.log.debug('Found driver %s%s', member[0], member[1])
+                    self.log.debug("Found driver %s%s", member[0], member[1])
                     driver_type = member[1]
                     # break
             except TypeError:
                 pass
 
         if driver_type is None:
-            raise RuntimeError("Could not find Driver on module %s" % config.driver_type)
+            raise RuntimeError(
+                "Could not find Driver on module %s" % config.driver_type
+            )
 
         self.driver = driver_type(models=self.models, raw_telemetry=self.raw_telemetry)
 
@@ -577,21 +643,29 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         try:
             if request:
-                await self.queue_remote.cmd_showQueue.start(timeout=self.parameters.cmd_timeout)
+                await self.queue_remote.cmd_showQueue.start(
+                    timeout=self.parameters.cmd_timeout
+                )
             try:
-                queue = await self.queue_remote.evt_queue.next(flush=False,
-                                                               timeout=self.parameters.cmd_timeout)
+                queue = await self.queue_remote.evt_queue.next(
+                    flush=False, timeout=self.parameters.cmd_timeout
+                )
             except asyncio.TimeoutError:
-                self.log.error('No state from queue. Requesting...')
+                self.log.error("No state from queue. Requesting...")
                 self.queue_remote.evt_queue.flush()
-                await self.queue_remote.cmd_showQueue.start(timeout=self.parameters.cmd_timeout)
-                queue = await self.queue_remote.evt_queue.next(flush=False,
-                                                               timeout=self.parameters.cmd_timeout)
+                await self.queue_remote.cmd_showQueue.start(
+                    timeout=self.parameters.cmd_timeout
+                )
+                queue = await self.queue_remote.evt_queue.next(
+                    flush=False, timeout=self.parameters.cmd_timeout
+                )
         except salobj.AckError as e:
-            self.log.error('No response from queue...')
-            self.fault(code=NO_QUEUE,
-                       report='Error no response from queue.',
-                       traceback=traceback.format_exc())
+            self.log.error("No response from queue...")
+            self.fault(
+                code=NO_QUEUE,
+                report="Error no response from queue.",
+                traceback=traceback.format_exc(),
+            )
             raise e
         else:
             return queue
@@ -608,7 +682,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             ended up a failed or unrecognized state.
 
         """
-        ntargets = len(self.raw_telemetry['scheduled_targets'])
+        ntargets = len(self.raw_telemetry["scheduled_targets"])
 
         if ntargets == 0:
             self.log.debug("No scheduled targets to check.")
@@ -618,12 +692,12 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         retval = True
         for i in range(ntargets):
-            target = self.raw_telemetry['scheduled_targets'].pop(0)
+            target = self.raw_telemetry["scheduled_targets"].pop(0)
             if target.sal_index in self.script_info:
                 info = self.script_info[target.sal_index]
             else:
                 # No information on script on queue, put it back and continue
-                self.raw_telemetry['scheduled_targets'].append(target)
+                self.raw_telemetry["scheduled_targets"].append(target)
                 continue
 
             if info.processState == ScriptQueue.ScriptProcessState.DONE:
@@ -640,22 +714,28 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 # future refs?
             elif info.processState in NonFinalStates:
                 # script in a non-final state, just put it back on the list.
-                self.raw_telemetry['scheduled_targets'].append(target)
+                self.raw_telemetry["scheduled_targets"].append(target)
             elif info.processState == ScriptQueue.ScriptProcessState.CONFIGUREFAILED:
-                self.log.warning('Failed to configure observation for target %s.', target.sal_index)
+                self.log.warning(
+                    "Failed to configure observation for target %s.", target.sal_index
+                )
                 # Remove related script from the list
                 del self.script_info[target.sal_index]
                 retval = False
             elif info.processState == ScriptQueue.ScriptProcessState.TERMINATED:
-                self.log.warning('Observation for target %s terminated.', target.sal_index)
+                self.log.warning(
+                    "Observation for target %s terminated.", target.sal_index
+                )
                 # Remove related script from the list
                 del self.script_info[target.sal_index]
                 retval = False
             else:
-                self.log.error('Unrecognized state [%i] for observation %i for target %s.',
-                               info.processState,
-                               target.sal_index,
-                               target)
+                self.log.error(
+                    "Unrecognized state [%i] for observation %i for target %s.",
+                    info.processState,
+                    target.sal_index,
+                    target,
+                )
                 # Remove related script from the list
                 del self.script_info[target.sal_index]
                 retval = False
@@ -692,7 +772,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         """
 
         self.run_loop = True
-        self.raw_telemetry['scheduled_targets'] = []
+        self.raw_telemetry["scheduled_targets"] = []
 
         loop = asyncio.get_event_loop()
 
@@ -718,18 +798,22 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
                     await loop.run_in_executor(None, self.update_telemetry)
 
-                    target = await loop.run_in_executor(None, self.driver.select_next_target)
+                    target = await loop.run_in_executor(
+                        None, self.driver.select_next_target
+                    )
 
                     # This method receives a list of targets and return a list
                     # of script ids
                     await self.put_on_queue([target])
 
                     if target.sal_index > 0:
-                        self.raw_telemetry['scheduled_targets'].append(target)
+                        self.raw_telemetry["scheduled_targets"].append(target)
                     else:
-                        self.log.error('Could not add target to the queue: %s', target)
-                        self.fault(code=PUT_ON_QUEUE,
-                                   report=f'Could not add target to the queue: {target}')
+                        self.log.error("Could not add target to the queue: %s", target)
+                        self.fault(
+                            code=PUT_ON_QUEUE,
+                            report=f"Could not add target to the queue: {target}",
+                        )
 
                     # TODO: publish detailed state indicating that the
                     # scheduler has finished the target selection
@@ -737,10 +821,12 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 else:
                     # TODO: Publish detailed state indicating that the
                     # scheduler is waiting.
-                    self.log.debug("Queue state: [Running:%s][Executing:%s][Empty:%s]",
-                                   queue.running == 1,
-                                   queue.currentSalIndex != 0,
-                                   queue.length == 0)
+                    self.log.debug(
+                        "Queue state: [Running:%s][Executing:%s][Empty:%s]",
+                        queue.running == 1,
+                        queue.currentSalIndex != 0,
+                        queue.length == 0,
+                    )
                     await asyncio.sleep(self.parameters.loop_sleep_time)
             except asyncio.CancelledError as e:
                 self.log.exception(e)
@@ -748,9 +834,11 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             except Exception as e:
                 # If there is an exception go to FAULT state, log the
                 # exception and break the loop
-                self.fault(code=SIMPLE_LOOP_ERROR,
-                           report='Error on simple target production loop.',
-                           traceback=traceback.format_exc())
+                self.fault(
+                    code=SIMPLE_LOOP_ERROR,
+                    report="Error on simple target production loop.",
+                    traceback=traceback.format_exc(),
+                )
                 self.log.exception(e)
                 break
 

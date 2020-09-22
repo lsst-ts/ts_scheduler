@@ -36,7 +36,7 @@ class SimpleTargetLoopTestCase(asynctest.TestCase):
         self.queue = scriptqueue.ScriptQueue(index=1,
                                              standardpath=standardpath,
                                              externalpath=externalpath)
-        self.queue.summary_state = salobj.State.DISABLED
+
         self.queue_remote = salobj.Remote(self.queue.domain, "ScriptQueue", index=1)
         self.process = None
 

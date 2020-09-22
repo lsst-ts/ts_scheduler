@@ -21,11 +21,8 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 """Run scheduler CSC"""
-
-import logging
+import asyncio
 
 from lsst.ts.scheduler import SchedulerCSC
 
-logging.basicConfig(level=logging.DEBUG)
-
-SchedulerCSC.main(index=True)
+asyncio.run(SchedulerCSC.amain(index=True))
