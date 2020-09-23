@@ -156,7 +156,7 @@ class TestSchedulerCSC(asynctest.TestCase):
             # send standby; new state is STANDBY
 
             id_ack = await harness.remote.cmd_standby.start(timeout=SHORT_TIMEOUT)
-            settings = await harness.remote.evt_settingVersions.next(flush=False, timeout=1)
+
             self.assertIsNotNone(settings)
             self.assertEqual(id_ack.ack, salobj.SalRetCode.CMD_COMPLETE)
             self.assertEqual(id_ack.error, 0)
