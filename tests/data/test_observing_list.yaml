@@ -1,28 +1,111 @@
-target1:
-  ra: 12:00:00
-  dec: -10:00:00
-  name: tile1
-  exptimes:
-    - 15.
-    - 15.
-  filters:
-    - r
-    - r
-target2:
-  ra: 12:00:00
-  dec: -13:30:00
-  name: tile2
-  exptimes:
-    - 15.
-    - 15.
-  filters:
-    - r
-    - r
-target3:
-  name: m104
-  exptimes:
-    - 15.
-    - 15.
-  filters:
-    - r
-    - r
+targets:
+  -
+    ra: 0.
+    dec: -50.
+    name: tile2
+    instrument_setup:
+      -
+        exptime: 15.
+        filter: r
+      -
+        exptime: 15.
+        filter: r
+  -
+    ra: 3.
+    dec: -50.
+    name: tile2
+    instrument_setup:
+      -
+        exptime: 15.
+        filter: r
+      -
+        exptime: 15.
+        filter: r
+  -
+    ra: 6.
+    dec: -50.
+    name: tile2
+    instrument_setup:
+      -
+        exptime: 15.
+        filter: r
+      -
+        exptime: 15.
+        filter: r
+  -
+    ra: 9.
+    dec: -50.
+    name: tile2
+    instrument_setup:
+      -
+        exptime: 15.
+        filter: r
+      -
+        exptime: 15.
+        filter: r
+  -
+    ra: 12.
+    dec: -50.
+    name: tile2
+    instrument_setup:
+      -
+        exptime: 15.
+        filter: r
+      -
+        exptime: 15.
+        filter: r
+  -
+    ra: 15.
+    dec: -50.
+    name: tile2
+    instrument_setup:
+      -
+        exptime: 15.
+        filter: r
+      -
+        exptime: 15.
+        filter: r
+  -
+    ra: 18.
+    dec: -50.
+    name: tile2
+    instrument_setup:
+      -
+        exptime: 15.
+        filter: r
+      -
+        exptime: 15.
+        filter: r
+  -
+    ra: 21.
+    dec: -50.
+    name: tile2
+    instrument_setup:
+      -
+        exptime: 15.
+        filter: r
+      -
+        exptime: 15.
+        filter: r
+  -
+    ra: 12.
+    dec: -10.
+    name: tile1
+    instrument_setup:
+      -
+        exptime: 15.
+        filter: r
+      -
+        exptime: 15.
+        filter: r
+  -
+    ra: 12
+    dec: -13.5
+    name: tile3
+    instrument_setup:
+      -
+        exptime: 15.
+        filter: r
+      -
+        exptime: 15.
+        filter: r

@@ -1,10 +1,36 @@
+# This file is part of ts_scheduler
+#
+# Developed for the LSST Telescope and Site Systems.
+# This product includes software developed by the LSST Project
+# (https://www.lsst.org).
+# See the COPYRIGHT file at the top-level directory of this distribution
+# for details of code ownership.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+
+import asyncio
+import functools
+import inspect
 import logging
 import pathlib
-from importlib import import_module
-import inspect
-import asyncio
 import time
 import traceback
+
+import urllib.request
+
+import numpy as np
+
+from importlib import import_module
 
 from lsst.ts import salobj
 from lsst.ts.idl.enums import ScriptQueue
@@ -29,27 +55,11 @@ import lsst.pex.config as pex_config
 
 __all__ = ["SchedulerCSC", "SchedulerCscParameters"]
 
+# Error codes
 NO_QUEUE = 300
-"""Could not connect to the queue (`int`).
-
-This error code is published in `Scheduler_logevent_errorCodeC` if the
-Scheduler CSC can not connect to the queue.
-"""
 PUT_ON_QUEUE = 301
-"""Failed to put target on the queue (`int`).
-
-This error code is published in `Scheduler_logevent_errorCodeC` if the
-Scheduler CSC fails to put a target (or targets) in the queue.
-"""
 SIMPLE_LOOP_ERROR = 400
-"""Unspecified error on the simple target generation loop (`int`).
-
-This error code is published in `Scheduler_logevent_errorCodeC` if there is an
-unspecified error while running the simple target generation loop. For
-instance, if a user defined scheduling algorithm throws an exception after a
-call to `Driver.select_next_target` this error code will, most likely, be
-issued (along with the traceback message).
-"""
+OBSERVATORY_STATE_UPDATE = 500
 
 NonFinalStates = frozenset(
     (
@@ -112,8 +122,6 @@ class SchedulerCscParameters(pex_config.Config):
             "monitor the telemetry stream, recompute the "
             "queue and change next target up to a "
             "certain lead time.",
-            "DRY": "Once the Scheduler is enabled it won't do "
-            "anything. Useful for testing",
         },
     )
     n_targets = pex_config.Field(
@@ -167,6 +175,16 @@ class SchedulerCSC(salobj.ConfigurableCsc):
     statemachine which is taken care of by the inherited class
     `base_csc.BaseCsc`.
 
+    Parameters
+    ----------
+    index : `int`
+        Scheduler SAL component index. This also defines the index of the
+        ScriptQueue the Scheduler will communicate with.
+
+        * 1 for the Main telescope.
+        * 2 for AuxTel.
+        * Any allowed value (see ``Raises``) for unit tests.
+
     Attributes
     ----------
     log : logging.Log
@@ -200,26 +218,42 @@ class SchedulerCSC(salobj.ConfigurableCsc):
     driver: `lsst.ts.scheduler.driver.Driver`
         A worker class that does much of the lower level computation called by
         the SchedulerCSC.
+
+    Notes
+    -----
+    **Simulation Modes**
+
+    Supported simulation modes:
+
+    * 0: regular operation
+    * 1: simulation mode: Do not initialize driver and other operational.
+         components.
+
+    **Error Codes**
+
+    * 300: Could not connect to the queue. This error code is published
+           if the Scheduler CSC can not connect to the queue.
+
+    * 301: Failed to put target on the queue.
+
+    * 400: Unspecified error on the simple target generation loop. This error
+           code is published if there is an unspecified error while running the
+           simple target generation loop. For instance, if a user defined
+           scheduling algorithm throws an exception after a call to
+           `Driver.select_next_target` this error code will, most likely, be
+           issued (along with the traceback message).
+
     """
 
+    valid_simulation_modes = (0, 1)
+
     def __init__(
-        self, index, config_dir=None, initial_state=salobj.base_csc.State.STANDBY
+        self,
+        index,
+        config_dir=None,
+        initial_state=salobj.base_csc.State.STANDBY,
+        simulation_mode=0,
     ):
-        """Initialized many of the class attributes.
-
-        The __init__ method initializes the minimal amount of setup needed for
-        the SchedulerCSC to be able to change state.
-
-        Parameters
-        ----------
-        index : int
-            We can create multiple CSC's based from the same XML explained here
-            https://confluence.lsstcorp.org/display/~aheyer/CSC+Name+Guidlines.
-            This index value refers to the Enumeration value specified in the
-            ts_xml/sal_interfaces/SALSubsystem.xml file. Under the Scheduler
-            tag. The scheduler will create a remote to communicate with the
-            queue with the same index.
-        """
         schema_path = (
             pathlib.Path(__file__).parents[4].joinpath("schema", "Scheduler.yaml")
         )
@@ -230,79 +264,59 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             config_dir=config_dir,
             index=index,
             initial_state=initial_state,
-            simulation_mode=0,
+            simulation_mode=simulation_mode,
         )
 
         # Communication channel with OCS queue.
-        self.queue_remote = salobj.Remote(self.domain, "ScriptQueue", index=index)
+        self.queue_remote = salobj.Remote(
+            self.domain, "ScriptQueue", index=index, include=["script", "queue"]
+        )
+
+        # Communication channel with pointing component to get observatory
+        # state
+        self.ptg = salobj.Remote(
+            self.domain,
+            "MTPtg" if index == 1 else "ATPtg",
+            include=["currentTargetStatus"],
+        )
+
+        self.no_observatory_state_warning = False
 
         self.parameters = SchedulerCscParameters()
 
         # How long to wait for target loop to stop before killing it
         self.loop_die_timeout = 5.0
 
-        self.models = {}
-        self.raw_telemetry = {}
-        self.script_info = (
-            {}
-        )  # Dictionary to store information about the scripts put on the queue
+        # Dictionary to store information about the scripts put on the queue
+        self.models = dict()
+        self.raw_telemetry = dict()
+        self.script_info = dict()
+
+        # This asyncio.Event is used to control when the scheduling task will
+        # be running or not, once the CSC is in enable. By default, the loop
+        # will not run once the CSC is enabled, and a "resume" command is
+        # needed to start it.
+        self.run_target_loop = asyncio.Event()
+
+        # Lock for the event loop. This is used to synchronize actions that
+        # will affect the target production loop.
+        self.target_loop_lock = asyncio.Lock()
 
         self.driver = None
 
-        self.target_production_task = (
-            None  # Stores the coroutine for the target production.
-        )
-        self.run_loop = False  # A flag to indicate that the event loop is running
+        # Stores the coroutine for the target production.
+        self.target_production_task = None
+
+        # A flag to indicate that the event loop is running
+        self.run_loop = False
 
         # Add callback to script info
         self.queue_remote.evt_script.callback = self.callback_script_info
 
-    # async def begin_start(self, id_data):
-    #     """Override superclass method to transition from `State.STANDBY` to
-    #     `State.DISABLED`. This is the step where we configure the models,
-    #     driver and scheduler, which can take some time. So here we
-    # acknowledge
-    #     that the task started, start working on the configuration and then
-    # make
-    #     the state transition.
-    #
-    #     Parameters
-    #     ----------
-    #     id_data : `salobj.CommandIdData`
-    #         Command ID and data
-    #     """
-    #     settings_to_apply = id_data.settingsToApply
-    #
-    #     # check settings_to_apply
-    #     if len(settings_to_apply) == 0:
-    #         self.log.warning("No settings selected. Using current one: %s",
-    #  self.current_setting)
-    #         settings_to_apply = self.current_setting
-    #
-    #     is_valid = False
-    #     for valid_setting in self.valid_settings:
-    #         await asyncio.sleep(0)  # give control to the event loop for
-    # responsiveness
-    #         if 'origin/%s' % settings_to_apply == valid_setting:
-    #             is_valid = True
-    #             break
-    #
-    #     if not is_valid:
-    #         raise salobj.ExpectedError(f"{settings_to_apply} is not a valid
-    # settings. "
-    # f"Choose one of: {self.valid_settings}.")
-    #
-    #     self.log.debug("Configuring the scheduler with setting '%s'",
-    # settings_to_apply)
-    #
-    #     await asyncio.sleep(0)  # give control to the event loop for
-    # responsiveness
-    #
-    #     executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
-    #
-    #     await self.run_configuration(settings_to_apply, executor)
+        # Telemetry loop. This will take care of observatory state.
+        self.telemetry_loop_task = None
 
-    async def begin_enable(self, id_data):
+    async def begin_enable(self, data):
         """Begin do_enable.
 
         Called before state transition from `State.DISABLED` to
@@ -312,13 +326,22 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         Parameters
         ----------
-        id_data : `CommandIdData`
-            Command ID and data
+        data : `DataType`
+            Command data
+
         """
 
-        if self.parameters.mode == "SIMPLE":
+        # Make sure event is not set so loops won't start once the CSC is
+        # enabled.
+        self.run_target_loop.clear()
 
-            self.target_production_task = asyncio.create_task(
+        if self.simulation_mode == 1:
+            self.log.debug("Running in simulation mode. No target production loop.")
+            self.target_production_task = None
+
+        elif self.parameters.mode == "SIMPLE":
+
+            self.target_production_task = asyncio.ensure_future(
                 self.simple_target_production_loop()
             )
 
@@ -326,9 +349,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
             self.target_production_task = None
             # This will just reject the command
-            raise NotImplementedError(
-                "ADVANCE target production loop not " "implemented."
-            )
+            raise NotImplementedError("ADVANCE target production loop not implemented.")
 
         elif self.parameters.mode == "DRY":
 
@@ -336,9 +357,40 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         else:
             # This will just reject the command
-            raise IOError("Unrecognized scheduler mode %s" % self.parameters.mode)
+            raise RuntimeError("Unrecognized scheduler mode %s" % self.parameters.mode)
 
-    async def begin_disable(self, id_data):
+    async def handle_summary_state(self):
+        """Handle summary state.
+
+        If the component is DISABLED or ENABLED, it will make sure the
+        telemetry loop is running. Shutdown the telemetry loop if in STANDBY.
+        """
+
+        if self.disabled_or_enabled and self.telemetry_loop_task is None:
+            self.run_loop = True
+            self.telemetry_loop_task = asyncio.create_task(self.telemetry_loop())
+        elif (
+            self.summary_state == salobj.State.STANDBY
+            and self.telemetry_loop_task is not None
+        ):
+            self.run_loop = False
+            try:
+                await asyncio.wait_for(
+                    self.telemetry_loop_task, timeout=self.loop_die_timeout
+                )
+            except asyncio.TimeoutError:
+                self.log.debug("Timeout waiting for telemetry loop to finish.")
+                self.telemetry_loop_task.cancel()
+                try:
+                    await self.telemetry_loop_task
+                except asyncio.CancelledError:
+                    self.log.debug(f"Telemetry loop cancelled.")
+                except Exception:
+                    self.log.exception(f"Unexpected error cancelling telemetry loop.")
+            finally:
+                self.telemetry_loop_task = None
+
+    async def begin_disable(self, data):
         """Transition from `State.ENABLED` to `State.DISABLED`. This
         transition will be made in a gentle way, meaning that it will wait for
         the target production loop to finalize before making the transition.
@@ -347,8 +399,9 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         Parameters
         ----------
-        id_data : `CommandIdData`
-            Command ID and data
+        data : `DataType`
+            Command data
+
         """
         try:
             if self.target_production_task is None:
@@ -365,6 +418,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 )
                 # Will set flag to False so the loop will stop at the earliest
                 # convenience
+                self.run_target_loop.clear()
                 self.run_loop = False
                 wait_start = time.time()
                 while not self.target_production_task.done():
@@ -394,22 +448,150 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             self.target_production_task = None
             self.log.exception(e)
 
-    # async def run_configuration(self, setting, executor):
-    #     """This coroutine is responsible for executing the entire
-    #     configuration set in a worker so the event loop will not block.
-    #
-    #     Parameters
-    #     ----------
-    #     setting: str: The selected setting.
-    #     executor: concurrent.futures.ThreadPoolExecutor: The executor where
-    #     the task will run.
-    #
-    #     """
-    #     loop = asyncio.get_event_loop()
-    #
-    #     # Run configure method on the executer thus, not blocking the event
-    #     # loop.
-    #     await loop.run_in_executor(executor, self.configure, setting)
+    async def do_resume(self, data):
+        """Resume target production loop.
+
+        Parameters
+        ----------
+        data : `DataType`
+            Command data
+
+        Raises
+        ------
+        RuntimeError
+            If target production loop is already running.
+
+        """
+
+        self.assert_enabled()
+
+        if self.run_target_loop.is_set():
+            raise RuntimeError("Target production loop already running.")
+
+        self.run_target_loop.set()
+
+    async def do_stop(self, data):
+        """Stop target production loop.
+
+        Parameters
+        ----------
+        data : `DataType`
+            Command data
+
+        """
+
+        self.assert_enabled()
+
+        if not self.run_target_loop.is_set():
+            raise RuntimeError("Target production loop is not running.")
+
+        self.run_target_loop.clear()
+
+        if data.abort:
+            async with self.target_loop_lock:
+                await self.remove_from_queue(self.raw_telemetry["scheduled_targets"])
+
+    async def do_load(self, data):
+        """Load user-defined schedule definition from URI.
+
+        The file is passed on to the driver to load. It must be compatible with
+        the currently configured scheduling algorithm or the load will fail,
+        and the command will be rejected.
+
+        Parameters
+        ----------
+        data : `DataType`
+            Command data
+
+        """
+
+        self.assert_enabled()
+
+        loop = asyncio.get_running_loop()
+
+        try:
+            retrieve = functools.partial(
+                urllib.request.urlretrieve, url=data.uri, filename=""
+            )
+            dest, _ = await loop.run_in_executor(None, retrieve)
+        except urllib.request.URLError:
+            raise RuntimeError(
+                f"Could not retrieve {data.uri}. Make sure it is a valid and accessible URI."
+            )
+
+        self.log.debug(f"Loading user-define configuration from {data.uri} -> {dest}.")
+
+        load = functools.partial(self.driver.load, config=dest)
+        await loop.run_in_executor(None, load)
+
+    async def telemetry_loop(self):
+        """Scheduler telemetry loop.
+
+        This method will monitor and process the observatory state and publish
+        the information to SAL.
+
+        """
+
+        while self.run_loop:
+
+            # Update observatory state and sleep at the same time.
+            try:
+                await asyncio.gather(
+                    self.handle_observatory_state(),
+                    asyncio.sleep(self.heartbeat_interval),
+                )
+            except Exception:
+                self.log.exception("Failed to update observatory state.")
+                self.fault(
+                    code=OBSERVATORY_STATE_UPDATE,
+                    report="Failed to update observatory state.",
+                    traceback=traceback.format_exc(),
+                )
+
+            self.tel_observatoryState.set_put(
+                timestamp=self.models["observatory_state"].time,
+                ra=self.models["observatory_state"].ra,
+                declination=self.models["observatory_state"].dec,
+                positionAngle=self.models["observatory_state"].ang,
+                parallacticAngle=self.models["observatory_state"].pa,
+                tracking=self.models["observatory_state"].tracking,
+                telescopeAltitude=self.models["observatory_state"].telalt,
+                telescopeAzimuth=self.models["observatory_state"].telaz,
+                telescopeRotator=self.models["observatory_state"].telrot,
+                domeAltitude=self.models["observatory_state"].domalt,
+                domeAzimuth=self.models["observatory_state"].domaz,
+                filterPosition="",
+                filterMounted="",
+                filterUnmounted="",
+            )
+
+    async def handle_observatory_state(self):
+        """Handle observatory state.
+        """
+
+        current_target_state = await self.ptg.tel_currentTargetStatus.next(
+            flush=True, timeout=self.heartbeat_interval
+        )
+
+        self.models["observatory_state"].time = current_target_state.timestamp
+        self.models["observatory_state"].az_rad = np.radians(
+            current_target_state.demandAz
+        )
+        self.models["observatory_state"].alt_rad = np.radians(
+            current_target_state.demandEl
+        )
+        self.models["observatory_state"].rot_rad = np.radians(
+            current_target_state.demandRot
+        )
+        self.models["observatory_state"].ra_rad = np.radians(
+            current_target_state.demandRa
+        )
+        self.models["observatory_state"].dec_rad = np.radians(
+            current_target_state.demandDec
+        )
+        self.models["observatory_state"].pa_rad = np.radians(
+            current_target_state.parAngle
+        )
 
     def init_models(self):
         """Initialize but not configure needed models.
@@ -434,16 +616,24 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         # will be derived from observatory time by the scheduler and will
         # aways be in the future.
         self.raw_telemetry["timeHandler"] = None
-        self.raw_telemetry[
-            "scheduled_targets"
-        ] = None  # List of scheduled targets and script ids
-        self.raw_telemetry[
-            "observing_queue"
-        ] = None  # List of things on the observatory queue
-        self.raw_telemetry["observatoryState"] = None  # Observatory State
-        self.raw_telemetry["bulkCloud"] = None  # Transparency measurement
-        self.raw_telemetry["seeing"] = None  # Seeing measurement
-        self.raw_telemetry["seeing"] = None  # Seeing measurement
+
+        # List of scheduled targets and script ids
+        self.raw_telemetry["scheduled_targets"] = None
+
+        # List of things on the observatory queue
+        self.raw_telemetry["observing_queue"] = None
+
+        # Observatory State
+        self.raw_telemetry["observatoryState"] = None
+
+        # Transparency measurement
+        self.raw_telemetry["bulkCloud"] = None
+
+        # Seeing measurement
+        self.raw_telemetry["seeing"] = None
+
+        # Seeing measurement
+        self.raw_telemetry["seeing"] = None
 
     def update_telemetry(self):
         """ Update data on all the telemetry values.
@@ -464,7 +654,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         Parameters
         ----------
-        targets: list(Targets): A list of targets to put on the queue.
+        targets : `list`
+            A list of targets to put on the queue.
 
         """
 
@@ -481,9 +672,32 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 timeout=self.parameters.cmd_timeout
             )
 
-            self.evt_target.set_put(**target.as_evt_topic())  # publishes target event
+            # publishes target event
+            self.evt_target.set_put(**target.as_evt_topic())
 
             target.sal_index = int(add_task.result)
+
+    async def remove_from_queue(self, targets):
+        """Given a list of targets, remove them from the queue.
+
+        Parameters
+        ----------
+        targets: `list`
+            A list of targets to put on the queue.
+
+        """
+
+        stop_scripts = self.queue_remote.cmd_stopScripts.DataType()
+
+        stop_scripts.length = len(targets)
+        stop_scripts.terminate = False
+
+        for i in range(stop_scripts.length):
+            stop_scripts.salIndices[i] = targets[i].sal_index
+
+        await self.queue_remote.cmd_stopScripts.start(
+            stop_scripts, timeout=self.parameters.cmd_timeout
+        )
 
     @staticmethod
     def get_config_pkg():
@@ -537,14 +751,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         survey_topology = self.configure_driver(config)
 
         # Publish topology
-        self.tel_surveyTopology.put(
-            survey_topology.to_topic(self.tel_surveyTopology.DataType())
-        )
-
-        # Publish settingsApplied and appliedSettingsMatchStart
-
-        self.evt_appliedSettingsMatchStart.set_put(
-            appliedSettingsMatchStartIsTrue=True, force_output=True
+        self.evt_surveyTopology.put(
+            survey_topology.to_topic(self.evt_surveyTopology.DataType())
         )
 
         # Most configurations comes from this single commit hash. I think the
@@ -563,6 +771,92 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             )
         else:
             self.log.warning("No 'dependenciesVersions' event.")
+
+        self.evt_obsSiteConfig.set_put(
+            observatoryName=config.location["obs_site"]["name"],
+            latitude=config.location["obs_site"]["latitude"],
+            longitude=config.location["obs_site"]["longitude"],
+            height=config.location["obs_site"]["height"],
+        )
+
+        self.evt_telescopeConfig.set_put(
+            altitudeMinpos=config.observatory_model["telescope"]["altitude_minpos"],
+            altitudeMaxpos=config.observatory_model["telescope"]["altitude_maxpos"],
+            azimuthMinpos=config.observatory_model["telescope"]["azimuth_minpos"],
+            azimuthMaxpos=config.observatory_model["telescope"]["azimuth_maxpos"],
+            altitudeMaxspeed=config.observatory_model["telescope"]["altitude_maxspeed"],
+            altitudeAccel=config.observatory_model["telescope"]["altitude_accel"],
+            altitudeDecel=config.observatory_model["telescope"]["altitude_decel"],
+            azimuthMaxspeed=config.observatory_model["telescope"]["azimuth_maxspeed"],
+            azimuthAccel=config.observatory_model["telescope"]["azimuth_accel"],
+            azimuthDecel=config.observatory_model["telescope"]["azimuth_decel"],
+            settleTime=config.observatory_model["telescope"]["settle_time"],
+        )
+
+        self.evt_rotatorConfig.set_put(
+            positionMin=config.observatory_model["rotator"]["minpos"],
+            positionMax=config.observatory_model["rotator"]["maxpos"],
+            positionFilterChange=config.observatory_model["rotator"][
+                "filter_change_pos"
+            ],
+            speedMax=config.observatory_model["rotator"]["maxspeed"],
+            accel=config.observatory_model["rotator"]["accel"],
+            decel=config.observatory_model["rotator"]["decel"],
+            followSky=config.observatory_model["rotator"]["follow_sky"],
+            resumeAngle=config.observatory_model["rotator"]["resume_angle"],
+        )
+
+        self.evt_domeConfig.set_put(
+            altitudeMaxspeed=config.observatory_model["dome"]["altitude_maxspeed"],
+            altitudeAccel=config.observatory_model["dome"]["altitude_accel"],
+            altitudeDecel=config.observatory_model["dome"]["altitude_decel"],
+            altitudeFreerange=config.observatory_model["dome"]["altitude_freerange"],
+            azimuthMaxspeed=config.observatory_model["dome"]["azimuth_maxspeed"],
+            azimuthAccel=config.observatory_model["dome"]["azimuth_accel"],
+            azimuthDecel=config.observatory_model["dome"]["azimuth_decel"],
+            azimuthFreerange=config.observatory_model["dome"]["azimuth_freerange"],
+            settleTime=config.observatory_model["dome"]["settle_time"],
+        )
+
+        self.evt_slewConfig.set_put(
+            prereqDomalt=config.observatory_model["slew"]["prereq_domalt"],
+            prereqDomaz=config.observatory_model["slew"]["prereq_domaz"],
+            prereqDomazSettle=config.observatory_model["slew"]["prereq_domazsettle"],
+            prereqTelalt=config.observatory_model["slew"]["prereq_telalt"],
+            prereqTelaz=config.observatory_model["slew"]["prereq_telaz"],
+            prereqTelOpticsOpenLoop=config.observatory_model["slew"][
+                "prereq_telopticsopenloop"
+            ],
+            prereqTelOpticsClosedLoop=config.observatory_model["slew"][
+                "prereq_telopticsclosedloop"
+            ],
+            prereqTelSettle=config.observatory_model["slew"]["prereq_telsettle"],
+            prereqTelRot=config.observatory_model["slew"]["prereq_telrot"],
+            prereqFilter=config.observatory_model["slew"]["prereq_filter"],
+            prereqExposures=config.observatory_model["slew"]["prereq_exposures"],
+            prereqReadout=config.observatory_model["slew"]["prereq_readout"],
+        )
+
+        self.evt_opticsLoopCorrConfig.set_put(
+            telOpticsOlSlope=config.observatory_model["optics_loop_corr"][
+                "tel_optics_ol_slope"
+            ],
+            telOpticsClAltLimit=config.observatory_model["optics_loop_corr"][
+                "tel_optics_cl_alt_limit"
+            ],
+            telOpticsClDelay=config.observatory_model["optics_loop_corr"][
+                "tel_optics_cl_delay"
+            ],
+        )
+
+        self.evt_parkConfig.set_put(
+            telescopeAltitude=config.observatory_model["park"]["telescope_altitude"],
+            telescopeAzimuth=config.observatory_model["park"]["telescope_azimuth"],
+            telescopeRotator=config.observatory_model["park"]["telescope_rotator"],
+            domeAltitude=config.observatory_model["park"]["dome_altitude"],
+            domeAzimuth=config.observatory_model["park"]["dome_azimuth"],
+            filterPosition=config.observatory_model["park"]["filter_position"],
+        )
 
     def configure_driver(self, config):
         """Load driver for selected scheduler and configure its basic
@@ -778,56 +1072,67 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         first_pass = True
         while self.summary_state == salobj.State.ENABLED and self.run_loop:
+
+            await self.run_target_loop.wait()
+
             try:
-                # If it is the first pass get the current queue, otherwise
-                # wait for the queue to change or get the latest if there's
-                # some
-                queue = await self.get_queue(first_pass)
+                async with self.target_loop_lock:
 
-                # This return False if script failed, in which case next pass
-                # won't wait for queue to change
-                first_pass = not await self.check_scheduled()
+                    # If it is the first pass get the current queue, otherwise
+                    # wait for the queue to change or get the latest if there's
+                    # some
+                    queue = await self.get_queue(first_pass)
 
-                # Only send targets to queue if it is running, empty and there
-                # is nothing executing
-                if queue.running and queue.currentSalIndex == 0 and queue.length == 0:
-                    # TODO: publish detailed state indicating that the
-                    # scheduler is selecting a target
+                    # This return False if script failed, in which case next
+                    # pass won't wait for queue to change
+                    first_pass = not await self.check_scheduled()
 
-                    self.log.debug("Queue ready to receive targets.")
+                    # Only send targets to queue if it is running, empty and
+                    # there is nothing executing
+                    if (
+                        queue.running
+                        and queue.currentSalIndex == 0
+                        and queue.length == 0
+                    ):
+                        # TODO: publish detailed state indicating that the
+                        # scheduler is selecting a target
 
-                    await loop.run_in_executor(None, self.update_telemetry)
+                        self.log.debug("Queue ready to receive targets.")
 
-                    target = await loop.run_in_executor(
-                        None, self.driver.select_next_target
-                    )
+                        await loop.run_in_executor(None, self.update_telemetry)
 
-                    # This method receives a list of targets and return a list
-                    # of script ids
-                    await self.put_on_queue([target])
-
-                    if target.sal_index > 0:
-                        self.raw_telemetry["scheduled_targets"].append(target)
-                    else:
-                        self.log.error("Could not add target to the queue: %s", target)
-                        self.fault(
-                            code=PUT_ON_QUEUE,
-                            report=f"Could not add target to the queue: {target}",
+                        target = await loop.run_in_executor(
+                            None, self.driver.select_next_target
                         )
 
-                    # TODO: publish detailed state indicating that the
-                    # scheduler has finished the target selection
+                        # This method receives a list of targets and return a
+                        # list of script ids
+                        await self.put_on_queue([target])
 
-                else:
-                    # TODO: Publish detailed state indicating that the
-                    # scheduler is waiting.
-                    self.log.debug(
-                        "Queue state: [Running:%s][Executing:%s][Empty:%s]",
-                        queue.running == 1,
-                        queue.currentSalIndex != 0,
-                        queue.length == 0,
-                    )
-                    await asyncio.sleep(self.parameters.loop_sleep_time)
+                        if target.sal_index > 0:
+                            self.raw_telemetry["scheduled_targets"].append(target)
+                        else:
+                            self.log.error(
+                                "Could not add target to the queue: %s", target
+                            )
+                            self.fault(
+                                code=PUT_ON_QUEUE,
+                                report=f"Could not add target to the queue: {target}",
+                            )
+
+                        # TODO: publish detailed state indicating that the
+                        # scheduler has finished the target selection
+
+                    else:
+                        # TODO: Publish detailed state indicating that the
+                        # scheduler is waiting.
+                        self.log.debug(
+                            "Queue state: [Running:%s][Executing:%s][Empty:%s]",
+                            queue.running == 1,
+                            queue.currentSalIndex != 0,
+                            queue.length == 0,
+                        )
+                        await asyncio.sleep(self.parameters.loop_sleep_time)
             except asyncio.CancelledError as e:
                 self.log.exception(e)
                 break
