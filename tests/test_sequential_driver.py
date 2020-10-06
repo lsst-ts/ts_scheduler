@@ -32,26 +32,49 @@ from lsst.ts.observatory.model import ObservatoryState
 
 from lsst.ts.dateloc import ObservatoryLocation
 
+from lsst.ts.astrosky.model import AstronomicalSkyModel
+
+from lsst.sims.seeingModel import SeeingModel
+from lsst.sims.cloudModel import CloudModel
+from lsst.sims.downtimeModel import DowntimeModel
+
 logging.basicConfig()
 
 
 class TestSchedulerDriver(unittest.TestCase):
     def setUp(self):
 
-        self.location = ObservatoryLocation()
-        self.location.for_lsst()
+        self.raw_telemetry = dict()
 
-        self.model = ObservatoryModel(self.location)
-        self.model.configure_from_module()
+        self.raw_telemetry["timeHandler"] = None
+        self.raw_telemetry["scheduled_targets"] = []
+        self.raw_telemetry["observing_queue"] = []
+        self.raw_telemetry["observatoryState"] = None
+        self.raw_telemetry["bulkCloud"] = 0.0
+        self.raw_telemetry["seeing"] = 1.0
 
-        self.model.update_state(current_tai())
+        self.models = dict()
 
-        self.state = ObservatoryState()
-        self.state.set(self.model.current_state)
+        self.models["location"] = ObservatoryLocation()
+        self.models["location"].for_lsst()
+
+        self.models["observatory_model"] = ObservatoryModel(self.models["location"])
+        self.models["observatory_model"].configure_from_module()
+
+        self.models["observatory_model"].update_state(current_tai())
+
+        self.models["observatory_state"] = ObservatoryState()
+        self.models["observatory_state"].set(
+            self.models["observatory_model"].current_state
+        )
+
+        self.models["sky"] = AstronomicalSkyModel(self.models["location"])
+        self.models["seeing"] = SeeingModel()
+        self.models["cloud"] = CloudModel()
+        self.models["downtime"] = DowntimeModel()
 
         self.driver = SequentialScheduler(
-            models={"observatory_model": self.model, "observatory_state": self.state},
-            raw_telemetry={},
+            models=self.models, raw_telemetry=self.raw_telemetry,
         )
 
         self.config = types.SimpleNamespace(
@@ -76,20 +99,26 @@ class TestSchedulerDriver(unittest.TestCase):
 
         while True:
 
-            with self.subTest(msg="Request target {n_targets}."):
+            self.driver.update_conditions()
 
-                target = self.driver.select_next_target()
+            target = self.driver.select_next_target()
 
-                if target is None:
-                    break
-                else:
+            print(target)
+
+            if target is None:
+                break
+            else:
+                with self.subTest(msg="Request target {n_targets}."):
                     self.assertIsInstance(target, Target)
                     self.assertGreater(target.num_exp, 0)
                     self.assertEqual(len(target.exp_times), target.num_exp)
                     self.assertGreater(target.slewtime, 0.0)
-                    n_targets += 1
-                self.model.observe(target)
-                self.state.set(self.model.current_state)
+                n_targets += 1
+
+            self.models["observatory_model"].observe(target)
+            self.models["observatory_state"].set(
+                self.models["observatory_model"].current_state
+            )
 
         self.assertGreater(n_targets, 0)
 

@@ -18,6 +18,7 @@
 #
 # You should have received a copy of the GNU General Public License
 
+import asyncio
 import os
 import glob
 import pathlib
@@ -55,7 +56,10 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, asynctest.TestCase):
             try:
                 self.remote.evt_summaryState.flush()
 
-                await self.remote.cmd_start.start(timeout=SHORT_TIMEOUT)
+                try:
+                    await self.remote.cmd_start.start(timeout=LONG_TIMEOUT)
+                except asyncio.TimeoutError:
+                    pass
 
                 self.assert_next_summary_state(salobj.State.DISABLED, flush=False)
 
@@ -94,7 +98,7 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, asynctest.TestCase):
             config_dir=TEST_CONFIG_DIR,
             initial_state=salobj.State.STANDBY,
             simulation_mode=1,
-        ):
+        ), ObservatoryStateMock():
             try:
                 self.assertEqual(self.csc.summary_state, salobj.State.STANDBY)
                 state = await self.remote.evt_summaryState.next(

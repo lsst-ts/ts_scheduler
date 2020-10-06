@@ -97,7 +97,7 @@ class SequentialParameters(DriverParameters):
     """
 
     observing_list = pex_config.Field(
-        "File with the list of targets to observe with the " "configuration.", str
+        "File with the list of targets to observe with the configuration.", str
     )
 
 
@@ -185,43 +185,32 @@ class SequentialScheduler(Driver):
 
         self.targetid += 1
 
-        while len(self.observing_list_dict) > 0:
+        for tid in self.observing_list_dict:
 
             target = SequentialTarget(
-                config=self.observing_list_dict.pop(
-                    list(self.observing_list_dict.keys())[0]
-                ),
-                targetid=self.targetid,
+                config=self.observing_list_dict[tid], targetid=self.targetid,
             )
 
-            # Update observatory model with current observatory state and
-            # check that target is observable.
-            if (
-                "observatory_model" in self.models
-                and "observatory_state" in self.models
-            ):
-                self.models["observatory_model"].set_state(
-                    self.models["observatory_state"]
-                )
-                slew_time, error = self.models["observatory_model"].get_slew_delay(
-                    target
-                )
+            slew_time, error = self.models["observatory_model"].get_slew_delay(target)
 
-                if error > 0:
-                    self.log.debug(
-                        f"Error[{error}]: Cannot slew to target @ ra={target.ra}, dec={target.dec}."
-                    )
-                    continue
-                else:
-                    target.slewtime = slew_time
+            if error > 0:
+                self.log.debug(
+                    f"Error[{error}]: Cannot slew to target @ ra={target.ra}, dec={target.dec}."
+                )
+                continue
+            else:
+                target.slewtime = slew_time
+
                 self.log.debug(f"Slewtime to target: {slew_time}s.")
 
-            else:
-                self.log.debug("No observatory model or state available.")
+                self.observing_list_dict.pop(tid)
 
-            return target
+                return target
 
-        self.log.info("Sequential Scheduler list empty. No more targets to schedule.")
+        self.log.info(
+            f"No observable target available. Current target list size: {len(self.observing_list_dict)}."
+        )
+
         return None
 
     def schema(self):
