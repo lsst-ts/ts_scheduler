@@ -29,7 +29,7 @@ class SimpleTargetLoopTestCase(asynctest.TestCase):
     """
 
     async def setUp(self):
-        salobj.test_utils.set_random_lsst_dds_domain()
+        salobj.testutils.set_random_lsst_dds_domain()
         self.datadir = os.path.abspath(os.path.join(os.path.dirname(__file__), "data"))
         standardpath = os.path.join(self.datadir, "standard")
         externalpath = os.path.join(self.datadir, "external")

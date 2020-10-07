@@ -23,7 +23,7 @@ TEST_CONFIG_DIR = pathlib.Path(__file__).parents[1].joinpath("tests", "data", "c
 class Harness:
     def __init__(self, config_dir=None):
         index = 0  # next(index_gen)
-        salobj.test_utils.set_random_lsst_dds_domain()
+        salobj.testutils.set_random_lsst_dds_domain()
         self.csc = SchedulerCSC(index=index, config_dir=config_dir)
         self.csc.parameters.mode = 'DRY'  # need to set this to allow tests
         self.remote = salobj.Remote(self.csc.domain, "Scheduler", index=index)
@@ -176,7 +176,7 @@ class TestSchedulerCSC(asynctest.TestCase):
             for bad_config_name in bad_config_names:
                 with self.subTest(bad_config_name=bad_config_name):
                     harness.remote.cmd_start.set(settingsToApply=bad_config_name)
-                    with salobj.test_utils.assertRaisesAckError():
+                    with salobj.testutils.assertRaisesAckError():
                         await harness.remote.cmd_start.start(timeout=SHORT_TIMEOUT)
 
             harness.remote.cmd_start.set(settingsToApply="all_fields")
