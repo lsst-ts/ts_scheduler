@@ -140,6 +140,10 @@ class FeatureScheduler(Driver):
         RuntimeError:
             If `config` does not have a `scheduler_config` attribute or if it
             points to a non-existing file.
+        NoSchedulerError:
+            If scheduler configuration does not define `scheduler` attribute.
+        NoNsideError:
+            If scheduler configuration does not define `nside` attribute.
 
         """
 
@@ -212,7 +216,7 @@ class FeatureScheduler(Driver):
         # Update conditions on the scheduler
         self.scheduler.update_conditions(self.conditions)
 
-        # Set time from next observation based on the current time on the
+        # Set time for next observation based on the current time on the
         # observatory model, which accounts for current observations on the
         # queue.
         self.next_observation_mjd = self.models["observatory_model"].dateprofile.mjd
@@ -262,19 +266,10 @@ class FeatureScheduler(Driver):
                     hpid
                 ]
                 target.observation["airmass"] = self.conditions.airmass[hpid]
-                # target.observation["fivesigmadepth"] = m5_flat_sed(
-                #     filtername,
-                #     target.observation["skybrightness"],
-                #     target.observation["FWHMeff"],
-                #     target.observation["exptime"],
-                #     target.observation["airmass"],
-                # )
                 target.observation["alt"] = target.alt_rad
                 target.observation["az"] = target.az_rad
                 target.observation["rotSkyPos"] = target.ang_rad
                 target.observation["clouds"] = self.conditions.bulk_cloud
-                # target.observation["sunAlt"] = telemetry_stream["sunAlt"]
-                # target.observation["moonAlt"] = telemetry_stream["moonAlt"]
 
                 target.slewtime = slew_time
                 target.airmass = target.observation["airmass"]
@@ -336,7 +331,7 @@ class FeatureScheduler(Driver):
             alts > self.models["observatory_model"].params.telalt_minpos_rad
         )
 
-        # Compute the airmass at each heapix
+        # Compute the airmass at each healpix
         airmass = np.zeros(alts.size, dtype=float)
         airmass.fill(np.nan)
         airmass[good] = 1.0 / np.cos(np.pi / 2.0 - alts[good])

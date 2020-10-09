@@ -1150,7 +1150,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     report="Error on simple target production loop.",
                     traceback=traceback.format_exc(),
                 )
-                self.log.exception("Error on simple target productiton loop.")
+                self.log.exception("Error on simple target production loop.")
                 break
 
     def callback_script_info(self, data):

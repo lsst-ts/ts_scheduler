@@ -35,29 +35,29 @@ def gen_greedy_surveys(
     Parameters
     ----------
     nside : int (32)
-        The HEALpix nside to use
+        The HEALpix nside to use.
     nexp : int (1)
         The number of exposures to use in a visit.
     exptime : float (30.)
-        The exposure time to use per visit (seconds)
+        The exposure time to use per visit (seconds).
     filters : list of str (['r', 'i', 'z', 'y'])
         Which filters to generate surveys for.
     camera_rot_limits : list of float ([-80., 80.])
         The limits to impose when rotationally dithering the camera (degrees).
     shadow_minutes : float (60.)
-        Used to mask regions around zenith (minutes)
-    max_alt : float (76.
-        The maximium altitude to use when masking zenith (degrees)
+        Used to mask regions around zenith (minutes).
+    max_alt : float (76.)
+        The maximium altitude to use when masking zenith (degrees).
     moon_distance : float (30.)
-        The mask radius to apply around the moon (degrees)
+        The mask radius to apply around the moon (degrees).
     ignore_obs : str or list of str ('DD')
         Ignore observations by surveys that include the given substring(s).
     m5_weight : float (3.)
-        The weight for the 5-sigma depth difference basis function
+        The weight for the 5-sigma depth difference basis function.
     footprint_weight : float (0.3)
         The weight on the survey footprint basis function.
     slewtime_weight : float (3.)
-        The weight on the slewtime basis function
+        The weight on the slewtime basis function.
     stayfilter_weight : float (3.)
         The weight on basis function that tries to stay avoid filter changes.
     """

@@ -294,7 +294,15 @@ class Driver(object):
         )
 
         # Only compute night boundaries when we transition from nighttime to
-        # daytitme
+        # daytime. Possibilities are:
+        # 1 - self.is_night=True and is_night = True: During the night (no need
+        #     to compute anything).
+        # 2 - self.is_night=False and is_night = True: Transitioned from
+        #     night/day (need to recompute night boundaries).
+        # 3 - self.is_night=True and is_night = False: Transitioned from
+        #     day/night (no need to compute anything).
+        # 4 - self.is_night=False and is_night = False: During the day, no need
+        #     to compute anything.
         if not self.is_night and is_night:
             self.log.debug("Night over. Computing next nigth boundaries.")
             self.night += 1

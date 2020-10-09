@@ -114,7 +114,7 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, asynctest.TestCase):
                 for bad_config_name in bad_config_names:
                     with self.subTest(bad_config_name=bad_config_name):
                         self.remote.cmd_start.set(settingsToApply=bad_config_name)
-                        with salobj.test_utils.assertRaisesAckError():
+                        with salobj.testutils.assertRaisesAckError():
                             await self.remote.cmd_start.start(timeout=SHORT_TIMEOUT)
 
                 self.remote.cmd_start.set(settingsToApply="all_fields")

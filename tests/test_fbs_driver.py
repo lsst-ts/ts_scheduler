@@ -50,7 +50,7 @@ logging.basicConfig()
 class TestFeatureSchedulerDriver(unittest.TestCase):
     def setUp(self):
         # Need to set current time to something the sky brightness files
-        # availble for testing have available (MJD: 59853.-59856.).
+        # available for testing have available (MJD: 59853.-59856.).
         start_time = Time(59853.983, format="mjd", scale="tai")
 
         self.raw_telemetry = dict()
@@ -144,7 +144,7 @@ class TestFeatureSchedulerDriver(unittest.TestCase):
 
         n_targets = 0
 
-        # Calling select_next_target without callind updata_conditions first
+        # Calling select_next_target without calling update_conditions first
         # should raise a RuntimeError exception.
         with self.assertRaises(RuntimeError):
             target = self.driver.select_next_target()
