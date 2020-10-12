@@ -56,6 +56,8 @@ class DriverTarget(Target):
         The declination (radians) of the target.
     ang_rad : float
         The sky angle (radians) of the target.
+    obs_time : float
+        Time of the observation. If zero (default) slew as soon as possible.
     num_exp : int
         The number of requested exposures for the target.
     exp_times : list[float]
@@ -73,10 +75,12 @@ class DriverTarget(Target):
         ra_rad=0.0,
         dec_rad=0.0,
         ang_rad=0.0,
+        obs_time=0.0,
         num_exp=0,
         exp_times=[],
     ):
         self.sal_index = sal_index
+        self.obs_time = obs_time
         super().__init__(
             targetid=targetid,
             fieldid=fieldid,
@@ -105,6 +109,7 @@ class DriverTarget(Target):
             "ra": self.ra,
             "dec": self.dec,
             "ang": self.ang,
+            "obs_time": self.obs_time,
             "num_exp": self.num_exp,
             "exp_times": self.exp_times,
         }
@@ -154,7 +159,18 @@ class DriverParameters(pex_config.Config):
     replace `self.params` on the Driver by the subclassed configuration.
     """
 
-    pass
+    night_boundary = pex_config.Field(
+        "Solar altitude (degrees) when it is considered night.", float
+    )
+    new_moon_phase_threshold = pex_config.Field(
+        "New moon phase threshold for swapping to dark time filter.", float
+    )
+
+    def setDefaults(self):
+        """Set defaults for the LSST Scheduler's Driver.
+        """
+        self.night_boundary = -12.0
+        self.new_moon_phase_threshold = 20.0
 
 
 class Driver(object):
@@ -195,6 +211,11 @@ class Driver(object):
         self.raw_telemetry = raw_telemetry
         self.targetid = 0
 
+        self.is_night = None
+        self.night = 1
+        self.current_sunset = None
+        self.current_sunrise = None
+
     def configure_scheduler(self, config=None):
         """This method is responsible for running the scheduler configuration
         and returning the survey topology, which specifies the number, name
@@ -233,13 +254,69 @@ class Driver(object):
         raise NotImplementedError("Cold start is not implemented.")
 
     def update_conditions(self):
-        """
+        """Update driver internal conditions.
 
-        Returns
-        -------
-
+        When subclassing this method, make sure to call it at the start of the
+        method, as it performs operations like running the observatory through
+        the current targets on the queue.
         """
-        pass
+        self.log.debug("Updating conditions.")
+        # Update observatory model with current observatory state.
+        self.models["observatory_model"].set_state(self.models["observatory_state"])
+
+        self.models["sky"].update(self.models["observatory_state"].time)
+
+        if self.is_night is None:
+            self.log.debug("Driver not initialized yet. Computing night parameters.")
+            # Driver was not initialized yet. Need to compute night
+            # boundaries
+
+            (self.current_sunset, self.current_sunrise) = self.models[
+                "sky"
+            ].get_night_boundaries(self.parameters.night_boundary)
+
+            self.is_night = (
+                self.current_sunset
+                <= self.models["observatory_state"].time
+                < self.current_sunrise
+            )
+
+            self.log.debug(
+                f"Sunset/Sunrise: {self.current_sunset}/{self.current_sunrise} "
+            )
+
+        is_night = self.is_night
+
+        self.is_night = (
+            self.current_sunset
+            <= self.models["observatory_state"].time
+            < self.current_sunrise
+        )
+
+        # Only compute night boundaries when we transition from nighttime to
+        # daytime. Possibilities are:
+        # 1 - self.is_night=True and is_night = True: During the night (no need
+        #     to compute anything).
+        # 2 - self.is_night=False and is_night = True: Transitioned from
+        #     night/day (need to recompute night boundaries).
+        # 3 - self.is_night=True and is_night = False: Transitioned from
+        #     day/night (no need to compute anything).
+        # 4 - self.is_night=False and is_night = False: During the day, no need
+        #     to compute anything.
+        if not self.is_night and is_night:
+            self.log.debug("Night over. Computing next nigth boundaries.")
+            self.night += 1
+            (self.current_sunset, self.current_sunrise) = self.models[
+                "sky"
+            ].get_night_boundaries(self.parameters.night_boundary)
+
+            self.log.debug(
+                f"[{self.night}]: Sunset/Sunrise: {self.current_sunset}/{self.current_sunrise} "
+            )
+
+        # Run observatory model over current targets on the queue
+        for target in self.raw_telemetry["scheduled_targets"]:
+            self.models["observatory_model"].observe(target)
 
     def select_next_target(self):
         """Picks a target and returns it as a target object.

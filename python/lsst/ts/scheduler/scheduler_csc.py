@@ -621,16 +621,13 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         self.raw_telemetry["scheduled_targets"] = None
 
         # List of things on the observatory queue
-        self.raw_telemetry["observing_queue"] = None
+        self.raw_telemetry["observing_queue"] = []
 
         # Observatory State
         self.raw_telemetry["observatoryState"] = None
 
         # Transparency measurement
         self.raw_telemetry["bulkCloud"] = None
-
-        # Seeing measurement
-        self.raw_telemetry["seeing"] = None
 
         # Seeing measurement
         self.raw_telemetry["seeing"] = None
@@ -644,7 +641,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         """
         self.log.debug("Updating telemetry stream.")
-        pass
+
+        self.driver.update_conditions()
 
     async def put_on_queue(self, targets):
         """Given a list of targets, append them on the queue to be observed.
@@ -1105,6 +1103,15 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                             None, self.driver.select_next_target
                         )
 
+                        current_tai = salobj.current_tai()
+
+                        if target.obs_time > current_tai:
+                            delta_t = current_tai - target.obs_time
+                            self.log.debug(
+                                f"Target observing time in the future. Waiting {delta_t}s"
+                            )
+                            await asyncio.sleep(delta_t)
+
                         # This method receives a list of targets and return a
                         # list of script ids
                         await self.put_on_queue([target])
@@ -1133,10 +1140,9 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                             queue.length == 0,
                         )
                         await asyncio.sleep(self.parameters.loop_sleep_time)
-            except asyncio.CancelledError as e:
-                self.log.exception(e)
+            except asyncio.CancelledError:
                 break
-            except Exception as e:
+            except Exception:
                 # If there is an exception go to FAULT state, log the
                 # exception and break the loop
                 self.fault(
@@ -1144,7 +1150,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     report="Error on simple target production loop.",
                     traceback=traceback.format_exc(),
                 )
-                self.log.exception(e)
+                self.log.exception("Error on simple target production loop.")
                 break
 
     def callback_script_info(self, data):
