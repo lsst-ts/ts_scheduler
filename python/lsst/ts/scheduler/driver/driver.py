@@ -1,10 +1,31 @@
+# This file is part of ts_scheduler
+#
+# Developed for the LSST Telescope and Site Systems.
+# This product includes software developed by the LSST Project
+# (https://www.lsst.org).
+# See the COPYRIGHT file at the top-level directory of this distribution
+# for details of code ownership.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+
+import os
 from builtins import object
 import logging
 import yaml
 
 import numpy as np
 
-from lsst.ts.scheduler.kernel import SurveyTopology
+from .survey_topology import SurveyTopology
 
 from lsst.ts.observatory.model import Target
 
@@ -35,6 +56,8 @@ class DriverTarget(Target):
         The declination (radians) of the target.
     ang_rad : float
         The sky angle (radians) of the target.
+    obs_time : float
+        Time of the observation. If zero (default) slew as soon as possible.
     num_exp : int
         The number of requested exposures for the target.
     exp_times : list[float]
@@ -42,12 +65,32 @@ class DriverTarget(Target):
         of num_exp.
 
     """
-    def __init__(self, sal_index=0, targetid=0, fieldid=0, band_filter="",
-                 ra_rad=0.0, dec_rad=0.0, ang_rad=0.0,
-                 num_exp=0, exp_times=[]):
+
+    def __init__(
+        self,
+        sal_index=0,
+        targetid=0,
+        fieldid=0,
+        band_filter="",
+        ra_rad=0.0,
+        dec_rad=0.0,
+        ang_rad=0.0,
+        obs_time=0.0,
+        num_exp=0,
+        exp_times=[],
+    ):
         self.sal_index = sal_index
-        super().__init__(targetid=targetid, fieldid=fieldid, band_filter=band_filter, ra_rad=ra_rad,
-                         dec_rad=dec_rad, ang_rad=ang_rad, num_exp=num_exp, exp_times=exp_times)
+        self.obs_time = obs_time
+        super().__init__(
+            targetid=targetid,
+            fieldid=fieldid,
+            band_filter=band_filter,
+            ra_rad=ra_rad,
+            dec_rad=dec_rad,
+            ang_rad=ang_rad,
+            num_exp=num_exp,
+            exp_times=exp_times,
+        )
 
         # TODO: This method might need to be expanded in the future.
         # Keeping it here as placeholder for now.
@@ -60,13 +103,16 @@ class DriverTarget(Target):
         -------
         config_str: str
         """
-        script_config = {'targetid': self.targetid,
-                         'band_filter': self.filter,
-                         'ra': self.ra,
-                         'dec': self.dec,
-                         'ang': self.ang,
-                         'num_exp': self.num_exp,
-                         'exp_times': self.exp_times}
+        script_config = {
+            "targetid": self.targetid,
+            "band_filter": self.filter,
+            "ra": self.ra,
+            "dec": self.dec,
+            "ang": self.ang,
+            "obs_time": self.obs_time,
+            "num_exp": self.num_exp,
+            "exp_times": self.exp_times,
+        }
 
         return yaml.safe_dump(script_config)
 
@@ -80,7 +126,7 @@ class DriverTarget(Target):
         """
         topic_target = dict()
 
-        topic_target['targetId'] = self.targetid
+        topic_target["targetId"] = self.targetid
         topic_target["filter"] = self.filter
         topic_target["requestTime"] = self.time
         topic_target["ra"] = self.ra
@@ -112,7 +158,19 @@ class DriverParameters(pex_config.Config):
     this and add the required parameters (e.g. file paths or else). Then,
     replace `self.params` on the Driver by the subclassed configuration.
     """
-    pass
+
+    night_boundary = pex_config.Field(
+        "Solar altitude (degrees) when it is considered night.", float
+    )
+    new_moon_phase_threshold = pex_config.Field(
+        "New moon phase threshold for swapping to dark time filter.", float
+    )
+
+    def setDefaults(self):
+        """Set defaults for the LSST Scheduler's Driver.
+        """
+        self.night_boundary = -12.0
+        self.new_moon_phase_threshold = 20.0
 
 
 class Driver(object):
@@ -138,8 +196,12 @@ class Driver(object):
     raw_telemetry: `dict`
         A dictionary with available raw telemetry.
     """
-    def __init__(self, models, raw_telemetry, parameters=None):
-        self.log = logging.getLogger("schedulerDriver")
+
+    def __init__(self, models, raw_telemetry, parameters=None, log=None):
+        if log is None:
+            self.log = logging.getLogger(type(self).__name__)
+        else:
+            self.log = log.getChild(type(self).__name__)
 
         if parameters is None:
             self.parameters = DriverParameters()
@@ -148,6 +210,11 @@ class Driver(object):
         self.models = models
         self.raw_telemetry = raw_telemetry
         self.targetid = 0
+
+        self.is_night = None
+        self.night = 1
+        self.current_sunset = None
+        self.current_sunrise = None
 
     def configure_scheduler(self, config=None):
         """This method is responsible for running the scheduler configuration
@@ -187,13 +254,69 @@ class Driver(object):
         raise NotImplementedError("Cold start is not implemented.")
 
     def update_conditions(self):
-        """
+        """Update driver internal conditions.
 
-        Returns
-        -------
-
+        When subclassing this method, make sure to call it at the start of the
+        method, as it performs operations like running the observatory through
+        the current targets on the queue.
         """
-        pass
+        self.log.debug("Updating conditions.")
+        # Update observatory model with current observatory state.
+        self.models["observatory_model"].set_state(self.models["observatory_state"])
+
+        self.models["sky"].update(self.models["observatory_state"].time)
+
+        if self.is_night is None:
+            self.log.debug("Driver not initialized yet. Computing night parameters.")
+            # Driver was not initialized yet. Need to compute night
+            # boundaries
+
+            (self.current_sunset, self.current_sunrise) = self.models[
+                "sky"
+            ].get_night_boundaries(self.parameters.night_boundary)
+
+            self.is_night = (
+                self.current_sunset
+                <= self.models["observatory_state"].time
+                < self.current_sunrise
+            )
+
+            self.log.debug(
+                f"Sunset/Sunrise: {self.current_sunset}/{self.current_sunrise} "
+            )
+
+        is_night = self.is_night
+
+        self.is_night = (
+            self.current_sunset
+            <= self.models["observatory_state"].time
+            < self.current_sunrise
+        )
+
+        # Only compute night boundaries when we transition from nighttime to
+        # daytime. Possibilities are:
+        # 1 - self.is_night=True and is_night = True: During the night (no need
+        #     to compute anything).
+        # 2 - self.is_night=False and is_night = True: Transitioned from
+        #     night/day (need to recompute night boundaries).
+        # 3 - self.is_night=True and is_night = False: Transitioned from
+        #     day/night (no need to compute anything).
+        # 4 - self.is_night=False and is_night = False: During the day, no need
+        #     to compute anything.
+        if not self.is_night and is_night:
+            self.log.debug("Night over. Computing next nigth boundaries.")
+            self.night += 1
+            (self.current_sunset, self.current_sunrise) = self.models[
+                "sky"
+            ].get_night_boundaries(self.parameters.night_boundary)
+
+            self.log.debug(
+                f"[{self.night}]: Sunset/Sunrise: {self.current_sunset}/{self.current_sunrise} "
+            )
+
+        # Run observatory model over current targets on the queue
+        for target in self.raw_telemetry["scheduled_targets"]:
+            self.models["observatory_model"].observe(target)
 
     def select_next_target(self):
         """Picks a target and returns it as a target object.
@@ -205,7 +328,7 @@ class Driver(object):
         Target
 
         """
-        self.log.log(WORDY, 'Selecting next target.')
+        self.log.log(WORDY, "Selecting next target.")
 
         self.targetid += 1
         target = DriverTarget(targetid=self.targetid)
@@ -229,6 +352,31 @@ class Driver(object):
         -------
         Python list of one or more Observations
         """
-        self.log.log(WORDY, 'Registering observation %s.', observation)
+        self.log.log(WORDY, "Registering observation %s.", observation)
 
         return [observation]
+
+    def load(self, config):
+        """Load a modifying configuration.
+
+        The input is a file that the Driver must be able to parse. It should
+        contain that the driver can parse to reconfigure the current scheduler
+        algorithm. For instance, it could contain new targets to add to a queue
+        or project.
+
+        Each Driver must implement its own load method. This method just checks
+        that the file exists.
+
+        Parameters
+        ----------
+        config : `str`
+            Configuration to load
+
+        Raises
+        ------
+        RuntimeError:
+            If input configuration file does not exists.
+
+        """
+        if not os.path.exists(config):
+            raise RuntimeError(f"Input configuration file {config} does not exist.")

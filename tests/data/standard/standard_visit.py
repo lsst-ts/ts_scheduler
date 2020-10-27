@@ -17,11 +17,11 @@ class StandardVisit(BaseScript):
 
     Wait for the specified time, then exit. See `configure` for details.
     """
+
     __test__ = False  # stop pytest from warning that this is not a test
 
     def __init__(self, index, descr=""):
-        super().__init__(index=index, descr=descr,
-                         remotes_dict={})
+        super().__init__(index=index, descr=descr, remotes_dict={})
 
         self.targetid = 0
         self.fieldid = 0
@@ -32,9 +32,17 @@ class StandardVisit(BaseScript):
         self.num_exp = 0
         self.exp_times = []
 
-    async def configure(self, targetid=0, fieldid=0, band_filter="",
-                        ra=0.0, dec=0.0, ang=0.0,
-                        num_exp=0, exp_times=[]):
+    async def configure(
+        self,
+        targetid=0,
+        fieldid=0,
+        band_filter="",
+        ra=0.0,
+        dec=0.0,
+        ang=0.0,
+        num_exp=0,
+        exp_times=[],
+    ):
         """Configure the script.
 
 
