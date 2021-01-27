@@ -60,7 +60,11 @@ class SequentialTarget(DriverTarget):
         config_str: str
         """
 
-        return yaml.safe_dump(self.config)
+        return yaml.safe_dump(
+            self.config["script_config"]
+            if "script_config" in self.config
+            else self.config
+        )
 
 
 class SequentialParameters(DriverParameters):
@@ -284,6 +288,10 @@ properties:
               filter:
                 description: Filters for this exposure.
                 type: string
+        script_config:
+          type: object
+          description: Script configuration.
+          additionalProperties: true
       # Disable support for providing name only. Need to check how to support it.
       # if:
       #   properties:
