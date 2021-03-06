@@ -159,7 +159,7 @@ class TestFeatureSchedulerDriver(unittest.TestCase):
                 break
             else:
                 with self.subTest(msg="Request target {n_targets}."):
-                    self.assertIsInstance(target, Target, f"Wrong target type.")
+                    self.assertIsInstance(target, Target, "Wrong target type.")
                     self.assertGreater(
                         target.num_exp,
                         0,

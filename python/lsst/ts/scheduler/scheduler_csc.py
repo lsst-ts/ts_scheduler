@@ -384,9 +384,9 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 try:
                     await self.telemetry_loop_task
                 except asyncio.CancelledError:
-                    self.log.debug(f"Telemetry loop cancelled.")
+                    self.log.debug("Telemetry loop cancelled.")
                 except Exception:
-                    self.log.exception(f"Unexpected error cancelling telemetry loop.")
+                    self.log.exception("Unexpected error cancelling telemetry loop.")
             finally:
                 self.telemetry_loop_task = None
 
