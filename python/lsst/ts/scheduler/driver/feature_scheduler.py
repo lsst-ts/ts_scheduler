@@ -84,8 +84,7 @@ class FeatureSchedulerTarget(DriverTarget):
 
 
 class FeatureSchedulerParameters(DriverParameters):
-    """Feature Scheduler driver parameters.
-    """
+    """Feature Scheduler driver parameters."""
 
     scheduler_config = pex_config.Field(
         "Python script with the feature scheduler configuration. It must define "
@@ -100,8 +99,7 @@ class FeatureSchedulerParameters(DriverParameters):
 
 
 class FeatureScheduler(Driver):
-    """Feature scheduler driver.
-    """
+    """Feature scheduler driver."""
 
     def __init__(self, models, raw_telemetry, parameters=None):
 
@@ -206,8 +204,7 @@ class FeatureScheduler(Driver):
         raise RuntimeError("Cold start not supported by SequentialScheduler.")
 
     def update_conditions(self):
-        """Update conditions on the scheduler.
-        """
+        """Update conditions on the scheduler."""
 
         super().update_conditions()
 
@@ -299,8 +296,7 @@ class FeatureScheduler(Driver):
         return [observation]
 
     def load(self, config):
-        """Load a new set of targets.
-        """
+        """Load a new set of targets."""
         raise NotImplementedError("Load method not implemented yet.")
 
     def _format_conditions(self):

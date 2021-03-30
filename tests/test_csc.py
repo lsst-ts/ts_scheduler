@@ -44,8 +44,7 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, asynctest.TestCase):
         )
 
     async def test_fail_no_observatory_state(self):
-        """Test CSC goes to FAULT if no observatory state.
-        """
+        """Test CSC goes to FAULT if no observatory state."""
 
         async with self.make_csc(
             config_dir=TEST_CONFIG_DIR,
@@ -92,8 +91,7 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, asynctest.TestCase):
             )
 
     async def test_configuration(self):
-        """Test basic configuration.
-        """
+        """Test basic configuration."""
         async with self.make_csc(
             config_dir=TEST_CONFIG_DIR,
             initial_state=salobj.State.STANDBY,
@@ -128,8 +126,7 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, asynctest.TestCase):
                 await salobj.set_summary_state(self.remote, salobj.State.STANDBY)
 
     async def test_load(self):
-        """Test load command.
-        """
+        """Test load command."""
         async with self.make_csc(
             config_dir=TEST_CONFIG_DIR,
             initial_state=salobj.State.STANDBY,
