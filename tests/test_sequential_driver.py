@@ -74,7 +74,8 @@ class TestSchedulerDriver(unittest.TestCase):
         self.models["downtime"] = DowntimeModel()
 
         self.driver = SequentialScheduler(
-            models=self.models, raw_telemetry=self.raw_telemetry,
+            models=self.models,
+            raw_telemetry=self.raw_telemetry,
         )
 
         self.config = types.SimpleNamespace(

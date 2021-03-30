@@ -73,8 +73,7 @@ NonFinalStates = frozenset(
 
 
 class SchedulerCscParameters(pex_config.Config):
-    """Configuration of the LSST Scheduler's Model.
-    """
+    """Configuration of the LSST Scheduler's Model."""
 
     driver_type = pex_config.Field(
         "Choose a driver to use. This should be an import string that "
@@ -150,8 +149,7 @@ class SchedulerCscParameters(pex_config.Config):
     )
 
     def set_defaults(self):
-        """Set defaults for the LSST Scheduler's Driver.
-        """
+        """Set defaults for the LSST Scheduler's Driver."""
         self.driver_type = "lsst.ts.scheduler.driver.driver"
         self.startup_type = "HOT"
         self.startup_database = ""
@@ -566,8 +564,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             )
 
     async def handle_observatory_state(self):
-        """Handle observatory state.
-        """
+        """Handle observatory state."""
 
         current_target_state = await self.ptg.tel_currentTargetStatus.next(
             flush=True, timeout=self.heartbeat_interval
@@ -633,7 +630,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         self.raw_telemetry["seeing"] = None
 
     def update_telemetry(self):
-        """ Update data on all the telemetry values.
+        """Update data on all the telemetry values.
 
         Returns
         -------
@@ -902,7 +899,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         return self.driver.configure_scheduler(config)
 
     def run(self):
-        """ This is the method that runs when the system is in enable state.
+        """This is the method that runs when the system is in enable state.
         It is responsible for the target production loop, updating telemetry,
         requesting targets from the driver to build a queue and filling
         the queue with targets.
@@ -1035,7 +1032,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         return retval
 
     async def simple_target_production_loop(self):
-        """ This coroutine implements the simple target production loop. It
+        """This coroutine implements the simple target production loop. It
         will query the status of the queue and, if there is nothing running,
         it will add an observation to the back of the queue. Once Scheduler is
         enabled with simple mode, this coroutine will be added to the event
