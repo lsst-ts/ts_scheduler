@@ -167,8 +167,7 @@ class DriverParameters(pex_config.Config):
     )
 
     def setDefaults(self):
-        """Set defaults for the LSST Scheduler's Driver.
-        """
+        """Set defaults for the LSST Scheduler's Driver."""
         self.night_boundary = -12.0
         self.new_moon_phase_threshold = 20.0
 

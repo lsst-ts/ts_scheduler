@@ -106,7 +106,7 @@ class SequentialParameters(DriverParameters):
 
 
 class SequentialScheduler(Driver):
-    """ A simple scheduler driver that implements a sequential scheduler
+    """A simple scheduler driver that implements a sequential scheduler
     algorithm.
 
     The driver reads from an input file of targets provided by the user and
@@ -192,7 +192,8 @@ class SequentialScheduler(Driver):
         for tid in self.observing_list_dict:
 
             target = SequentialTarget(
-                config=self.observing_list_dict[tid], targetid=self.targetid,
+                config=self.observing_list_dict[tid],
+                targetid=self.targetid,
             )
 
             slew_time, error = self.models["observatory_model"].get_slew_delay(target)
