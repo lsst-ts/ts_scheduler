@@ -32,6 +32,8 @@ import numpy as np
 
 from importlib import import_module
 
+from . import __version__
+
 from lsst.ts import salobj
 from lsst.ts.idl.enums import ScriptQueue
 
@@ -244,6 +246,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
     """
 
     valid_simulation_modes = (0, 1)
+    version = __version__
 
     def __init__(
         self,
