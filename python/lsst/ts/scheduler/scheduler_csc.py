@@ -32,10 +32,11 @@ import numpy as np
 
 from importlib import import_module
 
-from . import __version__
-
 from lsst.ts import salobj
 from lsst.ts.idl.enums import ScriptQueue
+
+from . import __version__
+from . import CONFIG_SCHEMA
 
 from lsst.ts.scheduler.driver import Driver
 from lsst.ts.dateloc import ObservatoryLocation
@@ -261,7 +262,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         super().__init__(
             name="Scheduler",
-            schema_path=schema_path,
+            config_schema=CONFIG_SCHEMA,
             config_dir=config_dir,
             index=index,
             initial_state=initial_state,

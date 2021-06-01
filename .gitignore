@@ -34,7 +34,6 @@ htmlcov
 
 # Project
 version.py
-config_*
 
 # LSST Stack
 .sconf_temp

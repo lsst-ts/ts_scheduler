@@ -25,3 +25,4 @@ except ModuleNotFoundError:
 
 from .driver.driver import *
 from .scheduler_csc import *
+from .config_schema import *
