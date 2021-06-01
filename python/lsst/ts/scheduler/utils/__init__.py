@@ -18,11 +18,6 @@
 #
 # You should have received a copy of the GNU General Public License
 
-try:
-    from .version import *
-except ModuleNotFoundError:
-    __version__ = "?"
-
-from .driver.driver import *
-from .config_schema import *
-from .scheduler_csc import *
+from .csc_utils import *
+from .error_codes import *
+from .parameters import *

@@ -18,11 +18,12 @@
 #
 # You should have received a copy of the GNU General Public License
 
+__all__ = ["SchedulerCSC"]
+
 import asyncio
 import functools
 import inspect
 import logging
-import pathlib
 import time
 import traceback
 
@@ -37,6 +38,14 @@ from lsst.ts.idl.enums import ScriptQueue
 
 from . import __version__
 from . import CONFIG_SCHEMA
+from .utils.csc_utils import NonFinalStates
+from .utils.error_codes import (
+    NO_QUEUE,
+    PUT_ON_QUEUE,
+    SIMPLE_LOOP_ERROR,
+    OBSERVATORY_STATE_UPDATE,
+)
+from .utils.parameters import SchedulerCscParameters
 
 from lsst.ts.scheduler.driver import Driver
 from lsst.ts.dateloc import ObservatoryLocation
@@ -53,117 +62,6 @@ from lsst.sims.cloudModel import CloudModel
 from lsst.sims.cloudModel import version as cloud_version
 from lsst.sims.downtimeModel import DowntimeModel
 from lsst.sims.downtimeModel import version as downtime_version
-
-import lsst.pex.config as pex_config
-
-__all__ = ["SchedulerCSC", "SchedulerCscParameters"]
-
-# Error codes
-NO_QUEUE = 300
-PUT_ON_QUEUE = 301
-SIMPLE_LOOP_ERROR = 400
-OBSERVATORY_STATE_UPDATE = 500
-
-NonFinalStates = frozenset(
-    (
-        ScriptQueue.ScriptProcessState.LOADING.value,
-        ScriptQueue.ScriptProcessState.CONFIGURED.value,
-        ScriptQueue.ScriptProcessState.RUNNING.value,
-    )
-)
-"""Stores all non final state for scripts submitted to the queue.
-"""
-
-
-class SchedulerCscParameters(pex_config.Config):
-    """Configuration of the LSST Scheduler's Model."""
-
-    driver_type = pex_config.Field(
-        "Choose a driver to use. This should be an import string that "
-        "is passed to `importlib.import_module()`. Model will look for "
-        "a subclass of Driver class inside the module.",
-        str,
-        default="lsst.ts.scheduler.driver.driver",
-    )
-    night_boundary = pex_config.Field(
-        "Solar altitude (degrees) when it is considered night.", float
-    )
-    new_moon_phase_threshold = pex_config.Field(
-        "New moon phase threshold for swapping to dark " "time filter.", float
-    )
-    startup_type = pex_config.ChoiceField(
-        "The method used to startup the scheduler.",
-        str,
-        default="HOT",
-        allowed={
-            "HOT": "Hot start, this means the scheduler is " "started up from scratch",
-            "WARM": "Reads the scheduler state from a "
-            "previously saved internal state.",
-            "COLD": "Rebuilds scheduler state from " "observation database.",
-        },
-    )
-    startup_database = pex_config.Field(
-        "Path to the file holding scheduler state or observation "
-        "database to be used on WARM or COLD start.",
-        str,
-        default="",
-    )
-    mode = pex_config.ChoiceField(
-        "The mode of operation of the scheduler. This basically chooses "
-        "one of the available target production loops. ",
-        str,
-        default="SIMPLE",
-        allowed={
-            "SIMPLE": "The Scheduler will publish one target at a "
-            "time, no next target published in advance "
-            "and no predicted schedule.",
-            "ADVANCE": "The Scheduler will pre-compute a predicted "
-            "schedule that is published as an event and "
-            "will fill the queue with a specified "
-            "number of targets. The scheduler will then "
-            "monitor the telemetry stream, recompute the "
-            "queue and change next target up to a "
-            "certain lead time.",
-        },
-    )
-    n_targets = pex_config.Field(
-        "Number of targets to put in the queue ahead of time.", int, default=1
-    )
-    predicted_scheduler_window = pex_config.Field(
-        "Size of predicted scheduler window, in hours.", float, default=2.0
-    )
-    loop_sleep_time = pex_config.Field(
-        "How long should the target production loop wait when "
-        "there is a wait event. Unit = seconds.",
-        float,
-        default=1.0,
-    )
-    cmd_timeout = pex_config.Field(
-        "Global command timeout. Unit = seconds.", float, default=60.0
-    )
-    observing_script = pex_config.Field(
-        "Name of the observing script.", str, default="standard_visit.py"
-    )
-    observing_script_is_standard = pex_config.Field(
-        "Is observing script standard?", bool, default=True
-    )
-    max_scripts = pex_config.Field(
-        "Maximum number of scripts to keep track of.", int, default=100
-    )
-
-    def set_defaults(self):
-        """Set defaults for the LSST Scheduler's Driver."""
-        self.driver_type = "lsst.ts.scheduler.driver.driver"
-        self.startup_type = "HOT"
-        self.startup_database = ""
-        self.mode = "SIMPLE"
-        self.n_targets = 1
-        self.predicted_scheduler_window = 2.0
-        self.loop_sleep_time = 1.0
-        self.cmd_timeout = 60.0
-        self.observing_script = "standard_visit.py"
-        self.observing_script_is_standard = True
-        self.max_scripts = 100
 
 
 class SchedulerCSC(salobj.ConfigurableCsc):
@@ -244,6 +142,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
            `Driver.select_next_target` this error code will, most likely, be
            issued (along with the traceback message).
 
+    * 500: Error updating observatory state.
     """
 
     valid_simulation_modes = (0, 1)
@@ -256,9 +155,6 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         initial_state=salobj.base_csc.State.STANDBY,
         simulation_mode=0,
     ):
-        schema_path = (
-            pathlib.Path(__file__).parents[4].joinpath("schema", "Scheduler.yaml")
-        )
 
         super().__init__(
             name="Scheduler",
