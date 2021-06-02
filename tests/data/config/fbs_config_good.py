@@ -23,6 +23,7 @@ def gen_greedy_surveys(
     slewtime_weight=3.0,
     stayfilter_weight=3.0,
     footprints=None,
+    seed=42,
 ):
     """
     Make a quick set of greedy surveys
@@ -60,13 +61,15 @@ def gen_greedy_surveys(
         The weight on the slewtime basis function.
     stayfilter_weight : float (3.)
         The weight on basis function that tries to stay avoid filter changes.
+    seed : int (42)
+        The random generator seed.
     """
     # Define the extra parameters that are used in the greedy survey. I
     # think these are fairly set, so no need to promote to utility func kwargs
     greed_survey_params = {
         "block_size": 1,
         "smoothing_kernel": None,
-        "seed": 42,
+        "seed": seed,
         "camera": "LSST",
         "dither": True,
         "survey_name": "greedy",
@@ -135,7 +138,7 @@ def gen_greedy_surveys(
                 ignore_obs=ignore_obs,
                 nexp=nexp,
                 detailers=[detailer],
-                **greed_survey_params
+                **greed_survey_params,
             )
         )
 
@@ -146,6 +149,7 @@ if __name__ == "config":
 
     nside = 32
     per_night = True  # Dither DDF per night
+    seed = 42
 
     camera_ddf_rot_limit = 75.0
 
@@ -160,6 +164,6 @@ if __name__ == "config":
     for i, key in enumerate(footprints_hp):
         footprints.footprints[i, :] = footprints_hp[key]
 
-    greedy = gen_greedy_surveys(nside, nexp=1, footprints=footprints)
+    greedy = gen_greedy_surveys(nside, nexp=1, footprints=footprints, seed=seed)
     surveys = [greedy]
     scheduler = Core_scheduler(surveys, nside=nside)

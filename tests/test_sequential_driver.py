@@ -18,6 +18,7 @@
 #
 # You should have received a copy of the GNU General Public License
 
+import os
 import types
 import pathlib
 import unittest
@@ -84,6 +85,8 @@ class TestSchedulerDriver(unittest.TestCase):
             .joinpath("tests", "data", "test_observing_list.yaml")
         )
 
+        self.files_to_delete = []
+
     def test_configure_scheduler(self):
 
         survey_topology = self.driver.configure_scheduler(self.config)
@@ -96,6 +99,42 @@ class TestSchedulerDriver(unittest.TestCase):
     def test_select_next_target(self):
         self.driver.configure_scheduler(self.config)
 
+        n_targets = self.run_observations()
+
+        self.assertGreater(n_targets, 0)
+
+    def test_load(self):
+
+        config = (
+            pathlib.Path(__file__)
+            .parents[1]
+            .joinpath("tests", "data", "test_observing_list.yaml")
+        )
+
+        self.driver.load(config)
+
+    def test_save_and_reset_from_file(self):
+
+        self.driver.configure_scheduler(self.config)
+
+        # Store copy of the state dictionary
+        state = self.driver.observing_list_dict.copy()
+
+        # Save state of the scheduler
+        filename = self.driver.save_state()
+
+        self.files_to_delete.append(filename)
+
+        # Run some observations
+        self.run_observations()
+
+        self.assertNotEqual(self.driver.observing_list_dict, state)
+
+        self.driver.reset_from_state(filename)
+
+        self.assertEqual(self.driver.observing_list_dict, state)
+
+    def run_observations(self):
         n_targets = 0
 
         while True:
@@ -121,20 +160,11 @@ class TestSchedulerDriver(unittest.TestCase):
                 self.models["observatory_model"].current_state
             )
 
-        self.assertGreater(n_targets, 0)
-
-    def test_load(self):
-
-        config = (
-            pathlib.Path(__file__)
-            .parents[1]
-            .joinpath("tests", "data", "test_observing_list.yaml")
-        )
-
-        self.driver.load(config)
+        return n_targets
 
     def tearDown(self):
-        pass
+        for filename in self.files_to_delete:
+            os.remove(filename)
 
 
 if __name__ == "__main__":
