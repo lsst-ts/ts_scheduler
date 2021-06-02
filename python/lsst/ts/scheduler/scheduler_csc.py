@@ -445,6 +445,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     report="Failed to update observatory state.",
                     traceback=traceback.format_exc(),
                 )
+                return
 
             self.tel_observatoryState.set_put(
                 timestamp=self.models["observatory_state"].time,
