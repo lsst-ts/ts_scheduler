@@ -23,7 +23,6 @@ import os
 import glob
 import pathlib
 import unittest
-import asynctest
 
 from lsst.ts import salobj
 from lsst.ts.scheduler import SchedulerCSC
@@ -35,7 +34,7 @@ LONG_LONG_TIMEOUT = 120.0
 TEST_CONFIG_DIR = pathlib.Path(__file__).parents[1].joinpath("tests", "data", "config")
 
 
-class TestSchedulerCSC(salobj.BaseCscTestCase, asynctest.TestCase):
+class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase):
     def basic_make_csc(self, initial_state, config_dir, simulation_mode):
         self.assertEqual(initial_state, salobj.State.STANDBY)
 

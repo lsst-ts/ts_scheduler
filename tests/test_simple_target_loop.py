@@ -22,7 +22,6 @@ import asyncio
 import os
 import unittest
 import time
-import asynctest
 import numpy as np
 
 import lsst.ts.salobj as salobj
@@ -43,13 +42,13 @@ STD_TIMEOUT = 15.0
 
 
 @unittest.skipIf(not with_scriptqueue, "Could not import scriptqueue.")
-class SimpleTargetLoopTestCase(asynctest.TestCase):
+class SimpleTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
     """This unit test is designed to test the interaction of the simple target
     production loop of the Scheduler CSC with the LSST Queue.
 
     """
 
-    async def setUp(self):
+    async def asyncSetUp(self):
         salobj.testutils.set_random_lsst_dds_partition_prefix()
         self.datadir = os.path.abspath(os.path.join(os.path.dirname(__file__), "data"))
         standardpath = os.path.join(self.datadir, "standard")
@@ -84,7 +83,7 @@ class SimpleTargetLoopTestCase(asynctest.TestCase):
             self.observatory_mock.start_task,
         )
 
-    async def tearDown(self):
+    async def asyncTearDown(self):
 
         try:
             await salobj.set_summary_state(self.scheduler_remote, salobj.State.STANDBY)
