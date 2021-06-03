@@ -18,14 +18,19 @@
 #
 # You should have received a copy of the GNU General Public License
 
-import asyncio
 import os
-import unittest
 import time
+import asyncio
+import logging
+import pathlib
+import unittest
+
 import numpy as np
 
 import lsst.ts.salobj as salobj
+
 from lsst.ts.scheduler import SchedulerCSC
+from lsst.ts.scheduler.utils.error_codes import NO_QUEUE
 from lsst.ts.scheduler.mock import ObservatoryStateMock
 
 with_scriptqueue = False
@@ -39,6 +44,9 @@ except ModuleNotFoundError:
 
 I0 = scriptqueue.script_queue.SCRIPT_INDEX_MULT  # initial Script SAL index
 STD_TIMEOUT = 15.0
+TEST_CONFIG_DIR = pathlib.Path(__file__).parents[1].joinpath("tests", "data", "config")
+
+logging.basicConfig()
 
 
 @unittest.skipIf(not with_scriptqueue, "Could not import scriptqueue.")
@@ -59,8 +67,7 @@ class SimpleTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
         self.queue_remote = salobj.Remote(self.queue.domain, "ScriptQueue", index=1)
         self.process = None
 
-        self.scheduler = SchedulerCSC(index=1)
-        self.scheduler.parameters.mode = "SIMPLE"
+        self.scheduler = SchedulerCSC(index=1, config_dir=TEST_CONFIG_DIR)
         self.scheduler_remote = salobj.Remote(
             self.scheduler.domain, "Scheduler", index=1
         )
@@ -111,7 +118,11 @@ class SimpleTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
         await salobj.set_summary_state(self.queue_remote, salobj.State.STANDBY)
 
         # Enable Scheduler
-        await salobj.set_summary_state(self.scheduler_remote, salobj.State.ENABLED)
+        await salobj.set_summary_state(
+            self.scheduler_remote,
+            salobj.State.ENABLED,
+            settingsToApply="simple_target_loop_sequential.yaml",
+        )
 
         # Resume scheduler operation
         await self.scheduler_remote.cmd_resume.start(timeout=STD_TIMEOUT)
@@ -137,6 +148,9 @@ class SimpleTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
             salobj.State.FAULT,
             f"Scheduler in {state}, expected FAULT. ",
         )
+        # Check error code
+        error_code = await self.scheduler_remote.evt_errorCode.aget(timeout=STD_TIMEOUT)
+        self.assertEqual(error_code.errorCode, NO_QUEUE)
 
         # recover from fault state sending it to STANDBY
         await self.scheduler_remote.cmd_standby.start(timeout=STD_TIMEOUT)
@@ -156,7 +170,11 @@ class SimpleTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
         """
 
         # enable queue...
-        await salobj.set_summary_state(self.queue_remote, salobj.State.ENABLED)
+        await salobj.set_summary_state(
+            self.queue_remote,
+            salobj.State.ENABLED,
+            settingsToApply="simple_target_loop_sequential.yaml",
+        )
 
         # ...and try again. This time the scheduler should stay in enable and
         # publish targets to the queue.
