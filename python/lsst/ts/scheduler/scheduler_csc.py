@@ -1041,14 +1041,16 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             except asyncio.CancelledError:
                 break
             except Exception:
-                # If there is an exception go to FAULT state, log the
-                # exception and break the loop
-                self.fault(
-                    code=SIMPLE_LOOP_ERROR,
-                    report="Error on simple target production loop.",
-                    traceback=traceback.format_exc(),
-                )
-                self.log.exception("Error on simple target production loop.")
+                # If there is an exception and not in FAULT, go to FAULT state
+                # and log the exception...
+                if self.summary_state != salobj.State.FAULT:
+                    self.fault(
+                        code=SIMPLE_LOOP_ERROR,
+                        report="Error on simple target production loop.",
+                        traceback=traceback.format_exc(),
+                    )
+                    self.log.exception("Error on simple target production loop.")
+                #  ...and break the loop
                 break
 
     def callback_script_info(self, data):
