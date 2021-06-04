@@ -18,11 +18,12 @@
 #
 # You should have received a copy of the GNU General Public License
 
+__all__ = ["SchedulerCSC"]
+
 import asyncio
 import functools
 import inspect
 import logging
-import pathlib
 import time
 import traceback
 
@@ -34,6 +35,18 @@ from importlib import import_module
 
 from lsst.ts import salobj
 from lsst.ts.idl.enums import ScriptQueue
+
+from . import __version__
+from . import CONFIG_SCHEMA
+from .utils.csc_utils import NonFinalStates
+from .utils.error_codes import (
+    NO_QUEUE,
+    PUT_ON_QUEUE,
+    SIMPLE_LOOP_ERROR,
+    ADVANCE_LOOP_ERROR,
+    OBSERVATORY_STATE_UPDATE,
+)
+from .utils.parameters import SchedulerCscParameters
 
 from lsst.ts.scheduler.driver import Driver
 from lsst.ts.dateloc import ObservatoryLocation
@@ -50,117 +63,6 @@ from lsst.sims.cloudModel import CloudModel
 from lsst.sims.cloudModel import version as cloud_version
 from lsst.sims.downtimeModel import DowntimeModel
 from lsst.sims.downtimeModel import version as downtime_version
-
-import lsst.pex.config as pex_config
-
-__all__ = ["SchedulerCSC", "SchedulerCscParameters"]
-
-# Error codes
-NO_QUEUE = 300
-PUT_ON_QUEUE = 301
-SIMPLE_LOOP_ERROR = 400
-OBSERVATORY_STATE_UPDATE = 500
-
-NonFinalStates = frozenset(
-    (
-        ScriptQueue.ScriptProcessState.LOADING.value,
-        ScriptQueue.ScriptProcessState.CONFIGURED.value,
-        ScriptQueue.ScriptProcessState.RUNNING.value,
-    )
-)
-"""Stores all non final state for scripts submitted to the queue.
-"""
-
-
-class SchedulerCscParameters(pex_config.Config):
-    """Configuration of the LSST Scheduler's Model."""
-
-    driver_type = pex_config.Field(
-        "Choose a driver to use. This should be an import string that "
-        "is passed to `importlib.import_module()`. Model will look for "
-        "a subclass of Driver class inside the module.",
-        str,
-        default="lsst.ts.scheduler.driver.driver",
-    )
-    night_boundary = pex_config.Field(
-        "Solar altitude (degrees) when it is considered night.", float
-    )
-    new_moon_phase_threshold = pex_config.Field(
-        "New moon phase threshold for swapping to dark " "time filter.", float
-    )
-    startup_type = pex_config.ChoiceField(
-        "The method used to startup the scheduler.",
-        str,
-        default="HOT",
-        allowed={
-            "HOT": "Hot start, this means the scheduler is " "started up from scratch",
-            "WARM": "Reads the scheduler state from a "
-            "previously saved internal state.",
-            "COLD": "Rebuilds scheduler state from " "observation database.",
-        },
-    )
-    startup_database = pex_config.Field(
-        "Path to the file holding scheduler state or observation "
-        "database to be used on WARM or COLD start.",
-        str,
-        default="",
-    )
-    mode = pex_config.ChoiceField(
-        "The mode of operation of the scheduler. This basically chooses "
-        "one of the available target production loops. ",
-        str,
-        default="SIMPLE",
-        allowed={
-            "SIMPLE": "The Scheduler will publish one target at a "
-            "time, no next target published in advance "
-            "and no predicted schedule.",
-            "ADVANCE": "The Scheduler will pre-compute a predicted "
-            "schedule that is published as an event and "
-            "will fill the queue with a specified "
-            "number of targets. The scheduler will then "
-            "monitor the telemetry stream, recompute the "
-            "queue and change next target up to a "
-            "certain lead time.",
-        },
-    )
-    n_targets = pex_config.Field(
-        "Number of targets to put in the queue ahead of time.", int, default=1
-    )
-    predicted_scheduler_window = pex_config.Field(
-        "Size of predicted scheduler window, in hours.", float, default=2.0
-    )
-    loop_sleep_time = pex_config.Field(
-        "How long should the target production loop wait when "
-        "there is a wait event. Unit = seconds.",
-        float,
-        default=1.0,
-    )
-    cmd_timeout = pex_config.Field(
-        "Global command timeout. Unit = seconds.", float, default=60.0
-    )
-    observing_script = pex_config.Field(
-        "Name of the observing script.", str, default="standard_visit.py"
-    )
-    observing_script_is_standard = pex_config.Field(
-        "Is observing script standard?", bool, default=True
-    )
-    max_scripts = pex_config.Field(
-        "Maximum number of scripts to keep track of.", int, default=100
-    )
-
-    def set_defaults(self):
-        """Set defaults for the LSST Scheduler's Driver."""
-        self.driver_type = "lsst.ts.scheduler.driver.driver"
-        self.startup_type = "HOT"
-        self.startup_database = ""
-        self.mode = "SIMPLE"
-        self.n_targets = 1
-        self.predicted_scheduler_window = 2.0
-        self.loop_sleep_time = 1.0
-        self.cmd_timeout = 60.0
-        self.observing_script = "standard_visit.py"
-        self.observing_script_is_standard = True
-        self.max_scripts = 100
 
 
 class SchedulerCSC(salobj.ConfigurableCsc):
@@ -241,9 +143,11 @@ class SchedulerCSC(salobj.ConfigurableCsc):
            `Driver.select_next_target` this error code will, most likely, be
            issued (along with the traceback message).
 
+    * 500: Error updating observatory state.
     """
 
     valid_simulation_modes = (0, 1)
+    version = __version__
 
     def __init__(
         self,
@@ -252,13 +156,10 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         initial_state=salobj.base_csc.State.STANDBY,
         simulation_mode=0,
     ):
-        schema_path = (
-            pathlib.Path(__file__).parents[4].joinpath("schema", "Scheduler.yaml")
-        )
 
         super().__init__(
             name="Scheduler",
-            schema_path=schema_path,
+            config_schema=CONFIG_SCHEMA,
             config_dir=config_dir,
             index=index,
             initial_state=initial_state,
@@ -314,6 +215,12 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         # Telemetry loop. This will take care of observatory state.
         self.telemetry_loop_task = None
 
+        # List of targets used in the ADVANCE target loop
+        self.targets_queue = []
+
+        # Future to store the results or target_queue check.
+        self.targets_queue_condition = salobj.make_done_future()
+
     async def begin_enable(self, data):
         """Begin do_enable.
 
@@ -339,15 +246,15 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         elif self.parameters.mode == "SIMPLE":
 
-            self.target_production_task = asyncio.ensure_future(
+            self.target_production_task = asyncio.create_task(
                 self.simple_target_production_loop()
             )
 
         elif self.parameters.mode == "ADVANCE":
 
-            self.target_production_task = None
-            # This will just reject the command
-            raise NotImplementedError("ADVANCE target production loop not implemented.")
+            self.target_production_task = asyncio.create_task(
+                self.advance_target_production_loop()
+            )
 
         elif self.parameters.mode == "DRY":
 
@@ -545,6 +452,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     report="Failed to update observatory state.",
                     traceback=traceback.format_exc(),
                 )
+                return
 
             self.tel_observatoryState.set_put(
                 timestamp=self.models["observatory_state"].time,
@@ -1044,8 +952,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         Also, note that the target production loop does not care about if it
         is day or night. It is up to the scheduling algorithm to decide
         whether there is something to observe or not given the input telemetry.
-        A
-        target produced by the scheduler can have a start time. In this case,
+        A target produced by the scheduler can have a start time. In this case,
         the task will be sent to the queue and it is up to the queue or the
         running script to wait for the specified time. If the scheduling
         algorithm does not produce any target, then the Scheduler will keep
@@ -1078,7 +985,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     # some
                     queue = await self.get_queue(first_pass)
 
-                    # This return False if script failed, in which case next
+                    # This returns False if script failed, in which case next
                     # pass won't wait for queue to change
                     first_pass = not await self.check_scheduled()
 
@@ -1140,15 +1047,235 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             except asyncio.CancelledError:
                 break
             except Exception:
-                # If there is an exception go to FAULT state, log the
-                # exception and break the loop
-                self.fault(
-                    code=SIMPLE_LOOP_ERROR,
-                    report="Error on simple target production loop.",
-                    traceback=traceback.format_exc(),
-                )
-                self.log.exception("Error on simple target production loop.")
+                # If there is an exception and not in FAULT, go to FAULT state
+                # and log the exception...
+                if self.summary_state != salobj.State.FAULT:
+                    self.fault(
+                        code=SIMPLE_LOOP_ERROR,
+                        report="Error on simple target production loop.",
+                        traceback=traceback.format_exc(),
+                    )
+                    self.log.exception("Error on simple target production loop.")
+                #  ...and break the loop
                 break
+
+    async def advance_target_production_loop(self):
+        """Advance target production loop.
+
+        This method will schedule targets ahead of time and send them to the
+        ScriptQueue according to the configuration parameters. This initial
+        implementation is simply blindly scheduling targets ahead of time and
+        not checking for post conditions. Further improvements will involve
+        dealing with different post conditions, generating the predicted queue
+        and further verifying that the schedule is keeping up.
+        """
+        self.run_loop = True
+        self.raw_telemetry["scheduled_targets"] = []
+
+        first_pass = True
+        targets_queue_condition_task = salobj.make_done_future()
+
+        while self.summary_state == salobj.State.ENABLED and self.run_loop:
+
+            await self.run_target_loop.wait()
+
+            try:
+                if (
+                    self.targets_queue_condition.done()
+                    and self.targets_queue_condition.result() is None
+                ):
+                    # The condition in which we have to generate a target queue
+                    # is when the targets_queue_condition future is done and
+                    # its result is None. If the future is not done, the task
+                    # that checks the queue is still ongoing. If the results is
+                    # different than None it means the queue is ok and it does
+                    # not need to be generated.
+                    # Note that this is also the initial condition, so the
+                    # target list is generated the first time the loop runs.
+                    await self.generate_target_queue()
+
+                async with self.target_loop_lock:
+
+                    # If it is the first pass get the current queue, otherwise
+                    # wait for the queue to change or get the latest if there's
+                    # some
+                    queue = await self.get_queue(first_pass)
+
+                    # This returns False if script failed, in which case next
+                    # pass won't wait for queue to change
+                    first_pass = not await self.check_scheduled()
+
+                    # The advance loop will always leave
+                    # self.parameters.n_targets additional target
+                    # in the queue. So we will schedule if the queue is running
+                    # and there is less than self.parameters.n_targets targets
+                    # in the queue. Basically, one target is executing and the
+                    # next will be waiting.
+                    if queue.running and queue.length < self.parameters.n_targets + 1:
+                        # TODO: publish detailed state indicating that the
+                        # scheduler is selecting a target
+
+                        # Take a target from the queue
+                        target = self.targets_queue.pop(0)
+
+                        current_tai = salobj.current_tai()
+
+                        if target.obs_time > current_tai:
+                            delta_t = current_tai - target.obs_time
+                            self.log.debug(
+                                f"Target observing time in the future. Waiting {delta_t}s"
+                            )
+                            await asyncio.sleep(delta_t)
+
+                        # This method receives a list of targets and return a
+                        # list of script ids
+                        await self.put_on_queue([target])
+
+                        if target.sal_index > 0:
+                            self.raw_telemetry["scheduled_targets"].append(target)
+                        else:
+                            self.log.error(
+                                "Could not add target to the queue: %s", target
+                            )
+                            self.fault(
+                                code=PUT_ON_QUEUE,
+                                report=f"Could not add target to the queue: {target}",
+                            )
+
+                        # TODO: publish detailed state indicating that the
+                        # scheduler has finished the target selection
+
+                    else:
+                        # Now it would be time for the scheduler to sleep while
+                        # it waits for the targets in the queue to execute. We
+                        # can take this time to check that the targets in the
+                        # queue are still good. We need to to this in the
+                        # background and keep track of the time. If we can
+                        # check this quick enough we continue waiting the
+                        # remaining time, otherwise we leave the check
+                        # running in the background.
+
+                        self.log.debug(
+                            "Queue state: [Running:%s][Executing:%s][length:%d]",
+                            queue.running == 1,
+                            queue.currentSalIndex != 0,
+                            queue.length,
+                        )
+
+                        if targets_queue_condition_task.done():
+                            # Task to check the targets_queue condition.
+                            targets_queue_condition_task = asyncio.create_task(
+                                self.check_targets_queue_condition(),
+                                name="check_targets_queue_condition",
+                            )
+
+                        timer_task = asyncio.sleep(self.parameters.loop_sleep_time)
+                        # Using the asycio.wait with a timeout will simply
+                        # return at the end without cancelling the task. If the
+                        # check takes less then the loop_sleep_time, we still
+                        # want to wait the remaining of the time, so that is
+                        # why we have the additional task.
+                        # The following await will not take more or less than
+                        # approximately self.parameters.loop_sleep_time.
+                        await asyncio.wait(
+                            [
+                                timer_task,
+                                targets_queue_condition_task,
+                            ],
+                            timeout=self.parameters.loop_sleep_time,
+                        )
+
+            except asyncio.CancelledError:
+                break
+            except Exception:
+                # If there is an exception and not in FAULT, go to FAULT state
+                # and log the exception...
+                if self.summary_state != salobj.State.FAULT:
+                    self.fault(
+                        code=ADVANCE_LOOP_ERROR,
+                        report="Error on advance target production loop.",
+                        traceback=traceback.format_exc(),
+                    )
+                    self.log.exception("Error on advance target production loop.")
+                break
+
+    async def generate_target_queue(self):
+        """Generate target queue.
+
+        This method will save the current state of the scheduler, play the
+        scheduler for the future, generating a list of observations.
+
+        """
+        self.save_scheduler_state()
+
+        self.targets_queue = []
+
+        loop = asyncio.get_running_loop()
+
+        # Note that here it runs the update_telemetry method from the
+        # scheduler. This method will update the telemetry based on most
+        # current recent data in the system.
+        await loop.run_in_executor(None, self.update_telemetry)
+
+        # Synchronize observatory model state with current observatory state.
+        self.models["observatory_model"].set_state(self.models["observatory_state"])
+
+        # For now it will only generate enough targets to send to the queue
+        # and leave one extra in the internal queue. In the future we will
+        # generate targets to fill the
+        # self.parameters.predicted_scheduler_window.
+        # But then we will have to improve how we handle the target generation
+        # and the check_targets_queue_condition.
+        while len(self.targets_queue) <= self.parameters.n_targets + 1:
+
+            # Inside the loop we are running update_conditions directly from
+            # the driver. This bypasses the updates done by the CSC method.
+            await loop.run_in_executor(None, self.driver.update_conditions)
+
+            target = await loop.run_in_executor(None, self.driver.select_next_target)
+
+            if target is None:
+                self.log.warning(
+                    f"No target from the scheduler. Stopping with {len(self.targets_queue)}."
+                )
+                break
+            else:
+                self.driver.register_observation([target])
+
+                # The following will playback the observations on the
+                # observatory model but will keep the observatory state
+                # unchanged
+                self.models["observatory_model"].observe(target)
+
+                self.targets_queue.append(target)
+
+        self.log.info(f"Generated queue with {len(self.targets_queue)} targets.")
+
+    async def check_targets_queue_condition(self):
+        """Check targets queue condition.
+
+        For now the check is only verifying if more targets need to be added
+        to the internal queue. In the future this method will be responsible
+        for verifying that the predicted schedule is still fine and requesting
+        a re-scheduling if needed.
+        """
+        if self.targets_queue_condition.done():
+            self.targets_queue_condition = asyncio.Future()
+
+        if len(self.targets_queue) == 0:
+            self.targets_queue_condition.set_result(None)
+
+    def save_scheduler_state(self):
+        """Save scheduler state to S3 bucket and publish event.
+
+        Returns
+        -------
+        str
+            Name of the local file saved to disk.
+        """
+
+        # TODO: publish to s3bucket.
+        return self.driver.save_state()
 
     def callback_script_info(self, data):
         """This callback function will store in a dictionary information about

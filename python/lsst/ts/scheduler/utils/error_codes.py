@@ -18,11 +18,17 @@
 #
 # You should have received a copy of the GNU General Public License
 
-try:
-    from .version import *
-except ModuleNotFoundError:
-    __version__ = "?"
+__all__ = [
+    "NO_QUEUE",
+    "PUT_ON_QUEUE",
+    "SIMPLE_LOOP_ERROR",
+    "ADVANCE_LOOP_ERROR",
+    "OBSERVATORY_STATE_UPDATE",
+]
 
-from .driver.driver import *
-from .config_schema import *
-from .scheduler_csc import *
+
+NO_QUEUE = 300
+PUT_ON_QUEUE = 301
+SIMPLE_LOOP_ERROR = 400
+ADVANCE_LOOP_ERROR = 401
+OBSERVATORY_STATE_UPDATE = 500

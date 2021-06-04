@@ -19,10 +19,13 @@
 # You should have received a copy of the GNU General Public License
 
 import os
+import pickle
 import importlib
 
 import numpy as np
 import healpy as hp
+
+from astropy.time import Time
 
 import lsst.pex.config as pex_config
 
@@ -115,6 +118,8 @@ class FeatureScheduler(Driver):
 
         self.almanac = Almanac()
 
+        self.seed = 42
+
         super().__init__(models, raw_telemetry, parameters)
 
     def configure_scheduler(self, config=None):
@@ -153,20 +158,35 @@ class FeatureScheduler(Driver):
             )
 
         if self.scheduler is None or config.get("force", False):
+
             self.log.info(
                 f"Loading feature based scheduler configuration from {config.scheduler_config}."
             )
+
             spec = importlib.util.spec_from_file_location(
                 "config", config.scheduler_config
             )
             conf = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(conf)
+
             if not hasattr(conf, "scheduler"):
                 raise NoSchedulerError("No scheduler defined in configuration file.")
-            self.scheduler = conf.scheduler
+
             if not hasattr(conf, "nside"):
                 raise NoNsideError("No nside defined in configuration file.")
+
+            if not hasattr(conf, "seed"):
+                self.log.warning(
+                    "Feature Based Scheduler configuration does not specify a random seed. "
+                    f"Assuming seed={self.seed}."
+                )
+            else:
+                self.seed = conf.seed
+
             self.nside = conf.nside
+
+            np.random.seed(self.seed)
+            self.scheduler = conf.scheduler
             self.conditions = Conditions(nside=self.nside)
 
             self.conditions.FWHMeff = dict(
@@ -335,6 +355,7 @@ class FeatureScheduler(Driver):
 
         # Use the model to get the seeing at this time and airmasses.
         FWHM_500 = self.raw_telemetry["seeing"]
+
         seeing_dict = self.models["seeing"](FWHM_500, airmass[good])
         fwhm_eff = seeing_dict["fwhmEff"]
         for i, key in enumerate(self.models["seeing"].filter_list):
@@ -371,6 +392,7 @@ class FeatureScheduler(Driver):
             goal_filter=self.models["observatory_state"].filter,
             lax_dome=True,
         )
+
         self.conditions.slewtime = slewtimes
 
         # Let's get the sun and moon
@@ -432,3 +454,33 @@ class FeatureScheduler(Driver):
         self.conditions.planet_positions = self.almanac.get_planet_positions(
             self.conditions.mjd
         )
+
+    def save_state(self):
+        """Save the current state of the scheduling algorithm to a file.
+
+        Returns
+        -------
+        filename : `str`
+            Name of the file with the state.
+        """
+
+        now = Time.now().to_value("isot")
+        filename = f"fbs_scheduler_{now}.p"
+
+        with open(filename, "wb") as fp:
+            pickle.dump(self.scheduler, fp)
+
+        return filename
+
+    def reset_from_state(self, filename):
+        """Load the state from a file.
+
+        Parameters
+        ----------
+        filename : `str`
+            Name of the file with the state.
+        """
+        # Reset random number generator
+        np.random.seed(self.seed)
+        with open(filename, "rb") as fp:
+            self.scheduler = pickle.load(fp)
