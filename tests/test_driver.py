@@ -25,11 +25,11 @@ import pathlib
 from lsst.ts.scheduler.driver import Driver, SurveyTopology
 from lsst.ts.observatory.model import Target
 
+logging.basicConfig()
+
 
 class TestSchedulerDriver(unittest.TestCase):
     def setUp(self):
-        logging.getLogger().setLevel(logging.WARN)
-
         self.driver = Driver(models={}, raw_telemetry={})
 
     def test_configure_scheduler(self):

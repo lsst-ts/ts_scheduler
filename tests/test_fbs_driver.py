@@ -18,6 +18,7 @@
 #
 # You should have received a copy of the GNU General Public License
 
+import os
 import types
 import pathlib
 import unittest
@@ -51,7 +52,7 @@ class TestFeatureSchedulerDriver(unittest.TestCase):
     def setUp(self):
         # Need to set current time to something the sky brightness files
         # available for testing have available (MJD: 59853.-59856.).
-        start_time = Time(59853.983, format="mjd", scale="tai")
+        self.start_time = Time(59853.983, format="mjd", scale="tai")
 
         self.raw_telemetry = dict()
 
@@ -70,7 +71,7 @@ class TestFeatureSchedulerDriver(unittest.TestCase):
         self.models["observatory_model"] = ObservatoryModel(self.models["location"])
         self.models["observatory_model"].configure_from_module()
 
-        self.models["observatory_model"].update_state(start_time.unix)
+        self.models["observatory_model"].update_state(self.start_time.unix)
 
         self.models["observatory_state"] = ObservatoryState()
         self.models["observatory_state"].set(
@@ -87,6 +88,8 @@ class TestFeatureSchedulerDriver(unittest.TestCase):
         )
 
         self.config = types.SimpleNamespace(scheduler_config="", force=True)
+
+        self.files_to_delete = []
 
     def test_configure_scheduler(self):
 
@@ -134,6 +137,52 @@ class TestFeatureSchedulerDriver(unittest.TestCase):
 
     def test_select_next_target(self):
 
+        self.configure_scheduler_for_test()
+
+        # Calling select_next_target without calling update_conditions first
+        # should raise a RuntimeError exception.
+        with self.assertRaises(RuntimeError):
+            self.driver.select_next_target()
+
+        targets = self.run_observations()
+
+        self.assertGreater(len(targets), 0)
+
+    @unittest.skip("Not implemented yet.")
+    def test_load(self):
+        pass
+
+    def test_save_and_reset_from_file(self):
+
+        self.configure_scheduler_for_test()
+
+        # Save state of the scheduler
+        filename = self.driver.save_state()
+
+        self.files_to_delete.append(filename)
+
+        # Run some observations
+        targets_run_1 = self.run_observations()
+
+        self.driver.reset_from_state(filename)
+
+        self.models["observatory_model"].reset()
+        self.models["observatory_model"].update_state(self.start_time.unix)
+        self.models["observatory_state"].set(
+            self.models["observatory_model"].current_state
+        )
+
+        targets_run_2 = self.run_observations()
+
+        # Targets 1 and 2 should be equal
+        self.assertEqual(len(targets_run_1), len(targets_run_2))
+
+        for target_1, target_2 in zip(targets_run_1, targets_run_2):
+            with self.subTest(target_1=target_1, target_2=target_2):
+                self.assertEqual(f"{target_1}", f"{target_2}")
+
+    def configure_scheduler_for_test(self):
+
         self.config.scheduler_config = (
             pathlib.Path(__file__)
             .parents[1]
@@ -142,14 +191,11 @@ class TestFeatureSchedulerDriver(unittest.TestCase):
 
         self.driver.configure_scheduler(self.config)
 
-        n_targets = 0
+    def run_observations(self):
 
-        # Calling select_next_target without calling update_conditions first
-        # should raise a RuntimeError exception.
-        with self.assertRaises(RuntimeError):
-            target = self.driver.select_next_target()
+        targets = []
 
-        while n_targets < 10:
+        while len(targets) < 10:
 
             self.driver.update_conditions()
 
@@ -173,18 +219,20 @@ class TestFeatureSchedulerDriver(unittest.TestCase):
                     self.assertGreater(
                         target.slewtime, 0.0, "Slewtime must be larger then zero."
                     )
-                n_targets += 1
+
                 self.driver.register_observation([target])
                 self.models["observatory_model"].observe(target)
                 self.models["observatory_state"].set(
                     self.models["observatory_model"].current_state
                 )
 
-        self.assertGreater(n_targets, 0)
+                targets.append(target)
 
-    def test_load(self):
+        return targets
 
-        pass
+    def tearDown(self):
+        for filename in self.files_to_delete:
+            os.remove(filename)
 
 
 if __name__ == "__main__":

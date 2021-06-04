@@ -1,4 +1,29 @@
-$schema: http://json-schema.org/draft-07/schema#
+# This file is part of ts_scheduler.
+#
+# Developed for Vera C. Rubin Observatory Telescope and Site Systems.
+# This product includes software developed by the LSST Project
+# (https://www.lsst.org).
+# See the COPYRIGHT file at the top-level directory of this distribution
+# for details of code ownership.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+
+__all__ = ["CONFIG_SCHEMA"]
+
+import yaml
+
+CONFIG_SCHEMA = yaml.safe_load(
+    """$schema: http://json-schema.org/draft-07/schema#
 $id: https://github.com/lsst-ts/ts_scheduler/blob/master/schema/Scheduler.yaml
 # title must end with one or more spaces followed by the schema version, which must begin with "v"
 title: Scheduler v1
@@ -304,11 +329,13 @@ properties:
         properties:
           tel_optics_ol_slope:
             type: number
-            description: Delay factor for Open Loop optics correction,  in units of seconds/(degrees in ALT slew)
+            description: >-
+                Delay factor for Open Loop optics correction,  in units of seconds/(degrees in ALT slew)
             default: 0.2857
           tel_optics_cl_delay:
             type: array
-            description: Table of delay factors for Closed Loop optics correction according to the ALT slew range.
+            description: >-
+                Table of delay factors for Closed Loop optics correction according to the ALT slew range.
             default:   [0.0, 36.0]
           tel_optics_cl_alt_limit:
             type: array
@@ -440,7 +467,9 @@ properties:
         type: array
         default: ['FWHM_500']
       efd_delta_time:
-        description: Length of history to request from the EFD. Positive values means time window (in seconds) negative values means number of data points.
+        description: >-
+            Length of history to request from the EFD. Positive values means time window
+            (in seconds) negative values means number of data points.
         type: number
         default: 0.
       target_columns:
@@ -456,7 +485,9 @@ properties:
         type: array
         default: ['cloud']
       efd_delta_time:
-        description: Length of history to request from the EFD. Positive values means time window (in seconds) negative values means number of data points.
+        description: >-
+            Length of history to request from the EFD. Positive values means time window
+            (in seconds) negative values means number of data points.
         type: number
         default: -1
       target_columns:
@@ -484,3 +515,6 @@ properties:
         type: array
         default: ['date']
     additionalProperties: false
+
+"""
+)

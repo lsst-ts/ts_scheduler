@@ -1,6 +1,6 @@
 # This file is part of ts_scheduler
 #
-# Developed for the LSST Telescope and Site Systems.
+# Developed for the Vera Rubin Observatory Telescope and Site Systems.
 # This product includes software developed by the LSST Project
 # (https://www.lsst.org).
 # See the COPYRIGHT file at the top-level directory of this distribution
@@ -19,6 +19,7 @@
 # You should have received a copy of the GNU General Public License
 
 import os
+import glob
 import time
 import asyncio
 import logging
@@ -33,8 +34,6 @@ from lsst.ts.scheduler import SchedulerCSC
 from lsst.ts.scheduler.utils.error_codes import NO_QUEUE
 from lsst.ts.scheduler.mock import ObservatoryStateMock
 
-with_scriptqueue = False
-
 try:
     with_scriptqueue = True
     from lsst.ts import scriptqueue
@@ -42,18 +41,17 @@ except ModuleNotFoundError:
     with_scriptqueue = False
     pass
 
+logging.basicConfig()
+
 I0 = scriptqueue.script_queue.SCRIPT_INDEX_MULT  # initial Script SAL index
 STD_TIMEOUT = 15.0
 TEST_CONFIG_DIR = pathlib.Path(__file__).parents[1].joinpath("tests", "data", "config")
 
-logging.basicConfig()
-
 
 @unittest.skipIf(not with_scriptqueue, "Could not import scriptqueue.")
-class SimpleTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
-    """This unit test is designed to test the interaction of the simple target
-    production loop of the Scheduler CSC with the LSST Queue.
-
+class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
+    """This unit test is designed to test the interaction of the advanced
+    target production loop of the Scheduler CSC with the ScriptQueue.
     """
 
     async def asyncSetUp(self):
@@ -68,6 +66,7 @@ class SimpleTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
         self.process = None
 
         self.scheduler = SchedulerCSC(index=1, config_dir=TEST_CONFIG_DIR)
+
         self.scheduler_remote = salobj.Remote(
             self.scheduler.domain, "Scheduler", index=1
         )
@@ -110,8 +109,8 @@ class SimpleTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
         enabled and the queue is not enabled.
         """
 
-        # Test 1 - Enable scheduler, Queue is not enable. Scheduler should go
-        # to ENABLE and then to FAULT It may take some time for the scheduler
+        # Test 1 - Enable scheduler, Queue is not enabled. Scheduler should go
+        # to ENABLE and then to FAULT. It may take some time for the scheduler
         # to go to FAULT state.
 
         # Make sure Queue is in STANDBY
@@ -121,7 +120,7 @@ class SimpleTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
         await salobj.set_summary_state(
             self.scheduler_remote,
             salobj.State.ENABLED,
-            settingsToApply="simple_target_loop_sequential.yaml",
+            settingsToApply="advance_target_loop_sequential.yaml",
         )
 
         # Resume scheduler operation
@@ -151,7 +150,6 @@ class SimpleTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
         # Check error code
         error_code = await self.scheduler_remote.evt_errorCode.aget(timeout=STD_TIMEOUT)
         self.assertEqual(error_code.errorCode, NO_QUEUE)
-
         # recover from fault state sending it to STANDBY
         await self.scheduler_remote.cmd_standby.start(timeout=STD_TIMEOUT)
 
@@ -173,10 +171,10 @@ class SimpleTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
         await salobj.set_summary_state(
             self.queue_remote,
             salobj.State.ENABLED,
-            settingsToApply="simple_target_loop_sequential.yaml",
+            settingsToApply="advance_target_loop_sequential.yaml",
         )
 
-        # ...and try again. This time the scheduler should stay in enable and
+        # ...and try again. This time the scheduler should stay in enabled and
         # publish targets to the queue.
 
         def assert_enable(data):
@@ -185,7 +183,7 @@ class SimpleTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
                 data.summaryState,
                 salobj.State.ENABLED,
                 "Scheduler unexpectedly transitioned from "
-                "ENABLE to %s" % salobj.State(data.summaryState),
+                "ENABLED to %s" % salobj.State(data.summaryState),
             )
 
         def count_targets(data):
@@ -250,6 +248,10 @@ class SimpleTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
             "expected >%i"
             % (self.heartbeats, expected_heartbeats - tolerance_heartbeats),
         )
+
+    def tearDown(self):
+        for filename in glob.glob("./sequential_*.p"):
+            os.remove(filename)
 
 
 if __name__ == "__main__":

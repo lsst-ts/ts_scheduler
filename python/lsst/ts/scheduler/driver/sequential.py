@@ -20,9 +20,11 @@
 
 import os
 import yaml
+import pickle
 import jsonschema
 
 import astropy.units as u
+from astropy.time import Time
 from astropy.coordinates import Angle
 
 import lsst.pex.config as pex_config
@@ -330,3 +332,31 @@ properties:
             ]
 
         self.log.debug(f"Got {len(new_targets)} objects.")
+
+    def save_state(self):
+        """Save the current state of the scheduling algorithm to a file.
+
+        Returns
+        -------
+        filename : `str`
+            Name of the file with the state.
+        """
+
+        now = Time.now().to_value("isot")
+        filename = f"sequential_{now}.p"
+
+        with open(filename, "wb") as fp:
+            pickle.dump(self.observing_list_dict, fp)
+
+        return filename
+
+    def reset_from_state(self, filename):
+        """Load the state from a file.
+
+        Parameters
+        ----------
+        filename : `str`
+            Name of the file with the state.
+        """
+        with open(filename, "rb") as fp:
+            self.observing_list_dict = pickle.load(fp)

@@ -21,21 +21,24 @@
 import asyncio
 import os
 import glob
+import logging
 import pathlib
 import unittest
-import asynctest
 
 from lsst.ts import salobj
 from lsst.ts.scheduler import SchedulerCSC
 from lsst.ts.scheduler.mock import ObservatoryStateMock
+from lsst.ts.scheduler.utils.error_codes import OBSERVATORY_STATE_UPDATE
 
 SHORT_TIMEOUT = 5.0
 LONG_TIMEOUT = 30.0
 LONG_LONG_TIMEOUT = 120.0
 TEST_CONFIG_DIR = pathlib.Path(__file__).parents[1].joinpath("tests", "data", "config")
 
+logging.basicConfig()
 
-class TestSchedulerCSC(salobj.BaseCscTestCase, asynctest.TestCase):
+
+class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase):
     def basic_make_csc(self, initial_state, config_dir, simulation_mode):
         self.assertEqual(initial_state, salobj.State.STANDBY)
 
@@ -63,6 +66,10 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, asynctest.TestCase):
                 self.assert_next_summary_state(salobj.State.DISABLED, flush=False)
 
                 self.assert_next_summary_state(salobj.State.FAULT, flush=False)
+
+                # Check error code
+                error_code = await self.remote.evt_errorCode.aget(timeout=SHORT_TIMEOUT)
+                self.assertEqual(error_code.errorCode, OBSERVATORY_STATE_UPDATE)
             finally:
                 await salobj.set_summary_state(self.remote, salobj.State.STANDBY)
 

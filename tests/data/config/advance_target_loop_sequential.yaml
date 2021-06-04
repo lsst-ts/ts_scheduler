@@ -1,0 +1,3 @@
+mode: ADVANCE
+driver_type: lsst.ts.scheduler.driver.sequential
+observing_list: tests/data/test_observing_list.yaml

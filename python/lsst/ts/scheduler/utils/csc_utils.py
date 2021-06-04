@@ -18,11 +18,17 @@
 #
 # You should have received a copy of the GNU General Public License
 
-try:
-    from .version import *
-except ModuleNotFoundError:
-    __version__ = "?"
+__all__ = ["NonFinalStates"]
 
-from .driver.driver import *
-from .config_schema import *
-from .scheduler_csc import *
+from lsst.ts.idl.enums import ScriptQueue
+
+
+NonFinalStates = frozenset(
+    (
+        ScriptQueue.ScriptProcessState.LOADING.value,
+        ScriptQueue.ScriptProcessState.CONFIGURED.value,
+        ScriptQueue.ScriptProcessState.RUNNING.value,
+    )
+)
+"""Stores all non final state for scripts submitted to the queue.
+"""

@@ -19,7 +19,6 @@
 # You should have received a copy of the GNU General Public License
 
 import os
-from builtins import object
 import logging
 import yaml
 
@@ -172,7 +171,7 @@ class DriverParameters(pex_config.Config):
         self.new_moon_phase_threshold = 20.0
 
 
-class Driver(object):
+class Driver:
     """The Scheduler Driver is the module that normalizes the interface between
     any scheduling algorithm to the LSST Scheduler CSC. The interface
     implements three main behaviours; configure an underlying algorithm,
@@ -379,3 +378,17 @@ class Driver(object):
         """
         if not os.path.exists(config):
             raise RuntimeError(f"Input configuration file {config} does not exist.")
+
+    def save_state(self):
+        """Save the current state of the scheduling algorithm to a file.
+
+        Returns
+        -------
+        filename: `str`
+            The name of the file with the state.
+        """
+        raise NotImplementedError("Save state is is not implemented.")
+
+    def reset_from_state(self, filename):
+        """Load the state from a file."""
+        raise NotImplementedError("Reset from state is not implemented.")

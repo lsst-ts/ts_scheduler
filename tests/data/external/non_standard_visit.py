@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 __all__ = ["NonStandardVisit"]
 
+import yaml
 import asyncio
 
 from lsst.ts.salobj import BaseScript
@@ -21,7 +22,7 @@ class NonStandardVisit(BaseScript):
     __test__ = False  # stop pytest from warning that this is not a test
 
     def __init__(self, index, descr=""):
-        super().__init__(index=index, descr=descr, remotes_dict={})
+        super().__init__(index=index, descr=descr)
 
         self.targetid = 0
         self.fieldid = 0
@@ -32,56 +33,66 @@ class NonStandardVisit(BaseScript):
         self.num_exp = 0
         self.exp_times = []
 
-    async def configure(
-        self,
-        targetid=0,
-        fieldid=0,
-        band_filter="",
-        ra=0.0,
-        dec=0.0,
-        ang=0.0,
-        num_exp=0,
-        exp_times=[],
-    ):
-        """Configure the script.
-
-
-        Parameters
-        ----------
-        targetid : int
-            A unique identifier for the given target.
-        fieldid : int
-            The ID of the associated OpSim field for the target.
-        band_filter : str
-            The single character name of the associated band filter.
-        ra : float
-            The right ascension (degrees) of the target.
-        dec : float
-            The declination (degrees) of the target.
-        ang : float
-            The sky angle (degrees) of the target.
-        num_exp : int
-            The number of requested exposures for the target.
-        exp_times : list[float]
-            The set of exposure times for the target. Needs to length
-            of num_exp.
-
-        Raises
-        ------
-        salobj.ExpectedError
-            If ``wait_time < 0``. This can be used to make config fail.
+    @classmethod
+    def get_schema(cls):
+        schema_yaml = """
+$schema: http://json-schema.org/draft-07/schema#
+$id: https://github.com/lsst-ts/ts_scheduler/blob/develop/tests/data/standard/standard_visit.py
+title: StandardVisit v1
+description: Configuration for StandardVisit.
+type: object
+properties:
+    target_id:
+        description: A unique identifier for the given target.
+        type: integer
+        default: 0
+    fieldid:
+        description: The ID of the associated OpSim field for the target.
+        type: integer
+        default: 0
+    band_filter:
+        type: string
+        description: The single character name of the associated band filter.
+        default: ""
+    ra:
+        type: number
+        description: The right ascension (degrees) of the target.
+        default: 0.
+    dec:
+        type: float
+        description: The declination (degrees) of the target.
+        default: 0.
+    ang:
+        type: float
+        description: The sky angle (degrees) of the target.
+        default: 0.
+    num_exp:
+        type: int
+        description: The number of requested exposures for the target.
+        default:  0
+    exp_times:
+        type: array
+        items:
+            type: number
+        description: The set of exposure times for the target. Needs to length of num_exp.
+        default: []
+additionalProperties: false
         """
+        return yaml.safe_load(schema_yaml)
+
+    async def configure(self, config):
+        """Configure the script."""
 
         self.log.info("Configure started")
 
-        self.targetid = targetid
-        self.fieldid = fieldid
-        self.filter = band_filter
-        self.ra = ra
-        self.dec = dec
-        self.ang = ang
-        self.num_exp = num_exp
-        self.exp_times = list(exp_times)
+        self.targetid = config.targetid
+        self.fieldid = config.fieldid
+        self.filter = config.band_filter
+        self.ra = config.ra
+        self.dec = config.dec
+        self.ang = config.ang
+        self.num_exp = config.num_exp
+        self.exp_times = config.exp_times
 
         self.log.info("Configure succeeded")
 
@@ -109,4 +120,4 @@ class NonStandardVisit(BaseScript):
 
 
 if __name__ == "__main__":
-    NonStandardVisit.main(descr="Mock non-standard visit.")
+    asyncio.run(NonStandardVisit.amain())
