@@ -1,0 +1,43 @@
+{% set data= load_setup_py_data() %}
+package:
+  name: ts-scheduler
+  version: {{ data.get('version') }}
+
+source:
+  path: ../
+
+build:
+  noarch: generic
+  script: python -m pip install --no-deps --ignore-installed .
+
+test:
+  requires:
+    - ts-conda-build =0.3
+    - ts-scriptqueue
+    - ts-observatory-model
+    - ts-astrosky-model
+    - ts-dateloc
+    - rubin-sim
+  source_files:
+    - python
+    - tests
+    - setup.cfg
+  commands:
+    - rs_download_data
+    - py.test -vsx
+
+requirements:
+  host:
+    - python
+    - pip
+    - setuptools_scm
+    - setuptools
+    - pytest-runner
+  run:
+    - python
+    - setuptools
+    - setuptools_scm
+    - ts-observatory-model
+    - ts-astrosky-model
+    - ts-dateloc
+    - rubin-sim
