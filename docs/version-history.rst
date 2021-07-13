@@ -4,6 +4,12 @@
 Version History
 ===============
 
+v1.7.0
+------
+
+* Replace lsst_sims with new rubin-sim conda package.
+* Add conda recipe and packaging script.
+
 v1.6.0
 ------
 
