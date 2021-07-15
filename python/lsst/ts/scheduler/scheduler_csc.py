@@ -57,12 +57,10 @@ from lsst.ts.observatory.model import ObservatoryState
 from lsst.ts.astrosky.model import AstronomicalSkyModel
 from lsst.ts.astrosky.model import version as astrosky_version
 
-from lsst.sims.seeingModel import SeeingModel
-from lsst.sims.seeingModel import version as seeing_version
-from lsst.sims.cloudModel import CloudModel
-from lsst.sims.cloudModel import version as cloud_version
-from lsst.sims.downtimeModel import DowntimeModel
-from lsst.sims.downtimeModel import version as downtime_version
+from rubin_sim.site_models.seeingModel import SeeingModel
+from rubin_sim.version import __version__ as rubin_sim_version
+from rubin_sim.site_models.cloudModel import CloudModel
+from rubin_sim.site_models.downtimeModel import DowntimeModel
 
 
 class SchedulerCSC(salobj.ConfigurableCsc):
@@ -666,10 +664,10 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 scheduler=self.parameters.driver_type,
                 observatoryModel=obs_mod_version.__version__,
                 observatoryLocation=dateloc_version.__version__,
-                seeingModel=seeing_version.__version__,
-                cloudModel=cloud_version.__version__,
+                seeingModel=rubin_sim_version,
+                cloudModel=rubin_sim_version,
                 skybrightnessModel=astrosky_version.__version__,
-                downtimeModel=downtime_version.__version__,
+                downtimeModel=rubin_sim_version,
                 force_output=True,
             )
         else:

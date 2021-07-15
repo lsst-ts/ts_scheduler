@@ -1,11 +1,11 @@
 import numpy as np
 
-from lsst.sims.featureScheduler.modelObservatory import Model_observatory
-from lsst.sims.featureScheduler.schedulers import Core_scheduler
-from lsst.sims.featureScheduler.utils import standard_goals, Footprint
-import lsst.sims.featureScheduler.basis_functions as bf
-from lsst.sims.featureScheduler.surveys import Greedy_survey
-import lsst.sims.featureScheduler.detailers as detailers
+from rubin_sim.scheduler.modelObservatory import Model_observatory
+from rubin_sim.scheduler.schedulers import Core_scheduler
+from rubin_sim.scheduler.utils import standard_goals, Footprint
+import rubin_sim.scheduler.basis_functions as bf
+from rubin_sim.scheduler.surveys import Greedy_survey
+import rubin_sim.scheduler.detailers as detailers
 
 
 def gen_greedy_surveys(
@@ -153,7 +153,7 @@ if __name__ == "config":
 
     camera_ddf_rot_limit = 75.0
 
-    observatory = Model_observatory(nside=nside)
+    observatory = Model_observatory(nside=nside, mjd_start=59853.1)
     conditions = observatory.return_conditions()
 
     footprints_hp = standard_goals(nside=nside)
