@@ -1,0 +1,2 @@
+@Library('JenkinsShared')_
+CondaPipeline(["ts_config_ocs"], "ts-scheduler", "lsst.ts.scheduler", "noarch")

@@ -27,8 +27,6 @@ import astropy.units as u
 from astropy.time import Time
 from astropy.coordinates import Angle
 
-import lsst.pex.config as pex_config
-
 from lsst.ts.salobj import index_generator
 
 from .driver import Driver, DriverParameters, DriverTarget
@@ -102,9 +100,8 @@ class SequentialParameters(DriverParameters):
             filter: r
     """
 
-    observing_list = pex_config.Field(
-        "File with the list of targets to observe with the configuration.", str
-    )
+    observing_list: str = ""
+    # File with the list of targets to observe with the configuration.
 
 
 class SequentialScheduler(Driver):

@@ -24,11 +24,11 @@ import yaml
 
 import numpy as np
 
+from dataclasses import dataclass
+
 from .survey_topology import SurveyTopology
 
 from lsst.ts.observatory.model import Target
-
-import lsst.pex.config as pex_config
 
 __all__ = ["Driver", "DriverParameters"]
 
@@ -149,7 +149,8 @@ class DriverTarget(Target):
         return topic_target
 
 
-class DriverParameters(pex_config.Config):
+@dataclass
+class DriverParameters:
     """Actual global driver configuration parameters.
 
     This can be expanded for other scheduler drivers. For instance, if your
@@ -158,12 +159,8 @@ class DriverParameters(pex_config.Config):
     replace `self.params` on the Driver by the subclassed configuration.
     """
 
-    night_boundary = pex_config.Field(
-        "Solar altitude (degrees) when it is considered night.", float
-    )
-    new_moon_phase_threshold = pex_config.Field(
-        "New moon phase threshold for swapping to dark time filter.", float
-    )
+    night_boundary: float = -12.0
+    new_moon_phase_threshold: float = 20.0
 
     def setDefaults(self):
         """Set defaults for the LSST Scheduler's Driver."""

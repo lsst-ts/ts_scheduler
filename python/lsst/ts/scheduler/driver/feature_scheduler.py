@@ -27,13 +27,11 @@ import healpy as hp
 
 from astropy.time import Time
 
-import lsst.pex.config as pex_config
-
 from lsst.ts.salobj import index_generator
 
-from lsst.sims.almanac import Almanac
-from lsst.sims.utils import _raDec2Hpid
-from lsst.sims.featureScheduler.features import Conditions
+from rubin_sim.site_models import Almanac
+from rubin_sim.utils import _raDec2Hpid
+from rubin_sim.scheduler.features import Conditions
 
 from .driver import Driver, DriverParameters, DriverTarget
 from .survey_topology import SurveyTopology
@@ -89,16 +87,14 @@ class FeatureSchedulerTarget(DriverTarget):
 class FeatureSchedulerParameters(DriverParameters):
     """Feature Scheduler driver parameters."""
 
-    scheduler_config = pex_config.Field(
-        "Python script with the feature scheduler configuration. It must define "
-        "a `scheduler` object of the type `lsst.sims.featureScheduler.schedulers.Core_scheduler`.",
-        str,
-    )
-    force = pex_config.Field(
-        "Force reloading scheduler? If `False` and scheduler is already configured "
-        "it will not be overritten.",
-        bool,
-    )
+    scheduler_config: str = ""
+    # Python script with the feature scheduler configuration. It must define
+    # a `scheduler` object of the type
+    # `lsst.sims.featureScheduler.schedulers.Core_scheduler`.
+
+    force: bool = False
+    # Force reloading scheduler? If `False` and scheduler is already configured
+    # it will not be overritten.
 
 
 class FeatureScheduler(Driver):

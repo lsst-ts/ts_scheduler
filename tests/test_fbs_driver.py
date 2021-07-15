@@ -41,9 +41,9 @@ from lsst.ts.dateloc import ObservatoryLocation
 
 from lsst.ts.astrosky.model import AstronomicalSkyModel
 
-from lsst.sims.seeingModel import SeeingModel
-from lsst.sims.cloudModel import CloudModel
-from lsst.sims.downtimeModel import DowntimeModel
+from rubin_sim.site_models.seeingModel import SeeingModel
+from rubin_sim.site_models.cloudModel import CloudModel
+from rubin_sim.site_models.downtimeModel import DowntimeModel
 
 logging.basicConfig()
 
