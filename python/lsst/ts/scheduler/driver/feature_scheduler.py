@@ -33,7 +33,8 @@ from rubin_sim.site_models import Almanac
 from rubin_sim.utils import _raDec2Hpid
 from rubin_sim.scheduler.features import Conditions
 
-from .driver import Driver, DriverParameters, DriverTarget
+from .driver import Driver, DriverParameters
+from .driver_target import DriverTarget
 from .survey_topology import SurveyTopology
 
 
