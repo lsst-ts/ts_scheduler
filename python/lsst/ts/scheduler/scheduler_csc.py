@@ -574,7 +574,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             )
 
             # publishes target event
-            self.evt_target.set_put(**target.as_evt_topic())
+            self.evt_target.set_put(**target.as_dict())
 
             target.sal_index = int(add_task.result)
 

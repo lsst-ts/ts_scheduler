@@ -101,13 +101,13 @@ class DriverTarget(Target):
 
         return yaml.safe_dump(script_config)
 
-    def as_evt_topic(self, exposure_times_size=10, proposal_id_size=5):
-        """Returns a SAL target topic with the Target information.
+    def as_dict(self, exposure_times_size=10, proposal_id_size=5):
+        """Returns a dictionary with the Target information.
 
         Returns
         -------
-        topic_target: `Scheduler_logevent_target`
-
+        topic_target: `dict`
+            Dictionary with target information.
         """
         topic_target = dict()
 
