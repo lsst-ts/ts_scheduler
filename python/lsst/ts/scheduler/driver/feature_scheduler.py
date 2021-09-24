@@ -147,22 +147,24 @@ class FeatureScheduler(Driver):
 
         """
 
-        if not hasattr(config, "scheduler_config"):
+        if not hasattr(config, "driver_configuration"):
+            raise RuntimeError("No driver configuration section defined.")
+        elif "scheduler_config" not in config.driver_configuration:
             raise RuntimeError("No feature scheduler configuration defined.")
-        elif not os.path.exists(config.scheduler_config):
+        elif not os.path.exists(
+            scheduler_config := config.driver_configuration["scheduler_config"]
+        ):
             raise RuntimeError(
-                f"Feature scheduler configuration file {config.scheduler_config} not found."
+                f"Feature scheduler configuration file {scheduler_config} not found."
             )
 
-        if self.scheduler is None or config.get("force", False):
+        if self.scheduler is None or config.driver_configuration.get("force", False):
 
             self.log.info(
-                f"Loading feature based scheduler configuration from {config.scheduler_config}."
+                f"Loading feature based scheduler configuration from: {scheduler_config}."
             )
 
-            spec = importlib.util.spec_from_file_location(
-                "config", config.scheduler_config
-            )
+            spec = importlib.util.spec_from_file_location("config", scheduler_config)
             conf = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(conf)
 

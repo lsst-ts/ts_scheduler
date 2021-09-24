@@ -18,6 +18,7 @@
 #
 # You should have received a copy of the GNU General Public License
 
+import types
 import logging
 import unittest
 import pathlib
@@ -33,10 +34,14 @@ class TestSchedulerDriver(unittest.TestCase):
         self.driver = Driver(models={}, raw_telemetry={})
 
     def test_configure_scheduler(self):
-        survey_topology = self.driver.configure_scheduler()
+        config = types.SimpleNamespace(
+            driver_configuration=dict(general_propos=["Test"])
+        )
+        survey_topology = self.driver.configure_scheduler(config)
 
         assert isinstance(survey_topology, SurveyTopology)
-        assert survey_topology.num_general_props != 0
+        assert survey_topology.num_general_props == 1
+        assert survey_topology.general_propos[0] == "Test"
         assert len(survey_topology.general_propos) == survey_topology.num_general_props
         assert len(survey_topology.sequence_propos) == survey_topology.num_seq_props
 

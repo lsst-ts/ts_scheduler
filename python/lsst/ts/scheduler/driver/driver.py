@@ -93,7 +93,7 @@ class Driver:
         self.current_sunset = None
         self.current_sunrise = None
 
-    def configure_scheduler(self, config=None):
+    def configure_scheduler(self, config):
         """This method is responsible for running the scheduler configuration
         and returning the survey topology, which specifies the number, name
         and type of projects running by the scheduler.
@@ -112,10 +112,19 @@ class Driver:
         """
         survey_topology = SurveyTopology()
 
-        survey_topology.num_general_props = 1
-        survey_topology.general_propos = ["Test"]
-        survey_topology.num_seq_props = 0
-        survey_topology.sequence_propos = []
+        if not hasattr(config, "driver_configuration"):
+            raise RuntimeError(
+                "No driver_configuration section defined in configuration."
+            )
+
+        survey_topology.general_propos = config.driver_configuration.get(
+            "general_propos", []
+        )
+        survey_topology.sequence_propos = config.driver_configuration.get(
+            "sequence_propos", []
+        )
+        survey_topology.num_general_props = len(survey_topology.general_propos)
+        survey_topology.num_seq_props = len(survey_topology.sequence_propos)
 
         return survey_topology
 

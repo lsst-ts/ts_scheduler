@@ -2,6 +2,9 @@ driver_type: "lsst.ts.scheduler.driver.driver"
 startup_type: "HOT"
 startup_database: " "
 mode: "SIMPLE"
+driver_configuration:
+  general_propos:
+    - Test
 n_targets: 1
 predicted_scheduler_window: 2.
 loop_sleep_time: 1.

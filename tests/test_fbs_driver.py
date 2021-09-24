@@ -87,18 +87,20 @@ class TestFeatureSchedulerDriver(unittest.TestCase):
             models=self.models, raw_telemetry=self.raw_telemetry
         )
 
-        self.config = types.SimpleNamespace(scheduler_config="", force=True)
+        self.config = types.SimpleNamespace(
+            driver_configuration=dict(scheduler_config="", force=True)
+        )
 
         self.files_to_delete = []
 
     def test_configure_scheduler(self):
 
-        self.config.scheduler_config = "no_file.py"
+        self.config.driver_configuration["scheduler_config"] = "no_file.py"
 
         with self.assertRaises(RuntimeError):
             survey_topology = self.driver.configure_scheduler(self.config)
 
-        self.config.scheduler_config = (
+        self.config.driver_configuration["scheduler_config"] = (
             pathlib.Path(__file__)
             .parents[1]
             .joinpath("tests", "data", "config", "fbs_config_no_nside.py")
@@ -107,7 +109,7 @@ class TestFeatureSchedulerDriver(unittest.TestCase):
         with self.assertRaises(NoNsideError):
             survey_topology = self.driver.configure_scheduler(self.config)
 
-        self.config.scheduler_config = (
+        self.config.driver_configuration["scheduler_config"] = (
             pathlib.Path(__file__)
             .parents[1]
             .joinpath("tests", "data", "config", "fbs_config_no_scheduler.py")
@@ -116,7 +118,7 @@ class TestFeatureSchedulerDriver(unittest.TestCase):
         with self.assertRaises(NoSchedulerError):
             survey_topology = self.driver.configure_scheduler(self.config)
 
-        self.config.scheduler_config = (
+        self.config.driver_configuration["scheduler_config"] = (
             pathlib.Path(__file__)
             .parents[1]
             .joinpath("tests", "data", "config", "fbs_config_good.py")
@@ -183,7 +185,7 @@ class TestFeatureSchedulerDriver(unittest.TestCase):
 
     def configure_scheduler_for_test(self):
 
-        self.config.scheduler_config = (
+        self.config.driver_configuration["scheduler_config"] = (
             pathlib.Path(__file__)
             .parents[1]
             .joinpath("tests", "data", "config", "fbs_config_good.py")

@@ -80,9 +80,12 @@ class TestSchedulerDriver(unittest.TestCase):
         )
 
         self.config = types.SimpleNamespace(
-            observing_list=pathlib.Path(__file__)
-            .parents[1]
-            .joinpath("tests", "data", "test_observing_list.yaml")
+            driver_configuration=dict(
+                observing_list=pathlib.Path(__file__)
+                .parents[1]
+                .joinpath("tests", "data", "test_observing_list.yaml"),
+                general_propos=["Test"],
+            )
         )
 
         self.files_to_delete = []

@@ -1,2 +1,3 @@
 # Labels for recommended settings; a dict of label: config_file
+simple: simple.yaml
 all_fields: all_fields.yaml

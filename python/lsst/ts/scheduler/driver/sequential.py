@@ -142,13 +142,18 @@ class SequentialScheduler(Driver):
 
         """
 
-        if not hasattr(config, "observing_list"):
+        if not hasattr(config, "driver_configuration"):
+            raise RuntimeError("No driver configuration section defined.")
+
+        elif "observing_list" not in config.driver_configuration:
             raise RuntimeError("No observing list provided in configuration.")
 
-        if not os.path.exists(config.observing_list):
-            raise RuntimeError(f"Observing list {config.observing_list} not found.")
+        elif not os.path.exists(
+            observing_list := config.driver_configuration["observing_list"]
+        ):
+            raise RuntimeError(f"Observing list {observing_list} not found.")
 
-        with open(config.observing_list, "r") as f:
+        with open(observing_list, "r") as f:
             config_yaml = f.read()
 
         observing_list_dict = yaml.safe_load(config_yaml)
