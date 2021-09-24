@@ -1109,7 +1109,11 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     # and there is less than self.parameters.n_targets targets
                     # in the queue. Basically, one target is executing and the
                     # next will be waiting.
-                    if queue.running and queue.length < self.parameters.n_targets + 1:
+                    if (
+                        queue.running
+                        and queue.length < self.parameters.n_targets + 1
+                        and len(self.targets_queue) > 0
+                    ):
                         # TODO: publish detailed state indicating that the
                         # scheduler is selecting a target
 
