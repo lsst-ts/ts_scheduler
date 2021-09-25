@@ -33,6 +33,7 @@ import numpy as np
 
 from importlib import import_module
 
+from lsst.ts import utils
 from lsst.ts import salobj
 from lsst.ts.idl.enums import ScriptQueue
 
@@ -217,7 +218,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         self.targets_queue = []
 
         # Future to store the results or target_queue check.
-        self.targets_queue_condition = salobj.make_done_future()
+        self.targets_queue_condition = utils.make_done_future()
 
     async def begin_enable(self, data):
         """Begin do_enable.
@@ -1010,7 +1011,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                             None, self.driver.select_next_target
                         )
 
-                        current_tai = salobj.current_tai()
+                        current_tai = utils.current_tai()
 
                         if target.obs_time > current_tai:
                             delta_t = current_tai - target.obs_time
@@ -1076,7 +1077,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         self.raw_telemetry["scheduled_targets"] = []
 
         first_pass = True
-        targets_queue_condition_task = salobj.make_done_future()
+        targets_queue_condition_task = utils.make_done_future()
 
         while self.summary_state == salobj.State.ENABLED and self.run_loop:
 
@@ -1125,7 +1126,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                         # Take a target from the queue
                         target = self.targets_queue.pop(0)
 
-                        current_tai = salobj.current_tai()
+                        current_tai = utils.current_tai()
 
                         if target.obs_time > current_tai:
                             delta_t = current_tai - target.obs_time
