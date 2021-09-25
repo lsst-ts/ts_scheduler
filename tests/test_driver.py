@@ -35,7 +35,11 @@ class TestSchedulerDriver(unittest.TestCase):
 
     def test_configure_scheduler(self):
         config = types.SimpleNamespace(
-            driver_configuration=dict(general_propos=["Test"])
+            driver_configuration=dict(
+                general_propos=["Test"],
+                default_observing_script_name="standard_visit.py",
+                default_observing_script_is_standard=True,
+            )
         )
         survey_topology = self.driver.configure_scheduler(config)
 
@@ -44,6 +48,15 @@ class TestSchedulerDriver(unittest.TestCase):
         assert survey_topology.general_propos[0] == "Test"
         assert len(survey_topology.general_propos) == survey_topology.num_general_props
         assert len(survey_topology.sequence_propos) == survey_topology.num_seq_props
+
+        self.assertEqual(
+            self.driver.default_observing_script_name,
+            config.driver_configuration["default_observing_script_name"],
+        )
+        self.assertEqual(
+            self.driver.default_observing_script_is_standard,
+            config.driver_configuration["default_observing_script_is_standard"],
+        )
 
     def test_select_next_target(self):
         target = self.driver.select_next_target()

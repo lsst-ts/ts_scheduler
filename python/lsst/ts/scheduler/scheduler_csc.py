@@ -561,10 +561,15 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         """
 
         for target in targets:
+            (
+                observing_script,
+                observing_script_is_standard,
+            ) = target.get_observing_script()
+
             self.queue_remote.cmd_add.set(
-                path=self.parameters.observing_script,
+                path=observing_script,
                 config=target.get_script_config(),
-                isStandard=self.parameters.observing_script_is_standard,
+                isStandard=observing_script_is_standard,
                 location=ScriptQueue.Location.LAST,
             )
 

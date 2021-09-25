@@ -35,7 +35,6 @@ from rubin_sim.scheduler.features import Conditions
 
 from .driver import Driver, DriverParameters
 from .driver_target import DriverTarget
-from .survey_topology import SurveyTopology
 
 
 __all__ = ["FeatureScheduler", "NoSchedulerError", "NoNsideError"]
@@ -62,16 +61,28 @@ class FeatureSchedulerTarget(DriverTarget):
 
     Parameters
     ----------
+    observing_script_name : str
+        Name of the observing script.
+    observing_script_is_standard: bool
+        Is the observing script standard?
     observation : `np.ndarray`
         Observation produced by the feature based scheduler.
 
     """
 
-    def __init__(self, observation, targetid=0):
+    def __init__(
+        self,
+        observing_script_name,
+        observing_script_is_standard,
+        observation,
+        targetid=0,
+    ):
 
         self.observation = observation
 
         super().__init__(
+            observing_script_name=observing_script_name,
+            observing_script_is_standard=observing_script_is_standard,
             targetid=targetid,
             band_filter=observation["filter"][0],
             ra_rad=observation["RA"][0],
@@ -195,14 +206,14 @@ class FeatureScheduler(Driver):
                 ]
             )
 
+        survey_topology = super().configure_scheduler(config)
+
         # self.scheduler.survey_lists is a list of lists with different surveys
         survey_names = [
             survey.survey_name
             for survey_list in self.scheduler.survey_lists
             for survey in survey_list
         ]
-
-        survey_topology = SurveyTopology()
 
         survey_topology.num_general_props = len(survey_names)
         survey_topology.general_propos = survey_names
@@ -254,7 +265,11 @@ class FeatureScheduler(Driver):
         desired_obs = self.scheduler.request_observation(mjd=self.next_observation_mjd)
 
         if desired_obs is not None:
-            target = FeatureSchedulerTarget(desired_obs)
+            target = FeatureSchedulerTarget(
+                observing_script_name=self.default_observing_script_name,
+                observing_script_is_standard=self.default_observing_script_is_standard,
+                observation=desired_obs,
+            )
 
             slew_time, error = self.models["observatory_model"].get_slew_delay(target)
 

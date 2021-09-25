@@ -85,6 +85,8 @@ class TestSchedulerDriver(unittest.TestCase):
                 .parents[1]
                 .joinpath("tests", "data", "test_observing_list.yaml"),
                 general_propos=["Test"],
+                default_observing_script_name="standard_visit.py",
+                default_observing_script_is_standard=True,
             )
         )
 

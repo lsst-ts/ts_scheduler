@@ -37,8 +37,16 @@ __all__ = ["SequentialParameters", "SequentialScheduler"]
 
 
 class SequentialTarget(DriverTarget):
-    def __init__(self, config, targetid=0):
-        super().__init__(targetid=targetid, num_exp=1, exp_times=[0.0])
+    def __init__(
+        self, observing_script_name, observing_script_is_standard, config, targetid=0
+    ):
+        super().__init__(
+            observing_script_name=observing_script_name,
+            observing_script_is_standard=observing_script_is_standard,
+            targetid=targetid,
+            num_exp=1,
+            exp_times=[0.0],
+        )
         self.config = config
         # config = self.get_script_config()
 
@@ -197,6 +205,8 @@ class SequentialScheduler(Driver):
         for tid in self.observing_list_dict:
 
             target = SequentialTarget(
+                observing_script_name=self.default_observing_script_name,
+                observing_script_is_standard=self.default_observing_script_is_standard,
                 config=self.observing_list_dict[tid],
                 targetid=self.targetid,
             )

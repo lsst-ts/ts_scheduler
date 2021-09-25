@@ -88,6 +88,9 @@ class Driver:
         self.raw_telemetry = raw_telemetry
         self.targetid = 0
 
+        self.default_observing_script_name = None
+        self.default_observing_script_is_standard = None
+
         self.is_night = None
         self.night = 1
         self.current_sunset = None
@@ -125,6 +128,13 @@ class Driver:
         )
         survey_topology.num_general_props = len(survey_topology.general_propos)
         survey_topology.num_seq_props = len(survey_topology.sequence_propos)
+
+        self.default_observing_script_name = config.driver_configuration[
+            "default_observing_script_name"
+        ]
+        self.default_observing_script_is_standard = config.driver_configuration[
+            "default_observing_script_is_standard"
+        ]
 
         return survey_topology
 
@@ -217,7 +227,11 @@ class Driver:
         self.log.log(WORDY, "Selecting next target.")
 
         self.targetid += 1
-        target = DriverTarget(targetid=self.targetid)
+        target = DriverTarget(
+            observing_script_name=self.default_observing_script_name,
+            observing_script_is_standard=self.default_observing_script_is_standard,
+            targetid=self.targetid,
+        )
 
         target.num_exp = 2
         target.exp_times = [15.0, 15.0]

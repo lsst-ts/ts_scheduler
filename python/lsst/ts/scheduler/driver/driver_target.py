@@ -32,6 +32,10 @@ class DriverTarget(Target):
 
     Parameters
     ----------
+    observing_script_name : str
+        Name of the observing script.
+    observing_script_is_standard: bool
+        Is the observing script standard?
     targetid : int
         A unique identifier for the given target.
     fieldid : int
@@ -56,6 +60,8 @@ class DriverTarget(Target):
 
     def __init__(
         self,
+        observing_script_name,
+        observing_script_is_standard,
         sal_index=0,
         targetid=0,
         fieldid=0,
@@ -67,6 +73,8 @@ class DriverTarget(Target):
         num_exp=0,
         exp_times=[],
     ):
+        self._observing_script_name = observing_script_name
+        self._observing_script_is_standard = observing_script_is_standard
         self.sal_index = sal_index
         self.obs_time = obs_time
         super().__init__(
@@ -100,6 +108,19 @@ class DriverTarget(Target):
         }
 
         return yaml.safe_dump(script_config)
+
+    def get_observing_script(self):
+        """Returns the name of the observing script and whether it is a
+        standard script or not.
+
+        Returns
+        -------
+        observing_script_name : str
+            Name of the observing script.
+        observing_script_is_standard: bool
+            Is the observing script standard?
+        """
+        return self._observing_script_name, self._observing_script_is_standard
 
     def as_dict(self, exposure_times_size=10, proposal_id_size=5):
         """Returns a dictionary with the Target information.

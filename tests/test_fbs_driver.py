@@ -88,7 +88,12 @@ class TestFeatureSchedulerDriver(unittest.TestCase):
         )
 
         self.config = types.SimpleNamespace(
-            driver_configuration=dict(scheduler_config="", force=True)
+            driver_configuration=dict(
+                scheduler_config="",
+                force=True,
+                default_observing_script_name="standard_visit.py",
+                default_observing_script_is_standard=True,
+            )
         )
 
         self.files_to_delete = []
