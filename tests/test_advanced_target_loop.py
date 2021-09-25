@@ -28,7 +28,7 @@ import unittest
 
 import numpy as np
 
-import lsst.ts.salobj as salobj
+from lsst.ts import salobj
 
 from lsst.ts.scheduler import SchedulerCSC
 from lsst.ts.scheduler.utils.error_codes import NO_QUEUE
