@@ -33,8 +33,8 @@ from rubin_sim.site_models import Almanac
 from rubin_sim.utils import _raDec2Hpid
 from rubin_sim.scheduler.features import Conditions
 
-from .driver import Driver, DriverParameters, DriverTarget
-from .survey_topology import SurveyTopology
+from .driver import Driver, DriverParameters
+from .driver_target import DriverTarget
 
 
 __all__ = ["FeatureScheduler", "NoSchedulerError", "NoNsideError"]
@@ -61,16 +61,28 @@ class FeatureSchedulerTarget(DriverTarget):
 
     Parameters
     ----------
+    observing_script_name : str
+        Name of the observing script.
+    observing_script_is_standard: bool
+        Is the observing script standard?
     observation : `np.ndarray`
         Observation produced by the feature based scheduler.
 
     """
 
-    def __init__(self, observation, targetid=0):
+    def __init__(
+        self,
+        observing_script_name,
+        observing_script_is_standard,
+        observation,
+        targetid=0,
+    ):
 
         self.observation = observation
 
         super().__init__(
+            observing_script_name=observing_script_name,
+            observing_script_is_standard=observing_script_is_standard,
             targetid=targetid,
             band_filter=observation["filter"][0],
             ra_rad=observation["RA"][0],
@@ -146,22 +158,24 @@ class FeatureScheduler(Driver):
 
         """
 
-        if not hasattr(config, "scheduler_config"):
+        if not hasattr(config, "driver_configuration"):
+            raise RuntimeError("No driver configuration section defined.")
+        elif "scheduler_config" not in config.driver_configuration:
             raise RuntimeError("No feature scheduler configuration defined.")
-        elif not os.path.exists(config.scheduler_config):
+        elif not os.path.exists(
+            scheduler_config := config.driver_configuration["scheduler_config"]
+        ):
             raise RuntimeError(
-                f"Feature scheduler configuration file {config.scheduler_config} not found."
+                f"Feature scheduler configuration file {scheduler_config} not found."
             )
 
-        if self.scheduler is None or config.get("force", False):
+        if self.scheduler is None or config.driver_configuration.get("force", False):
 
             self.log.info(
-                f"Loading feature based scheduler configuration from {config.scheduler_config}."
+                f"Loading feature based scheduler configuration from: {scheduler_config}."
             )
 
-            spec = importlib.util.spec_from_file_location(
-                "config", config.scheduler_config
-            )
+            spec = importlib.util.spec_from_file_location("config", scheduler_config)
             conf = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(conf)
 
@@ -192,14 +206,14 @@ class FeatureScheduler(Driver):
                 ]
             )
 
+        survey_topology = super().configure_scheduler(config)
+
         # self.scheduler.survey_lists is a list of lists with different surveys
         survey_names = [
             survey.survey_name
             for survey_list in self.scheduler.survey_lists
             for survey in survey_list
         ]
-
-        survey_topology = SurveyTopology()
 
         survey_topology.num_general_props = len(survey_names)
         survey_topology.general_propos = survey_names
@@ -251,7 +265,11 @@ class FeatureScheduler(Driver):
         desired_obs = self.scheduler.request_observation(mjd=self.next_observation_mjd)
 
         if desired_obs is not None:
-            target = FeatureSchedulerTarget(desired_obs)
+            target = FeatureSchedulerTarget(
+                observing_script_name=self.default_observing_script_name,
+                observing_script_is_standard=self.default_observing_script_is_standard,
+                observation=desired_obs,
+            )
 
             slew_time, error = self.models["observatory_model"].get_slew_delay(target)
 

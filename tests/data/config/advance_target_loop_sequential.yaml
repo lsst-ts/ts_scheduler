@@ -1,3 +1,6 @@
 mode: ADVANCE
 driver_type: lsst.ts.scheduler.driver.sequential
-observing_list: tests/data/test_observing_list.yaml
+driver_configuration:
+  observing_list: tests/data/test_observing_list.yaml
+  default_observing_script_name: non_standard_visit.py
+  default_observing_script_is_standard: False

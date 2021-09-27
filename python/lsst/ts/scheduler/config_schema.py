@@ -26,10 +26,12 @@ CONFIG_SCHEMA = yaml.safe_load(
     """$schema: http://json-schema.org/draft-07/schema#
 $id: https://github.com/lsst-ts/ts_scheduler/blob/master/schema/Scheduler.yaml
 # title must end with one or more spaces followed by the schema version, which must begin with "v"
-title: Scheduler v1
+title: Scheduler v2
 description: Schema for Scheduler configuration files
 type: object
-additionalProperties: true
+additionalProperties: false
+required:
+  - driver_configuration
 properties:
   driver_type:
     description: >-
@@ -38,6 +40,24 @@ properties:
       class inside the module.
     type: string
     default: "lsst.ts.scheduler.driver.driver"
+  driver_configuration:
+    description: >-
+      Configuration section dedicated to the driver. This is a dictionary with
+      no fixed setting and can be adapted to the different drivers. The driver
+      will add a verification of the schema.
+    type: object
+    additionalProperties: true
+    properties:
+      default_observing_script_name:
+        description: >-
+          Name of the default observing script. This is used by default in the
+          driver. The application can override them internally when needed.
+        type: string
+        default: standard_visit.py
+      default_observing_script_is_standard:
+        description: Is the default observing script standard?
+        type: boolean
+        default: true
   startup_type:
     description: The method used to startup the scheduler.
     type: string

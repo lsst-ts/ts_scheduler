@@ -33,6 +33,7 @@ import numpy as np
 
 from importlib import import_module
 
+from lsst.ts import utils
 from lsst.ts import salobj
 from lsst.ts.idl.enums import ScriptQueue
 
@@ -217,7 +218,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         self.targets_queue = []
 
         # Future to store the results or target_queue check.
-        self.targets_queue_condition = salobj.make_done_future()
+        self.targets_queue_condition = utils.make_done_future()
 
     async def begin_enable(self, data):
         """Begin do_enable.
@@ -561,10 +562,15 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         """
 
         for target in targets:
+            (
+                observing_script,
+                observing_script_is_standard,
+            ) = target.get_observing_script()
+
             self.queue_remote.cmd_add.set(
-                path=self.parameters.observing_script,
+                path=observing_script,
                 config=target.get_script_config(),
-                isStandard=self.parameters.observing_script_is_standard,
+                isStandard=observing_script_is_standard,
                 location=ScriptQueue.Location.LAST,
             )
 
@@ -574,7 +580,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             )
 
             # publishes target event
-            self.evt_target.set_put(**target.as_evt_topic())
+            self.evt_target.set_put(**target.as_dict())
 
             target.sal_index = int(add_task.result)
 
@@ -1005,7 +1011,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                             None, self.driver.select_next_target
                         )
 
-                        current_tai = salobj.current_tai()
+                        current_tai = utils.current_tai()
 
                         if target.obs_time > current_tai:
                             delta_t = current_tai - target.obs_time
@@ -1071,7 +1077,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         self.raw_telemetry["scheduled_targets"] = []
 
         first_pass = True
-        targets_queue_condition_task = salobj.make_done_future()
+        targets_queue_condition_task = utils.make_done_future()
 
         while self.summary_state == salobj.State.ENABLED and self.run_loop:
 
@@ -1109,14 +1115,18 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     # and there is less than self.parameters.n_targets targets
                     # in the queue. Basically, one target is executing and the
                     # next will be waiting.
-                    if queue.running and queue.length < self.parameters.n_targets + 1:
+                    if (
+                        queue.running
+                        and queue.length < self.parameters.n_targets + 1
+                        and len(self.targets_queue) > 0
+                    ):
                         # TODO: publish detailed state indicating that the
                         # scheduler is selecting a target
 
                         # Take a target from the queue
                         target = self.targets_queue.pop(0)
 
-                        current_tai = salobj.current_tai()
+                        current_tai = utils.current_tai()
 
                         if target.obs_time > current_tai:
                             delta_t = current_tai - target.obs_time

@@ -28,7 +28,7 @@ import unittest
 
 import numpy as np
 
-import lsst.ts.salobj as salobj
+from lsst.ts import salobj
 
 from lsst.ts.scheduler import SchedulerCSC
 from lsst.ts.scheduler.utils.error_codes import NO_QUEUE
@@ -171,7 +171,6 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
         await salobj.set_summary_state(
             self.queue_remote,
             salobj.State.ENABLED,
-            settingsToApply="advance_target_loop_sequential.yaml",
         )
 
         # ...and try again. This time the scheduler should stay in enabled and
@@ -198,7 +197,11 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
         self.scheduler_remote.evt_target.callback = count_targets
         self.scheduler_remote.evt_heartbeat.callback = count_heartbeats
 
-        await salobj.set_summary_state(self.scheduler_remote, salobj.State.ENABLED)
+        await salobj.set_summary_state(
+            self.scheduler_remote,
+            salobj.State.ENABLED,
+            settingsToApply="advance_target_loop_sequential.yaml",
+        )
 
         # Resume scheduler operation
         await self.scheduler_remote.cmd_resume.start(timeout=STD_TIMEOUT)
