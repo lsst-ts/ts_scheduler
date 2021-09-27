@@ -170,11 +170,7 @@ class SimpleTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
         """
 
         # enable queue...
-        await salobj.set_summary_state(
-            self.queue_remote,
-            salobj.State.ENABLED,
-            settingsToApply="simple_target_loop_sequential.yaml",
-        )
+        await salobj.set_summary_state(self.queue_remote, salobj.State.ENABLED)
 
         # ...and try again. This time the scheduler should stay in enable and
         # publish targets to the queue.
@@ -200,7 +196,11 @@ class SimpleTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
         self.scheduler_remote.evt_target.callback = count_targets
         self.scheduler_remote.evt_heartbeat.callback = count_heartbeats
 
-        await salobj.set_summary_state(self.scheduler_remote, salobj.State.ENABLED)
+        await salobj.set_summary_state(
+            self.scheduler_remote,
+            salobj.State.ENABLED,
+            settingsToApply="simple_target_loop_sequential.yaml",
+        )
 
         # Resume scheduler operation
         await self.scheduler_remote.cmd_resume.start(timeout=STD_TIMEOUT)

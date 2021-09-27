@@ -2,11 +2,14 @@ driver_type: "lsst.ts.scheduler.driver.driver"
 startup_type: "HOT"
 startup_database: " "
 mode: "SIMPLE"
+driver_configuration:
+  general_propos:
+    - Test
 n_targets: 1
 predicted_scheduler_window: 2.
 loop_sleep_time: 1.
 cmd_timeout: 60.
-observing_script: 'standard_visit.py'
+observing_script: "standard_visit.py"
 observing_script_is_standard: true
 max_scripts: 100
 location:
@@ -56,15 +59,24 @@ observatory_model:
     filter_unmounted: [u]
   optics_loop_corr:
     tel_optics_ol_slope: 0.2857
-    tel_optics_cl_delay:   [0.0, 36.0]
-    tel_optics_cl_alt_limit:   [0.0, 9.0, 90.0]
+    tel_optics_cl_delay: [0.0, 36.0]
+    tel_optics_cl_alt_limit: [0.0, 9.0, 90.0]
   slew:
     prereq_telalt: []
     prereq_telaz: []
     prereq_telrot: []
-    prereq_telsettle: [telalt,telaz]
-    prereq_telopticsopenloop: [telalt,telaz]
-    prereq_telopticsclosedloop: [domalt,domazsettle,telsettle,readout,telopticsopenloop,filter,telrot]
+    prereq_telsettle: [telalt, telaz]
+    prereq_telopticsopenloop: [telalt, telaz]
+    prereq_telopticsclosedloop:
+      [
+        domalt,
+        domazsettle,
+        telsettle,
+        readout,
+        telopticsopenloop,
+        filter,
+        telrot,
+      ]
     prereq_domalt: []
     prereq_domaz: []
     prereq_domazsettle: [domaz]
@@ -73,10 +85,10 @@ observatory_model:
     prereq_exposures: [telopticsclosedloop]
   park:
     telescope_altitude: 86.5
-    telescope_azimuth :  0.0
-    telescope_rotator:  0.0
+    telescope_azimuth: 0.0
+    telescope_rotator: 0.0
     dome_altitude: 90.0
-    dome_azimuth :  0.0
+    dome_azimuth: 0.0
     filter_position: r
 sky:
   exclude_planets: true
@@ -85,17 +97,25 @@ seeing:
   optical_design_seeing: 0.08
   camera_seeing: 0.30
   raw_seeing_wavelength: 500
-  filter_list: ['u', 'g', 'r', 'i', 'z', 'y']
-  filter_effwavelens: [367.06988658, 482.68517118, 622.32403587, 754.59752265, 869.09018708, 971.02780848]
-  throughputs_version: '1.1'
+  filter_list: ["u", "g", "r", "i", "z", "y"]
+  filter_effwavelens:
+    [
+      367.06988658,
+      482.68517118,
+      622.32403587,
+      754.59752265,
+      869.09018708,
+      971.02780848,
+    ]
+  throughputs_version: "1.1"
   efd_columns: [FWHM]
   efd_delta_time: -1
-  target_columns: ['airmass']
+  target_columns: ["airmass"]
 cloud:
-  efd_columns: ['cloud']
+  efd_columns: ["cloud"]
   efd_delta_time: -1
-  target_columns: ['altitude', 'azimuth']
+  target_columns: ["altitude", "azimuth"]
 downtime:
-  efd_columns: ['scheduled_downtimes', 'unscheduled_downtimes']
+  efd_columns: ["scheduled_downtimes", "unscheduled_downtimes"]
   efd_delta_time: -1
-  target_columns: ['time']
+  target_columns: ["time"]

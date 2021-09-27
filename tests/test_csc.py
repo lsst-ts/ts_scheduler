@@ -59,7 +59,9 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                 self.remote.evt_summaryState.flush()
 
                 try:
-                    await self.remote.cmd_start.start(timeout=LONG_TIMEOUT)
+                    await self.remote.cmd_start.set_start(
+                        timeout=LONG_TIMEOUT, settingsToApply="simple"
+                    )
                 except asyncio.TimeoutError:
                     pass
 
@@ -94,7 +96,7 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
         ), ObservatoryStateMock():
 
             await self.check_standard_state_transitions(
-                enabled_commands=("resume", "stop", "load"),
+                enabled_commands=("resume", "stop", "load"), settingsToApply="simple"
             )
 
     async def test_configuration(self):
@@ -152,7 +154,9 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
             )
 
             try:
-                await salobj.set_summary_state(self.remote, salobj.State.ENABLED)
+                await salobj.set_summary_state(
+                    self.remote, salobj.State.ENABLED, settingsToApply="simple"
+                )
 
                 await self.remote.cmd_load.set_start(
                     uri=config.as_uri(), timeout=SHORT_TIMEOUT

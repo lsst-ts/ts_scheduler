@@ -29,15 +29,24 @@ from astropy.coordinates import Angle
 
 from lsst.ts.salobj import index_generator
 
-from .driver import Driver, DriverParameters, DriverTarget
+from .driver import Driver, DriverParameters
+from .driver_target import DriverTarget
 
 
 __all__ = ["SequentialParameters", "SequentialScheduler"]
 
 
 class SequentialTarget(DriverTarget):
-    def __init__(self, config, targetid=0):
-        super().__init__(targetid=targetid, num_exp=1, exp_times=[0.0])
+    def __init__(
+        self, observing_script_name, observing_script_is_standard, config, targetid=0
+    ):
+        super().__init__(
+            observing_script_name=observing_script_name,
+            observing_script_is_standard=observing_script_is_standard,
+            targetid=targetid,
+            num_exp=1,
+            exp_times=[0.0],
+        )
         self.config = config
         # config = self.get_script_config()
 
@@ -141,13 +150,18 @@ class SequentialScheduler(Driver):
 
         """
 
-        if not hasattr(config, "observing_list"):
+        if not hasattr(config, "driver_configuration"):
+            raise RuntimeError("No driver configuration section defined.")
+
+        elif "observing_list" not in config.driver_configuration:
             raise RuntimeError("No observing list provided in configuration.")
 
-        if not os.path.exists(config.observing_list):
-            raise RuntimeError(f"Observing list {config.observing_list} not found.")
+        elif not os.path.exists(
+            observing_list := config.driver_configuration["observing_list"]
+        ):
+            raise RuntimeError(f"Observing list {observing_list} not found.")
 
-        with open(config.observing_list, "r") as f:
+        with open(observing_list, "r") as f:
             config_yaml = f.read()
 
         observing_list_dict = yaml.safe_load(config_yaml)
@@ -191,6 +205,8 @@ class SequentialScheduler(Driver):
         for tid in self.observing_list_dict:
 
             target = SequentialTarget(
+                observing_script_name=self.default_observing_script_name,
+                observing_script_is_standard=self.default_observing_script_is_standard,
                 config=self.observing_list_dict[tid],
                 targetid=self.targetid,
             )

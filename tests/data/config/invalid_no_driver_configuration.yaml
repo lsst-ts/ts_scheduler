@@ -1,0 +1,2 @@
+mode: SIMPLE
+driver_type: lsst.ts.scheduler.driver.sequential
