@@ -77,6 +77,50 @@ class TestSchedulerDriver(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             self.driver.load(bad_config)
 
+    def test_configure_survey_observing_script(self):
+
+        survey_observing_script = dict(
+            survey_1=dict(
+                observing_script_name="survey1_script",
+                observing_script_is_standard=True,
+            ),
+            survey_2=dict(
+                observing_script_name="survey2_script",
+                observing_script_is_standard=False,
+            ),
+        )
+
+        self.driver.configure_survey_observing_script(survey_observing_script)
+
+        self.assertEqual(survey_observing_script, self.driver._survey_observing_script)
+
+    def test_configure_survey_observing_script_bad_input_missing_is_standard(self):
+
+        survey_observing_script = dict(
+            survey_1=dict(
+                observing_script_name="survey1_script",
+            ),
+            survey_2=dict(
+                observing_script_name="survey2_script",
+                observing_script_is_standard=False,
+            ),
+        )
+        with self.assertRaises(RuntimeError):
+            self.driver.configure_survey_observing_script(survey_observing_script)
+
+    def test_configure_survey_observing_script_bad_input_missing_name(self):
+
+        survey_observing_script = dict(
+            survey_1=dict(
+                observing_script_is_standard=True,
+            ),
+            survey_2=dict(
+                observing_script_name="survey2_script",
+                observing_script_is_standard=False,
+            ),
+        )
+        with self.assertRaises(RuntimeError):
+            self.driver.configure_survey_observing_script(survey_observing_script)
     @unittest.skip("Cannot run this as-is: needs updating")
     def test_init(self):
 
