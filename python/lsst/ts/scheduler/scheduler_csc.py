@@ -649,7 +649,10 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             # changes on the models.
             if hasattr(config, model):
                 self.log.debug(f"Configuring {model}")
-                self.models[model].configure(getattr(config, model))
+                try:
+                    self.models[model].configure(getattr(config, model))
+                except Exception:
+                    self.log.exception(f"Failed to configure model {model}.")
             else:
                 self.log.warning(f"No configuration for {model}. Skipping.")
 
