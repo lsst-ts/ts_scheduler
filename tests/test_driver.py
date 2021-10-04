@@ -121,6 +121,73 @@ class TestSchedulerDriver(unittest.TestCase):
         )
         with self.assertRaises(RuntimeError):
             self.driver.configure_survey_observing_script(survey_observing_script)
+
+    def test_get_survey_observing_script_only_default(self):
+
+        self.configure_scheduler_for_test()
+
+        (
+            observing_script_name,
+            observing_script_is_standard,
+        ) = self.driver.get_survey_observing_script("survey_1")
+
+        self.assertEqual(
+            observing_script_name, self.driver.default_observing_script_name
+        )
+        self.assertEqual(
+            observing_script_is_standard,
+            self.driver.default_observing_script_is_standard,
+        )
+
+    def test_get_survey_observing_script_with_customization(self):
+
+        _, config = self.configure_scheduler_for_test(
+            additional_driver_configuration=dict(
+                survey_observing_script=dict(
+                    survey_1=dict(
+                        observing_script_name="survey1_script",
+                        observing_script_is_standard=True,
+                    ),
+                    survey_2=dict(
+                        observing_script_name="survey2_script",
+                        observing_script_is_standard=False,
+                    ),
+                )
+            )
+        )
+
+        (
+            observing_script_name,
+            observing_script_is_standard,
+        ) = self.driver.get_survey_observing_script("survey_3")
+
+        self.assertEqual(
+            observing_script_name, self.driver.default_observing_script_name
+        )
+        self.assertEqual(
+            observing_script_is_standard,
+            self.driver.default_observing_script_is_standard,
+        )
+
+        for survey_name in config.driver_configuration["survey_observing_script"]:
+            (
+                observing_script_name,
+                observing_script_is_standard,
+            ) = self.driver.get_survey_observing_script(survey_name)
+
+            self.assertEqual(
+                observing_script_name,
+                config.driver_configuration["survey_observing_script"][survey_name][
+                    "observing_script_name"
+                ],
+            )
+            self.assertEqual(
+                observing_script_is_standard,
+                config.driver_configuration["survey_observing_script"][survey_name][
+                    "observing_script_is_standard"
+                ],
+            )
+
     @unittest.skip("Cannot run this as-is: needs updating")
     def test_init(self):
 

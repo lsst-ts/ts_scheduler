@@ -340,3 +340,42 @@ class Driver:
                 raise RuntimeError(
                     f"Entry {survey_name} missing required key {missing}, got {provided_keys}."
                 )
+
+    def get_survey_observing_script(self, survey_name):
+        """Return the appropriate survey observing script.
+
+        If the script contains a especial script, return it, if not, return
+        defaults.
+
+        Parameters
+        ----------
+        survey_name : `str`
+            Name of the survey.
+
+        Returns
+        -------
+        observing_script_name : `str`
+            Name of the observing script.
+        observing_script_is_standard : `bool`
+            Is the observing script standard?
+
+        See Also
+        --------
+        configure_survey_observing_script : Configure survey specific observing
+            script.
+        """
+
+        if survey_name in self._survey_observing_script:
+            self.log.debug(f"Using custom observing script for {survey_name}.")
+            return (
+                self._survey_observing_script[survey_name]["observing_script_name"],
+                self._survey_observing_script[survey_name][
+                    "observing_script_is_standard"
+                ],
+            )
+        else:
+            self.log.debug(f"Using default observing script for {survey_name}.")
+            return (
+                self.default_observing_script_name,
+                self.default_observing_script_is_standard,
+            )
