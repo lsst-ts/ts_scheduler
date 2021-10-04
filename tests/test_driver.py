@@ -34,14 +34,8 @@ class TestSchedulerDriver(unittest.TestCase):
         self.driver = Driver(models={}, raw_telemetry={})
 
     def test_configure_scheduler(self):
-        config = types.SimpleNamespace(
-            driver_configuration=dict(
-                general_propos=["Test"],
-                default_observing_script_name="standard_visit.py",
-                default_observing_script_is_standard=True,
-            )
-        )
-        survey_topology = self.driver.configure_scheduler(config)
+
+        survey_topology, config = self.configure_scheduler_for_test()
 
         assert isinstance(survey_topology, SurveyTopology)
         assert survey_topology.num_general_props == 1
@@ -220,6 +214,22 @@ class TestSchedulerDriver(unittest.TestCase):
         self.assertEqual(
             self.driver.science_proposal_list[0].survey_targets_goal, 1537650
         )
+
+    def configure_scheduler_for_test(self, additional_driver_configuration=None):
+        config = types.SimpleNamespace(
+            driver_configuration=dict(
+                general_propos=["Test"],
+                default_observing_script_name="standard_visit.py",
+                default_observing_script_is_standard=True,
+            )
+        )
+        if additional_driver_configuration is not None:
+            for item in additional_driver_configuration:
+                config.driver_configuration[item] = additional_driver_configuration[
+                    item
+                ]
+
+        return self.driver.configure_scheduler(config), config
 
     def tearDown(self):
         pass
