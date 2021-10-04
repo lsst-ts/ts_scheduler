@@ -265,6 +265,13 @@ class FeatureScheduler(Driver):
         desired_obs = self.scheduler.request_observation(mjd=self.next_observation_mjd)
 
         if desired_obs is not None:
+            (
+                observing_script_name,
+                observing_script_is_standard,
+            ) = self.get_survey_observing_script(
+                self._get_survey_name_from_observation(desired_obs)
+            )
+
             target = FeatureSchedulerTarget(
                 observing_script_name=self.default_observing_script_name,
                 observing_script_is_standard=self.default_observing_script_is_standard,
@@ -498,3 +505,19 @@ class FeatureScheduler(Driver):
         np.random.seed(self.seed)
         with open(filename, "rb") as fp:
             self.scheduler = pickle.load(fp)
+
+    def _get_survey_name_from_observation(self, observation):
+        """Get the survey name for the feature scheduler observation.
+
+        Parameters
+        ----------
+        observation : `numpy.ndarray`
+            Feature based scheduler observation.
+
+        Returns
+        -------
+        survey_name : `str`
+            Survey name parsed from observation
+        """
+        # For now simply return the "notes" field.
+        return observation["note"][0]
