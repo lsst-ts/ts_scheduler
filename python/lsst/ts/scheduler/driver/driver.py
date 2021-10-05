@@ -341,6 +341,25 @@ class Driver:
                     f"Entry {survey_name} missing required key {missing}, got {provided_keys}."
                 )
 
+    def assert_survey_observing_script(self, survey_name):
+        """Assert that the input survey name has a dedicated observing script.
+
+        Parameters
+        ----------
+        survey_name : `str`
+            Name of the survey.
+
+        Raises
+        ------
+        AssertError:
+            If `survey_name` is not in the list of valid survey observing
+            scripts.
+        """
+        assert survey_name in self._survey_observing_script, (
+            f"{survey_name} not in the list of survey observing scripts. "
+            f"Current defined are: {set(self._survey_observing_script.keys())}"
+        )
+
     def get_survey_observing_script(self, survey_name):
         """Return the appropriate survey observing script.
 

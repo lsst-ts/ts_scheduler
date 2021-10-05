@@ -122,6 +122,30 @@ class TestSchedulerDriver(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             self.driver.configure_survey_observing_script(survey_observing_script)
 
+    def test_assert_survey_observing_script(self):
+
+        self.configure_scheduler_for_test()
+
+        _, config = self.configure_scheduler_for_test(
+            additional_driver_configuration=dict(
+                survey_observing_script=dict(
+                    survey_1=dict(
+                        observing_script_name="survey1_script",
+                        observing_script_is_standard=True,
+                    ),
+                    survey_2=dict(
+                        observing_script_name="survey2_script",
+                        observing_script_is_standard=False,
+                    ),
+                )
+            )
+        )
+
+        self.driver.assert_survey_observing_script("survey_1")
+
+        with self.assertRaises(AssertionError):
+            self.driver.assert_survey_observing_script("survey_3")
+
     def test_get_survey_observing_script_only_default(self):
 
         self.configure_scheduler_for_test()
