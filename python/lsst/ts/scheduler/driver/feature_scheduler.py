@@ -124,6 +124,8 @@ class FeatureScheduler(Driver):
 
         self.next_observation_mjd = None
 
+        self._desired_obs = None
+
         self.almanac = Almanac()
 
         self.seed = 42
@@ -157,6 +159,8 @@ class FeatureScheduler(Driver):
             If scheduler configuration does not define `nside` attribute.
 
         """
+
+        self._desired_obs = None
 
         if not hasattr(config, "driver_configuration"):
             raise RuntimeError("No driver configuration section defined.")
