@@ -266,60 +266,96 @@ class FeatureScheduler(Driver):
                 "Time for next observation not set. Call `update_conditions` before requesting a target."
             )
 
-        desired_obs = self.scheduler.request_observation(mjd=self.next_observation_mjd)
+        desired_obs = (
+            self.scheduler.request_observation(mjd=self.next_observation_mjd)
+            if self._desired_obs is None
+            else self._desired_obs
+        )
 
-        if desired_obs is not None:
-            (
-                observing_script_name,
-                observing_script_is_standard,
-            ) = self.get_survey_observing_script(
-                self._get_survey_name_from_observation(desired_obs)
+        return self._handle_desired_observation(desired_observation=desired_obs)
+
+    def _handle_desired_observation(self, desired_observation):
+        """Handler desired observation.
+
+        Parameters
+        ----------
+        desired_observation : `np.array`
+            Feature based scheduler observation.
+
+        Returns
+        -------
+        Target
+        """
+
+        if desired_observation is not None:
+
+            return self._get_validated_target_from_observation(
+                observation=desired_observation
             )
-
-            target = FeatureSchedulerTarget(
-                observing_script_name=self.default_observing_script_name,
-                observing_script_is_standard=self.default_observing_script_is_standard,
-                observation=desired_obs,
-            )
-
-            slew_time, error = self.models["observatory_model"].get_slew_delay(target)
-
-            if error > 0:
-                self.log.error(
-                    f"Error[{error}]: Cannot slew to target @ ra={target.ra}, dec={target.dec}."
-                )
-                self.scheduler.flush_queue()
-                return None
-            else:
-                target.slewtime = slew_time
-
-                target.observation["mjd"] = (
-                    self.conditions.mjd + slew_time / 60.0 / 60.0 / 24.0
-                )
-                target.observation["night"] = self.conditions.night
-                target.observation["slewtime"] = slew_time
-
-                hpid = _raDec2Hpid(self.nside, target.ra_rad, target.dec_rad)
-
-                target.observation["skybrightness"] = self.conditions.skybrightness[
-                    target.filter
-                ][hpid]
-                target.observation["FWHMeff"] = self.conditions.FWHMeff[target.filter][
-                    hpid
-                ]
-                target.observation["airmass"] = self.conditions.airmass[hpid]
-                target.observation["alt"] = target.alt_rad
-                target.observation["az"] = target.az_rad
-                target.observation["rotSkyPos"] = target.ang_rad
-                target.observation["clouds"] = self.conditions.bulk_cloud
-
-                target.slewtime = slew_time
-                target.airmass = target.observation["airmass"]
-                target.sky_brightness = target.observation["skybrightness"]
-
-                return target
         else:
             return None
+
+    def _get_validated_target_from_observation(self, observation):
+        """Validate a feature based scheduler observation and convert it to a
+        Target.
+
+        Parameters
+        ----------
+        desired_observation : `np.array`
+            Feature based scheduler observation.
+
+        Returns
+        -------
+        Target
+        """
+
+        (
+            observing_script_name,
+            observing_script_is_standard,
+        ) = self.get_survey_observing_script(
+            self._get_survey_name_from_observation(observation)
+        )
+
+        target = FeatureSchedulerTarget(
+            observing_script_name=observing_script_name,
+            observing_script_is_standard=observing_script_is_standard,
+            observation=observation,
+        )
+
+        slew_time, error = self.models["observatory_model"].get_slew_delay(target)
+
+        if error > 0:
+            self.log.error(
+                f"Error[{error}]: Cannot slew to target @ ra={target.ra}, dec={target.dec}."
+            )
+            self.scheduler.flush_queue()
+            return None
+        else:
+            target.slewtime = slew_time
+
+            target.observation["mjd"] = (
+                self.conditions.mjd + slew_time / 60.0 / 60.0 / 24.0
+            )
+            target.observation["night"] = self.conditions.night
+            target.observation["slewtime"] = slew_time
+
+            hpid = _raDec2Hpid(self.nside, target.ra_rad, target.dec_rad)
+
+            target.observation["skybrightness"] = self.conditions.skybrightness[
+                target.filter
+            ][hpid]
+            target.observation["FWHMeff"] = self.conditions.FWHMeff[target.filter][hpid]
+            target.observation["airmass"] = self.conditions.airmass[hpid]
+            target.observation["alt"] = target.alt_rad
+            target.observation["az"] = target.az_rad
+            target.observation["rotSkyPos"] = target.ang_rad
+            target.observation["clouds"] = self.conditions.bulk_cloud
+
+            target.slewtime = slew_time
+            target.airmass = target.observation["airmass"]
+            target.sky_brightness = target.observation["skybrightness"]
+
+            return target
 
     def register_observation(self, observation):
         """Validates observation and returns a list of successfully completed
