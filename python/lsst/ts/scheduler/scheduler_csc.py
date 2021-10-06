@@ -806,7 +806,9 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 "Could not find Driver on module %s" % config.driver_type
             )
 
-        self.driver = driver_type(models=self.models, raw_telemetry=self.raw_telemetry)
+        self.driver = driver_type(
+            models=self.models, raw_telemetry=self.raw_telemetry, log=self.log
+        )
 
         # load_override_configuration(self.driver.parameters,
         #                             self.configuration_path)
