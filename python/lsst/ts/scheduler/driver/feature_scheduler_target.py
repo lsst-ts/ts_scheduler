@@ -84,15 +84,22 @@ class FeatureSchedulerTarget(DriverTarget):
             return super().get_script_config()
 
     def _get_script_config_cwfs(self):
-        script_config = {
-            "find_target": dict(
+        script_config = self._script_configuration.get(
+            f"{self._script_config_root}_cwfs", dict()
+        ).copy()
+
+        if "find_target" in script_config:
+            script_config["find_target"]["az"] = math.degrees(
+                float(self.observation["az"][0])
+            )
+            script_config["find_target"]["el"] = math.degrees(
+                float(self.observation["alt"][0])
+            )
+        else:
+            script_config["find_target"] = dict(
                 az=math.degrees(float(self.observation["az"][0])),
                 el=math.degrees(float(self.observation["alt"][0])),
-            ),
-            **self._script_configuration.get(
-                f"{self._script_config_root}_cwfs", dict()
-            ),
-        }
+            )
 
         return yaml.safe_dump(script_config)
 
