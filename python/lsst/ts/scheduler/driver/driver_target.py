@@ -98,13 +98,13 @@ class DriverTarget(Target):
         """
         script_config = {
             "targetid": self.targetid,
-            "band_filter": self.filter,
+            "band_filter": str(self.filter),
             "ra": self.ra,
             "dec": self.dec,
             "ang": self.ang,
             "obs_time": self.obs_time,
-            "num_exp": self.num_exp,
-            "exp_times": self.exp_times,
+            "num_exp": int(self.num_exp),
+            "exp_times": [float(exptime) for exptime in self.exp_times],
         }
 
         return yaml.safe_dump(script_config)
