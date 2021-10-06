@@ -19,6 +19,7 @@
 # You should have received a copy of the GNU General Public License
 
 import os
+import math
 import pickle
 import importlib
 
@@ -363,10 +364,20 @@ class FeatureScheduler(Driver):
 
         target_elevation = target.observation["alt"][0]
 
-        return (
-            np.abs(current_telescope_elevation - target_elevation)
-            > self.models["observatory_model"].params.optics_cl_altlimit[1]
-        )
+        delta_elevation = np.abs(current_telescope_elevation - target_elevation)
+        delta_elevation_limit = self.models[
+            "observatory_model"
+        ].params.optics_cl_altlimit[1]
+
+        if delta_elevation >= delta_elevation_limit:
+            self.log.debug(
+                f"Change in elevation ({math.degrees(delta_elevation)}) larger "
+                f"than threshold ({math.degrees(delta_elevation_limit)}). "
+                "Scheduling CWFS."
+            )
+            return True
+        else:
+            return False
 
     def _get_cwfs_target_for_observation(self, observation):
         """Return a target for cwfs suitable for the input target.
@@ -406,7 +417,7 @@ class FeatureScheduler(Driver):
         Python list of one or more Observations
         """
         for obs in observation:
-            self.log.debug(obs.observation)
+            self.log.debug(f"Registering observation {obs}")
             self.scheduler.add_observation(obs.observation)
 
         return [observation]

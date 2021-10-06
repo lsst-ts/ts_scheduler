@@ -1312,7 +1312,6 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         # Make sure the size of script info is smaller then the maximum allowed
         script_info_size = len(self.script_info)
         if script_info_size > self.parameters.max_scripts:
-            self.log.debug("Cleaning up script info database.")
             # Removes old entries
             for key in self.script_info:
                 del self.script_info[key]
