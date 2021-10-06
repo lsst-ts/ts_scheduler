@@ -21,6 +21,9 @@
 import yaml
 import math
 
+from astropy.coordinates import Angle
+from astropy import units
+
 from .driver_target import DriverTarget
 
 
@@ -106,8 +109,16 @@ class FeatureSchedulerTarget(DriverTarget):
     def _get_script_config_spec(self):
         script_config = {
             "object_name": str(self.observation["note"][0]),
-            "object_dec": math.degrees(float(self.observation["dec"][0])),
-            "object_ra": math.degrees(float(self.observation["RA"][0])),
+            "object_dec": str(
+                Angle(float(self.observation["dec"][0]), unit=units.rad).to_string(
+                    unit=units.degree, sep=":"
+                )
+            ),
+            "object_ra": str(
+                Angle(float(self.observation["RA"][0]), unit=units.rad).to_string(
+                    unit=units.hourangle, sep=":"
+                )
+            ),
             **self._script_configuration.get(
                 f"{self._script_config_root}_spec", dict()
             ),

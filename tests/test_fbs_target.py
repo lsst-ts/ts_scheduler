@@ -19,9 +19,12 @@
 # You should have received a copy of the GNU General Public License
 
 import yaml
+import math
 import unittest
 
+from astropy.coordinates import Angle
 from astropy.time import Time
+from astropy import units
 
 from rubin_sim.scheduler.utils import empty_observation
 
@@ -95,8 +98,8 @@ class TestFeatureSchedulerTarget(unittest.TestCase):
 
         script_config_expected = dict(
             find_target=dict(
-                az=float(observation["az"][0]),
-                el=float(observation["alt"][0]),
+                az=math.degrees(float(observation["az"][0])),
+                el=math.degrees(float(observation["alt"][0])),
             )
         )
 
@@ -119,8 +122,8 @@ class TestFeatureSchedulerTarget(unittest.TestCase):
 
         script_config_expected = dict(
             find_target=dict(
-                az=float(observation["az"][0]),
-                el=float(observation["alt"][0]),
+                az=math.degrees(float(observation["az"][0])),
+                el=math.degrees(float(observation["alt"][0])),
             ),
             filter="SDSSg",
             grating="empty_1",
@@ -144,8 +147,12 @@ class TestFeatureSchedulerTarget(unittest.TestCase):
 
         script_config_expected = {
             "object_name": observation["note"][0],
-            "object_dec": observation["dec"][0],
-            "object_ra": observation["RA"][0],
+            "object_dec": Angle(float(observation["dec"][0]), unit=units.rad).to_string(
+                unit=units.degree, sep=":"
+            ),
+            "object_ra": Angle(float(observation["RA"][0]), unit=units.rad).to_string(
+                unit=units.hourangle, sep=":"
+            ),
         }
 
         script_config_yaml = target.get_script_config()
@@ -170,8 +177,12 @@ class TestFeatureSchedulerTarget(unittest.TestCase):
 
         script_config_expected = {
             "object_name": observation["note"][0],
-            "object_dec": observation["dec"][0],
-            "object_ra": observation["RA"][0],
+            "object_dec": Angle(float(observation["dec"][0]), unit=units.rad).to_string(
+                unit=units.degree, sep=":"
+            ),
+            "object_ra": Angle(float(observation["RA"][0]), unit=units.rad).to_string(
+                unit=units.hourangle, sep=":"
+            ),
             "filter_sequence": ["SDSSg", "SDSSg"],
             "grating_sequence": ["empty_1", "empty_1"],
         }
