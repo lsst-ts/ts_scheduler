@@ -72,7 +72,7 @@ class FeatureSchedulerParameters(DriverParameters):
 class FeatureScheduler(Driver):
     """Feature scheduler driver."""
 
-    def __init__(self, models, raw_telemetry, parameters=None):
+    def __init__(self, models, raw_telemetry, parameters=None, log=None):
 
         self.scheduler = None
 
@@ -92,7 +92,7 @@ class FeatureScheduler(Driver):
 
         self.script_configuration = dict()
 
-        super().__init__(models, raw_telemetry, parameters)
+        super().__init__(models, raw_telemetry, parameters, log=log)
 
     def configure_scheduler(self, config=None):
         """This method is responsible for running the scheduler configuration
