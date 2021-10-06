@@ -594,4 +594,4 @@ class FeatureScheduler(Driver):
             Survey name parsed from observation
         """
         # For now simply return the "notes" field.
-        return observation["note"][0]
+        return observation["note"][0].split(":")[0]
