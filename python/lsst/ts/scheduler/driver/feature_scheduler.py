@@ -445,7 +445,11 @@ class FeatureScheduler(Driver):
         self.conditions.airmass = airmass
 
         # Use the model to get the seeing at this time and airmasses.
-        FWHM_500 = self.raw_telemetry["seeing"]
+        FWHM_500 = (
+            self.raw_telemetry["seeing"]
+            if self.raw_telemetry["seeing"] is not None
+            else 1.0
+        )
 
         seeing_dict = self.models["seeing"](FWHM_500, airmass[good])
         fwhm_eff = seeing_dict["fwhmEff"]
