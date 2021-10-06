@@ -85,7 +85,16 @@ class FeatureSchedulerTarget(DriverTarget):
         if survey_name in self._script_get_config:
             return self._script_get_config[survey_name]()
         else:
-            return super().get_script_config()
+            script_config = super().get_script_config()
+
+            additional_script_config = self._script_configuration.get(
+                self._script_config_root, dict()
+            ).copy()
+
+            for key in additional_script_config:
+                script_config[key] = additional_script_config[key]
+
+            return script_config
 
     def _get_script_config_cwfs(self):
         script_config = self._script_configuration.get(
