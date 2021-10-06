@@ -90,6 +90,8 @@ class FeatureScheduler(Driver):
 
         self.seed = 42
 
+        self.script_configuration = dict()
+
         super().__init__(models, raw_telemetry, parameters)
 
     def configure_scheduler(self, config=None):
@@ -170,6 +172,9 @@ class FeatureScheduler(Driver):
                 ]
             )
 
+        self.script_configuration = config.driver_configuration.get(
+            "script_configuration", dict()
+        )
         survey_topology = super().configure_scheduler(config)
 
         # self.scheduler.survey_lists is a list of lists with different surveys
@@ -249,9 +254,18 @@ class FeatureScheduler(Driver):
 
         if desired_observation is not None:
 
-            return self._get_validated_target_from_observation(
+            desired_target = self._get_validated_target_from_observation(
                 observation=desired_observation
             )
+
+            if desired_target is None:
+                return None
+            elif self._check_need_cwfs(desired_target):
+                self._desired_obs = desired_observation
+                return self._get_cwfs_target_for_observation(desired_observation)
+            else:
+                self._desired_obs = None
+                return desired_target
         else:
             return None
 
@@ -280,6 +294,7 @@ class FeatureScheduler(Driver):
             observing_script_name=observing_script_name,
             observing_script_is_standard=observing_script_is_standard,
             observation=observation,
+            **self.script_configuration,
         )
 
         slew_time, error = self.models["observatory_model"].get_slew_delay(target)
@@ -316,6 +331,61 @@ class FeatureScheduler(Driver):
             target.sky_brightness = target.observation["skybrightness"]
 
             return target
+
+    def _check_need_cwfs(self, target):
+        """Check if the target needs curvature wavefront sensing (cwfs).
+
+        Parameters
+        ----------
+        target : `Target`
+            Target to check if cwfs is required.
+
+        Returns
+        -------
+        `bool`
+            `True` if cwfs is needed.
+        """
+
+        try:
+            self.assert_survey_observing_script("cwfs")
+        except AssertionError:
+            self.log.debug("CWFS survey not configured.")
+            return False
+
+        current_telescope_elevation = self.models[
+            "observatory_model"
+        ].current_state.alt_rad
+
+        target_elevation = target.observation["alt"][0]
+
+        return (
+            np.abs(current_telescope_elevation - target_elevation)
+            > self.models["observatory_model"].params.optics_cl_altlimit[1]
+        )
+
+    def _get_cwfs_target_for_observation(self, observation):
+        """Return a target for cwfs suitable for the input target.
+
+        Parameters
+        ----------
+        observation : `np.array`
+
+        Returns
+        -------
+        `Target`
+            Validated target for CWFS.
+        """
+        self.assert_survey_observing_script("cwfs")
+
+        (
+            observing_script_name,
+            observing_script_is_standard,
+        ) = self.get_survey_observing_script("cwfs")
+
+        cwfs_observation = observation.copy()
+        cwfs_observation["note"][0] = "cwfs"
+
+        return self._get_validated_target_from_observation(observation=cwfs_observation)
 
     def register_observation(self, observation):
         """Validates observation and returns a list of successfully completed

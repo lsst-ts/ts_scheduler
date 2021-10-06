@@ -49,6 +49,11 @@ logging.basicConfig()
 
 
 class TestFeatureSchedulerDriver(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.log = logging.getLogger("TestFeatureSchedulerDriver")
+        return super().setUpClass()
+
     def setUp(self):
         # Need to set current time to something the sky brightness files
         # available for testing have available (MJD: 59853.-59856.).
@@ -155,6 +160,23 @@ class TestFeatureSchedulerDriver(unittest.TestCase):
 
         self.assertGreater(len(targets), 0)
 
+    def test_select_next_target_with_cwfs(self):
+
+        self.configure_scheduler_for_test_with_cwfs()
+
+        self.driver.assert_survey_observing_script("cwfs")
+
+        targets = self.run_observations()
+
+        self.assertGreater(len(targets), 0)
+
+        number_of_cwfs_targets = len(
+            [target for target in targets if target.observation["note"][0] == "cwfs"]
+        )
+
+        self.assertGreaterEqual(number_of_cwfs_targets, 2)
+        self.assertGreater(len(targets), number_of_cwfs_targets)
+
     @unittest.skip("Not implemented yet.")
     def test_load(self):
         pass
@@ -198,6 +220,22 @@ class TestFeatureSchedulerDriver(unittest.TestCase):
 
         self.driver.configure_scheduler(self.config)
 
+    def configure_scheduler_for_test_with_cwfs(self):
+
+        self.config.driver_configuration["scheduler_config"] = (
+            pathlib.Path(__file__)
+            .parents[1]
+            .joinpath("tests", "data", "config", "fbs_config_good_with_cwfs.py")
+        )
+        self.config.driver_configuration["survey_observing_script"] = dict(
+            cwfs=dict(
+                observing_script_name="cwfs_script",
+                observing_script_is_standard=False,
+            ),
+        )
+
+        self.driver.configure_scheduler(self.config)
+
     def run_observations(self):
 
         targets = []
@@ -207,6 +245,8 @@ class TestFeatureSchedulerDriver(unittest.TestCase):
             self.driver.update_conditions()
 
             target = self.driver.select_next_target()
+
+            self.log.debug(f"[{len(targets)}]::{target.observation}")
 
             if target is None:
                 break
@@ -224,7 +264,9 @@ class TestFeatureSchedulerDriver(unittest.TestCase):
                         "Size of exposure times table should be equal to number of exposures.",
                     )
                     self.assertGreater(
-                        target.slewtime, 0.0, "Slewtime must be larger then zero."
+                        target.slewtime,
+                        0.0,
+                        f"Slewtime must be larger then zero. {target.observation}",
                     )
 
                 self.driver.register_observation([target])
