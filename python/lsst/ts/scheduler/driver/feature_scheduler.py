@@ -261,6 +261,7 @@ class FeatureScheduler(Driver):
             if desired_target is None:
                 return None
             elif self._check_need_cwfs(desired_target):
+                self.log.debug(f"Scheduling cwfs observation before {desired_target}.")
                 self._desired_obs = desired_observation
                 return self._get_cwfs_target_for_observation(desired_observation)
             else:
@@ -350,6 +351,10 @@ class FeatureScheduler(Driver):
             self.assert_survey_observing_script("cwfs")
         except AssertionError:
             self.log.debug("CWFS survey not configured.")
+            return False
+
+        if target.observation["note"][0] == "cwfs":
+            self.log.debug("Scheduled target already cwfs.")
             return False
 
         current_telescope_elevation = self.models[
