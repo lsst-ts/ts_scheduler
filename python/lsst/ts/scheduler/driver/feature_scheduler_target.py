@@ -19,6 +19,7 @@
 # You should have received a copy of the GNU General Public License
 
 import yaml
+import math
 
 from .driver_target import DriverTarget
 
@@ -85,8 +86,8 @@ class FeatureSchedulerTarget(DriverTarget):
     def _get_script_config_cwfs(self):
         script_config = {
             "find_target": dict(
-                az=float(self.observation["az"][0]),
-                el=float(self.observation["alt"][0]),
+                az=math.degrees(float(self.observation["az"][0])),
+                el=math.degrees(float(self.observation["alt"][0])),
             ),
             **self._script_configuration.get(
                 f"{self._script_config_root}_cwfs", dict()
@@ -98,8 +99,8 @@ class FeatureSchedulerTarget(DriverTarget):
     def _get_script_config_spec(self):
         script_config = {
             "object_name": str(self.observation["note"][0]),
-            "object_dec": float(self.observation["dec"][0]),
-            "object_ra": float(self.observation["RA"][0]),
+            "object_dec": math.degrees(float(self.observation["dec"][0])),
+            "object_ra": math.degrees(float(self.observation["RA"][0])),
             **self._script_configuration.get(
                 f"{self._script_config_root}_spec", dict()
             ),
