@@ -34,7 +34,7 @@ from rubin_sim.utils import _raDec2Hpid
 from rubin_sim.scheduler.features import Conditions
 
 from .driver import Driver, DriverParameters
-from .driver_target import DriverTarget
+from .feature_scheduler_target import FeatureSchedulerTarget
 
 
 __all__ = ["FeatureScheduler", "NoSchedulerError", "NoNsideError"]
@@ -54,46 +54,6 @@ class NoNsideError(Exception):
     """
 
     pass
-
-
-class FeatureSchedulerTarget(DriverTarget):
-    """Feature based scheduler target.
-
-    Parameters
-    ----------
-    observing_script_name : str
-        Name of the observing script.
-    observing_script_is_standard: bool
-        Is the observing script standard?
-    observation : `np.ndarray`
-        Observation produced by the feature based scheduler.
-
-    """
-
-    def __init__(
-        self,
-        observing_script_name,
-        observing_script_is_standard,
-        observation,
-        targetid=0,
-    ):
-
-        self.observation = observation
-
-        super().__init__(
-            observing_script_name=observing_script_name,
-            observing_script_is_standard=observing_script_is_standard,
-            targetid=targetid,
-            band_filter=observation["filter"][0],
-            ra_rad=observation["RA"][0],
-            dec_rad=observation["dec"][0],
-            ang_rad=observation["rotSkyPos"][0],
-            num_exp=observation["nexp"][0],
-            exp_times=[
-                observation["exptime"][0] / observation["nexp"][0]
-                for i in range(observation["nexp"][0])
-            ],
-        )
 
 
 class FeatureSchedulerParameters(DriverParameters):
