@@ -77,6 +77,7 @@ class FeatureSchedulerTarget(DriverTarget):
                 for i in range(observation["nexp"][0])
             ],
         )
+        self.note = str(observation["note"][0])
 
     def get_script_config(self):
         survey_name = self._get_survey_name()

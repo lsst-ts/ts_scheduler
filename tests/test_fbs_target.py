@@ -72,8 +72,13 @@ class TestFeatureSchedulerTarget(unittest.TestCase):
         script_config_expected = {
             "targetid": target.targetid,
             "band_filter": target.filter,
-            "ra": target.ra,
-            "dec": target.dec,
+            "ra": Angle(float(observation["RA"][0]), unit=units.rad).to_string(
+                unit=units.hourangle, sep=":"
+            ),
+            "dec": Angle(float(observation["dec"][0]), unit=units.rad).to_string(
+                unit=units.degree, sep=":"
+            ),
+            "name": observation["note"][0],
             "ang": target.ang,
             "obs_time": target.obs_time,
             "num_exp": target.num_exp,

@@ -21,6 +21,9 @@ import yaml
 
 import numpy as np
 
+from astropy import units
+from astropy.coordinates import Angle
+
 from lsst.ts.observatory.model import Target
 
 
@@ -99,8 +102,15 @@ class DriverTarget(Target):
         script_config = {
             "targetid": self.targetid,
             "band_filter": str(self.filter),
-            "ra": self.ra,
-            "dec": self.dec,
+            "ra": str(
+                Angle(self.ra, unit=units.degree).to_string(
+                    unit=units.hourangle, sep=":"
+                )
+            ),
+            "dec": str(
+                Angle(self.dec, unit=units.degree).to_string(unit=units.degree, sep=":")
+            ),
+            "name": self.note,
             "ang": self.ang,
             "obs_time": self.obs_time,
             "num_exp": int(self.num_exp),
