@@ -418,7 +418,7 @@ class FeatureScheduler(Driver):
         """
         for obs in observation:
             self.log.debug(f"Registering observation {obs}")
-            self.scheduler.add_observation(obs.observation)
+            self.scheduler.add_observation(obs.observation[0])
 
         return [observation]
 
