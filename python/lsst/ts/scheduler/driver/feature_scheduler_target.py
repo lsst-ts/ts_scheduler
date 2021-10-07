@@ -85,7 +85,9 @@ class FeatureSchedulerTarget(DriverTarget):
         if survey_name in self._script_get_config:
             return self._script_get_config[survey_name]()
         else:
-            script_config = super().get_script_config()
+            script_config_yaml = super().get_script_config()
+
+            script_config = yaml.safe_load(script_config_yaml)
 
             additional_script_config = self._script_configuration.get(
                 self._script_config_root, dict()
@@ -94,7 +96,7 @@ class FeatureSchedulerTarget(DriverTarget):
             for key in additional_script_config:
                 script_config[key] = additional_script_config[key]
 
-            return script_config
+            return yaml.safe_dump(script_config)
 
     def _get_script_config_cwfs(self):
         script_config = self._script_configuration.get(
