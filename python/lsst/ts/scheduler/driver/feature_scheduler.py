@@ -424,7 +424,8 @@ class FeatureScheduler(Driver):
 
     def load(self, config):
         """Load a new set of targets."""
-        raise NotImplementedError("Load method not implemented yet.")
+
+        self.reset_from_state(config)
 
     def _format_conditions(self):
         """Format telemetry and observatory conditions for the feature
