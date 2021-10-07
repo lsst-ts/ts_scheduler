@@ -411,6 +411,11 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         self.assert_enabled()
 
+        if self.run_target_loop.is_set():
+            raise RuntimeError(
+                "Target production loop is running. Stop it before loading a file."
+            )
+
         loop = asyncio.get_running_loop()
 
         try:
