@@ -105,7 +105,7 @@ class DriverTarget(Target):
             return ""
 
         script_config = {
-            "targetid": self.targetid,
+            "targetid": int(self.targetid),
             "band_filter": str(self.filter),
             "ra": str(
                 Angle(self.ra, unit=units.degree).to_string(
@@ -115,12 +115,12 @@ class DriverTarget(Target):
             "dec": str(
                 Angle(self.dec, unit=units.degree).to_string(unit=units.degree, sep=":")
             ),
-            "name": self.note,
-            "rot_sky": self.ang,
-            "obs_time": self.obs_time,
+            "name": str(self.note),
+            "rot_sky": float(self.ang),
+            "obs_time": float(self.obs_time),
             "num_exp": int(self.num_exp),
             "exp_times": [float(exptime) for exptime in self.exp_times],
-            "estimated_slew_time": self.slewtime,
+            "estimated_slew_time": float(self.slewtime),
         }
 
         return yaml.safe_dump(script_config)
