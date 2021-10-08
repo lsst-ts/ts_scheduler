@@ -35,7 +35,7 @@ from rubin_sim.site_models import Almanac
 from rubin_sim.utils import _raDec2Hpid
 from rubin_sim.scheduler.features import Conditions
 
-from .driver import Driver, DriverParameters
+from .driver import Driver, DriverParameters, WORDY
 from .feature_scheduler_target import FeatureSchedulerTarget
 
 
@@ -418,7 +418,7 @@ class FeatureScheduler(Driver):
         Python list of one or more Observations
         """
         for obs in observation:
-            self.log.debug(f"Registering observation {obs}")
+            self.log.log(WORDY, f"Registering observation {obs}")
             self.scheduler.add_observation(obs.observation[0])
 
         return [observation]

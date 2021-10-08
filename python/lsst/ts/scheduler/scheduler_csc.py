@@ -944,6 +944,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 # use scriptState from info as a first guess
                 # FIXME: we probably need to get updated information about the
                 # observed target
+                self.log.debug(f"Target observation completed: {target.note}.")
                 self.driver.register_observation([target])
                 # Remove related script from the list
                 del self.script_info[target.sal_index]
@@ -1270,6 +1271,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         self.log.debug("Registering current scheduled targets.")
 
         for target in self.raw_telemetry["scheduled_targets"]:
+            self.log.debug(f"Temporarily registering scheduled target: {target.note}.")
             self.driver.register_observation([target])
             self.models["observatory_model"].observe(target)
 
@@ -1301,6 +1303,9 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             else:
                 await self.reset_handle_no_targets_on_queue()
 
+                self.log.debug(
+                    f"Temporarily registering selected target: {target.note}."
+                )
                 self.driver.register_observation([target])
 
                 # The following will playback the observations on the
