@@ -91,6 +91,9 @@ class Driver:
         self.default_observing_script_name = None
         self.default_observing_script_is_standard = None
 
+        self.stop_tracking_script_name = None
+        self.stop_tracking_script_is_standard = None
+
         self._survey_observing_script = dict()
 
         self.is_night = None
@@ -136,6 +139,13 @@ class Driver:
         ]
         self.default_observing_script_is_standard = config.driver_configuration[
             "default_observing_script_is_standard"
+        ]
+
+        self.stop_tracking_script_name = config.driver_configuration[
+            "stop_tracking_observing_script_name"
+        ]
+        self.stop_tracking_script_is_standard = config.driver_configuration[
+            "stop_tracking_observing_script_is_standard"
         ]
 
         if "survey_observing_script" in config.driver_configuration:
@@ -262,6 +272,16 @@ class Driver:
         self.log.log(WORDY, "Registering observation %s.", observation)
 
         return [observation]
+
+    def get_stop_tracking_target(self):
+
+        target = DriverTarget(
+            observing_script_name=self.stop_tracking_script_name,
+            observing_script_is_standard=self.stop_tracking_script_is_standard,
+            targetid=self.targetid,
+        )
+
+        return target
 
     def load(self, config):
         """Load a modifying configuration.

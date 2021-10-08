@@ -356,6 +356,8 @@ class TestSchedulerDriver(unittest.TestCase):
                 general_propos=["Test"],
                 default_observing_script_name="standard_visit.py",
                 default_observing_script_is_standard=True,
+                stop_tracking_observing_script_name="stop_tracking.py",
+                stop_tracking_observing_script_is_standard=True,
             )
         )
         if additional_driver_configuration is not None:

@@ -98,6 +98,8 @@ class TestFeatureSchedulerDriver(unittest.TestCase):
                 force=True,
                 default_observing_script_name="standard_visit.py",
                 default_observing_script_is_standard=True,
+                stop_tracking_observing_script_name="stop_tracking.py",
+                stop_tracking_observing_script_is_standard=True,
             )
         )
 

@@ -217,6 +217,10 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         # List of targets used in the ADVANCE target loop
         self.targets_queue = []
 
+        # keep track whether a "no new target" condition was handled by the
+        # scheduler.
+        self._no_target_handled = False
+
         # Future to store the results or target_queue check.
         self.targets_queue_condition = utils.make_done_future()
 
@@ -1256,8 +1260,12 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 self.log.warning(
                     f"No target from the scheduler. Stopping with {len(self.targets_queue)}."
                 )
+                if len(self.targets_queue) == 0:
+                    await self.handle_no_targets_on_queue()
                 break
             else:
+                await self.reset_handle_no_targets_on_queue()
+
                 self.driver.register_observation([target])
 
                 # The following will playback the observations on the
@@ -1291,9 +1299,28 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         str
             Name of the local file saved to disk.
         """
+    async def handle_no_targets_on_queue(self):
+        """Handle condition where there are note more targets on the queue."""
+        if self._no_target_handled:
+            self.log.debug("No targets condition already handled. Ignoring.")
+
+        stop_tracking_target = self.driver.get_stop_tracking_target()
+
+        await self.put_on_queue([stop_tracking_target])
+
+        await self.estimate_next_target()
+
+    async def reset_handle_no_targets_on_queue(self):
+        """Reset conditions that no targets on queue were handled."""
+        self._no_target_handled = False
+
+    async def estimate_next_target(self):
+        """Estimate how long until the next target become available."""
 
         # TODO: publish to s3bucket.
         return self.driver.save_state()
+        # TODO
+        self.log.debug("Estimating next target not implemented.")
 
     def callback_script_info(self, data):
         """This callback function will store in a dictionary information about
