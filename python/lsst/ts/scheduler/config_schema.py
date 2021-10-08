@@ -38,7 +38,6 @@ properties:
       Large File Annex S3 instance, for example "nts", "tuc", "ls", "cp".
     type: string
     default: "cp"
-    pattern: "^[a-z0-9][.a-z0-9]*[a-z0-9]$"
   driver_type:
     description: >-
       Choose a driver to use. This should be an import string that is passed
