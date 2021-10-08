@@ -18,6 +18,7 @@
 #
 # You should have received a copy of the GNU General Public License
 
+import io
 import os
 import math
 import pickle
@@ -583,6 +584,22 @@ class FeatureScheduler(Driver):
             pickle.dump(self.scheduler, fp)
 
         return filename
+
+    def get_state_as_file_object(self):
+        """Get the current state of the scheduling algorithm as a file object.
+
+        Returns
+        -------
+        file_object : `io.BytesIO`
+            File object with the current.
+        """
+        file_object = io.BytesIO()
+
+        pickle.dump(self.scheduler, file_object)
+
+        file_object.seek(0)
+
+        return file_object
 
     def reset_from_state(self, filename):
         """Load the state from a file.

@@ -318,6 +318,16 @@ class Driver:
         """
         raise NotImplementedError("Save state is is not implemented.")
 
+    def get_state_as_file_object(self):
+        """Get the current state of the scheduling algorithm as a file object.
+
+        Returns
+        -------
+        file_object : `io.BytesIO`
+            File object with the current.
+        """
+        raise NotImplementedError("Get state as file object not implemented.")
+
     def reset_from_state(self, filename):
         """Load the state from a file."""
         raise NotImplementedError("Reset from state is not implemented.")
