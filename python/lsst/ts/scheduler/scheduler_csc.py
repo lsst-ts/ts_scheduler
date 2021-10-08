@@ -1341,6 +1341,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         if self._no_target_handled:
             self.log.debug("No targets condition already handled. Ignoring.")
 
+        self._no_target_handled = True
+
         stop_tracking_target = self.driver.get_stop_tracking_target()
 
         await self.put_on_queue([stop_tracking_target])

@@ -278,6 +278,7 @@ class Driver:
         target = DriverTarget(
             observing_script_name=self.stop_tracking_script_name,
             observing_script_is_standard=self.stop_tracking_script_is_standard,
+            observing_script_has_configuration=False,
             targetid=self.targetid,
         )
 

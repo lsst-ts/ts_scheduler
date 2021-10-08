@@ -65,6 +65,7 @@ class DriverTarget(Target):
         self,
         observing_script_name,
         observing_script_is_standard,
+        observing_script_has_configuration=True,
         sal_index=0,
         targetid=0,
         fieldid=0,
@@ -78,6 +79,7 @@ class DriverTarget(Target):
     ):
         self._observing_script_name = observing_script_name
         self._observing_script_is_standard = observing_script_is_standard
+        self._observing_script_has_configuration = observing_script_has_configuration
         self.sal_index = sal_index
         self.obs_time = obs_time
         super().__init__(
@@ -99,6 +101,9 @@ class DriverTarget(Target):
         -------
         config_str: str
         """
+        if not self._observing_script_has_configuration:
+            return ""
+
         script_config = {
             "targetid": self.targetid,
             "band_filter": str(self.filter),
