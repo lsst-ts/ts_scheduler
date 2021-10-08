@@ -1115,6 +1115,9 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         first_pass = True
         targets_queue_condition_task = utils.make_done_future()
 
+        self.targets_queue = []
+        self.targets_queue_condition = utils.make_done_future()
+
         while self.summary_state == salobj.State.ENABLED and self.run_loop:
 
             await self.run_target_loop.wait()
@@ -1252,7 +1255,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         """
         await self.save_scheduler_state()
 
-        self.targets_queue = []
+        self.log.debug(f"Target queue contains {len(self.targets_queue)} targets.")
 
         loop = asyncio.get_running_loop()
 
