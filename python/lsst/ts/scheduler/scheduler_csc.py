@@ -39,7 +39,7 @@ from lsst.ts.idl.enums import ScriptQueue
 
 from . import __version__
 from . import CONFIG_SCHEMA
-from .utils.csc_utils import NonFinalStates
+from .utils.csc_utils import NonFinalStates, SchedulerModes
 from .utils.error_codes import (
     NO_QUEUE,
     PUT_ON_QUEUE,
@@ -124,9 +124,11 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
     Supported simulation modes:
 
-    * 0: regular operation
-    * 1: simulation mode: Do not initialize driver and other operational.
-         components.
+    * `SchedulerModes.NORMAL`: Regular operation
+    * `SchedulerModes.MOCKS3`: Semi-operation mode. Normal operation but mock
+        s3 bucket for large file object.
+    * `SchedulerModes.SIMULATION`: Simulation mode. Do not initialize driver
+        and other operational components.
 
     **Error Codes**
 
@@ -145,7 +147,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
     * 500: Error updating observatory state.
     """
 
-    valid_simulation_modes = (0, 1)
+    valid_simulation_modes = tuple([mode.value for mode in SchedulerModes])
     version = __version__
 
     def __init__(

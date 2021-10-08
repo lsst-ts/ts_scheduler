@@ -18,7 +18,9 @@
 #
 # You should have received a copy of the GNU General Public License
 
-__all__ = ["NonFinalStates"]
+__all__ = ["NonFinalStates", "SchedulerModes"]
+
+import enum
 
 from lsst.ts.idl.enums import ScriptQueue
 
@@ -32,3 +34,9 @@ NonFinalStates = frozenset(
 )
 """Stores all non final state for scripts submitted to the queue.
 """
+
+
+class SchedulerModes(enum.IntEnum):
+    NORMAL = 0
+    MOCKS3 = enum.auto()
+    SIMULATION = enum.auto()
