@@ -1259,6 +1259,9 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         # Synchronize observatory model state with current observatory state.
         self.models["observatory_model"].set_state(self.models["observatory_state"])
+        self.models["observatory_model"].start_tracking(
+            self.models["observatory_state"].time
+        )
 
         self.log.debug("Registering current scheduled targets.")
 
