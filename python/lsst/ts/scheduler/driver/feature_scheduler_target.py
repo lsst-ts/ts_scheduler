@@ -46,7 +46,6 @@ class FeatureSchedulerTarget(DriverTarget):
         observing_script_name,
         observing_script_is_standard,
         observation,
-        targetid=0,
         **kwargs,
     ):
 
@@ -66,7 +65,7 @@ class FeatureSchedulerTarget(DriverTarget):
         super().__init__(
             observing_script_name=observing_script_name,
             observing_script_is_standard=observing_script_is_standard,
-            targetid=targetid,
+            targetid=observation["ID"][0],
             band_filter=observation["filter"][0],
             ra_rad=observation["RA"][0],
             dec_rad=observation["dec"][0],
