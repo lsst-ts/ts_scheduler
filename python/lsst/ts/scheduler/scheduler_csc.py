@@ -943,8 +943,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 # use scriptState from info as a first guess
                 # FIXME: we probably need to get updated information about the
                 # observed target
-                self.driver.register_observation([target])
-
+                if self.parameters.mode != "ADVANCE":
+                    self.driver.register_observation([target])
                 # Remove related script from the list
                 del self.script_info[target.sal_index]
                 # target now simply disappears... Should I keep it in for
