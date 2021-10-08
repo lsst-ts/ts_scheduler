@@ -1296,6 +1296,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 self.models["observatory_model"].observe(target)
 
                 self.targets_queue.append(target)
+        
+        await self.check_targets_queue_condition()
 
         self.log.info(f"Generated queue with {len(self.targets_queue)} targets.")
 
