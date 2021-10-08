@@ -1331,7 +1331,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         )
         try:
             await self.s3bucket.upload(fileobj=file_object, key=key)
-            url = f"s3://{self.s3bucket.name}/{key}"
+            url = f"{self.s3bucket.service_resource.meta.client.meta.endpoint_url}/{self.s3bucket.name}/{key}"
             self.evt_largeFileObjectAvailable.set_put(
                 url=url, generator=f"{self.salinfo.name}:{self.salinfo.index}"
             )
