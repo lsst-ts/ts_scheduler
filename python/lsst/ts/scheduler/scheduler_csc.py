@@ -1340,6 +1340,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         """Handle condition where there are note more targets on the queue."""
         if self._no_target_handled:
             self.log.debug("No targets condition already handled. Ignoring.")
+            return
 
         self._no_target_handled = True
 
