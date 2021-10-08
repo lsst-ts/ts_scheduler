@@ -20,6 +20,7 @@
 
 __all__ = ["SchedulerCSC"]
 
+import shutil
 import asyncio
 import functools
 import inspect
@@ -943,8 +944,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 # use scriptState from info as a first guess
                 # FIXME: we probably need to get updated information about the
                 # observed target
-                if self.parameters.mode != "ADVANCE":
-                    self.driver.register_observation([target])
+                self.driver.register_observation([target])
                 # Remove related script from the list
                 del self.script_info[target.sal_index]
                 # target now simply disappears... Should I keep it in for
@@ -1253,7 +1253,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         scheduler for the future, generating a list of observations.
 
         """
-        await self.save_scheduler_state()
+        last_scheduler_state_filename = await self.save_scheduler_state()
 
         self.log.debug(f"Target queue contains {len(self.targets_queue)} targets.")
 
@@ -1267,12 +1267,22 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         # Synchronize observatory model state with current observatory state.
         self.models["observatory_model"].set_state(self.models["observatory_state"])
 
+        self.log.debug("Registering current scheduled targets.")
+
+        for target in self.raw_telemetry["scheduled_targets"]:
+            self.driver.register_observation([target])
+            self.models["observatory_model"].observe(target)
+
         # For now it will only generate enough targets to send to the queue
         # and leave one extra in the internal queue. In the future we will
         # generate targets to fill the
         # self.parameters.predicted_scheduler_window.
         # But then we will have to improve how we handle the target generation
         # and the check_targets_queue_condition.
+        self.log.debug(
+            f"Requesting {self.parameters.n_targets + 1} additional targets."
+        )
+
         while len(self.targets_queue) <= self.parameters.n_targets + 1:
 
             # Inside the loop we are running update_conditions directly from
@@ -1300,6 +1310,10 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
                 self.targets_queue.append(target)
 
+        self.log.debug("Resetting scheduler state.")
+        self.driver.reset_from_state(last_scheduler_state_filename)
+        shutil.os.remove(last_scheduler_state_filename)
+
         await self.check_targets_queue_condition()
 
         self.log.info(f"Generated queue with {len(self.targets_queue)} targets.")
@@ -1322,6 +1336,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         """Save scheduler state to S3 bucket and publish event."""
 
         file_object = self.driver.get_state_as_file_object()
+
         key = self.s3bucket.make_key(
             salname=self.salinfo.name,
             salindexname=self.salinfo.index,
@@ -1329,6 +1344,10 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             date=utils.astropy_time_from_tai_unix(utils.current_tai()),
             suffix=".p",
         )
+
+        scheduler_state_filename = "last_scheduler_state.p"
+        saved_scheduler_state_filename = self.driver.save_state()
+
         try:
             await self.s3bucket.upload(fileobj=file_object, key=key)
             url = f"{self.s3bucket.service_resource.meta.client.meta.endpoint_url}/{self.s3bucket.name}/{key}"
@@ -1337,9 +1356,11 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             )
         except Exception:
             self.log.exception(
-                f"Could not upload FITS file {key} to S3; trying to save to local disk."
+                f"Could not upload file {key} to S3. Keeping file {saved_scheduler_state_filename}."
             )
-            self.driver.save_state()
+            return shutil.copy(saved_scheduler_state_filename, scheduler_state_filename)
+        else:
+            return shutil.move(saved_scheduler_state_filename, scheduler_state_filename)
 
     async def handle_no_targets_on_queue(self):
         """Handle condition where there are note more targets on the queue."""
