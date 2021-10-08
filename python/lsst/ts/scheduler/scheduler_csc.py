@@ -226,6 +226,10 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         # Future to store the results or target_queue check.
         self.targets_queue_condition = utils.make_done_future()
 
+        # Large file object available
+        self.s3bucket_name = None  # Set by `configure`.
+        self.s3bucket = None  # Set by `handle_summary_state`.
+
     async def begin_enable(self, data):
         """Begin do_enable.
 
@@ -245,7 +249,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         # enabled.
         self.run_target_loop.clear()
 
-        if self.simulation_mode == 1:
+        if self.simulation_mode == SchedulerModes.SIMULATION:
             self.log.debug("Running in simulation mode. No target production loop.")
             self.target_production_task = None
 
@@ -279,6 +283,13 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         if self.disabled_or_enabled and self.telemetry_loop_task is None:
             self.run_loop = True
             self.telemetry_loop_task = asyncio.create_task(self.telemetry_loop())
+
+            if self.s3bucket is None:
+                mock_s3 = self.simulation_mode == SchedulerModes.MOCKS3
+                self.s3bucket = salobj.AsyncS3Bucket(
+                    name=self.s3bucket_name, domock=mock_s3, create=mock_s3
+                )
+
         elif (
             self.summary_state == salobj.State.STANDBY
             and self.telemetry_loop_task is not None
@@ -299,6 +310,10 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     self.log.exception("Unexpected error cancelling telemetry loop.")
             finally:
                 self.telemetry_loop_task = None
+
+            if self.s3bucket is not None:
+                self.s3bucket.stop_mock()
+            self.s3bucket = None
 
     async def begin_disable(self, data):
         """Transition from `State.ENABLED` to `State.DISABLED`. This
@@ -636,6 +651,11 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         None
 
         """
+
+        self.s3bucket_name = salobj.AsyncS3Bucket.make_bucket_name(
+            s3instance=config.s3instance,
+        )
+
         self.parameters.driver_type = config.driver_type
         self.parameters.startup_type = config.startup_type
         self.parameters.startup_database = config.startup_database
@@ -1230,7 +1250,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         scheduler for the future, generating a list of observations.
 
         """
-        self.save_scheduler_state()
+        await self.save_scheduler_state()
 
         self.targets_queue = []
 
@@ -1293,14 +1313,29 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         if len(self.targets_queue) == 0:
             self.targets_queue_condition.set_result(None)
 
-    def save_scheduler_state(self):
-        """Save scheduler state to S3 bucket and publish event.
+    async def save_scheduler_state(self):
+        """Save scheduler state to S3 bucket and publish event."""
 
-        Returns
-        -------
-        str
-            Name of the local file saved to disk.
-        """
+        file_object = self.driver.get_state_as_file_object()
+        key = self.s3bucket.make_key(
+            salname=self.salinfo.name,
+            salindexname=self.salinfo.index,
+            generator=f"{self.salinfo.name}:{self.salinfo.index}",
+            date=utils.astropy_time_from_tai_unix(utils.current_tai()),
+            suffix=".p",
+        )
+        try:
+            await self.s3bucket.upload(fileobj=file_object, key=key)
+            url = f"s3://{self.s3bucket.name}/{key}"
+            self.evt_largeFileObjectAvailable.set_put(
+                url=url, generator=self.generator_name
+            )
+        except Exception:
+            self.log.exception(
+                f"Could not upload FITS file {key} to S3; trying to save to local disk."
+            )
+            self.driver.save_state()
+
     async def handle_no_targets_on_queue(self):
         """Handle condition where there are note more targets on the queue."""
         if self._no_target_handled:
@@ -1319,8 +1354,6 @@ class SchedulerCSC(salobj.ConfigurableCsc):
     async def estimate_next_target(self):
         """Estimate how long until the next target become available."""
 
-        # TODO: publish to s3bucket.
-        return self.driver.save_state()
         # TODO
         self.log.debug("Estimating next target not implemented.")
 
