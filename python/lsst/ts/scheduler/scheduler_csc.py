@@ -36,7 +36,7 @@ from importlib import import_module
 
 from lsst.ts import utils
 from lsst.ts import salobj
-from lsst.ts.idl.enums import ScriptQueue
+from lsst.ts.idl.enums import ScriptQueue, Script
 
 from . import __version__
 from . import CONFIG_SCHEMA
@@ -938,31 +938,23 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 self.raw_telemetry["scheduled_targets"].append(target)
                 continue
 
-            if info.processState == ScriptQueue.ScriptProcessState.DONE:
-                # Script completed I'll assume the observation was successful.
-                # TODO: Need to make sure script completed successfully. Can
-                # use scriptState from info as a first guess
-                # FIXME: we probably need to get updated information about the
-                # observed target
-                self.log.debug(f"Target observation completed: {target.note}.")
+            if info.scriptState == Script.ScriptState.DONE:
+                # Script completed successfully
+                self.log.debug(
+                    f"{target.note} observation completed successfully. "
+                    "Registering observation."
+                )
                 self.driver.register_observation([target])
                 # Remove related script from the list
                 del self.script_info[target.sal_index]
                 # target now simply disappears... Should I keep it in for
                 # future refs?
-            elif info.processState in NonFinalStates:
+            elif info.scriptState in NonFinalStates:
                 # script in a non-final state, just put it back on the list.
                 self.raw_telemetry["scheduled_targets"].append(target)
-            elif info.processState == ScriptQueue.ScriptProcessState.CONFIGUREFAILED:
+            elif info.scriptState == Script.ScriptState.FAILED:
                 self.log.warning(
-                    "Failed to configure observation for target %s.", target.sal_index
-                )
-                # Remove related script from the list
-                del self.script_info[target.sal_index]
-                retval = False
-            elif info.processState == ScriptQueue.ScriptProcessState.TERMINATED:
-                self.log.warning(
-                    "Observation for target %s terminated.", target.sal_index
+                    f"{target.note} failed. Not registering observation.",
                 )
                 # Remove related script from the list
                 del self.script_info[target.sal_index]
@@ -970,7 +962,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             else:
                 self.log.error(
                     "Unrecognized state [%i] for observation %i for target %s.",
-                    info.processState,
+                    info.scriptState,
                     target.sal_index,
                     target,
                 )

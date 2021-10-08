@@ -22,14 +22,20 @@ __all__ = ["NonFinalStates", "SchedulerModes"]
 
 import enum
 
-from lsst.ts.idl.enums import ScriptQueue
+from lsst.ts.idl.enums import Script
 
 
 NonFinalStates = frozenset(
     (
-        ScriptQueue.ScriptProcessState.LOADING.value,
-        ScriptQueue.ScriptProcessState.CONFIGURED.value,
-        ScriptQueue.ScriptProcessState.RUNNING.value,
+        Script.ScriptState.UNKNOWN,
+        Script.ScriptState.UNCONFIGURED,
+        Script.ScriptState.CONFIGURED,
+        Script.ScriptState.RUNNING,
+        Script.ScriptState.PAUSED,
+        Script.ScriptState.ENDING,
+        Script.ScriptState.STOPPING,
+        Script.ScriptState.FAILING,
+        Script.ScriptState.STOPPED,
     )
 )
 """Stores all non final state for scripts submitted to the queue.
