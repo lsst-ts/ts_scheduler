@@ -111,10 +111,11 @@ class DriverTarget(Target):
                 Angle(self.dec, unit=units.degree).to_string(unit=units.degree, sep=":")
             ),
             "name": self.note,
-            "ang": self.ang,
+            "rot_sky": self.ang,
             "obs_time": self.obs_time,
             "num_exp": int(self.num_exp),
             "exp_times": [float(exptime) for exptime in self.exp_times],
+            "estimated_slew_time": self.slewtime,
         }
 
         return yaml.safe_dump(script_config)

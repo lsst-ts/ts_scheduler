@@ -78,6 +78,7 @@ class FeatureSchedulerTarget(DriverTarget):
             ],
         )
         self.note = str(observation["note"][0])
+        self.slewtime = float(observation["slewtime"][0])
 
     def get_script_config(self):
         survey_name = self._get_survey_name()

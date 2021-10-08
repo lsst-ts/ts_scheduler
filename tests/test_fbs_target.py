@@ -79,10 +79,11 @@ class TestFeatureSchedulerTarget(unittest.TestCase):
                 unit=units.degree, sep=":"
             ),
             "name": observation["note"][0],
-            "ang": target.ang,
+            "rot_sky": target.ang,
             "obs_time": target.obs_time,
             "num_exp": target.num_exp,
             "exp_times": target.exp_times,
+            "estimated_slew_time": target.slewtime,
         }
 
         script_config_yaml = target.get_script_config()
