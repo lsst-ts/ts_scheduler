@@ -1296,7 +1296,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 self.models["observatory_model"].observe(target)
 
                 self.targets_queue.append(target)
-        
+
         await self.check_targets_queue_condition()
 
         self.log.info(f"Generated queue with {len(self.targets_queue)} targets.")
@@ -1330,7 +1330,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             await self.s3bucket.upload(fileobj=file_object, key=key)
             url = f"s3://{self.s3bucket.name}/{key}"
             self.evt_largeFileObjectAvailable.set_put(
-                url=url, generator=self.generator_name
+                url=url, generator=f"{self.salinfo.name}:{self.salinfo.index}"
             )
         except Exception:
             self.log.exception(
