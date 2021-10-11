@@ -18,17 +18,31 @@
 #
 # You should have received a copy of the GNU General Public License
 
-__all__ = ["NonFinalStates"]
+__all__ = ["NonFinalStates", "SchedulerModes"]
 
-from lsst.ts.idl.enums import ScriptQueue
+import enum
+
+from lsst.ts.idl.enums import Script
 
 
 NonFinalStates = frozenset(
     (
-        ScriptQueue.ScriptProcessState.LOADING.value,
-        ScriptQueue.ScriptProcessState.CONFIGURED.value,
-        ScriptQueue.ScriptProcessState.RUNNING.value,
+        Script.ScriptState.UNKNOWN,
+        Script.ScriptState.UNCONFIGURED,
+        Script.ScriptState.CONFIGURED,
+        Script.ScriptState.RUNNING,
+        Script.ScriptState.PAUSED,
+        Script.ScriptState.ENDING,
+        Script.ScriptState.STOPPING,
+        Script.ScriptState.FAILING,
+        Script.ScriptState.STOPPED,
     )
 )
 """Stores all non final state for scripts submitted to the queue.
 """
+
+
+class SchedulerModes(enum.IntEnum):
+    NORMAL = 0
+    MOCKS3 = enum.auto()
+    SIMULATION = enum.auto()

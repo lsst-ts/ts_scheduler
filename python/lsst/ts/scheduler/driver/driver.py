@@ -91,6 +91,11 @@ class Driver:
         self.default_observing_script_name = None
         self.default_observing_script_is_standard = None
 
+        self.stop_tracking_script_name = None
+        self.stop_tracking_script_is_standard = None
+
+        self._survey_observing_script = dict()
+
         self.is_night = None
         self.night = 1
         self.current_sunset = None
@@ -135,6 +140,18 @@ class Driver:
         self.default_observing_script_is_standard = config.driver_configuration[
             "default_observing_script_is_standard"
         ]
+
+        self.stop_tracking_script_name = config.driver_configuration[
+            "stop_tracking_observing_script_name"
+        ]
+        self.stop_tracking_script_is_standard = config.driver_configuration[
+            "stop_tracking_observing_script_is_standard"
+        ]
+
+        if "survey_observing_script" in config.driver_configuration:
+            self.configure_survey_observing_script(
+                config.driver_configuration["survey_observing_script"]
+            )
 
         return survey_topology
 
@@ -256,6 +273,17 @@ class Driver:
 
         return [observation]
 
+    def get_stop_tracking_target(self):
+
+        target = DriverTarget(
+            observing_script_name=self.stop_tracking_script_name,
+            observing_script_is_standard=self.stop_tracking_script_is_standard,
+            observing_script_has_configuration=False,
+            targetid=self.targetid,
+        )
+
+        return target
+
     def load(self, config):
         """Load a modifying configuration.
 
@@ -291,6 +319,113 @@ class Driver:
         """
         raise NotImplementedError("Save state is is not implemented.")
 
+    def get_state_as_file_object(self):
+        """Get the current state of the scheduling algorithm as a file object.
+
+        Returns
+        -------
+        file_object : `io.BytesIO`
+            File object with the current.
+        """
+        raise NotImplementedError("Get state as file object not implemented.")
+
     def reset_from_state(self, filename):
         """Load the state from a file."""
         raise NotImplementedError("Reset from state is not implemented.")
+
+    def configure_survey_observing_script(self, survey_observing_script):
+        """Configure survey-based observing script.
+
+        Parameters
+        ----------
+        survey_observing_script : `dict`
+            Dictionary with survey name as key and a dictionary with
+            observing_script_name (string) and observing_script_is_standard
+            (boolean) values.
+
+        See Also
+        --------
+        get_survey_observing_script : Returns survey-specific observing script.
+        """
+
+        self.log.debug("Configuring survey-specific observing script.")
+
+        for survey_name in survey_observing_script:
+            if (
+                "observing_script_name" in survey_observing_script[survey_name]
+                and "observing_script_is_standard"
+                in survey_observing_script[survey_name]
+            ):
+                self.log.debug(
+                    f"Survey {survey_name}: {survey_observing_script[survey_name]}"
+                )
+                self._survey_observing_script[survey_name] = survey_observing_script[
+                    survey_name
+                ].copy()
+            else:
+                provided_keys = set(survey_observing_script[survey_name].keys())
+                missing = {
+                    "observing_script_name",
+                    "observing_script_is_standard",
+                } - provided_keys
+                raise RuntimeError(
+                    f"Entry {survey_name} missing required key {missing}, got {provided_keys}."
+                )
+
+    def assert_survey_observing_script(self, survey_name):
+        """Assert that the input survey name has a dedicated observing script.
+
+        Parameters
+        ----------
+        survey_name : `str`
+            Name of the survey.
+
+        Raises
+        ------
+        AssertError:
+            If `survey_name` is not in the list of valid survey observing
+            scripts.
+        """
+        assert survey_name in self._survey_observing_script, (
+            f"{survey_name} not in the list of survey observing scripts. "
+            f"Current defined are: {set(self._survey_observing_script.keys())}"
+        )
+
+    def get_survey_observing_script(self, survey_name):
+        """Return the appropriate survey observing script.
+
+        If the script contains a especial script, return it, if not, return
+        defaults.
+
+        Parameters
+        ----------
+        survey_name : `str`
+            Name of the survey.
+
+        Returns
+        -------
+        observing_script_name : `str`
+            Name of the observing script.
+        observing_script_is_standard : `bool`
+            Is the observing script standard?
+
+        See Also
+        --------
+        configure_survey_observing_script : Configure survey specific observing
+            script.
+        """
+
+        if survey_name in self._survey_observing_script:
+            self.log.debug(f"Using custom observing script for {survey_name}.")
+            return (
+                self._survey_observing_script[survey_name]["observing_script_name"],
+                self._survey_observing_script[survey_name][
+                    "observing_script_is_standard"
+                ],
+            )
+        else:
+            self.log.debug(f"Using default observing script for {survey_name}.")
+            return (
+                self.default_observing_script_name,
+                self.default_observing_script_is_standard,
+            )

@@ -27,6 +27,7 @@ import unittest
 
 from lsst.ts import salobj
 from lsst.ts.scheduler import SchedulerCSC
+from lsst.ts.scheduler.utils import SchedulerModes
 from lsst.ts.scheduler.mock import ObservatoryStateMock
 from lsst.ts.scheduler.utils.error_codes import OBSERVATORY_STATE_UPDATE
 
@@ -52,7 +53,7 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
         async with self.make_csc(
             config_dir=TEST_CONFIG_DIR,
             initial_state=salobj.State.STANDBY,
-            simulation_mode=1,
+            simulation_mode=SchedulerModes.SIMULATION,
         ):
 
             try:
@@ -92,7 +93,7 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
         async with self.make_csc(
             config_dir=TEST_CONFIG_DIR,
             initial_state=salobj.State.STANDBY,
-            simulation_mode=1,
+            simulation_mode=SchedulerModes.SIMULATION,
         ), ObservatoryStateMock():
 
             await self.check_standard_state_transitions(
@@ -104,7 +105,7 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
         async with self.make_csc(
             config_dir=TEST_CONFIG_DIR,
             initial_state=salobj.State.STANDBY,
-            simulation_mode=1,
+            simulation_mode=SchedulerModes.SIMULATION,
         ), ObservatoryStateMock():
             try:
                 self.assertEqual(self.csc.summary_state, salobj.State.STANDBY)
@@ -139,7 +140,7 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
         async with self.make_csc(
             config_dir=TEST_CONFIG_DIR,
             initial_state=salobj.State.STANDBY,
-            simulation_mode=1,
+            simulation_mode=SchedulerModes.SIMULATION,
         ), ObservatoryStateMock():
             config = (
                 pathlib.Path(__file__)
