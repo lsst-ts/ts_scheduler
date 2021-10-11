@@ -20,6 +20,7 @@
 
 __all__ = ["SchedulerCSC"]
 
+import shutil
 import asyncio
 import functools
 import inspect
@@ -35,11 +36,11 @@ from importlib import import_module
 
 from lsst.ts import utils
 from lsst.ts import salobj
-from lsst.ts.idl.enums import ScriptQueue
+from lsst.ts.idl.enums import ScriptQueue, Script
 
 from . import __version__
 from . import CONFIG_SCHEMA
-from .utils.csc_utils import NonFinalStates
+from .utils.csc_utils import NonFinalStates, SchedulerModes
 from .utils.error_codes import (
     NO_QUEUE,
     PUT_ON_QUEUE,
@@ -124,9 +125,11 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
     Supported simulation modes:
 
-    * 0: regular operation
-    * 1: simulation mode: Do not initialize driver and other operational.
-         components.
+    * `SchedulerModes.NORMAL`: Regular operation
+    * `SchedulerModes.MOCKS3`: Semi-operation mode. Normal operation but mock
+        s3 bucket for large file object.
+    * `SchedulerModes.SIMULATION`: Simulation mode. Do not initialize driver
+        and other operational components.
 
     **Error Codes**
 
@@ -145,7 +148,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
     * 500: Error updating observatory state.
     """
 
-    valid_simulation_modes = (0, 1)
+    valid_simulation_modes = tuple([mode.value for mode in SchedulerModes])
     version = __version__
 
     def __init__(
@@ -217,8 +220,16 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         # List of targets used in the ADVANCE target loop
         self.targets_queue = []
 
+        # keep track whether a "no new target" condition was handled by the
+        # scheduler.
+        self._no_target_handled = False
+
         # Future to store the results or target_queue check.
         self.targets_queue_condition = utils.make_done_future()
+
+        # Large file object available
+        self.s3bucket_name = None  # Set by `configure`.
+        self.s3bucket = None  # Set by `handle_summary_state`.
 
     async def begin_enable(self, data):
         """Begin do_enable.
@@ -239,7 +250,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         # enabled.
         self.run_target_loop.clear()
 
-        if self.simulation_mode == 1:
+        if self.simulation_mode == SchedulerModes.SIMULATION:
             self.log.debug("Running in simulation mode. No target production loop.")
             self.target_production_task = None
 
@@ -273,6 +284,13 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         if self.disabled_or_enabled and self.telemetry_loop_task is None:
             self.run_loop = True
             self.telemetry_loop_task = asyncio.create_task(self.telemetry_loop())
+
+            if self.s3bucket is None:
+                mock_s3 = self.simulation_mode == SchedulerModes.MOCKS3
+                self.s3bucket = salobj.AsyncS3Bucket(
+                    name=self.s3bucket_name, domock=mock_s3, create=mock_s3
+                )
+
         elif (
             self.summary_state == salobj.State.STANDBY
             and self.telemetry_loop_task is not None
@@ -293,6 +311,10 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     self.log.exception("Unexpected error cancelling telemetry loop.")
             finally:
                 self.telemetry_loop_task = None
+
+            if self.s3bucket is not None:
+                self.s3bucket.stop_mock()
+            self.s3bucket = None
 
     async def begin_disable(self, data):
         """Transition from `State.ENABLED` to `State.DISABLED`. This
@@ -410,6 +432,11 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         """
 
         self.assert_enabled()
+
+        if self.run_target_loop.is_set():
+            raise RuntimeError(
+                "Target production loop is running. Stop it before loading a file."
+            )
 
         loop = asyncio.get_running_loop()
 
@@ -625,6 +652,11 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         None
 
         """
+
+        self.s3bucket_name = salobj.AsyncS3Bucket.make_bucket_name(
+            s3instance=config.s3instance,
+        )
+
         self.parameters.driver_type = config.driver_type
         self.parameters.startup_type = config.startup_type
         self.parameters.startup_database = config.startup_database
@@ -649,7 +681,10 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             # changes on the models.
             if hasattr(config, model):
                 self.log.debug(f"Configuring {model}")
-                self.models[model].configure(getattr(config, model))
+                try:
+                    self.models[model].configure(getattr(config, model))
+                except Exception:
+                    self.log.exception(f"Failed to configure model {model}.")
             else:
                 self.log.warning(f"No configuration for {model}. Skipping.")
 
@@ -803,7 +838,9 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 "Could not find Driver on module %s" % config.driver_type
             )
 
-        self.driver = driver_type(models=self.models, raw_telemetry=self.raw_telemetry)
+        self.driver = driver_type(
+            models=self.models, raw_telemetry=self.raw_telemetry, log=self.log
+        )
 
         # load_override_configuration(self.driver.parameters,
         #                             self.configuration_path)
@@ -901,31 +938,23 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 self.raw_telemetry["scheduled_targets"].append(target)
                 continue
 
-            if info.processState == ScriptQueue.ScriptProcessState.DONE:
-                # Script completed I'll assume the observation was successful.
-                # TODO: Need to make sure script completed successfully. Can
-                # use scriptState from info as a first guess
-                # FIXME: we probably need to get updated information about the
-                # observed target
-                self.driver.register_observation(target)
-
+            if info.scriptState == Script.ScriptState.DONE:
+                # Script completed successfully
+                self.log.debug(
+                    f"{target.note} observation completed successfully. "
+                    "Registering observation."
+                )
+                self.driver.register_observation([target])
                 # Remove related script from the list
                 del self.script_info[target.sal_index]
                 # target now simply disappears... Should I keep it in for
                 # future refs?
-            elif info.processState in NonFinalStates:
+            elif info.scriptState in NonFinalStates:
                 # script in a non-final state, just put it back on the list.
                 self.raw_telemetry["scheduled_targets"].append(target)
-            elif info.processState == ScriptQueue.ScriptProcessState.CONFIGUREFAILED:
+            elif info.scriptState == Script.ScriptState.FAILED:
                 self.log.warning(
-                    "Failed to configure observation for target %s.", target.sal_index
-                )
-                # Remove related script from the list
-                del self.script_info[target.sal_index]
-                retval = False
-            elif info.processState == ScriptQueue.ScriptProcessState.TERMINATED:
-                self.log.warning(
-                    "Observation for target %s terminated.", target.sal_index
+                    f"{target.note} failed. Not registering observation.",
                 )
                 # Remove related script from the list
                 del self.script_info[target.sal_index]
@@ -933,7 +962,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             else:
                 self.log.error(
                     "Unrecognized state [%i] for observation %i for target %s.",
-                    info.processState,
+                    info.scriptState,
                     target.sal_index,
                     target,
                 )
@@ -1079,6 +1108,9 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         first_pass = True
         targets_queue_condition_task = utils.make_done_future()
 
+        self.targets_queue = []
+        self.targets_queue_condition = utils.make_done_future()
+
         while self.summary_state == salobj.State.ENABLED and self.run_loop:
 
             await self.run_target_loop.wait()
@@ -1214,9 +1246,9 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         scheduler for the future, generating a list of observations.
 
         """
-        self.save_scheduler_state()
+        last_scheduler_state_filename = await self.save_scheduler_state()
 
-        self.targets_queue = []
+        self.log.debug(f"Target queue contains {len(self.targets_queue)} targets.")
 
         loop = asyncio.get_running_loop()
 
@@ -1227,6 +1259,16 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         # Synchronize observatory model state with current observatory state.
         self.models["observatory_model"].set_state(self.models["observatory_state"])
+        self.models["observatory_model"].start_tracking(
+            self.models["observatory_state"].time
+        )
+
+        self.log.debug("Registering current scheduled targets.")
+
+        for target in self.raw_telemetry["scheduled_targets"]:
+            self.log.debug(f"Temporarily registering scheduled target: {target.note}.")
+            self.driver.register_observation([target])
+            self.models["observatory_model"].observe(target)
 
         # For now it will only generate enough targets to send to the queue
         # and leave one extra in the internal queue. In the future we will
@@ -1234,6 +1276,10 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         # self.parameters.predicted_scheduler_window.
         # But then we will have to improve how we handle the target generation
         # and the check_targets_queue_condition.
+        self.log.debug(
+            f"Requesting {self.parameters.n_targets + 1} additional targets."
+        )
+
         while len(self.targets_queue) <= self.parameters.n_targets + 1:
 
             # Inside the loop we are running update_conditions directly from
@@ -1246,8 +1292,15 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 self.log.warning(
                     f"No target from the scheduler. Stopping with {len(self.targets_queue)}."
                 )
+                if len(self.targets_queue) == 0:
+                    await self.handle_no_targets_on_queue()
                 break
             else:
+                await self.reset_handle_no_targets_on_queue()
+
+                self.log.debug(
+                    f"Temporarily registering selected target: {target.note}."
+                )
                 self.driver.register_observation([target])
 
                 # The following will playback the observations on the
@@ -1256,6 +1309,12 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 self.models["observatory_model"].observe(target)
 
                 self.targets_queue.append(target)
+
+        self.log.debug("Resetting scheduler state.")
+        self.driver.reset_from_state(last_scheduler_state_filename)
+        shutil.os.remove(last_scheduler_state_filename)
+
+        await self.check_targets_queue_condition()
 
         self.log.info(f"Generated queue with {len(self.targets_queue)} targets.")
 
@@ -1273,17 +1332,59 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         if len(self.targets_queue) == 0:
             self.targets_queue_condition.set_result(None)
 
-    def save_scheduler_state(self):
-        """Save scheduler state to S3 bucket and publish event.
+    async def save_scheduler_state(self):
+        """Save scheduler state to S3 bucket and publish event."""
 
-        Returns
-        -------
-        str
-            Name of the local file saved to disk.
-        """
+        file_object = self.driver.get_state_as_file_object()
 
-        # TODO: publish to s3bucket.
-        return self.driver.save_state()
+        key = self.s3bucket.make_key(
+            salname=self.salinfo.name,
+            salindexname=self.salinfo.index,
+            generator=f"{self.salinfo.name}:{self.salinfo.index}",
+            date=utils.astropy_time_from_tai_unix(utils.current_tai()),
+            suffix=".p",
+        )
+
+        scheduler_state_filename = "last_scheduler_state.p"
+        saved_scheduler_state_filename = self.driver.save_state()
+
+        try:
+            await self.s3bucket.upload(fileobj=file_object, key=key)
+            url = f"{self.s3bucket.service_resource.meta.client.meta.endpoint_url}/{self.s3bucket.name}/{key}"
+            self.evt_largeFileObjectAvailable.set_put(
+                url=url, generator=f"{self.salinfo.name}:{self.salinfo.index}"
+            )
+        except Exception:
+            self.log.exception(
+                f"Could not upload file {key} to S3. Keeping file {saved_scheduler_state_filename}."
+            )
+            return shutil.copy(saved_scheduler_state_filename, scheduler_state_filename)
+        else:
+            return shutil.move(saved_scheduler_state_filename, scheduler_state_filename)
+
+    async def handle_no_targets_on_queue(self):
+        """Handle condition where there are note more targets on the queue."""
+        if self._no_target_handled:
+            self.log.debug("No targets condition already handled. Ignoring.")
+            return
+
+        self._no_target_handled = True
+
+        stop_tracking_target = self.driver.get_stop_tracking_target()
+
+        await self.put_on_queue([stop_tracking_target])
+
+        await self.estimate_next_target()
+
+    async def reset_handle_no_targets_on_queue(self):
+        """Reset conditions that no targets on queue were handled."""
+        self._no_target_handled = False
+
+    async def estimate_next_target(self):
+        """Estimate how long until the next target become available."""
+
+        # TODO
+        self.log.debug("Estimating next target not implemented.")
 
     def callback_script_info(self, data):
         """This callback function will store in a dictionary information about
@@ -1307,7 +1408,6 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         # Make sure the size of script info is smaller then the maximum allowed
         script_info_size = len(self.script_info)
         if script_info_size > self.parameters.max_scripts:
-            self.log.debug("Cleaning up script info database.")
             # Removes old entries
             for key in self.script_info:
                 del self.script_info[key]

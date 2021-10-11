@@ -21,6 +21,9 @@ import yaml
 
 import numpy as np
 
+from astropy import units
+from astropy.coordinates import Angle
+
 from lsst.ts.observatory.model import Target
 
 
@@ -62,6 +65,7 @@ class DriverTarget(Target):
         self,
         observing_script_name,
         observing_script_is_standard,
+        observing_script_has_configuration=True,
         sal_index=0,
         targetid=0,
         fieldid=0,
@@ -75,6 +79,7 @@ class DriverTarget(Target):
     ):
         self._observing_script_name = observing_script_name
         self._observing_script_is_standard = observing_script_is_standard
+        self._observing_script_has_configuration = observing_script_has_configuration
         self.sal_index = sal_index
         self.obs_time = obs_time
         super().__init__(
@@ -96,15 +101,26 @@ class DriverTarget(Target):
         -------
         config_str: str
         """
+        if not self._observing_script_has_configuration:
+            return ""
+
         script_config = {
-            "targetid": self.targetid,
-            "band_filter": self.filter,
-            "ra": self.ra,
-            "dec": self.dec,
-            "ang": self.ang,
-            "obs_time": self.obs_time,
-            "num_exp": self.num_exp,
-            "exp_times": self.exp_times,
+            "targetid": int(self.targetid),
+            "band_filter": str(self.filter),
+            "ra": str(
+                Angle(self.ra, unit=units.degree).to_string(
+                    unit=units.hourangle, sep=":"
+                )
+            ),
+            "dec": str(
+                Angle(self.dec, unit=units.degree).to_string(unit=units.degree, sep=":")
+            ),
+            "name": str(self.note),
+            "rot_sky": float(self.ang),
+            "obs_time": float(self.obs_time),
+            "num_exp": int(self.num_exp),
+            "exp_times": [float(exptime) for exptime in self.exp_times],
+            "estimated_slew_time": float(self.slewtime),
         }
 
         return yaml.safe_dump(script_config)

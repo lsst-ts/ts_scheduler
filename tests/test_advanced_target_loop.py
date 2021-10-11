@@ -31,6 +31,7 @@ import numpy as np
 from lsst.ts import salobj
 
 from lsst.ts.scheduler import SchedulerCSC
+from lsst.ts.scheduler.utils import SchedulerModes
 from lsst.ts.scheduler.utils.error_codes import NO_QUEUE
 from lsst.ts.scheduler.mock import ObservatoryStateMock
 
@@ -65,7 +66,9 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
         self.queue_remote = salobj.Remote(self.queue.domain, "ScriptQueue", index=1)
         self.process = None
 
-        self.scheduler = SchedulerCSC(index=1, config_dir=TEST_CONFIG_DIR)
+        self.scheduler = SchedulerCSC(
+            index=1, config_dir=TEST_CONFIG_DIR, simulation_mode=SchedulerModes.MOCKS3
+        )
 
         self.scheduler_remote = salobj.Remote(
             self.scheduler.domain, "Scheduler", index=1

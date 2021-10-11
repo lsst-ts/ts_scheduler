@@ -18,7 +18,9 @@
 #
 # You should have received a copy of the GNU General Public License
 
+import io
 import os
+import math
 import pickle
 import importlib
 
@@ -33,8 +35,8 @@ from rubin_sim.site_models import Almanac
 from rubin_sim.utils import _raDec2Hpid
 from rubin_sim.scheduler.features import Conditions
 
-from .driver import Driver, DriverParameters
-from .driver_target import DriverTarget
+from .driver import Driver, DriverParameters, WORDY
+from .feature_scheduler_target import FeatureSchedulerTarget
 
 
 __all__ = ["FeatureScheduler", "NoSchedulerError", "NoNsideError"]
@@ -56,46 +58,6 @@ class NoNsideError(Exception):
     pass
 
 
-class FeatureSchedulerTarget(DriverTarget):
-    """Feature based scheduler target.
-
-    Parameters
-    ----------
-    observing_script_name : str
-        Name of the observing script.
-    observing_script_is_standard: bool
-        Is the observing script standard?
-    observation : `np.ndarray`
-        Observation produced by the feature based scheduler.
-
-    """
-
-    def __init__(
-        self,
-        observing_script_name,
-        observing_script_is_standard,
-        observation,
-        targetid=0,
-    ):
-
-        self.observation = observation
-
-        super().__init__(
-            observing_script_name=observing_script_name,
-            observing_script_is_standard=observing_script_is_standard,
-            targetid=targetid,
-            band_filter=observation["filter"][0],
-            ra_rad=observation["RA"][0],
-            dec_rad=observation["dec"][0],
-            ang_rad=observation["rotSkyPos"][0],
-            num_exp=observation["nexp"][0],
-            exp_times=[
-                observation["exptime"][0] / observation["nexp"][0]
-                for i in range(observation["nexp"][0])
-            ],
-        )
-
-
 class FeatureSchedulerParameters(DriverParameters):
     """Feature Scheduler driver parameters."""
 
@@ -112,7 +74,7 @@ class FeatureSchedulerParameters(DriverParameters):
 class FeatureScheduler(Driver):
     """Feature scheduler driver."""
 
-    def __init__(self, models, raw_telemetry, parameters=None):
+    def __init__(self, models, raw_telemetry, parameters=None, log=None):
 
         self.scheduler = None
 
@@ -124,11 +86,15 @@ class FeatureScheduler(Driver):
 
         self.next_observation_mjd = None
 
+        self._desired_obs = None
+
         self.almanac = Almanac()
 
         self.seed = 42
 
-        super().__init__(models, raw_telemetry, parameters)
+        self.script_configuration = dict()
+
+        super().__init__(models, raw_telemetry, parameters, log=log)
 
     def configure_scheduler(self, config=None):
         """This method is responsible for running the scheduler configuration
@@ -157,6 +123,8 @@ class FeatureScheduler(Driver):
             If scheduler configuration does not define `nside` attribute.
 
         """
+
+        self._desired_obs = None
 
         if not hasattr(config, "driver_configuration"):
             raise RuntimeError("No driver configuration section defined.")
@@ -206,6 +174,9 @@ class FeatureScheduler(Driver):
                 ]
             )
 
+        self.script_configuration = config.driver_configuration.get(
+            "script_configuration", dict()
+        )
         survey_topology = super().configure_scheduler(config)
 
         # self.scheduler.survey_lists is a list of lists with different surveys
@@ -262,53 +233,176 @@ class FeatureScheduler(Driver):
                 "Time for next observation not set. Call `update_conditions` before requesting a target."
             )
 
-        desired_obs = self.scheduler.request_observation(mjd=self.next_observation_mjd)
+        desired_obs = (
+            self.scheduler.request_observation(mjd=self.next_observation_mjd)
+            if self._desired_obs is None
+            else self._desired_obs
+        )
 
-        if desired_obs is not None:
-            target = FeatureSchedulerTarget(
-                observing_script_name=self.default_observing_script_name,
-                observing_script_is_standard=self.default_observing_script_is_standard,
-                observation=desired_obs,
+        return self._handle_desired_observation(desired_observation=desired_obs)
+
+    def _handle_desired_observation(self, desired_observation):
+        """Handler desired observation.
+
+        Parameters
+        ----------
+        desired_observation : `np.array`
+            Feature based scheduler observation.
+
+        Returns
+        -------
+        Target
+        """
+
+        if desired_observation is not None:
+
+            desired_target = self._get_validated_target_from_observation(
+                observation=desired_observation
             )
 
-            slew_time, error = self.models["observatory_model"].get_slew_delay(target)
-
-            if error > 0:
-                self.log.error(
-                    f"Error[{error}]: Cannot slew to target @ ra={target.ra}, dec={target.dec}."
-                )
-                self.scheduler.flush_queue()
+            if desired_target is None:
                 return None
+            elif self._check_need_cwfs(desired_target):
+                self.log.debug(f"Scheduling cwfs observation before {desired_target}.")
+                self._desired_obs = desired_observation
+                return self._get_cwfs_target_for_observation(desired_observation)
             else:
-                target.slewtime = slew_time
-
-                target.observation["mjd"] = (
-                    self.conditions.mjd + slew_time / 60.0 / 60.0 / 24.0
-                )
-                target.observation["night"] = self.conditions.night
-                target.observation["slewtime"] = slew_time
-
-                hpid = _raDec2Hpid(self.nside, target.ra_rad, target.dec_rad)
-
-                target.observation["skybrightness"] = self.conditions.skybrightness[
-                    target.filter
-                ][hpid]
-                target.observation["FWHMeff"] = self.conditions.FWHMeff[target.filter][
-                    hpid
-                ]
-                target.observation["airmass"] = self.conditions.airmass[hpid]
-                target.observation["alt"] = target.alt_rad
-                target.observation["az"] = target.az_rad
-                target.observation["rotSkyPos"] = target.ang_rad
-                target.observation["clouds"] = self.conditions.bulk_cloud
-
-                target.slewtime = slew_time
-                target.airmass = target.observation["airmass"]
-                target.sky_brightness = target.observation["skybrightness"]
-
-                return target
+                self._desired_obs = None
+                return desired_target
         else:
             return None
+
+    def _get_validated_target_from_observation(self, observation):
+        """Validate a feature based scheduler observation and convert it to a
+        Target.
+
+        Parameters
+        ----------
+        desired_observation : `np.array`
+            Feature based scheduler observation.
+
+        Returns
+        -------
+        Target
+        """
+
+        (
+            observing_script_name,
+            observing_script_is_standard,
+        ) = self.get_survey_observing_script(
+            self._get_survey_name_from_observation(observation)
+        )
+
+        target = FeatureSchedulerTarget(
+            observing_script_name=observing_script_name,
+            observing_script_is_standard=observing_script_is_standard,
+            observation=observation,
+            **self.script_configuration,
+        )
+
+        slew_time, error = self.models["observatory_model"].get_slew_delay(target)
+
+        if error > 0:
+            self.log.error(
+                f"Error[{error}]: Cannot slew to target @ ra={target.ra}, dec={target.dec}."
+            )
+            self.scheduler.flush_queue()
+            return None
+        else:
+            target.slewtime = slew_time
+
+            target.observation["mjd"] = (
+                self.conditions.mjd + slew_time / 60.0 / 60.0 / 24.0
+            )
+            target.observation["night"] = self.conditions.night
+            target.observation["slewtime"] = slew_time
+
+            hpid = _raDec2Hpid(self.nside, target.ra_rad, target.dec_rad)
+
+            target.observation["skybrightness"] = self.conditions.skybrightness[
+                target.filter
+            ][hpid]
+            target.observation["FWHMeff"] = self.conditions.FWHMeff[target.filter][hpid]
+            target.observation["airmass"] = self.conditions.airmass[hpid]
+            target.observation["alt"] = target.alt_rad
+            target.observation["az"] = target.az_rad
+            target.observation["rotSkyPos"] = target.ang_rad
+            target.observation["clouds"] = self.conditions.bulk_cloud
+
+            target.slewtime = slew_time
+            target.airmass = target.observation["airmass"]
+            target.sky_brightness = target.observation["skybrightness"]
+
+            return target
+
+    def _check_need_cwfs(self, target):
+        """Check if the target needs curvature wavefront sensing (cwfs).
+
+        Parameters
+        ----------
+        target : `Target`
+            Target to check if cwfs is required.
+
+        Returns
+        -------
+        `bool`
+            `True` if cwfs is needed.
+        """
+
+        try:
+            self.assert_survey_observing_script("cwfs")
+        except AssertionError:
+            self.log.debug("CWFS survey not configured.")
+            return False
+
+        if target.observation["note"][0] == "cwfs":
+            self.log.debug("Scheduled target already cwfs.")
+            return False
+
+        current_telescope_elevation = self.models[
+            "observatory_model"
+        ].current_state.alt_rad
+
+        target_elevation = target.observation["alt"][0]
+
+        delta_elevation = np.abs(current_telescope_elevation - target_elevation)
+        delta_elevation_limit = self.models[
+            "observatory_model"
+        ].params.optics_cl_altlimit[1]
+
+        if delta_elevation >= delta_elevation_limit:
+            self.log.debug(
+                f"Change in elevation ({math.degrees(delta_elevation)}) larger "
+                f"than threshold ({math.degrees(delta_elevation_limit)}). "
+                "Scheduling CWFS."
+            )
+            return True
+        else:
+            return False
+
+    def _get_cwfs_target_for_observation(self, observation):
+        """Return a target for cwfs suitable for the input target.
+
+        Parameters
+        ----------
+        observation : `np.array`
+
+        Returns
+        -------
+        `Target`
+            Validated target for CWFS.
+        """
+        self.assert_survey_observing_script("cwfs")
+
+        (
+            observing_script_name,
+            observing_script_is_standard,
+        ) = self.get_survey_observing_script("cwfs")
+
+        cwfs_observation = observation.copy()
+        cwfs_observation["note"][0] = "cwfs"
+
+        return self._get_validated_target_from_observation(observation=cwfs_observation)
 
     def register_observation(self, observation):
         """Validates observation and returns a list of successfully completed
@@ -324,14 +418,15 @@ class FeatureScheduler(Driver):
         Python list of one or more Observations
         """
         for obs in observation:
-            self.log.debug(obs.observation)
-            self.scheduler.add_observation(obs.observation)
+            self.log.log(WORDY, f"Registering observation {obs}")
+            self.scheduler.add_observation(obs.observation[0])
 
         return [observation]
 
     def load(self, config):
         """Load a new set of targets."""
-        raise NotImplementedError("Load method not implemented yet.")
+
+        self.reset_from_state(config)
 
     def _format_conditions(self):
         """Format telemetry and observatory conditions for the feature
@@ -368,7 +463,11 @@ class FeatureScheduler(Driver):
         self.conditions.airmass = airmass
 
         # Use the model to get the seeing at this time and airmasses.
-        FWHM_500 = self.raw_telemetry["seeing"]
+        FWHM_500 = (
+            self.raw_telemetry["seeing"]
+            if self.raw_telemetry["seeing"] is not None
+            else 1.0
+        )
 
         seeing_dict = self.models["seeing"](FWHM_500, airmass[good])
         fwhm_eff = seeing_dict["fwhmEff"]
@@ -486,6 +585,22 @@ class FeatureScheduler(Driver):
 
         return filename
 
+    def get_state_as_file_object(self):
+        """Get the current state of the scheduling algorithm as a file object.
+
+        Returns
+        -------
+        file_object : `io.BytesIO`
+            File object with the current.
+        """
+        file_object = io.BytesIO()
+
+        pickle.dump(self.scheduler, file_object)
+
+        file_object.seek(0)
+
+        return file_object
+
     def reset_from_state(self, filename):
         """Load the state from a file.
 
@@ -498,3 +613,19 @@ class FeatureScheduler(Driver):
         np.random.seed(self.seed)
         with open(filename, "rb") as fp:
             self.scheduler = pickle.load(fp)
+
+    def _get_survey_name_from_observation(self, observation):
+        """Get the survey name for the feature scheduler observation.
+
+        Parameters
+        ----------
+        observation : `numpy.ndarray`
+            Feature based scheduler observation.
+
+        Returns
+        -------
+        survey_name : `str`
+            Survey name parsed from observation
+        """
+        # For now simply return the "notes" field.
+        return observation["note"][0].split(":")[0]

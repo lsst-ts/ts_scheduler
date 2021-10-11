@@ -33,6 +33,11 @@ additionalProperties: false
 required:
   - driver_configuration
 properties:
+  s3instance:
+    description: >-
+      Large File Annex S3 instance, for example "nts", "tuc", "ls", "cp".
+    type: string
+    default: "cp"
   driver_type:
     description: >-
       Choose a driver to use. This should be an import string that is passed
@@ -56,6 +61,16 @@ properties:
         default: standard_visit.py
       default_observing_script_is_standard:
         description: Is the default observing script standard?
+        type: boolean
+        default: true
+      stop_tracking_observing_script_name:
+        description: >-
+          Name of the SAL script used to stop the telescope if there is no
+          target from the Scheduler.
+        type: string
+        default: stop_tracking.py
+      stop_tracking_observing_script_is_standard:
+        description: Is the stop tracking script standard?
         type: boolean
         default: true
   startup_type:
