@@ -353,8 +353,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     await asyncio.sleep(self.parameters.loop_sleep_time)
                     elapsed = time.time() - wait_start
                     self.log.debug(
-                        f"Waiting target loop to finish (elapsed: {elapsed} s, "
-                        f"timeout: {self.parameters.cmd_timeout} s)..."
+                        f"Waiting target loop to finish (elapsed: {elapsed:0.2f} s, "
+                        f"timeout: {self.loop_die_timeout} s)..."
                     )
                     if elapsed > self.loop_die_timeout:
                         self.log.warning("Target loop not stopping, cancelling it...")
