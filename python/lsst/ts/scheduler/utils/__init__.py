@@ -19,5 +19,6 @@
 # You should have received a copy of the GNU General Public License
 
 from .csc_utils import *
+from .efd_utils import *
 from .error_codes import *
 from .parameters import *
