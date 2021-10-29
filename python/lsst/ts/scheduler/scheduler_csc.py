@@ -145,6 +145,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
            `Driver.select_next_target` this error code will, most likely, be
            issued (along with the traceback message).
 
+    * 401: Unspecified error on advanced target generation loop.
+
     * 500: Error updating observatory state.
     """
 
