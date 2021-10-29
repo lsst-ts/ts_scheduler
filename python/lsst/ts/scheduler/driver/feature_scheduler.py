@@ -445,7 +445,13 @@ class FeatureScheduler(Driver):
         self.conditions.night = self.almanac.sunsets["night"][almanac_indx]
 
         # Clouds. Just the raw value
-        self.conditions.bulk_cloud = self.raw_telemetry["bulkCloud"]
+        self.conditions.bulk_cloud = self.raw_telemetry.get("bulk_cloud", np.nan)
+
+        # Wind speed and direction
+        self.conditions.wind_speed = self.raw_telemetry.get("wind_speed", np.nan)
+        self.conditions.wind_direction = self.raw_telemetry.get(
+            "wind_direction", np.nan
+        )
 
         # use conditions object itself to get aprox altitude of each healpx
         # These are in radians.
@@ -462,13 +468,10 @@ class FeatureScheduler(Driver):
         airmass[good] = 1.0 / np.cos(np.pi / 2.0 - alts[good])
         self.conditions.airmass = airmass
 
-        # Use the model to get the seeing at this time and airmasses.
-        FWHM_500 = (
-            self.raw_telemetry["seeing"]
-            if self.raw_telemetry["seeing"] is not None
-            else 1.0
-        )
+        # Seeing measurement
+        FWHM_500 = self.raw_telemetry.get("seeing", np.nan)
 
+        # Use the model to get the seeing at this time and airmasses.
         seeing_dict = self.models["seeing"](FWHM_500, airmass[good])
         fwhm_eff = seeing_dict["fwhmEff"]
         for i, key in enumerate(self.models["seeing"].filter_list):
