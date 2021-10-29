@@ -49,8 +49,8 @@ from .utils.error_codes import (
     OBSERVATORY_STATE_UPDATE,
 )
 from .utils.parameters import SchedulerCscParameters
+from .driver import Driver
 
-from lsst.ts.scheduler.driver import Driver
 from lsst.ts.dateloc import ObservatoryLocation
 from lsst.ts.dateloc import version as dateloc_version
 from lsst.ts.observatory.model import ObservatoryModel
