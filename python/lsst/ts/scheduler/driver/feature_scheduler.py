@@ -440,6 +440,8 @@ class FeatureScheduler(Driver):
 
         self.conditions.mjd = self.models["observatory_model"].dateprofile.mjd
 
+        self.log.debug(f"Format conditions. mjd={self.conditions.mjd}")
+
         almanac_indx = self.almanac.mjd_indx(self.conditions.mjd)
 
         self.conditions.night = self.almanac.sunsets["night"][almanac_indx]
@@ -550,6 +552,7 @@ class FeatureScheduler(Driver):
 
         # Add in the almanac information
         self.conditions.sunset = self.almanac.sunsets["sunset"][almanac_indx]
+        self.conditions.sun_n0_setting = self.current_sunset
         self.conditions.sun_n12_setting = self.almanac.sunsets["sun_n12_setting"][
             almanac_indx
         ]
@@ -562,6 +565,8 @@ class FeatureScheduler(Driver):
         self.conditions.sun_n12_rising = self.almanac.sunsets["sun_n12_rising"][
             almanac_indx
         ]
+        self.conditions.sun_n0_rising = self.current_sunrise
+
         self.conditions.sunrise = self.almanac.sunsets["sunrise"][almanac_indx]
         self.conditions.moonrise = self.almanac.sunsets["moonrise"][almanac_indx]
         self.conditions.moonset = self.almanac.sunsets["moonset"][almanac_indx]

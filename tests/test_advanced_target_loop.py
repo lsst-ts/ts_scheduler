@@ -55,6 +55,10 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
     target production loop of the Scheduler CSC with the ScriptQueue.
     """
 
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.log = logging.getLogger("AdvancedTargetLoopTestCase")
+
     async def asyncSetUp(self):
         salobj.testutils.set_random_lsst_dds_partition_prefix()
         self.datadir = os.path.abspath(os.path.join(os.path.dirname(__file__), "data"))
@@ -164,7 +168,7 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
         )
 
     async def test_with_queue(self):
-        """Test the simple target production loop.
+        """Test the target production loop with queue.
 
         This test makes sure the scheduler is capable of interacting with the
         queue and will produce targets when both are enabled.
@@ -243,6 +247,7 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
             "Got %i of %i" % (self.received_targets, self.expected_targets),
         )
 
+        # Check that enough heartbeats were sent
         expected_heartbeats = int(
             (end_time - start_time) / salobj.base_csc.HEARTBEAT_INTERVAL
         )
@@ -254,6 +259,12 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
             "expected >%i"
             % (self.heartbeats, expected_heartbeats - tolerance_heartbeats),
         )
+
+        # Check that telemetry stream was queried
+        self.scheduler.telemetry_stream_handler.efd_client.select_time_series.assert_awaited()
+        for telemetry in self.scheduler.telemetry_stream_handler.telemetry_streams:
+            self.log.debug(f"{telemetry}={self.scheduler.raw_telemetry[telemetry]}")
+            assert np.isfinite(self.scheduler.raw_telemetry[telemetry])
 
     def tearDown(self):
         for filename in glob.glob("./sequential_*.p"):

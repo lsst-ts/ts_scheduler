@@ -118,6 +118,17 @@ class Driver:
         survey_topology: `lsst.ts.scheduler.kernel.SurveyTopology`
 
         """
+
+        if "parameters" in config.driver_configuration:
+            for parameter in config.driver_configuration["parameters"]:
+                value = config.driver_configuration["parameters"][parameter]
+                self.log.debug(f"Setting driver parameter: {parameter} = {value}")
+                setattr(
+                    self.parameters,
+                    parameter,
+                    value,
+                )
+
         survey_topology = SurveyTopology()
 
         if not hasattr(config, "driver_configuration"):
