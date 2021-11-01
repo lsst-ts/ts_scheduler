@@ -1367,13 +1367,14 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         while len(self.targets_queue) <= self.parameters.n_targets + 1:
 
             # Inside the loop we are running update_conditions directly from
-            # the driver. This bypasses the updates done by the CSC method.
+            # the driver instead if update_telemetry. This bypasses the updates
+            # done by the CSC method.
             await loop.run_in_executor(None, self.driver.update_conditions)
 
             target = await loop.run_in_executor(None, self.driver.select_next_target)
 
             if target is None:
-                self.log.warning(
+                self.log.debug(
                     f"No target from the scheduler. Stopping with {len(self.targets_queue)}."
                 )
                 if len(self.targets_queue) == 0:
@@ -1400,7 +1401,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         await self.check_targets_queue_condition()
 
-        self.log.info(f"Generated queue with {len(self.targets_queue)} targets.")
+        self.log.debug(f"Generated queue with {len(self.targets_queue)} targets.")
 
     async def check_targets_queue_condition(self):
         """Check targets queue condition.
