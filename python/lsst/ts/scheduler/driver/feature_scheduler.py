@@ -261,6 +261,7 @@ class FeatureScheduler(Driver):
             )
 
             if desired_target is None:
+                self._desired_obs = None
                 return None
             elif self._check_need_cwfs(desired_target):
                 self.log.debug(f"Scheduling cwfs observation before {desired_target}.")
@@ -372,8 +373,8 @@ class FeatureScheduler(Driver):
 
         if delta_elevation >= delta_elevation_limit:
             self.log.debug(
-                f"Change in elevation ({math.degrees(delta_elevation)}) larger "
-                f"than threshold ({math.degrees(delta_elevation_limit)}). "
+                f"Change in elevation ({math.degrees(delta_elevation):0.2f} deg) larger "
+                f"than threshold ({math.degrees(delta_elevation_limit):0.2f} deg). "
                 "Scheduling CWFS."
             )
             return True
@@ -394,13 +395,10 @@ class FeatureScheduler(Driver):
         """
         self.assert_survey_observing_script("cwfs")
 
-        (
-            observing_script_name,
-            observing_script_is_standard,
-        ) = self.get_survey_observing_script("cwfs")
-
         cwfs_observation = observation.copy()
         cwfs_observation["note"][0] = "cwfs"
+
+        self.log.debug(f"Get cwfs target for: {observation}.")
 
         return self._get_validated_target_from_observation(observation=cwfs_observation)
 
