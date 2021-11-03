@@ -218,11 +218,13 @@ class TelemetryStreamHandler:
                 f"Invalid stream name {stream_name}. Must be one of {self.telemetry_streams}."
             )
 
-        self.log.debug(f"Retrieving {stream_name} telemetry")
-
         time_query_end = Time.now()
         time_query_start = time_query_end - TimeDelta(
             self.telemetry_streams[stream_name]["efd_delta_time"] * units.second
+        )
+
+        self.log.debug(
+            f"Retrieving {stream_name} telemetry between {time_query_start}::{time_query_end}."
         )
 
         efd_data = await self.efd_client.select_time_series(
