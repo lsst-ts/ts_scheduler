@@ -601,6 +601,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 config=target.get_script_config(),
                 isStandard=observing_script_is_standard,
                 location=ScriptQueue.Location.LAST,
+                logLevel=self.log.getEffectiveLevel(),
             )
 
             self.log.debug(f"Putting target {target.targetid} on the queue.")
