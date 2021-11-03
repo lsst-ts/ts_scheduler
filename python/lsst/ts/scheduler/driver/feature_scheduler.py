@@ -587,7 +587,13 @@ class FeatureScheduler(Driver):
         filename = f"fbs_scheduler_{now}.p"
 
         with open(filename, "wb") as fp:
-            pickle.dump(self.scheduler, fp)
+            pickle.dump(
+                [
+                    self.scheduler,
+                    self.conditions,
+                ],
+                fp,
+            )
 
         return filename
 
@@ -601,7 +607,13 @@ class FeatureScheduler(Driver):
         """
         file_object = io.BytesIO()
 
-        pickle.dump(self.scheduler, file_object)
+        pickle.dump(
+            [
+                self.scheduler,
+                self.conditions,
+            ],
+            file_object,
+        )
 
         file_object.seek(0)
 
@@ -618,7 +630,7 @@ class FeatureScheduler(Driver):
         # Reset random number generator
         np.random.seed(self.seed)
         with open(filename, "rb") as fp:
-            self.scheduler = pickle.load(fp)
+            self.scheduler, _ = pickle.load(fp)
 
     def _get_survey_name_from_observation(self, observation):
         """Get the survey name for the feature scheduler observation.
