@@ -550,7 +550,11 @@ class FeatureScheduler(Driver):
 
         # Add in the almanac information
         self.conditions.sunset = self.almanac.sunsets["sunset"][almanac_indx]
-        self.conditions.sun_0_setting = self.current_sunset
+        self.conditions.sun_0_setting = Time(
+            self.current_sunset,
+            format="unix",
+            scale="utc",
+        ).mjd
         self.conditions.sun_n12_setting = self.almanac.sunsets["sun_n12_setting"][
             almanac_indx
         ]
@@ -563,7 +567,11 @@ class FeatureScheduler(Driver):
         self.conditions.sun_n12_rising = self.almanac.sunsets["sun_n12_rising"][
             almanac_indx
         ]
-        self.conditions.sun_0_rising = self.current_sunrise
+        self.conditions.sun_0_rising = Time(
+            self.current_sunrise,
+            format="unix",
+            scale="utc",
+        ).mjd
 
         self.conditions.sunrise = self.almanac.sunsets["sunrise"][almanac_indx]
         self.conditions.moonrise = self.almanac.sunsets["moonrise"][almanac_indx]
