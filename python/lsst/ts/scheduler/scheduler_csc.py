@@ -573,6 +573,10 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         else:
             self.log.debug("Telemetry stream not configured.")
 
+        self.models["observatory_model"].update_state(
+            utils.astropy_time_from_tai_unix(utils.current_tai()).unix
+        )
+
         loop = asyncio.get_event_loop()
 
         await loop.run_in_executor(None, self.driver.update_conditions)
