@@ -49,6 +49,9 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
             index=1, config_dir=config_dir, simulation_mode=simulation_mode
         )
 
+    async def test_bin_script(self):
+        await self.check_bin_script("Scheduler", 1, "run_scheduler.py")
+
     async def test_fail_no_observatory_state(self):
         """Test CSC goes to FAULT if no observatory state."""
 
