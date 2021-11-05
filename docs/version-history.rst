@@ -4,6 +4,12 @@
 Version History
 ===============
 
+v1.9.0
+------
+
+* Implement telemetry stream parsing on Scheduler CSC.
+* General improvements and bug fixes caught during night-time tests with the Auxiliary Telescope.
+
 v1.8.0
 ------
 
