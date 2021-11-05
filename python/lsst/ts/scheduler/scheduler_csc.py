@@ -978,7 +978,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     flush=False, timeout=self.parameters.cmd_timeout
                 )
             except asyncio.TimeoutError:
-                self.log.error("No state from queue. Requesting...")
+                self.log.debug("No state from queue. Requesting...")
                 self.queue_remote.evt_queue.flush()
                 await self.queue_remote.cmd_showQueue.start(
                     timeout=self.parameters.cmd_timeout
