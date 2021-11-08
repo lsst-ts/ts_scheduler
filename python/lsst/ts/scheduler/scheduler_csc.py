@@ -27,6 +27,7 @@ import inspect
 import logging
 import time
 import traceback
+from typing import Dict
 
 import urllib.request
 
@@ -49,8 +50,9 @@ from .utils.error_codes import (
     OBSERVATORY_STATE_UPDATE,
 )
 from .utils.parameters import SchedulerCscParameters
+from .driver import Driver
+from . import TelemetryStreamHandler
 
-from lsst.ts.scheduler.driver import Driver
 from lsst.ts.dateloc import ObservatoryLocation
 from lsst.ts.dateloc import version as dateloc_version
 from lsst.ts.observatory.model import ObservatoryModel
@@ -145,6 +147,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
            `Driver.select_next_target` this error code will, most likely, be
            issued (along with the traceback message).
 
+    * 401: Unspecified error on advanced target generation loop.
+
     * 500: Error updating observatory state.
     """
 
@@ -188,7 +192,9 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         # How long to wait for target loop to stop before killing it
         self.loop_die_timeout = 5.0
 
-        # Dictionary to store information about the scripts put on the queue
+        self.telemetry_stream_handler = None
+
+        # Dictionaries to store information about the scripts put on the queue
         self.models = dict()
         self.raw_telemetry = dict()
         self.script_info = dict()
@@ -351,8 +357,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     await asyncio.sleep(self.parameters.loop_sleep_time)
                     elapsed = time.time() - wait_start
                     self.log.debug(
-                        f"Waiting target loop to finish (elapsed: {elapsed} s, "
-                        f"timeout: {self.parameters.cmd_timeout} s)..."
+                        f"Waiting target loop to finish (elapsed: {elapsed:0.2f} s, "
+                        f"timeout: {self.loop_die_timeout} s)..."
                     )
                     if elapsed > self.loop_die_timeout:
                         self.log.warning("Target loop not stopping, cancelling it...")
@@ -541,12 +547,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         self.models["cloud"] = CloudModel()
         self.models["downtime"] = DowntimeModel()
 
-        # FIXME: The list of raw telemetry should be something that the models
-        # return, plus some additional standard telemetry like time.
-        # Observatory Time. This is NOT observation time. Observation time
-        # will be derived from observatory time by the scheduler and will
-        # aways be in the future.
-        self.raw_telemetry["timeHandler"] = None
+    def init_telemetry(self):
+        """Initialized telemetry streams."""
 
         # List of scheduled targets and script ids
         self.raw_telemetry["scheduled_targets"] = None
@@ -554,26 +556,30 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         # List of things on the observatory queue
         self.raw_telemetry["observing_queue"] = []
 
-        # Observatory State
-        self.raw_telemetry["observatoryState"] = None
+    async def update_telemetry(self):
+        """Update data on all the telemetry values."""
 
-        # Transparency measurement
-        self.raw_telemetry["bulkCloud"] = None
+        if self.telemetry_stream_handler is not None:
+            self.log.debug("Updating telemetry stream.")
 
-        # Seeing measurement
-        self.raw_telemetry["seeing"] = None
+            for telemetry in self.telemetry_stream_handler.telemetry_streams:
+                telemetry_data = await self.telemetry_stream_handler.retrive_telemetry(
+                    telemetry
+                )
 
-    def update_telemetry(self):
-        """Update data on all the telemetry values.
+                self.raw_telemetry[telemetry] = (
+                    telemetry_data[0] if len(telemetry_data) == 1 else telemetry_data
+                )
+        else:
+            self.log.debug("Telemetry stream not configured.")
 
-        Returns
-        -------
-        None
+        self.models["observatory_model"].update_state(
+            utils.astropy_time_from_tai_unix(utils.current_tai()).unix
+        )
 
-        """
-        self.log.debug("Updating telemetry stream.")
+        loop = asyncio.get_event_loop()
 
-        self.driver.update_conditions()
+        await loop.run_in_executor(None, self.driver.update_conditions)
 
     async def put_on_queue(self, targets):
         """Given a list of targets, append them on the queue to be observed.
@@ -599,6 +605,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 config=target.get_script_config(),
                 isStandard=observing_script_is_standard,
                 location=ScriptQueue.Location.LAST,
+                logLevel=self.log.getEffectiveLevel(),
             )
 
             self.log.debug(f"Putting target {target.targetid} on the queue.")
@@ -671,7 +678,16 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         )
         self.parameters.max_scripts = config.max_scripts
 
-        # Configuring Models
+        self.log.debug("Configuring telemetry streams.")
+
+        if len(self.raw_telemetry) == 0:
+            self.log.warning("Telemetry stream not initialized. Initializing...")
+            self.init_telemetry()
+
+        await self.configure_telemetry_streams(config.telemetry)
+
+        self.log.debug("Configuring models.")
+
         if len(self.models) == 0:
             self.log.warning("Models are not initialized. Initializing...")
             self.init_models()
@@ -679,20 +695,19 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         for model in self.models:
             # TODO: This check will give us time to implement the required
             # changes on the models.
-            if hasattr(config, model):
+            if model in config.models:
                 self.log.debug(f"Configuring {model}")
                 try:
-                    self.models[model].configure(getattr(config, model))
+                    self.models[model].configure(config.models[model])
                 except Exception:
                     self.log.exception(f"Failed to configure model {model}.")
             else:
                 self.log.warning(f"No configuration for {model}. Skipping.")
 
-        # Configuring Driver and Scheduler
+        self.log.debug("Configuring Driver and Scheduler.")
 
         survey_topology = self.configure_driver(config)
 
-        # Publish topology
         self.evt_surveyTopology.put(
             survey_topology.to_topic(self.evt_surveyTopology.DataType())
         )
@@ -715,90 +730,164 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             self.log.warning("No 'dependenciesVersions' event.")
 
         self.evt_obsSiteConfig.set_put(
-            observatoryName=config.location["obs_site"]["name"],
-            latitude=config.location["obs_site"]["latitude"],
-            longitude=config.location["obs_site"]["longitude"],
-            height=config.location["obs_site"]["height"],
+            observatoryName=config.models["location"]["obs_site"]["name"],
+            latitude=config.models["location"]["obs_site"]["latitude"],
+            longitude=config.models["location"]["obs_site"]["longitude"],
+            height=config.models["location"]["obs_site"]["height"],
         )
 
         self.evt_telescopeConfig.set_put(
-            altitudeMinpos=config.observatory_model["telescope"]["altitude_minpos"],
-            altitudeMaxpos=config.observatory_model["telescope"]["altitude_maxpos"],
-            azimuthMinpos=config.observatory_model["telescope"]["azimuth_minpos"],
-            azimuthMaxpos=config.observatory_model["telescope"]["azimuth_maxpos"],
-            altitudeMaxspeed=config.observatory_model["telescope"]["altitude_maxspeed"],
-            altitudeAccel=config.observatory_model["telescope"]["altitude_accel"],
-            altitudeDecel=config.observatory_model["telescope"]["altitude_decel"],
-            azimuthMaxspeed=config.observatory_model["telescope"]["azimuth_maxspeed"],
-            azimuthAccel=config.observatory_model["telescope"]["azimuth_accel"],
-            azimuthDecel=config.observatory_model["telescope"]["azimuth_decel"],
-            settleTime=config.observatory_model["telescope"]["settle_time"],
+            altitudeMinpos=config.models["observatory_model"]["telescope"][
+                "altitude_minpos"
+            ],
+            altitudeMaxpos=config.models["observatory_model"]["telescope"][
+                "altitude_maxpos"
+            ],
+            azimuthMinpos=config.models["observatory_model"]["telescope"][
+                "azimuth_minpos"
+            ],
+            azimuthMaxpos=config.models["observatory_model"]["telescope"][
+                "azimuth_maxpos"
+            ],
+            altitudeMaxspeed=config.models["observatory_model"]["telescope"][
+                "altitude_maxspeed"
+            ],
+            altitudeAccel=config.models["observatory_model"]["telescope"][
+                "altitude_accel"
+            ],
+            altitudeDecel=config.models["observatory_model"]["telescope"][
+                "altitude_decel"
+            ],
+            azimuthMaxspeed=config.models["observatory_model"]["telescope"][
+                "azimuth_maxspeed"
+            ],
+            azimuthAccel=config.models["observatory_model"]["telescope"][
+                "azimuth_accel"
+            ],
+            azimuthDecel=config.models["observatory_model"]["telescope"][
+                "azimuth_decel"
+            ],
+            settleTime=config.models["observatory_model"]["telescope"]["settle_time"],
         )
 
         self.evt_rotatorConfig.set_put(
-            positionMin=config.observatory_model["rotator"]["minpos"],
-            positionMax=config.observatory_model["rotator"]["maxpos"],
-            positionFilterChange=config.observatory_model["rotator"][
+            positionMin=config.models["observatory_model"]["rotator"]["minpos"],
+            positionMax=config.models["observatory_model"]["rotator"]["maxpos"],
+            positionFilterChange=config.models["observatory_model"]["rotator"][
                 "filter_change_pos"
             ],
-            speedMax=config.observatory_model["rotator"]["maxspeed"],
-            accel=config.observatory_model["rotator"]["accel"],
-            decel=config.observatory_model["rotator"]["decel"],
-            followSky=config.observatory_model["rotator"]["follow_sky"],
-            resumeAngle=config.observatory_model["rotator"]["resume_angle"],
+            speedMax=config.models["observatory_model"]["rotator"]["maxspeed"],
+            accel=config.models["observatory_model"]["rotator"]["accel"],
+            decel=config.models["observatory_model"]["rotator"]["decel"],
+            followSky=config.models["observatory_model"]["rotator"]["follow_sky"],
+            resumeAngle=config.models["observatory_model"]["rotator"]["resume_angle"],
         )
 
         self.evt_domeConfig.set_put(
-            altitudeMaxspeed=config.observatory_model["dome"]["altitude_maxspeed"],
-            altitudeAccel=config.observatory_model["dome"]["altitude_accel"],
-            altitudeDecel=config.observatory_model["dome"]["altitude_decel"],
-            altitudeFreerange=config.observatory_model["dome"]["altitude_freerange"],
-            azimuthMaxspeed=config.observatory_model["dome"]["azimuth_maxspeed"],
-            azimuthAccel=config.observatory_model["dome"]["azimuth_accel"],
-            azimuthDecel=config.observatory_model["dome"]["azimuth_decel"],
-            azimuthFreerange=config.observatory_model["dome"]["azimuth_freerange"],
-            settleTime=config.observatory_model["dome"]["settle_time"],
+            altitudeMaxspeed=config.models["observatory_model"]["dome"][
+                "altitude_maxspeed"
+            ],
+            altitudeAccel=config.models["observatory_model"]["dome"]["altitude_accel"],
+            altitudeDecel=config.models["observatory_model"]["dome"]["altitude_decel"],
+            altitudeFreerange=config.models["observatory_model"]["dome"][
+                "altitude_freerange"
+            ],
+            azimuthMaxspeed=config.models["observatory_model"]["dome"][
+                "azimuth_maxspeed"
+            ],
+            azimuthAccel=config.models["observatory_model"]["dome"]["azimuth_accel"],
+            azimuthDecel=config.models["observatory_model"]["dome"]["azimuth_decel"],
+            azimuthFreerange=config.models["observatory_model"]["dome"][
+                "azimuth_freerange"
+            ],
+            settleTime=config.models["observatory_model"]["dome"]["settle_time"],
         )
 
         self.evt_slewConfig.set_put(
-            prereqDomalt=config.observatory_model["slew"]["prereq_domalt"],
-            prereqDomaz=config.observatory_model["slew"]["prereq_domaz"],
-            prereqDomazSettle=config.observatory_model["slew"]["prereq_domazsettle"],
-            prereqTelalt=config.observatory_model["slew"]["prereq_telalt"],
-            prereqTelaz=config.observatory_model["slew"]["prereq_telaz"],
-            prereqTelOpticsOpenLoop=config.observatory_model["slew"][
+            prereqDomalt=config.models["observatory_model"]["slew"]["prereq_domalt"],
+            prereqDomaz=config.models["observatory_model"]["slew"]["prereq_domaz"],
+            prereqDomazSettle=config.models["observatory_model"]["slew"][
+                "prereq_domazsettle"
+            ],
+            prereqTelalt=config.models["observatory_model"]["slew"]["prereq_telalt"],
+            prereqTelaz=config.models["observatory_model"]["slew"]["prereq_telaz"],
+            prereqTelOpticsOpenLoop=config.models["observatory_model"]["slew"][
                 "prereq_telopticsopenloop"
             ],
-            prereqTelOpticsClosedLoop=config.observatory_model["slew"][
+            prereqTelOpticsClosedLoop=config.models["observatory_model"]["slew"][
                 "prereq_telopticsclosedloop"
             ],
-            prereqTelSettle=config.observatory_model["slew"]["prereq_telsettle"],
-            prereqTelRot=config.observatory_model["slew"]["prereq_telrot"],
-            prereqFilter=config.observatory_model["slew"]["prereq_filter"],
-            prereqExposures=config.observatory_model["slew"]["prereq_exposures"],
-            prereqReadout=config.observatory_model["slew"]["prereq_readout"],
+            prereqTelSettle=config.models["observatory_model"]["slew"][
+                "prereq_telsettle"
+            ],
+            prereqTelRot=config.models["observatory_model"]["slew"]["prereq_telrot"],
+            prereqFilter=config.models["observatory_model"]["slew"]["prereq_filter"],
+            prereqExposures=config.models["observatory_model"]["slew"][
+                "prereq_exposures"
+            ],
+            prereqReadout=config.models["observatory_model"]["slew"]["prereq_readout"],
         )
 
         self.evt_opticsLoopCorrConfig.set_put(
-            telOpticsOlSlope=config.observatory_model["optics_loop_corr"][
+            telOpticsOlSlope=config.models["observatory_model"]["optics_loop_corr"][
                 "tel_optics_ol_slope"
             ],
-            telOpticsClAltLimit=config.observatory_model["optics_loop_corr"][
+            telOpticsClAltLimit=config.models["observatory_model"]["optics_loop_corr"][
                 "tel_optics_cl_alt_limit"
             ],
-            telOpticsClDelay=config.observatory_model["optics_loop_corr"][
+            telOpticsClDelay=config.models["observatory_model"]["optics_loop_corr"][
                 "tel_optics_cl_delay"
             ],
         )
 
         self.evt_parkConfig.set_put(
-            telescopeAltitude=config.observatory_model["park"]["telescope_altitude"],
-            telescopeAzimuth=config.observatory_model["park"]["telescope_azimuth"],
-            telescopeRotator=config.observatory_model["park"]["telescope_rotator"],
-            domeAltitude=config.observatory_model["park"]["dome_altitude"],
-            domeAzimuth=config.observatory_model["park"]["dome_azimuth"],
-            filterPosition=config.observatory_model["park"]["filter_position"],
+            telescopeAltitude=config.models["observatory_model"]["park"][
+                "telescope_altitude"
+            ],
+            telescopeAzimuth=config.models["observatory_model"]["park"][
+                "telescope_azimuth"
+            ],
+            telescopeRotator=config.models["observatory_model"]["park"][
+                "telescope_rotator"
+            ],
+            domeAltitude=config.models["observatory_model"]["park"]["dome_altitude"],
+            domeAzimuth=config.models["observatory_model"]["park"]["dome_azimuth"],
+            filterPosition=config.models["observatory_model"]["park"][
+                "filter_position"
+            ],
         )
+
+    async def configure_telemetry_streams(self, config: Dict) -> None:
+        """Configure telemetry streams.
+
+        Parameters
+        ----------
+        config : `dict`
+            Telemetry stream configuration.
+        """
+
+        if "streams" not in config:
+            self.log.warning(
+                "No telemetry stream defined in configuration. Skipping configuring telemetry streams."
+            )
+            return
+
+        self.log.debug(
+            f"Configuring telemetry stream handler for {config['efd_name']} efd instance."
+        )
+
+        self.telemetry_stream_handler = TelemetryStreamHandler(
+            log=self.log, efd_name=config["efd_name"]
+        )
+
+        self.log.debug("Configuring telemetry stream.")
+
+        await self.telemetry_stream_handler.configure_telemetry_stream(
+            config["streams"]
+        )
+
+        for telemetry in self.telemetry_stream_handler.telemetry_streams:
+            self.raw_telemetry[telemetry] = np.nan
 
     def configure_driver(self, config):
         """Load driver for selected scheduler and configure its basic
@@ -889,7 +978,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     flush=False, timeout=self.parameters.cmd_timeout
                 )
             except asyncio.TimeoutError:
-                self.log.error("No state from queue. Requesting...")
+                self.log.debug("No state from queue. Requesting...")
                 self.queue_remote.evt_queue.flush()
                 await self.queue_remote.cmd_showQueue.start(
                     timeout=self.parameters.cmd_timeout
@@ -1034,7 +1123,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
                         self.log.debug("Queue ready to receive targets.")
 
-                        await loop.run_in_executor(None, self.update_telemetry)
+                        await self.update_telemetry()
 
                         target = await loop.run_in_executor(
                             None, self.driver.select_next_target
@@ -1255,7 +1344,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         # Note that here it runs the update_telemetry method from the
         # scheduler. This method will update the telemetry based on most
         # current recent data in the system.
-        await loop.run_in_executor(None, self.update_telemetry)
+        await self.update_telemetry()
 
         # Synchronize observatory model state with current observatory state.
         self.models["observatory_model"].set_state(self.models["observatory_state"])
@@ -1283,13 +1372,14 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         while len(self.targets_queue) <= self.parameters.n_targets + 1:
 
             # Inside the loop we are running update_conditions directly from
-            # the driver. This bypasses the updates done by the CSC method.
+            # the driver instead if update_telemetry. This bypasses the updates
+            # done by the CSC method.
             await loop.run_in_executor(None, self.driver.update_conditions)
 
             target = await loop.run_in_executor(None, self.driver.select_next_target)
 
             if target is None:
-                self.log.warning(
+                self.log.debug(
                     f"No target from the scheduler. Stopping with {len(self.targets_queue)}."
                 )
                 if len(self.targets_queue) == 0:
@@ -1316,7 +1406,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         await self.check_targets_queue_condition()
 
-        self.log.info(f"Generated queue with {len(self.targets_queue)} targets.")
+        self.log.debug(f"Generated queue with {len(self.targets_queue)} targets.")
 
     async def check_targets_queue_condition(self):
         """Check targets queue condition.

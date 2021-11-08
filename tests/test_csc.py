@@ -36,16 +36,21 @@ LONG_TIMEOUT = 30.0
 LONG_LONG_TIMEOUT = 120.0
 TEST_CONFIG_DIR = pathlib.Path(__file__).parents[1].joinpath("tests", "data", "config")
 
-logging.basicConfig()
-
 
 class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.log = logging.getLogger("TestSchedulerCSC")
+
     def basic_make_csc(self, initial_state, config_dir, simulation_mode):
         self.assertEqual(initial_state, salobj.State.STANDBY)
 
         return SchedulerCSC(
             index=1, config_dir=config_dir, simulation_mode=simulation_mode
         )
+
+    async def test_bin_script(self):
+        await self.check_bin_script("Scheduler", 1, "run_scheduler.py")
 
     async def test_fail_no_observatory_state(self):
         """Test CSC goes to FAULT if no observatory state."""
@@ -66,9 +71,9 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                 except asyncio.TimeoutError:
                     pass
 
-                self.assert_next_summary_state(salobj.State.DISABLED, flush=False)
+                await self.assert_next_summary_state(salobj.State.DISABLED, flush=False)
 
-                self.assert_next_summary_state(salobj.State.FAULT, flush=False)
+                await self.assert_next_summary_state(salobj.State.FAULT, flush=False)
 
                 # Check error code
                 error_code = await self.remote.evt_errorCode.aget(timeout=SHORT_TIMEOUT)
@@ -120,6 +125,7 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                 bad_config_names = [os.path.basename(name) for name in invalid_files]
                 bad_config_names.append("no_such_file.yaml")
                 for bad_config_name in bad_config_names:
+                    self.log.info(f"Testing bad configuration: {bad_config_name}.")
                     with self.subTest(bad_config_name=bad_config_name):
                         self.remote.cmd_start.set(settingsToApply=bad_config_name)
                         with salobj.testutils.assertRaisesAckError():

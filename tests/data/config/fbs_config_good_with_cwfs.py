@@ -6,50 +6,7 @@ import rubin_sim.scheduler.detailers as detailers
 from rubin_sim.scheduler.modelObservatory import Model_observatory
 from rubin_sim.scheduler.schedulers import Core_scheduler
 from rubin_sim.scheduler.utils import standard_goals, Footprint
-from rubin_sim.scheduler import features
 from rubin_sim.scheduler.surveys import Greedy_survey
-
-
-class NoteLastObserved(features.BaseSurveyFeature):
-    """Track when the last observation that matches a certain condition
-    was made.
-    """
-
-    def __init__(self, note):
-        self.note = note
-        self.feature = None
-
-    def add_observation(self, observation, indx=None):
-        if self.note in observation["note"]:
-            # print(f"Adding obs {observation}")
-            self.feature = observation["mjd"]
-
-
-class VisitGap(bf.Base_basis_function):
-    def __init__(self, note, gap_min=25.0, penalty_val=np.nan):
-        super().__init__()
-        self.penalty_val = penalty_val
-
-        self.gap = gap_min / 60.0 / 24.0
-        self.survey_features = dict()
-        self.survey_features["NoteLastObserved"] = NoteLastObserved(note=note)
-
-    def _check_feasibility(self, conditions):
-        if self.survey_features["NoteLastObserved"].feature is None:
-            return True
-
-        diff = conditions.mjd - self.survey_features["NoteLastObserved"].feature
-
-        if diff <= self.gap:
-            return False
-        else:
-            return True
-
-    def check_feasibility(self, conditions):
-        return self._check_feasibility(conditions)
-
-    def _calc_value(self, conditions, indx=None):
-        return 1.0 if self._check_feasibility(conditions) else self.penalty_val
 
 
 def gen_cwfs_survey(nside, survey_name, time_gap_min):
@@ -59,7 +16,7 @@ def gen_cwfs_survey(nside, survey_name, time_gap_min):
         bf.Slewtime_basis_function(nside=nside),
         bf.Moon_avoidance_basis_function(nside=nside),
         bf.Zenith_shadow_mask_basis_function(min_alt=28.0, max_alt=85.5, nside=nside),
-        VisitGap(note=survey_name, gap_min=time_gap_min),
+        bf.VisitGap(note=survey_name, gap_min=time_gap_min),
     ]
 
     return [
@@ -87,6 +44,7 @@ def gen_greedy_surveys(
     footprint_weight=0.3,
     slewtime_weight=3.0,
     stayfilter_weight=3.0,
+    sun_alt_limit=-18,
     footprints=None,
     seed=42,
 ):
@@ -146,11 +104,8 @@ def gen_greedy_surveys(
     )
 
     for filtername in filters:
-        bfs = []
-        bfs.append(
-            (bf.M5_diff_basis_function(filtername=filtername, nside=nside), m5_weight)
-        )
-        bfs.append(
+        bfs = [
+            (bf.M5_diff_basis_function(filtername=filtername, nside=nside), m5_weight),
             (
                 bf.Footprint_basis_function(
                     filtername=filtername,
@@ -159,37 +114,29 @@ def gen_greedy_surveys(
                     nside=nside,
                 ),
                 footprint_weight,
-            )
-        )
-        bfs.append(
+            ),
             (
                 bf.Slewtime_basis_function(filtername=filtername, nside=nside),
                 slewtime_weight,
-            )
-        )
-        bfs.append(
-            (bf.Strict_filter_basis_function(filtername=filtername), stayfilter_weight)
-        )
-        # Masks, give these 0 weight
-        bfs.append(
+            ),
+            (bf.Strict_filter_basis_function(filtername=filtername), stayfilter_weight),
+            (bf.Not_twilight_basis_function(sun_alt_limit=sun_alt_limit), 0),
+            # Masks, give these 0 weight
             (
                 bf.Zenith_shadow_mask_basis_function(
                     nside=nside, shadow_minutes=shadow_minutes, max_alt=max_alt
                 ),
                 0,
-            )
-        )
-        bfs.append(
+            ),
             (
                 bf.Moon_avoidance_basis_function(
                     nside=nside, moon_distance=moon_distance
                 ),
                 0,
-            )
-        )
-
-        bfs.append((bf.Filter_loaded_basis_function(filternames=filtername), 0))
-        bfs.append((bf.Planet_mask_basis_function(nside=nside), 0))
+            ),
+            (bf.Filter_loaded_basis_function(filternames=filtername), 0),
+            (bf.Planet_mask_basis_function(nside=nside), 0),
+        ]
 
         weights = [val[1] for val in bfs]
         basis_functions = [val[0] for val in bfs]
@@ -230,7 +177,7 @@ if __name__ == "config":
         footprints.footprints[i, :] = footprints_hp[key]
 
     greedy = gen_greedy_surveys(nside, nexp=1, footprints=footprints, seed=seed)
-    cwfs = gen_cwfs_survey(nside=nside, survey_name="cwfs", time_gap_min=3.0)
+    cwfs = gen_cwfs_survey(nside=nside, survey_name="cwfs", time_gap_min=30.0)
 
     surveys = [cwfs, greedy]
 

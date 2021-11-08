@@ -4,3 +4,21 @@ driver_configuration:
   observing_list: tests/data/test_observing_list.yaml
   default_observing_script_name: non_standard_visit.py
   default_observing_script_is_standard: False
+telemetry:
+  efd_name: summit_efd
+  streams:
+    - name: seeing
+      efd_table: lsst.sal.DIMM.logevent_dimmMeasurement
+      efd_columns:
+        - fwhm
+      efd_delta_time: 300.0
+    - name: wind_speed
+      efd_table: lsst.sal.WeatherStation.windSpeed
+      efd_columns:
+        - avg2M
+      efd_delta_time: 300.0
+    - name: wind_direction
+      efd_table: lsst.sal.WeatherStation.windDirection
+      efd_columns:
+        - avg2M
+      efd_delta_time: 300.0

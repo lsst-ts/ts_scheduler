@@ -118,6 +118,17 @@ class Driver:
         survey_topology: `lsst.ts.scheduler.kernel.SurveyTopology`
 
         """
+
+        if "parameters" in config.driver_configuration:
+            for parameter in config.driver_configuration["parameters"]:
+                value = config.driver_configuration["parameters"][parameter]
+                self.log.debug(f"Setting driver parameter: {parameter} = {value}")
+                setattr(
+                    self.parameters,
+                    parameter,
+                    value,
+                )
+
         survey_topology = SurveyTopology()
 
         if not hasattr(config, "driver_configuration"):
@@ -174,8 +185,6 @@ class Driver:
         the current targets on the queue.
         """
         self.log.debug("Updating conditions.")
-        # Update observatory model with current observatory state.
-        self.models["observatory_model"].set_state(self.models["observatory_state"])
 
         self.models["sky"].update(self.models["observatory_state"].time)
 
@@ -195,7 +204,8 @@ class Driver:
             )
 
             self.log.debug(
-                f"Sunset/Sunrise: {self.current_sunset}/{self.current_sunrise} "
+                f"Sunset/Sunrise: {self.current_sunset}/{self.current_sunrise}, "
+                f"sun @ {self.parameters.night_boundary} degrees."
             )
 
         is_night = self.is_night
@@ -217,7 +227,10 @@ class Driver:
         # 4 - self.is_night=False and is_night = False: During the day, no need
         #     to compute anything.
         if not self.is_night and is_night:
-            self.log.debug("Night over. Computing next nigth boundaries.")
+            self.log.debug(
+                "Night over. Computing next night boundaries. "
+                f"Assuming sun elevation of {self.parameters.night_boundary}."
+            )
             self.night += 1
             (self.current_sunset, self.current_sunrise) = self.models[
                 "sky"
@@ -226,10 +239,6 @@ class Driver:
             self.log.debug(
                 f"[{self.night}]: Sunset/Sunrise: {self.current_sunset}/{self.current_sunrise} "
             )
-
-        # Run observatory model over current targets on the queue
-        for target in self.raw_telemetry["scheduled_targets"]:
-            self.models["observatory_model"].observe(target)
 
     def select_next_target(self):
         """Picks a target and returns it as a target object.

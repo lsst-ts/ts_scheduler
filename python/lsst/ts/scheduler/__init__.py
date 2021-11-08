@@ -25,4 +25,5 @@ except ModuleNotFoundError:
 
 from .driver.driver import *
 from .config_schema import *
+from .telemetry_stream_handler import *
 from .scheduler_csc import *
