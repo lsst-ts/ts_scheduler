@@ -1,3 +1,6 @@
 mode: SIMPLE
 driver_type: lsst.ts.scheduler.driver.sequential
+driver_configuration:
+  general_propos:
+    - Test
 invalid_additional_property: invalid

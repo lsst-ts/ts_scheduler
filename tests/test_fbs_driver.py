@@ -58,6 +58,8 @@ class TestFeatureSchedulerDriver(unittest.TestCase):
         # Need to set current time to something the sky brightness files
         # available for testing have available (MJD: 59853.-59856.).
         self.start_time = Time(59853.983, format="mjd", scale="tai")
+        # Step in time when there is no target (in seconds).
+        self.no_target_time_step = 120.0
 
         self.raw_telemetry = dict()
 
@@ -242,17 +244,34 @@ class TestFeatureSchedulerDriver(unittest.TestCase):
 
         targets = []
 
-        while len(targets) < 10:
+        self.driver.update_conditions()
+        current_time = self.driver.current_sunset
+        sunset_time = self.driver.current_sunset
+        sunrise_time = self.driver.current_sunrise
+        self.models["observatory_model"].update_state(current_time)
+
+        while current_time < sunrise_time:
+
+            self.log.debug(
+                f"current_time: {current_time}, sunset: {sunset_time}, sunrise: {sunrise_time}."
+            )
 
             self.driver.update_conditions()
 
             target = self.driver.select_next_target()
 
-            self.log.debug(f"[{len(targets)}]::{target.observation}")
-
             if target is None:
-                break
+                self.log.debug("No target produced by scheduler.")
+                current_time += self.no_target_time_step
+                self.models["observatory_model"].update_state(current_time)
+                self.models["observatory_state"].set(
+                    self.models["observatory_model"].current_state
+                )
+                self.driver.update_conditions()
             else:
+
+                self.log.debug(f"[{len(targets)}]::{target}")
+
                 with self.subTest(msg="Request target {n_targets}."):
                     self.assertIsInstance(target, Target, "Wrong target type.")
                     self.assertGreater(
@@ -276,8 +295,11 @@ class TestFeatureSchedulerDriver(unittest.TestCase):
                 self.models["observatory_state"].set(
                     self.models["observatory_model"].current_state
                 )
-
+                current_time = self.models["observatory_state"].time
                 targets.append(target)
+
+            if len(targets) > 10:
+                break
 
         return targets
 

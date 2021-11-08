@@ -261,6 +261,7 @@ class FeatureScheduler(Driver):
             )
 
             if desired_target is None:
+                self._desired_obs = None
                 return None
             elif self._check_need_cwfs(desired_target):
                 self.log.debug(f"Scheduling cwfs observation before {desired_target}.")
@@ -372,8 +373,8 @@ class FeatureScheduler(Driver):
 
         if delta_elevation >= delta_elevation_limit:
             self.log.debug(
-                f"Change in elevation ({math.degrees(delta_elevation)}) larger "
-                f"than threshold ({math.degrees(delta_elevation_limit)}). "
+                f"Change in elevation ({math.degrees(delta_elevation):0.2f} deg) larger "
+                f"than threshold ({math.degrees(delta_elevation_limit):0.2f} deg). "
                 "Scheduling CWFS."
             )
             return True
@@ -394,13 +395,10 @@ class FeatureScheduler(Driver):
         """
         self.assert_survey_observing_script("cwfs")
 
-        (
-            observing_script_name,
-            observing_script_is_standard,
-        ) = self.get_survey_observing_script("cwfs")
-
         cwfs_observation = observation.copy()
         cwfs_observation["note"][0] = "cwfs"
+
+        self.log.debug(f"Get cwfs target for: {observation}.")
 
         return self._get_validated_target_from_observation(observation=cwfs_observation)
 
@@ -440,12 +438,20 @@ class FeatureScheduler(Driver):
 
         self.conditions.mjd = self.models["observatory_model"].dateprofile.mjd
 
+        self.log.debug(f"Format conditions. mjd={self.conditions.mjd}")
+
         almanac_indx = self.almanac.mjd_indx(self.conditions.mjd)
 
         self.conditions.night = self.almanac.sunsets["night"][almanac_indx]
 
         # Clouds. Just the raw value
-        self.conditions.bulk_cloud = self.raw_telemetry["bulkCloud"]
+        self.conditions.bulk_cloud = self.raw_telemetry.get("bulk_cloud", np.nan)
+
+        # Wind speed and direction
+        self.conditions.wind_speed = self.raw_telemetry.get("wind_speed", np.nan)
+        self.conditions.wind_direction = self.raw_telemetry.get(
+            "wind_direction", np.nan
+        )
 
         # use conditions object itself to get aprox altitude of each healpx
         # These are in radians.
@@ -462,13 +468,10 @@ class FeatureScheduler(Driver):
         airmass[good] = 1.0 / np.cos(np.pi / 2.0 - alts[good])
         self.conditions.airmass = airmass
 
-        # Use the model to get the seeing at this time and airmasses.
-        FWHM_500 = (
-            self.raw_telemetry["seeing"]
-            if self.raw_telemetry["seeing"] is not None
-            else 1.0
-        )
+        # Seeing measurement
+        FWHM_500 = self.raw_telemetry.get("seeing", np.nan)
 
+        # Use the model to get the seeing at this time and airmasses.
         seeing_dict = self.models["seeing"](FWHM_500, airmass[good])
         fwhm_eff = seeing_dict["fwhmEff"]
         for i, key in enumerate(self.models["seeing"].filter_list):
@@ -547,6 +550,11 @@ class FeatureScheduler(Driver):
 
         # Add in the almanac information
         self.conditions.sunset = self.almanac.sunsets["sunset"][almanac_indx]
+        self.conditions.sun_0_setting = Time(
+            self.current_sunset,
+            format="unix",
+            scale="utc",
+        ).mjd
         self.conditions.sun_n12_setting = self.almanac.sunsets["sun_n12_setting"][
             almanac_indx
         ]
@@ -559,6 +567,12 @@ class FeatureScheduler(Driver):
         self.conditions.sun_n12_rising = self.almanac.sunsets["sun_n12_rising"][
             almanac_indx
         ]
+        self.conditions.sun_0_rising = Time(
+            self.current_sunrise,
+            format="unix",
+            scale="utc",
+        ).mjd
+
         self.conditions.sunrise = self.almanac.sunsets["sunrise"][almanac_indx]
         self.conditions.moonrise = self.almanac.sunsets["moonrise"][almanac_indx]
         self.conditions.moonset = self.almanac.sunsets["moonset"][almanac_indx]
@@ -581,7 +595,13 @@ class FeatureScheduler(Driver):
         filename = f"fbs_scheduler_{now}.p"
 
         with open(filename, "wb") as fp:
-            pickle.dump(self.scheduler, fp)
+            pickle.dump(
+                [
+                    self.scheduler,
+                    self.conditions,
+                ],
+                fp,
+            )
 
         return filename
 
@@ -595,7 +615,13 @@ class FeatureScheduler(Driver):
         """
         file_object = io.BytesIO()
 
-        pickle.dump(self.scheduler, file_object)
+        pickle.dump(
+            [
+                self.scheduler,
+                self.conditions,
+            ],
+            file_object,
+        )
 
         file_object.seek(0)
 
@@ -612,7 +638,7 @@ class FeatureScheduler(Driver):
         # Reset random number generator
         np.random.seed(self.seed)
         with open(filename, "rb") as fp:
-            self.scheduler = pickle.load(fp)
+            self.scheduler, _ = pickle.load(fp)
 
     def _get_survey_name_from_observation(self, observation):
         """Get the survey name for the feature scheduler observation.
