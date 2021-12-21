@@ -4,6 +4,11 @@
 Version History
 ===============
 
+v1.10.0
+-------
+
+* Updated unit tests for compatibility with ts_salobj 6.8, which is now required.
+
 v1.9.0
 ------
 
