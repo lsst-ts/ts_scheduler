@@ -60,7 +60,7 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
             initial_state=salobj.State.STANDBY,
             simulation_mode=SchedulerModes.SIMULATION,
         ):
-
+            await self.assert_next_sample(topic=self.remote.evt_errorCode, errorCode=0)
             try:
                 self.remote.evt_summaryState.flush()
 
@@ -76,8 +76,9 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                 await self.assert_next_summary_state(salobj.State.FAULT, flush=False)
 
                 # Check error code
-                error_code = await self.remote.evt_errorCode.aget(timeout=SHORT_TIMEOUT)
-                self.assertEqual(error_code.errorCode, OBSERVATORY_STATE_UPDATE)
+                await self.assert_next_sample(
+                    topic=self.remote.evt_errorCode, errorCode=OBSERVATORY_STATE_UPDATE
+                )
             finally:
                 await salobj.set_summary_state(self.remote, salobj.State.STANDBY)
 

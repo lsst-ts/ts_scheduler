@@ -115,6 +115,10 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
         This test makes sure the scheduler will go to a fault state if it is
         enabled and the queue is not enabled.
         """
+        data = await self.scheduler_remote.evt_errorCode.next(
+            flush=False, timeout=STD_TIMEOUT
+        )
+        assert data.errorCode == 0
 
         # Test 1 - Enable scheduler, Queue is not enabled. Scheduler should go
         # to ENABLE and then to FAULT. It may take some time for the scheduler
@@ -155,8 +159,11 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
             f"Scheduler in {state}, expected FAULT. ",
         )
         # Check error code
-        error_code = await self.scheduler_remote.evt_errorCode.aget(timeout=STD_TIMEOUT)
-        self.assertEqual(error_code.errorCode, NO_QUEUE)
+        data = await self.scheduler_remote.evt_errorCode.next(
+            flush=False, timeout=STD_TIMEOUT
+        )
+        assert data.errorCode == NO_QUEUE
+
         # recover from fault state sending it to STANDBY
         await self.scheduler_remote.cmd_standby.start(timeout=STD_TIMEOUT)
 
@@ -166,6 +173,10 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
             "Scheduler in %s, expected STANDBY. "
             % salobj.State(self.scheduler.summary_state),
         )
+        data = await self.scheduler_remote.evt_errorCode.next(
+            flush=False, timeout=STD_TIMEOUT
+        )
+        assert data.errorCode == 0
 
     async def test_with_queue(self):
         """Test the target production loop with queue.

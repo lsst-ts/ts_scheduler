@@ -4,6 +4,18 @@
 Version History
 ===============
 
+v1.10.1
+-------
+
+* Add Jenkinsfile to build/upload documentation.
+* Update documentation.
+* Update .gitignore to ignore documentation build files.
+
+v1.10.0
+-------
+
+* Updated unit tests for compatibility with ts_salobj 6.8, which is now required.
+
 v1.9.0
 ------
 
