@@ -4,6 +4,13 @@
 Version History
 ===============
 
+v1.10.1
+-------
+
+* Add Jenkinsfile to build/upload documentation.
+* Update documentation.
+* Update .gitignore to ignore documentation build files.
+
 v1.10.0
 -------
 

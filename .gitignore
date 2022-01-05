@@ -40,3 +40,7 @@ version.py
 .sconsign.dblite
 *.tests
 ups/*.cfgc
+
+# documentation builds
+doc/_build
+doc/py-api
