@@ -121,6 +121,8 @@ class DriverTarget(Target):
             "num_exp": int(self.num_exp),
             "exp_times": [float(exptime) for exptime in self.exp_times],
             "estimated_slew_time": float(self.slewtime),
+            "reason": str(self.note),
+            "program": str(self.note),
         }
 
         return yaml.safe_dump(script_config)
