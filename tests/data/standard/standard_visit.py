@@ -81,6 +81,10 @@ properties:
             type: number
         description: The set of exposure times for the target. Needs to length of num_exp.
         default: []
+    note:
+        type: string
+        description: Note.
+        default: ""
 additionalProperties: false
         """
         return yaml.safe_load(schema_yaml)
