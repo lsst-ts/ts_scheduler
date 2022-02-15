@@ -51,7 +51,12 @@ properties:
         type: integer
         default: 0
     band_filter:
-        type: string
+        anyOf:
+            - type: array
+                minItems: 1
+                items:
+                type: string
+            - type: string
         description: The single character name of the associated band filter.
         default: ""
     ra:
