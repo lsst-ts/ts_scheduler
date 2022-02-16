@@ -81,9 +81,9 @@ properties:
             type: number
         description: The set of exposure times for the target. Needs to length of num_exp.
         default: []
-    note:
+    program:
         type: string
-        description: Note.
+        description: Program.
         default: ""
 additionalProperties: false
         """

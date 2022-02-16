@@ -62,9 +62,9 @@ properties:
         type: string
         description: Target name.
         default: non_standard_visit_target
-    note:
+    program:
         type: string
-        description: Note.
+        description: Program.
         default: ""
     ang:
         type: number
