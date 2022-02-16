@@ -62,6 +62,10 @@ properties:
         type: string
         description: Target name.
         default: non_standard_visit_target
+    program:
+        type: string
+        description: Program.
+        default: ""
     ang:
         type: number
         description: The sky angle (degrees) of the target.
