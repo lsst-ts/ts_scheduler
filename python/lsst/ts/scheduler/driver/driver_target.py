@@ -18,6 +18,7 @@
 #
 # You should have received a copy of the GNU General Public License
 import yaml
+import logging
 
 import numpy as np
 
@@ -76,7 +77,13 @@ class DriverTarget(Target):
         obs_time=0.0,
         num_exp=0,
         exp_times=[],
+        log=None,
     ):
+        if log is None:
+            self.log = logging.getLogger(type(self).__name__)
+        else:
+            self.log = log.getChild(type(self).__name__)
+
         self._observing_script_name = observing_script_name
         self._observing_script_is_standard = observing_script_is_standard
         self._observing_script_has_configuration = observing_script_has_configuration

@@ -83,6 +83,7 @@ class FeatureSchedulerTarget(DriverTarget):
         survey_name = self._get_survey_name()
 
         if survey_name in self._script_get_config:
+            self.log.debug(f"Handling script configuratino for survey: {survey_name}.")
             return self._script_get_config[survey_name]()
         else:
             script_config_yaml = super().get_script_config()
@@ -91,6 +92,10 @@ class FeatureSchedulerTarget(DriverTarget):
 
             # Handle multiple observations for the same target
             if len(self.observation) > 1:
+
+                self.log.debug(
+                    f"Handling multiple observations: {len(self.observation)}"
+                )
 
                 script_config["band_filter"] = []
                 script_config["exp_times"] = []
@@ -104,6 +109,8 @@ class FeatureSchedulerTarget(DriverTarget):
                         float(observation["exptime"] / observation["nexp"])
                         for i in range(observation["nexp"])
                     ]
+            else:
+                self.log.debug("Single observation.")
 
             additional_script_config = self._script_configuration.get(
                 self._script_config_root, dict()

@@ -81,7 +81,7 @@ class TestFeatureSchedulerTarget(unittest.TestCase):
                 unit=units.degree, sep=":"
             ),
             "name": observation["note"][0],
-            "note": observation["note"][0].rsplit("_", maxsplit=1)[0],
+            "program": observation["note"][0].rsplit("_", maxsplit=1)[0],
             "rot_sky": target.ang,
             "obs_time": target.obs_time,
             "num_exp": target.num_exp,

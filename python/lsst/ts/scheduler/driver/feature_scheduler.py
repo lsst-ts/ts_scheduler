@@ -298,6 +298,7 @@ class FeatureScheduler(Driver):
             observing_script_name=observing_script_name,
             observing_script_is_standard=observing_script_is_standard,
             observation=observation,
+            log=self.log,
             **self.script_configuration,
         )
 
