@@ -189,6 +189,11 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         self.parameters = SchedulerCscParameters()
 
+        # How far to step into the future when there's not targets in seconds
+        self.time_delta_no_target = 30.0
+        # The maximum tolerable time without targets in seconds.
+        self.max_time_no_target = 3600.0
+
         # How long to wait for target loop to stop before killing it
         self.loop_die_timeout = 5.0
 
@@ -232,6 +237,9 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         # Future to store the results or target_queue check.
         self.targets_queue_condition = utils.make_done_future()
+
+        # Task with a times until the next target.
+        self.next_target_timer = utils.make_done_future()
 
         # Large file object available
         self.s3bucket_name = None  # Set by `configure`.
@@ -290,6 +298,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         if self.disabled_or_enabled and self.telemetry_loop_task is None:
             self.run_loop = True
             self.telemetry_loop_task = asyncio.create_task(self.telemetry_loop())
+
+            await self.stop_next_target_timer_task()
 
             if self.s3bucket is None:
                 mock_s3 = self.simulation_mode == SchedulerModes.MOCKS3
@@ -422,6 +432,22 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         if data.abort:
             async with self.target_loop_lock:
                 await self.remove_from_queue(self.raw_telemetry["scheduled_targets"])
+
+        await self.stop_next_target_timer_task()
+
+    async def stop_next_target_timer_task(self):
+
+        if not self.next_target_timer.done():
+            self.log.debug("Cancelling next target timer.")
+            self.next_target_timer.cancel()
+            try:
+                await self.next_target_timer
+            except asyncio.CancelledError:
+                pass
+            except Exception:
+                self.log.exception(
+                    "Error in waiting for next target timer to complete."
+                )
 
     async def do_load(self, data):
         """Load user-defined schedule definition from URI.
@@ -1202,6 +1228,10 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         while self.summary_state == salobj.State.ENABLED and self.run_loop:
 
+            if not self.next_target_timer.done():
+                self.log.debug("Waiting next target timer task...")
+                await self.next_target_timer
+
             await self.run_target_loop.wait()
 
             try:
@@ -1473,8 +1503,51 @@ class SchedulerCSC(salobj.ConfigurableCsc):
     async def estimate_next_target(self):
         """Estimate how long until the next target become available."""
 
-        # TODO
-        self.log.debug("Estimating next target not implemented.")
+        if not self.next_target_timer.done():
+            self.log.warning(
+                "Next target timer not done. Skipping estimate next target."
+            )
+            return
+
+        loop = asyncio.get_running_loop()
+
+        time_start = self.models["observatory_model"].current_state.time
+        time_evaluation = time_start
+
+        self.models["observatory_model"].stop_tracking(time_evaluation)
+
+        target = None
+        while (
+            target is None and (time_evaluation - time_start) < self.max_time_no_target
+        ):
+            await loop.run_in_executor(None, self.driver.update_conditions)
+
+            time_evaluation += self.time_delta_no_target
+            self.models["observatory_model"].update_state(time_evaluation)
+
+            target = await loop.run_in_executor(None, self.driver.select_next_target)
+
+        if target is None:
+            raise RuntimeError(
+                f"Could not determine next target in alloted window: {self.max_time_no_target}s."
+            )
+        else:
+            delta_time = time_evaluation - time_start
+            self.log.debug(f"Next target: {target}.")
+            if delta_time > self.parameters.loop_sleep_time:
+                self.log.info(
+                    f"Next target will be observable in {delta_time}s. Creating timer task."
+                )
+                self.next_target_timer = asyncio.create_task(
+                    asyncio.sleep(delta_time / 2)
+                )
+            else:
+                self.log.info(
+                    f"Next target will be observable in {delta_time}s, "
+                    f"less than looptime ({self.parameters.loop_sleep_time}s). Skip creating timer task."
+                )
+
+            return delta_time
 
     def callback_script_info(self, data):
         """This callback function will store in a dictionary information about
