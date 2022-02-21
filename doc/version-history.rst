@@ -4,6 +4,23 @@
 Version History
 ===============
 
+v1.11.0
+-------
+
+* Implement estimate_next_target.
+  This method steps into the future to estimate how long it will take for the next target to be available.
+  It is mostly used in the advance_target_production_loop when there are no targets to determine how long it will take for the next target.
+  Then it sets a timer task that the loop can wait on until it evaluates the queue again.
+  It also sets a maximum time which the scheduler can accomodate without new targets.
+  If it takes longer than the allotted time, the scheduler will go to fault.
+* Support `program` field in unit tests for feature scheduler target.
+* In `FeatureSchedulerTarget`, fill in `program` field in script configuration.
+* In `FeatureSchedulerDriver` pass logger to `FeatureSchedulerTarget`.
+* Add logger to `DriverTarget`.
+* Add unit test for `FeatureSchedulerTarget` when running with multiple observations.
+* In `FeatureSchedulerTarget` add support for multiple observations.
+* Update setup.cfg to ignore everything under `doc/`.
+
 v1.10.1
 -------
 

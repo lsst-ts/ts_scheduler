@@ -51,7 +51,12 @@ properties:
         type: integer
         default: 0
     band_filter:
-        type: string
+        anyOf:
+            - type: array
+                minItems: 1
+                items:
+                type: string
+            - type: string
         description: The single character name of the associated band filter.
         default: ""
     ra:
@@ -76,6 +81,10 @@ properties:
             type: number
         description: The set of exposure times for the target. Needs to length of num_exp.
         default: []
+    program:
+        type: string
+        description: Program.
+        default: ""
 additionalProperties: false
         """
         return yaml.safe_load(schema_yaml)
