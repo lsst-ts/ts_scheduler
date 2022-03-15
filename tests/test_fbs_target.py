@@ -22,6 +22,8 @@ import yaml
 import math
 import unittest
 
+import numpy as np
+
 from astropy.coordinates import Angle
 from astropy.time import Time
 from astropy import units
@@ -79,6 +81,7 @@ class TestFeatureSchedulerTarget(unittest.TestCase):
                 unit=units.degree, sep=":"
             ),
             "name": observation["note"][0],
+            "program": observation["note"][0].rsplit("_", maxsplit=1)[0],
             "rot_sky": target.ang,
             "obs_time": target.obs_time,
             "num_exp": target.num_exp,
@@ -199,19 +202,44 @@ class TestFeatureSchedulerTarget(unittest.TestCase):
 
         self.assertEqual(script_config_expected, script_config_unpacked)
 
-    def make_fbs_observation(self, note):
+    def test_get_script_config_multiple_observations(self):
 
-        observation = empty_observation()
+        filter_obs = "gri"
+        observations = self.make_fbs_observation("std", filter_obs=filter_obs)
+
+        target = FeatureSchedulerTarget(
+            observing_script_name="observing_script",
+            observing_script_is_standard=True,
+            observation=observations,
+        )
+
+        slew_time, error = self.observatory_model.get_slew_delay(target)
+
+        script_config = yaml.safe_load(target.get_script_config())
+
+        self.assertEqual(len(script_config["exp_times"]), len(filter_obs) * 2)
+        for filter_name in filter_obs:
+            self.assertIn(filter_name, script_config["band_filter"])
+
+        self.assertEqual(error, 0)
+        self.assertGreater(slew_time, 0.0)
+
+    def make_fbs_observation(self, note, filter_obs="r"):
+
+        observations = np.concatenate(
+            [empty_observation() for _ in range(len(filter_obs))]
+        )
 
         ra, dec, _ = self.observatory_model.altaz2radecpa(
             self.observatory_model.dateprofile, 65.0, 180.0
         )
-        observation["RA"][0] = ra
-        observation["dec"][0] = dec
-        observation["mjd"][0] = self.observatory_model.dateprofile.mjd
-        observation["filter"][0] = "r"
-        observation["exptime"][0] = 30.0
-        observation["nexp"][0] = 1
-        observation["note"][0] = note
+        for obs_filter, observation in zip(filter_obs, observations):
+            observation["RA"] = ra
+            observation["dec"] = dec
+            observation["mjd"] = self.observatory_model.dateprofile.mjd
+            observation["filter"] = obs_filter
+            observation["exptime"] = 30.0
+            observation["nexp"] = 2
+            observation["note"] = note
 
-        return observation
+        return observations

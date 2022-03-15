@@ -89,12 +89,29 @@ class FeatureSchedulerTarget(DriverTarget):
 
             script_config = yaml.safe_load(script_config_yaml)
 
+            # Handle multiple observations for the same target
+            if len(self.observation) > 1:
+
+                script_config["band_filter"] = []
+                script_config["exp_times"] = []
+
+                for observation in self.observation:
+                    script_config["band_filter"] += [
+                        str(observation["filter"]),
+                    ] * observation["nexp"]
+
+                    script_config["exp_times"] += [
+                        float(observation["exptime"] / observation["nexp"])
+                        for i in range(observation["nexp"])
+                    ]
             additional_script_config = self._script_configuration.get(
                 self._script_config_root, dict()
             ).copy()
 
             for key in additional_script_config:
                 script_config[key] = additional_script_config[key]
+
+            script_config["program"] = survey_name.rsplit("_", maxsplit=1)[0]
 
             return yaml.safe_dump(script_config)
 
