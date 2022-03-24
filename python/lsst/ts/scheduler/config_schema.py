@@ -26,7 +26,7 @@ CONFIG_SCHEMA = yaml.safe_load(
     """$schema: http://json-schema.org/draft-07/schema#
 $id: https://github.com/lsst-ts/ts_scheduler/blob/master/schema/Scheduler.yaml
 # title must end with one or more spaces followed by the schema version, which must begin with "v"
-title: Scheduler v3
+title: Scheduler v4
 description: Schema for Scheduler configuration files
 type: object
 additionalProperties: false
@@ -35,7 +35,8 @@ required:
 properties:
   s3instance:
     description: >-
-      Large File Annex S3 instance, for example "nts", "tuc", "ls", "cp".
+      Large File Annex S3 instance, for example "tuc" (Tucson Test Stand),
+      "ls" (Base Test Stand), "cp" (summit).
     type: string
     default: "cp"
   driver_type:

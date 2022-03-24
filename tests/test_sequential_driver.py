@@ -24,7 +24,7 @@ import pathlib
 import unittest
 import logging
 
-from lsst.ts.salobj import current_tai
+from lsst.ts.utils import current_tai
 
 from lsst.ts.scheduler.driver import SequentialScheduler, SurveyTopology
 from lsst.ts.observatory.model import Target

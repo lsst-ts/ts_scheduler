@@ -24,10 +24,12 @@ import asyncio
 import logging
 import pathlib
 import unittest
+import typing
 
 import numpy as np
 
-import lsst.ts.salobj as salobj
+from lsst.ts import utils
+from lsst.ts import salobj
 
 from lsst.ts.scheduler import SchedulerCSC
 from lsst.ts.scheduler.utils.error_codes import NO_QUEUE
@@ -56,8 +58,17 @@ class SimpleTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
 
     """
 
+    def run(self, result: typing.Any) -> None:
+        """Override `run` to set a random LSST_DDS_PARTITION_PREFIX
+        and set LSST_SITE=test for every test.
+
+        https://stackoverflow.com/a/11180583
+        """
+        salobj.set_random_lsst_dds_partition_prefix()
+        with utils.modify_environ(LSST_SITE="test"):
+            super().run(result)
+
     async def asyncSetUp(self):
-        salobj.testutils.set_random_lsst_dds_partition_prefix()
         self.datadir = os.path.abspath(os.path.join(os.path.dirname(__file__), "data"))
         standardpath = os.path.join(self.datadir, "standard")
         externalpath = os.path.join(self.datadir, "external")
@@ -125,7 +136,7 @@ class SimpleTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
         await salobj.set_summary_state(
             self.scheduler_remote,
             salobj.State.ENABLED,
-            settingsToApply="simple_target_loop_sequential.yaml",
+            override="simple_target_loop_sequential.yaml",
         )
 
         # Resume scheduler operation
@@ -205,7 +216,7 @@ class SimpleTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
         await salobj.set_summary_state(
             self.scheduler_remote,
             salobj.State.ENABLED,
-            settingsToApply="simple_target_loop_sequential.yaml",
+            override="simple_target_loop_sequential.yaml",
         )
 
         # Resume scheduler operation
