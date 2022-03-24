@@ -1,6 +1,6 @@
 # This file is part of ts_scheduler
 #
-# Developed for the LSST Telescope and Site Systems.
+# Developed for the Rubin Observatory Telescope and Site Systems.
 # This product includes software developed by the LSST Project
 # (https://www.lsst.org).
 # See the COPYRIGHT file at the top-level directory of this distribution
@@ -47,9 +47,11 @@ from .utils.error_codes import (
     PUT_ON_QUEUE,
     SIMPLE_LOOP_ERROR,
     ADVANCE_LOOP_ERROR,
+    UNABLE_TO_FIND_TARGET,
     OBSERVATORY_STATE_UPDATE,
 )
 from .utils.parameters import SchedulerCscParameters
+from .utils.exceptions import UnableToFindTarget
 from .driver import Driver
 from . import TelemetryStreamHandler
 
@@ -1347,6 +1349,16 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
             except asyncio.CancelledError:
                 break
+            except UnableToFindTarget:
+                # If there is an exception and not in FAULT, go to FAULT state
+                # and log the exception...
+                if self.summary_state != salobj.State.FAULT:
+                    self.fault(
+                        code=UNABLE_TO_FIND_TARGET,
+                        report=f"Unable to find target in the next {self.max_time_no_target/60./60.} hours.",
+                        traceback=traceback.format_exc(),
+                    )
+                break
             except Exception:
                 # If there is an exception and not in FAULT, go to FAULT state
                 # and log the exception...
@@ -1356,7 +1368,6 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                         report="Error on advance target production loop.",
                         traceback=traceback.format_exc(),
                     )
-                    self.log.exception("Error on advance target production loop.")
                 break
 
     async def generate_target_queue(self):
@@ -1489,6 +1500,11 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             self.log.debug("No targets condition already handled. Ignoring.")
             return
 
+        self.log.warning(
+            "Handling no targets on queue condition. "
+            "This consist of queuing a stop tracking script and estimating the time until the next target."
+        )
+
         self._no_target_handled = True
 
         stop_tracking_target = self.driver.get_stop_tracking_target()
@@ -1530,8 +1546,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             target = await loop.run_in_executor(None, self.driver.select_next_target)
 
         if target is None:
-            raise RuntimeError(
-                f"Could not determine next target in alloted window: {self.max_time_no_target}s."
+            raise UnableToFindTarget(
+                f"Could not determine next target in allotted window: {self.max_time_no_target}s."
             )
         else:
             delta_time = time_evaluation - time_start

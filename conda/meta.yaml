@@ -13,9 +13,9 @@ build:
 test:
   requires:
     - ts-conda-build =0.3
-    - ts-idl {{ idl_version }}
+    - ts-idl =3.7.0_10.2.0_6.1.0
     - ts-utils
-    - ts-salobj {{ salobj_version }}
+    - ts-salobj =6
     - ts-scriptqueue
     - ts-observatory-model
     - ts-astrosky-model
@@ -40,9 +40,9 @@ requirements:
     - python
     - setuptools
     - setuptools_scm
-    - ts-idl
+    - ts-idl =3.7.0_10.2.0_6.1.0
     - ts-utils
-    - ts-salobj
+    - ts-salobj =6
     - ts-observatory-model
     - ts-astrosky-model
     - ts-dateloc
