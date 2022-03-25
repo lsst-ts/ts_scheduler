@@ -60,6 +60,7 @@ class TestTelemetryStreamHandler(unittest.IsolatedAsyncioTestCase):
                 efd_table="lsst.sal.DIMM.logevent_dimmMeasurement",
                 efd_columns=["fwhm"],
                 efd_delta_time=300.0,
+                fill_value=None,
             ),
         ]
 
@@ -81,18 +82,21 @@ class TestTelemetryStreamHandler(unittest.IsolatedAsyncioTestCase):
                 efd_table="lsst.sal.DIMM.logevent_dimmMeasurement",
                 efd_columns=["fwhm"],
                 efd_delta_time=300.0,
+                fill_value=None,
             ),
             dict(
                 name="wind_speed",
                 efd_table="lsst.sal.WeatherStation.windSpeed",
                 efd_columns=["avg2M"],
                 efd_delta_time=300.0,
+                fill_value=None,
             ),
             dict(
                 name="wind_direction",
                 efd_table="lsst.sal.WeatherStation.windDirection",
                 efd_columns=["avg2M"],
                 efd_delta_time=300.0,
+                fill_value=None,
             ),
         ]
 
@@ -111,6 +115,7 @@ class TestTelemetryStreamHandler(unittest.IsolatedAsyncioTestCase):
                 efd_table="lsst.sal.DIMM.logevent_inexistentTopic",
                 efd_columns=["fwhm"],
                 efd_delta_time=300.0,
+                fill_value=None,
             ),
         ]
 
@@ -129,6 +134,7 @@ class TestTelemetryStreamHandler(unittest.IsolatedAsyncioTestCase):
                 efd_table="lsst.sal.DIMM.logevent_dimmMeasurement",
                 efd_columns=["not_fwhm"],
                 efd_delta_time=300.0,
+                fill_value=None,
             ),
         ]
 
@@ -149,6 +155,7 @@ class TestTelemetryStreamHandler(unittest.IsolatedAsyncioTestCase):
                 efd_table="lsst.sal.DIMM.logevent_dimmMeasurement",
                 efd_columns=["fwhm"],
                 efd_delta_time=0.0,
+                fill_value=None,
             ),
         ]
 
@@ -172,6 +179,7 @@ class TestTelemetryStreamHandler(unittest.IsolatedAsyncioTestCase):
                 efd_table="lsst.sal.DIMM.logevent_dimmMeasurement",
                 efd_columns=["not_fwhm"],
                 efd_delta_time=300.0,
+                fill_value=None,
             ),
         ]
 
@@ -180,6 +188,7 @@ class TestTelemetryStreamHandler(unittest.IsolatedAsyncioTestCase):
                 efd_table="lsst.sal.DIMM.logevent_dimmMeasurement",
                 efd_columns=["not_fwhm"],
                 efd_delta_time=300.0,
+                fill_value=None,
             ),
         ]
 
@@ -188,6 +197,7 @@ class TestTelemetryStreamHandler(unittest.IsolatedAsyncioTestCase):
                 name="seeing",
                 efd_columns=["not_fwhm"],
                 efd_delta_time=300.0,
+                fill_value=None,
             ),
         ]
 
@@ -196,6 +206,7 @@ class TestTelemetryStreamHandler(unittest.IsolatedAsyncioTestCase):
                 name="seeing",
                 efd_table="lsst.sal.DIMM.logevent_dimmMeasurement",
                 efd_delta_time=300.0,
+                fill_value=None,
             ),
         ]
 
@@ -204,6 +215,7 @@ class TestTelemetryStreamHandler(unittest.IsolatedAsyncioTestCase):
                 name="seeing",
                 efd_table="lsst.sal.DIMM.logevent_dimmMeasurement",
                 efd_columns=["not_fwhm"],
+                fill_value=None,
             ),
         ]
 
