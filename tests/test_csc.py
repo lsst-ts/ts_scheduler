@@ -66,7 +66,7 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
 
                 try:
                     await self.remote.cmd_start.set_start(
-                        timeout=LONG_TIMEOUT, settingsToApply="simple"
+                        timeout=LONG_TIMEOUT, configurationOverride="simple.yaml"
                     )
                 except asyncio.TimeoutError:
                     pass
@@ -103,7 +103,8 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
         ), ObservatoryStateMock():
 
             await self.check_standard_state_transitions(
-                enabled_commands=("resume", "stop", "load"), settingsToApply="simple"
+                enabled_commands=("resume", "stop", "load"),
+                override="simple.yaml",
             )
 
     async def test_configuration(self):
@@ -128,12 +129,15 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                 for bad_config_name in bad_config_names:
                     self.log.info(f"Testing bad configuration: {bad_config_name}.")
                     with self.subTest(bad_config_name=bad_config_name):
-                        self.remote.cmd_start.set(settingsToApply=bad_config_name)
                         with salobj.testutils.assertRaisesAckError():
-                            await self.remote.cmd_start.start(timeout=SHORT_TIMEOUT)
+                            await self.remote.cmd_start.set_start(
+                                configurationOverride=bad_config_name,
+                                timeout=SHORT_TIMEOUT,
+                            )
 
-                self.remote.cmd_start.set(settingsToApply="all_fields")
-                await self.remote.cmd_start.start(timeout=SHORT_TIMEOUT)
+                await self.remote.cmd_start.set_start(
+                    configurationOverride="", timeout=SHORT_TIMEOUT
+                )
                 self.assertEqual(self.csc.summary_state, salobj.State.DISABLED)
                 state = await self.remote.evt_summaryState.next(
                     flush=False, timeout=SHORT_TIMEOUT
@@ -163,7 +167,7 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
 
             try:
                 await salobj.set_summary_state(
-                    self.remote, salobj.State.ENABLED, settingsToApply="simple"
+                    self.remote, salobj.State.ENABLED, override="simple.yaml"
                 )
 
                 await self.remote.cmd_load.set_start(

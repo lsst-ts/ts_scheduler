@@ -28,7 +28,7 @@ import astropy.units as u
 from astropy.time import Time
 from astropy.coordinates import Angle
 
-from lsst.ts.salobj import index_generator
+from lsst.ts.utils import index_generator
 
 from .driver import Driver, DriverParameters
 from .driver_target import DriverTarget

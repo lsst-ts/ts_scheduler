@@ -45,34 +45,18 @@ class SurveyTopology(object):
         self.general_propos = topic.general_propos.split(",")
         self.sequence_propos = topic.sequence_propos.split(",")
 
-    def to_topic(self, topic):
-        """
-
-        Parameters
-        ----------
-        topic
+    def as_dict(self):
+        """Return survey topology as a dictionary.
 
         Returns
         -------
-
+        dict
+            Dictionary with survey topology data.
         """
-        topic.numGeneralProps = self.num_general_props
-        topic.numSeqProps = self.num_seq_props
 
-        general_propos = ""
-        for i, gen_prop in enumerate(self.general_propos):
-            general_propos += gen_prop
-            if i < self.num_general_props - 1:
-                general_propos += ","
-
-        topic.generalPropos = general_propos
-
-        sequence_propos = ""
-        for i, seq_prop in enumerate(self.sequence_propos):
-            sequence_propos += seq_prop
-            if i < self.num_seq_props - 1:
-                sequence_propos += ","
-
-        topic.sequencePropos = sequence_propos
-
-        return topic
+        return dict(
+            numGeneralProps=self.num_general_props,
+            numSeqProps=self.num_seq_props,
+            generalPropos=",".join(self.general_propos),
+            sequencePropos=",".join(self.sequence_propos),
+        )

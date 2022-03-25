@@ -4,6 +4,12 @@
 Version History
 ===============
 
+v1.12.0
+-------
+
+* Upgrade to salobj 7.
+* Update conda recipe to remove pins on ts-idl and ts-salobj.
+
 v1.11.1
 -------
 
