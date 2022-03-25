@@ -1352,6 +1352,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                         report="Error on advance target production loop.",
                         traceback=traceback.format_exc(),
                     )
+                self.log.exception("Error on advance target production loop.")
                 break
 
     async def generate_target_queue(self):
