@@ -4,6 +4,21 @@
 Version History
 ===============
 
+v1.12.0
+-------
+
+* Upgrade to salobj 7.
+* Update conda recipe to remove pins on ts-idl and ts-salobj.
+
+v1.11.1
+-------
+
+* Improve handling of "no targets on queue" condition:
+  * Add a custom exception to track when there are no new targets in the next allotted window.
+  * Add new error code for this condition.
+  * Improve error message.
+* Pin version of ts_salobj and ts_idl in conda recipe.
+
 v1.11.0
 -------
 

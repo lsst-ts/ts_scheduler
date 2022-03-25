@@ -18,19 +18,8 @@
 #
 # You should have received a copy of the GNU General Public License
 
-__all__ = [
-    "NO_QUEUE",
-    "PUT_ON_QUEUE",
-    "SIMPLE_LOOP_ERROR",
-    "ADVANCE_LOOP_ERROR",
-    "UNABLE_TO_FIND_TARGET",
-    "OBSERVATORY_STATE_UPDATE",
-]
+__all__ = ["UnableToFindTarget"]
 
 
-NO_QUEUE = 300
-PUT_ON_QUEUE = 301
-SIMPLE_LOOP_ERROR = 400
-ADVANCE_LOOP_ERROR = 401
-UNABLE_TO_FIND_TARGET = 402
-OBSERVATORY_STATE_UPDATE = 500
+class UnableToFindTarget(Exception):
+    pass

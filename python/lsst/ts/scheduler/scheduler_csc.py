@@ -1,6 +1,6 @@
 # This file is part of ts_scheduler
 #
-# Developed for the LSST Telescope and Site Systems.
+# Developed for the Rubin Observatory Telescope and Site Systems.
 # This product includes software developed by the LSST Project
 # (https://www.lsst.org).
 # See the COPYRIGHT file at the top-level directory of this distribution
@@ -47,9 +47,11 @@ from .utils.error_codes import (
     PUT_ON_QUEUE,
     SIMPLE_LOOP_ERROR,
     ADVANCE_LOOP_ERROR,
+    UNABLE_TO_FIND_TARGET,
     OBSERVATORY_STATE_UPDATE,
 )
 from .utils.parameters import SchedulerCscParameters
+from .utils.exceptions import UnableToFindTarget
 from .driver import Driver
 from . import TelemetryStreamHandler
 
@@ -246,6 +248,13 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         self.s3bucket_name = None  # Set by `configure`.
         self.s3bucket = None  # Set by `handle_summary_state`.
 
+    async def begin_start(self, data):
+        try:
+            await super().begin_start(data)
+        except Exception:
+            self.log.exception("Error in beging start")
+            raise
+
     async def begin_enable(self, data):
         """Begin do_enable.
 
@@ -380,16 +389,10 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     await self.target_production_task
                 except asyncio.CancelledError:
                     self.log.info("Target production task cancelled...")
-                except Exception as e:
-                    # Something else may have happened. I still want to
-                    # disable as this will stop the loop on the
-                    # target production
-                    self.log.exception(e)
-                finally:
-                    self.target_production_task = None
-        except Exception as e:
+        except Exception:
+            self.log.exception("Error while disabling the Scheduler. Ignoring...")
+        finally:
             self.target_production_task = None
-            self.log.exception(e)
 
     async def do_resume(self, data):
         """Resume target production loop.
@@ -506,14 +509,14 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 )
             except Exception:
                 self.log.exception("Failed to update observatory state.")
-                self.fault(
+                await self.fault(
                     code=OBSERVATORY_STATE_UPDATE,
                     report="Failed to update observatory state.",
                     traceback=traceback.format_exc(),
                 )
                 return
 
-            self.tel_observatoryState.set_put(
+            await self.tel_observatoryState.set_write(
                 timestamp=self.models["observatory_state"].time,
                 ra=self.models["observatory_state"].ra,
                 declination=self.models["observatory_state"].dec,
@@ -641,7 +644,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             )
 
             # publishes target event
-            self.evt_target.set_put(**target.as_dict())
+            await self.evt_target.set_write(**target.as_dict())
 
             target.sal_index = int(add_task.result)
 
@@ -735,14 +738,12 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         survey_topology = self.configure_driver(config)
 
-        self.evt_surveyTopology.put(
-            survey_topology.to_topic(self.evt_surveyTopology.DataType())
-        )
+        await self.evt_surveyTopology.set_write(**survey_topology.as_dict())
 
         # Most configurations comes from this single commit hash. I think the
         # other modules could host the version for each one of them
         if hasattr(self, "evt_dependenciesVersions"):
-            self.evt_dependenciesVersions.set_put(
+            await self.evt_dependenciesVersions.set_write(
                 version="",
                 scheduler=self.parameters.driver_type,
                 observatoryModel=obs_mod_version.__version__,
@@ -756,14 +757,14 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         else:
             self.log.warning("No 'dependenciesVersions' event.")
 
-        self.evt_obsSiteConfig.set_put(
+        await self.evt_obsSiteConfig.set_write(
             observatoryName=config.models["location"]["obs_site"]["name"],
             latitude=config.models["location"]["obs_site"]["latitude"],
             longitude=config.models["location"]["obs_site"]["longitude"],
             height=config.models["location"]["obs_site"]["height"],
         )
 
-        self.evt_telescopeConfig.set_put(
+        await self.evt_telescopeConfig.set_write(
             altitudeMinpos=config.models["observatory_model"]["telescope"][
                 "altitude_minpos"
             ],
@@ -797,7 +798,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             settleTime=config.models["observatory_model"]["telescope"]["settle_time"],
         )
 
-        self.evt_rotatorConfig.set_put(
+        await self.evt_rotatorConfig.set_write(
             positionMin=config.models["observatory_model"]["rotator"]["minpos"],
             positionMax=config.models["observatory_model"]["rotator"]["maxpos"],
             positionFilterChange=config.models["observatory_model"]["rotator"][
@@ -810,7 +811,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             resumeAngle=config.models["observatory_model"]["rotator"]["resume_angle"],
         )
 
-        self.evt_domeConfig.set_put(
+        await self.evt_domeConfig.set_write(
             altitudeMaxspeed=config.models["observatory_model"]["dome"][
                 "altitude_maxspeed"
             ],
@@ -830,7 +831,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             settleTime=config.models["observatory_model"]["dome"]["settle_time"],
         )
 
-        self.evt_slewConfig.set_put(
+        await self.evt_slewConfig.set_write(
             prereqDomalt=config.models["observatory_model"]["slew"]["prereq_domalt"],
             prereqDomaz=config.models["observatory_model"]["slew"]["prereq_domaz"],
             prereqDomazSettle=config.models["observatory_model"]["slew"][
@@ -855,7 +856,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             prereqReadout=config.models["observatory_model"]["slew"]["prereq_readout"],
         )
 
-        self.evt_opticsLoopCorrConfig.set_put(
+        await self.evt_opticsLoopCorrConfig.set_write(
             telOpticsOlSlope=config.models["observatory_model"]["optics_loop_corr"][
                 "tel_optics_ol_slope"
             ],
@@ -867,7 +868,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             ],
         )
 
-        self.evt_parkConfig.set_put(
+        await self.evt_parkConfig.set_write(
             telescopeAltitude=config.models["observatory_model"]["park"][
                 "telescope_altitude"
             ],
@@ -958,22 +959,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             models=self.models, raw_telemetry=self.raw_telemetry, log=self.log
         )
 
-        # load_override_configuration(self.driver.parameters,
-        #                             self.configuration_path)
-
         return self.driver.configure_scheduler(config)
-
-    def run(self):
-        """This is the method that runs when the system is in enable state.
-        It is responsible for the target production loop, updating telemetry,
-        requesting targets from the driver to build a queue and filling
-        the queue with targets.
-
-        Returns
-        -------
-
-        """
-        pass
 
     async def get_queue(self, request=True):
         """Utility method to get the queue.
@@ -1015,7 +1001,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 )
         except salobj.AckError as e:
             self.log.error("No response from queue...")
-            self.fault(
+            await self.fault(
                 code=NO_QUEUE,
                 report="Error no response from queue.",
                 traceback=traceback.format_exc(),
@@ -1175,7 +1161,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                             self.log.error(
                                 "Could not add target to the queue: %s", target
                             )
-                            self.fault(
+                            await self.fault(
                                 code=PUT_ON_QUEUE,
                                 report=f"Could not add target to the queue: {target}",
                             )
@@ -1199,7 +1185,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 # If there is an exception and not in FAULT, go to FAULT state
                 # and log the exception...
                 if self.summary_state != salobj.State.FAULT:
-                    self.fault(
+                    await self.fault(
                         code=SIMPLE_LOOP_ERROR,
                         report="Error on simple target production loop.",
                         traceback=traceback.format_exc(),
@@ -1297,7 +1283,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                             self.log.error(
                                 "Could not add target to the queue: %s", target
                             )
-                            self.fault(
+                            await self.fault(
                                 code=PUT_ON_QUEUE,
                                 report=f"Could not add target to the queue: {target}",
                             )
@@ -1347,16 +1333,26 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
             except asyncio.CancelledError:
                 break
+            except UnableToFindTarget:
+                # If there is an exception and not in FAULT, go to FAULT state
+                # and log the exception...
+                if self.summary_state != salobj.State.FAULT:
+                    await self.fault(
+                        code=UNABLE_TO_FIND_TARGET,
+                        report=f"Unable to find target in the next {self.max_time_no_target/60./60.} hours.",
+                        traceback=traceback.format_exc(),
+                    )
+                break
             except Exception:
                 # If there is an exception and not in FAULT, go to FAULT state
                 # and log the exception...
                 if self.summary_state != salobj.State.FAULT:
-                    self.fault(
+                    await self.fault(
                         code=ADVANCE_LOOP_ERROR,
                         report="Error on advance target production loop.",
                         traceback=traceback.format_exc(),
                     )
-                    self.log.exception("Error on advance target production loop.")
+                self.log.exception("Error on advance target production loop.")
                 break
 
     async def generate_target_queue(self):
@@ -1472,7 +1468,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         try:
             await self.s3bucket.upload(fileobj=file_object, key=key)
             url = f"{self.s3bucket.service_resource.meta.client.meta.endpoint_url}/{self.s3bucket.name}/{key}"
-            self.evt_largeFileObjectAvailable.set_put(
+            await self.evt_largeFileObjectAvailable.set_write(
                 url=url, generator=f"{self.salinfo.name}:{self.salinfo.index}"
             )
         except Exception:
@@ -1488,6 +1484,11 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         if self._no_target_handled:
             self.log.debug("No targets condition already handled. Ignoring.")
             return
+
+        self.log.warning(
+            "Handling no targets on queue condition. "
+            "This consist of queuing a stop tracking script and estimating the time until the next target."
+        )
 
         self._no_target_handled = True
 
@@ -1530,8 +1531,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             target = await loop.run_in_executor(None, self.driver.select_next_target)
 
         if target is None:
-            raise RuntimeError(
-                f"Could not determine next target in alloted window: {self.max_time_no_target}s."
+            raise UnableToFindTarget(
+                f"Could not determine next target in allotted window: {self.max_time_no_target}s."
             )
         else:
             delta_time = time_evaluation - time_start

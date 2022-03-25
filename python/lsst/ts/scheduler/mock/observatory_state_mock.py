@@ -22,6 +22,7 @@ __all__ = ["ObservatoryStateMock"]
 
 import asyncio
 
+from lsst.ts import utils
 from lsst.ts import salobj
 
 from lsst.ts.dateloc import ObservatoryLocation
@@ -47,9 +48,9 @@ class ObservatoryStateMock:
 
     async def current_target_status(self):
         while self.run_current_target_status_loop:
-            time = salobj.current_tai()
+            time = utils.current_tai()
             self.model.update_state(time)
-            self.ptg.tel_currentTargetStatus.set(
+            await self.ptg.tel_currentTargetStatus.set_write(
                 timestamp=time,
                 demandAz=self.model.current_state.telaz,
                 demandEl=self.model.current_state.telalt,
@@ -58,7 +59,6 @@ class ObservatoryStateMock:
                 demandDec=self.model.current_state.dec,
                 parAngle=self.model.current_state.pa,
             )
-            self.ptg.tel_currentTargetStatus.put()
             await asyncio.sleep(self.telemetry_sleep_time)
 
     async def start(self):

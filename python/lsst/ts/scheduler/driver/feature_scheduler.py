@@ -29,7 +29,7 @@ import healpy as hp
 
 from astropy.time import Time
 
-from lsst.ts.salobj import index_generator
+from lsst.ts.utils import index_generator
 
 from rubin_sim.site_models import Almanac
 from rubin_sim.utils import _raDec2Hpid
