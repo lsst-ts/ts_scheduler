@@ -27,6 +27,8 @@ from astropy.coordinates import Angle
 
 from lsst.ts.observatory.model import Target
 
+from .observation import Observation
+
 
 class DriverTarget(Target):
     """This class provides a wrapper around `lsst.ts.observatory.model.Target`
@@ -177,3 +179,6 @@ class DriverTarget(Target):
         topic_target["note"] = self.note
 
         return topic_target
+
+    def get_observation(self) -> Observation:
+        return Observation()

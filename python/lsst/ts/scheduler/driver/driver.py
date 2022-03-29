@@ -25,6 +25,7 @@ from dataclasses import dataclass
 
 from .survey_topology import SurveyTopology
 from .driver_target import DriverTarget
+from .observation import Observation
 
 __all__ = ["Driver", "DriverParameters"]
 
@@ -302,21 +303,22 @@ class Driver:
 
         return target
 
-    def register_observation(self, observation):
-        """Validates observation and returns a list of successfully completed
-        observations.
+    def register_observed_target(self, target: DriverTarget) -> Observation:
+        """Validates observed target and returns an observation.
 
         Parameters
         ----------
-        observation : Observation or a python list of Observations
+        target : ``DriverTarget``
+            Observed target to register.
 
         Returns
         -------
-        Python list of one or more Observations
+        Observation
+            Registered observation.
         """
-        self.log.log(WORDY, "Registering observation %s.", observation)
+        self.log.log(WORDY, "Registering target %s.", target)
 
-        return [observation]
+        return target.get_observation()
 
     def get_stop_tracking_target(self):
 

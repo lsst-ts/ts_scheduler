@@ -53,6 +53,7 @@ from .utils.error_codes import (
 from .utils.parameters import SchedulerCscParameters
 from .utils.exceptions import UnableToFindTarget
 from .driver import Driver
+from .driver.observation import Observation
 from . import TelemetryStreamHandler
 
 from lsst.ts.dateloc import ObservatoryLocation
@@ -1046,7 +1047,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     f"{target.note} observation completed successfully. "
                     "Registering observation."
                 )
-                self.driver.register_observation([target])
+                observation = self.driver.register_observed_target(target)
+                await self.register_observation(observation)
                 # Remove related script from the list
                 del self.script_info[target.sal_index]
                 # target now simply disappears... Should I keep it in for
@@ -1383,7 +1385,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         for target in self.raw_telemetry["scheduled_targets"]:
             self.log.debug(f"Temporarily registering scheduled target: {target.note}.")
-            self.driver.register_observation([target])
+            self.driver.register_observed_target(target)
             self.models["observatory_model"].observe(target)
 
         # For now it will only generate enough targets to send to the queue
@@ -1418,7 +1420,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 self.log.debug(
                     f"Temporarily registering selected target: {target.note}."
                 )
-                self.driver.register_observation([target])
+                self.driver.register_observed_target(target)
 
                 # The following will playback the observations on the
                 # observatory model but will keep the observatory state
@@ -1579,3 +1581,13 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 del self.script_info[key]
                 if len(self.script_info) < self.parameters.max_scripts:
                     break
+
+    async def register_observation(self, observation: Observation) -> None:
+        """Register observation.
+
+        Parameters
+        ----------
+        observation : Observation
+            Observation to be registered.
+        """
+        pass

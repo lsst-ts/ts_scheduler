@@ -290,7 +290,7 @@ class TestFeatureSchedulerDriver(unittest.TestCase):
                         f"Slewtime must be larger then zero. {target.observation}",
                     )
 
-                self.driver.register_observation([target])
+                self.driver.register_observed_target(target)
                 self.models["observatory_model"].observe(target)
                 self.models["observatory_state"].set(
                     self.models["observatory_model"].current_state
