@@ -19,6 +19,8 @@
 # You should have received a copy of the GNU General Public License
 
 import os
+import io
+import typing
 import logging
 
 from dataclasses import dataclass
@@ -45,7 +47,7 @@ class DriverParameters:
     night_boundary: float = -12.0
     new_moon_phase_threshold: float = 20.0
 
-    def setDefaults(self):
+    def setDefaults(self) -> None:
         """Set defaults for the LSST Scheduler's Driver."""
         self.night_boundary = -12.0
         self.new_moon_phase_threshold = 20.0
@@ -111,7 +113,13 @@ class Driver:
         Timestamp for the current sunrise.
     """
 
-    def __init__(self, models, raw_telemetry, parameters=None, log=None):
+    def __init__(
+        self,
+        models: typing.Dict[str, typing.Any],
+        raw_telemetry: typing.Dict[str, typing.Any],
+        parameters: typing.Optional[DriverParameters] = None,
+        log: typing.Optional[logging.Logger] = None,
+    ) -> None:
         if log is None:
             self.log = logging.getLogger(type(self).__name__)
         else:
@@ -138,7 +146,7 @@ class Driver:
         self.current_sunset = None
         self.current_sunrise = None
 
-    def configure_scheduler(self, config):
+    def configure_scheduler(self, config: typing.Any) -> SurveyTopology:
         """This method is responsible for running the scheduler configuration
         and returning the survey topology, which specifies the number, name
         and type of projects running by the scheduler.
@@ -203,7 +211,7 @@ class Driver:
 
         return survey_topology
 
-    def cold_start(self, observations):
+    def cold_start(self, observations: typing.List[Observation]) -> None:
         """Rebuilds the internal state of the scheduler from a list of
         observations.
 
@@ -214,7 +222,7 @@ class Driver:
         """
         raise NotImplementedError("Cold start is not implemented.")
 
-    def update_conditions(self):
+    def update_conditions(self) -> None:
         """Update driver internal conditions.
 
         When subclassing this method, make sure to call it at the start of the
@@ -277,7 +285,7 @@ class Driver:
                 f"[{self.night}]: Sunset/Sunrise: {self.current_sunset}/{self.current_sunrise} "
             )
 
-    def select_next_target(self):
+    def select_next_target(self) -> DriverTarget:
         """Picks a target and returns it as a target object.
 
         By default it will just return a dummy test target.
@@ -320,7 +328,7 @@ class Driver:
 
         return target.get_observation()
 
-    def get_stop_tracking_target(self):
+    def get_stop_tracking_target(self) -> DriverTarget:
 
         target = DriverTarget(
             observing_script_name=self.stop_tracking_script_name,
@@ -331,7 +339,7 @@ class Driver:
 
         return target
 
-    def load(self, config):
+    def load(self, config: str) -> None:
         """Load a modifying configuration.
 
         The input is a file that the Driver must be able to parse. It should
@@ -356,7 +364,7 @@ class Driver:
         if not os.path.exists(config):
             raise RuntimeError(f"Input configuration file {config} does not exist.")
 
-    def save_state(self):
+    def save_state(self) -> None:
         """Save the current state of the scheduling algorithm to a file.
 
         Returns
@@ -366,7 +374,7 @@ class Driver:
         """
         raise NotImplementedError("Save state is is not implemented.")
 
-    def parse_observation_database(self, filename):
+    def parse_observation_database(self, filename: str) -> None:
         """Parse an observation database into a list of observations.
 
         Parameters
@@ -379,7 +387,7 @@ class Driver:
         """
         raise NotImplementedError("Parse observation database not implemented.")
 
-    def get_state_as_file_object(self):
+    def get_state_as_file_object(self) -> io.BytesIO:
         """Get the current state of the scheduling algorithm as a file object.
 
         Returns
@@ -389,11 +397,13 @@ class Driver:
         """
         raise NotImplementedError("Get state as file object not implemented.")
 
-    def reset_from_state(self, filename):
+    def reset_from_state(self, filename: str) -> None:
         """Load the state from a file."""
         raise NotImplementedError("Reset from state is not implemented.")
 
-    def configure_survey_observing_script(self, survey_observing_script):
+    def configure_survey_observing_script(
+        self, survey_observing_script: typing.Dict[str, typing.Any]
+    ) -> None:
         """Configure survey-based observing script.
 
         Parameters
@@ -432,7 +442,7 @@ class Driver:
                     f"Entry {survey_name} missing required key {missing}, got {provided_keys}."
                 )
 
-    def assert_survey_observing_script(self, survey_name):
+    def assert_survey_observing_script(self, survey_name: str) -> None:
         """Assert that the input survey name has a dedicated observing script.
 
         Parameters
@@ -451,7 +461,7 @@ class Driver:
             f"Current defined are: {set(self._survey_observing_script.keys())}"
         )
 
-    def get_survey_observing_script(self, survey_name):
+    def get_survey_observing_script(self, survey_name: str) -> typing.Tuple[str, bool]:
         """Return the appropriate survey observing script.
 
         If the script contains a especial script, return it, if not, return
