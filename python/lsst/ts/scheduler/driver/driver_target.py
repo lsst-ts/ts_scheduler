@@ -19,6 +19,7 @@
 # You should have received a copy of the GNU General Public License
 import yaml
 import logging
+import typing
 
 import numpy as np
 
@@ -66,21 +67,21 @@ class DriverTarget(Target):
 
     def __init__(
         self,
-        observing_script_name,
-        observing_script_is_standard,
-        observing_script_has_configuration=True,
-        sal_index=0,
-        targetid=0,
-        fieldid=0,
-        band_filter="",
-        ra_rad=0.0,
-        dec_rad=0.0,
-        ang_rad=0.0,
-        obs_time=0.0,
-        num_exp=0,
-        exp_times=[],
-        log=None,
-    ):
+        observing_script_name: str,
+        observing_script_is_standard: bool,
+        observing_script_has_configuration: bool = True,
+        sal_index: int = 0,
+        targetid: int = 0,
+        fieldid: int = 0,
+        band_filter: str = "",
+        ra_rad: float = 0.0,
+        dec_rad: float = 0.0,
+        ang_rad: float = 0.0,
+        obs_time: float = 0.0,
+        num_exp: float = 0,
+        exp_times: typing.List[float] = [],
+        log: typing.Optional[logging.Logger] = None,
+    ) -> None:
         if log is None:
             self.log = logging.getLogger(type(self).__name__)
         else:
@@ -102,7 +103,7 @@ class DriverTarget(Target):
             exp_times=exp_times,
         )
 
-    def get_script_config(self):
+    def get_script_config(self) -> str:
         """Returns a yaml string representation of a dictionary with the
         configuration to be used for the observing script.
 
@@ -134,7 +135,7 @@ class DriverTarget(Target):
 
         return yaml.safe_dump(script_config)
 
-    def get_observing_script(self):
+    def get_observing_script(self) -> typing.Tuple[str, str]:
         """Returns the name of the observing script and whether it is a
         standard script or not.
 
@@ -147,7 +148,9 @@ class DriverTarget(Target):
         """
         return self._observing_script_name, self._observing_script_is_standard
 
-    def as_dict(self, exposure_times_size=10, proposal_id_size=5):
+    def as_dict(
+        self, exposure_times_size: int = 10, proposal_id_size: int = 5
+    ) -> typing.Dict[str, typing.Any]:
         """Returns a dictionary with the Target information.
 
         Returns
