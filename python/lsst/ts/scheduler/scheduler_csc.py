@@ -27,9 +27,12 @@ import inspect
 import logging
 import time
 import traceback
+import dataclasses
+
 from typing import Dict
 
 import urllib.request
+from lsst.ts.scheduler.driver.driver_target import DriverTarget
 
 import numpy as np
 
@@ -53,7 +56,6 @@ from .utils.error_codes import (
 from .utils.parameters import SchedulerCscParameters
 from .utils.exceptions import UnableToFindTarget
 from .driver import Driver
-from .driver.observation import Observation
 from . import TelemetryStreamHandler
 
 from lsst.ts.dateloc import ObservatoryLocation
@@ -1047,8 +1049,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     f"{target.note} observation completed successfully. "
                     "Registering observation."
                 )
-                observation = self.driver.register_observed_target(target)
-                await self.register_observation(observation)
+                await self.register_observation(target)
                 # Remove related script from the list
                 del self.script_info[target.sal_index]
                 # target now simply disappears... Should I keep it in for
@@ -1582,7 +1583,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 if len(self.script_info) < self.parameters.max_scripts:
                     break
 
-    async def register_observation(self, observation: Observation) -> None:
+    async def register_observation(self, target: DriverTarget) -> None:
         """Register observation.
 
         Parameters
@@ -1590,4 +1591,6 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         observation : Observation
             Observation to be registered.
         """
-        pass
+        self.driver.register_observation(target=target)
+        if hasattr(self, "evt_observation"):
+            await self.evt_observation.set_write(**dataclasses.asdict(target))
