@@ -160,9 +160,29 @@ class TestFeatureSchedulerDriver(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             self.driver.select_next_target()
 
-        targets = self.run_observations()
+        targets = self.run_observations(register_observations=True)
+
+        registered_targets = self.driver.schema_converter.opsim2obs(
+            filename=self.driver.observation_database_name,
+        )
 
         self.assertGreater(len(targets), 0)
+        self.assertEqual(len(targets), len(registered_targets))
+
+        for observed_target, registered_target in zip(targets, registered_targets):
+            observed_ra, observed_dec, observed_note = (
+                observed_target.observation["RA"][0],
+                observed_target.observation["dec"][0],
+                observed_target.observation["note"][0],
+            )
+            target_ra, target_dec, target_note = (
+                registered_target["RA"],
+                registered_target["dec"],
+                registered_target["note"],
+            )
+            self.assertAlmostEqual(observed_ra, target_ra)
+            self.assertAlmostEqual(observed_dec, target_dec)
+            self.assertEqual(observed_note, target_note)
 
     def test_select_next_target_with_cwfs(self):
 
@@ -170,7 +190,7 @@ class TestFeatureSchedulerDriver(unittest.TestCase):
 
         self.driver.assert_survey_observing_script("cwfs")
 
-        targets = self.run_observations()
+        targets = self.run_observations(register_observations=True)
 
         self.assertGreater(len(targets), 0)
 
@@ -178,8 +198,27 @@ class TestFeatureSchedulerDriver(unittest.TestCase):
             [target for target in targets if target.observation["note"][0] == "cwfs"]
         )
 
+        registered_targets = self.driver.schema_converter.opsim2obs(
+            filename=self.driver.observation_database_name,
+        )
+
         self.assertGreaterEqual(number_of_cwfs_targets, 2)
         self.assertGreater(len(targets), number_of_cwfs_targets)
+
+        for observed_target, registered_target in zip(targets, registered_targets):
+            observed_ra, observed_dec, observed_note = (
+                observed_target.observation["RA"][0],
+                observed_target.observation["dec"][0],
+                observed_target.observation["note"][0],
+            )
+            target_ra, target_dec, target_note = (
+                registered_target["RA"],
+                registered_target["dec"],
+                registered_target["note"],
+            )
+            self.assertAlmostEqual(observed_ra, target_ra)
+            self.assertAlmostEqual(observed_dec, target_dec)
+            self.assertEqual(observed_note, target_note)
 
     @unittest.skip("Not implemented yet.")
     def test_load(self):
@@ -195,7 +234,7 @@ class TestFeatureSchedulerDriver(unittest.TestCase):
         self.files_to_delete.append(filename)
 
         # Run some observations
-        targets_run_1 = self.run_observations()
+        targets_run_1 = self.run_observations(register_observations=False)
 
         self.driver.reset_from_state(filename)
 
@@ -205,7 +244,7 @@ class TestFeatureSchedulerDriver(unittest.TestCase):
             self.models["observatory_model"].current_state
         )
 
-        targets_run_2 = self.run_observations()
+        targets_run_2 = self.run_observations(register_observations=False)
 
         # Targets 1 and 2 should be equal
         self.assertEqual(len(targets_run_1), len(targets_run_2))
@@ -222,6 +261,15 @@ class TestFeatureSchedulerDriver(unittest.TestCase):
             .joinpath("tests", "data", "config", "fbs_config_good.py")
         )
 
+        self.config.driver_configuration["observation_database_name"] = (
+            pathlib.Path(__file__)
+            .parents[1]
+            .joinpath("tests", "data", "fbs_test_observation_database")
+        )
+
+        self.files_to_delete.append(
+            self.config.driver_configuration["observation_database_name"]
+        )
         self.driver.configure_scheduler(self.config)
 
     def configure_scheduler_for_test_with_cwfs(self):
@@ -238,9 +286,19 @@ class TestFeatureSchedulerDriver(unittest.TestCase):
             ),
         )
 
+        self.config.driver_configuration["observation_database_name"] = (
+            pathlib.Path(__file__)
+            .parents[1]
+            .joinpath("tests", "data", "fbs_test_observation_database_with_cwfs")
+        )
+
+        self.files_to_delete.append(
+            self.config.driver_configuration["observation_database_name"]
+        )
+
         self.driver.configure_scheduler(self.config)
 
-    def run_observations(self):
+    def run_observations(self, register_observations):
 
         targets = []
 
@@ -290,22 +348,29 @@ class TestFeatureSchedulerDriver(unittest.TestCase):
                         f"Slewtime must be larger then zero. {target.observation}",
                     )
 
-                self.driver.register_observed_target(target)
                 self.models["observatory_model"].observe(target)
                 self.models["observatory_state"].set(
                     self.models["observatory_model"].current_state
                 )
                 current_time = self.models["observatory_state"].time
+                self.driver.register_observed_target(target)
                 targets.append(target)
 
             if len(targets) > 10:
                 break
 
+        if register_observations:
+            for target in targets:
+                self.driver.register_observation(target)
         return targets
 
     def tearDown(self):
         for filename in self.files_to_delete:
-            os.remove(filename)
+            if os.path.exists(filename):
+                self.log.debug(f"Deleting: {filename}")
+                os.remove(filename)
+            else:
+                self.log.warning(f"File not found: {filename}")
 
 
 if __name__ == "__main__":
