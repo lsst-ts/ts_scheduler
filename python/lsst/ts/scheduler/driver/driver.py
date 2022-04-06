@@ -328,6 +328,21 @@ class Driver:
 
         return target.get_observation()
 
+    def register_observation(self, target: DriverTarget) -> None:
+        """Register observations.
+
+        This method should store the observation in a way that can be retrieved
+        afterwards by the driver.
+
+        The default implementation is not implemented.
+
+        Parameters
+        ----------
+        target : `DriverTarget`
+            Observation to register.
+        """
+        self.register_observed_target(target=target)
+
     def get_stop_tracking_target(self) -> DriverTarget:
 
         target = DriverTarget(
