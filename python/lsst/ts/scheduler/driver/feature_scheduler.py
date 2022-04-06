@@ -39,7 +39,7 @@ from .driver import Driver, DriverParameters
 from .driver_target import DriverTarget
 from .observation import Observation
 from .feature_scheduler_target import FeatureSchedulerTarget
-
+from ..utils import SchemaConverter
 
 __all__ = ["FeatureScheduler", "NoSchedulerError", "NoNsideError"]
 
@@ -95,6 +95,10 @@ class FeatureScheduler(Driver):
         self.seed = 42
 
         self.script_configuration = dict()
+
+        self.observation_database_name = "fbs_observation_database"
+
+        self.schema_converter = SchemaConverter()
 
         super().__init__(models, raw_telemetry, parameters, log=log)
 
@@ -174,6 +178,18 @@ class FeatureScheduler(Driver):
                     (key, np.empty(hp.nside2npix(self.nside), dtype=float))
                     for key in self.models["seeing"].filter_list
                 ]
+            )
+
+        if "observation_database_name" in config.driver_configuration:
+            self.observation_database_name = config.driver_configuration[
+                "observation_database_name"
+            ]
+        else:
+            self.log.warning(
+                "Observation database name not defined in driver configuration. "
+                f"Using default: {self.observation_database_name}. "
+                "This database is used for warm start the scheduler, you might "
+                "want to define a destination with persistent storage."
             )
 
         self.script_configuration = config.driver_configuration.get(
@@ -409,6 +425,8 @@ class FeatureScheduler(Driver):
         """Validates observation and returns a list of successfully completed
         observations.
 
+        Add target observation to the feature based scheduler.
+
         Parameters
         ----------
         observation : `list` of `Target`
@@ -422,6 +440,24 @@ class FeatureScheduler(Driver):
         self.scheduler.add_observation(target.observation[0])
 
         return super().register_observed_target(target)
+
+    def register_observation(self, target: FeatureSchedulerTarget) -> None:
+        """Register observation.
+
+        Write the target observation into the observation database.
+
+        Parameters
+        ----------
+        target : `FeatureSchedulerTarget`
+            Target to register.
+        """
+
+        self.schema_converter.obs2opsim(
+            target.observation,
+            filename=self.observation_database_name,
+        )
+
+        return super().register_observation(target)
 
     def load(self, config):
         """Load a new set of targets."""
