@@ -184,4 +184,31 @@ class DriverTarget(Target):
         return topic_target
 
     def get_observation(self) -> Observation:
-        return Observation()
+        """Return observation from current target information.
+
+        Returns
+        -------
+        Observation
+            Observation object with information about the target.
+        """
+        return Observation(
+            targetId=self.targetid,
+            ra=self.ra,
+            decl=self.dec,
+            rotSkyPos=self.ang,
+            mjd=self.obs_time,
+            exptime=np.sum(self.exp_times),
+            filter=self.filter,
+            nexp=len(self.exp_times),
+            additionalInformation=self.get_additional_information(),
+        )
+
+    def get_additional_information(self) -> str:
+        """Return additional information about the target.
+
+        Returns
+        -------
+        str
+            Target additional information.
+        """
+        return ""
