@@ -22,12 +22,13 @@ __all__ = ["get_efd_client", "get_mock_efd_client"]
 
 import astropy
 import pandas
-import unittest
 import warnings
 
 import numpy as np
 
 from typing import List, Any, Union
+from unittest.mock import AsyncMock, Mock
+
 
 try:
     import lsst_efd_client
@@ -84,7 +85,7 @@ def get_efd_client(efd_name: str, mock: bool = False) -> Any:
     return efd_client
 
 
-def get_mock_efd_client(efd_name: str) -> unittest.mock.AsyncMock:
+def get_mock_efd_client(efd_name: str) -> AsyncMock:
     """Create a mock EFD client.
 
     Parameters
@@ -98,7 +99,7 @@ def get_mock_efd_client(efd_name: str) -> unittest.mock.AsyncMock:
         Mock EFD client.
     """
 
-    mock_efd_client = unittest.mock.AsyncMock()
+    mock_efd_client = AsyncMock()
 
     mock_efd_client.configure_mock(
         **{
@@ -109,7 +110,7 @@ def get_mock_efd_client(efd_name: str) -> unittest.mock.AsyncMock:
     )
 
     mock_efd_client.attach_mock(
-        unittest.mock.Mock(
+        Mock(
             return_value=[
                 efd_name,
             ],
