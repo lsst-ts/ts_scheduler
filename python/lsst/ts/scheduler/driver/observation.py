@@ -23,4 +23,12 @@ import dataclasses
 
 @dataclasses.dataclass
 class Observation:
-    pass
+    targetId: int
+    ra: float
+    decl: float
+    rotSkyPos: float
+    mjd: float
+    exptime: float
+    filter: str
+    nexp: int
+    additionalInformation: str
