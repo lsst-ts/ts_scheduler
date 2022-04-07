@@ -735,7 +735,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         self.log.debug("Configuring Driver and Scheduler.")
 
-        survey_topology = self.configure_driver(config)
+        survey_topology = await self.configure_driver(config)
 
         await self.evt_surveyTopology.set_write(**survey_topology.as_dict())
 
@@ -958,11 +958,10 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             models=self.models, raw_telemetry=self.raw_telemetry, log=self.log
         )
 
-        return self.driver.configure_scheduler(config)
+        survey_topology = await self._handle_driver_configure_scheduler(config)
 
     async def get_queue(self, request=True):
         """Utility method to get the queue.
-
 
         Parameters
         ----------
@@ -1590,6 +1589,30 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         self.driver.register_observation(target=target)
         if hasattr(self, "evt_observation"):
             await self.evt_observation.set_write(**dataclasses.asdict(target))
+
+    async def _handle_driver_configure_scheduler(
+        self, config: typing.Any
+    ) -> SurveyTopology:
+        """Handle configuring the scheduler asynchronously.
+
+        Parameters
+        ----------
+        config : `types.SimpleNamespace`
+            Configuration, as described by ``schema/Scheduler.yaml``
+
+        Returns
+        -------
+        survey_topology: `SurveyTopology`
+            Survey topology
+        """
+
+        configure_scheduler = functools.partial(
+            self.driver.configure_scheduler, config=config
+        )
+
+        return await asyncio.get_running_loop().run_in_executor(
+            None, configure_scheduler
+        )
 
     async def _handle_load_snapshot(self, uri: str) -> None:
         """Handler loading a scheduler snapshot asynchronously.
