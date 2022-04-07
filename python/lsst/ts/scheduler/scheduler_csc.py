@@ -481,6 +481,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         """
 
+        failed_observatory_state_logged = False
         while self.run_loop:
 
             # Update observatory state and sleep at the same time.
@@ -489,14 +490,30 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     self.handle_observatory_state(),
                     asyncio.sleep(self.heartbeat_interval),
                 )
+                failed_observatory_state_logged = False
             except Exception:
-                self.log.exception("Failed to update observatory state.")
-                await self.fault(
-                    code=OBSERVATORY_STATE_UPDATE,
-                    report="Failed to update observatory state.",
-                    traceback=traceback.format_exc(),
-                )
-                return
+                if (
+                    self.summary_state == salobj.State.ENABLED
+                    and self.run_target_loop.is_set()
+                ):
+                    self.log.exception("Failed to update observatory state.")
+                    await self.fault(
+                        code=OBSERVATORY_STATE_UPDATE,
+                        report="Failed to update observatory state.",
+                        traceback=traceback.format_exc(),
+                    )
+                    return
+                elif not failed_observatory_state_logged:
+                    failed_observatory_state_logged = True
+                    message_text = (
+                        " but not running"
+                        if self.summary_state == salobj.State.ENABLED
+                        else ""
+                    )
+                    self.log.warning(
+                        "Failed to update observatory state. "
+                        f"Ignoring, scheduler in {self.summary_state!r}{message_text}."
+                    )
 
             await self.tel_observatoryState.set_write(
                 timestamp=self.models["observatory_state"].time,
