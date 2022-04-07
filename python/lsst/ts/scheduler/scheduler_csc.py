@@ -967,42 +967,11 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             )
             return self.driver.get_survey_topology(config)
 
-        self.log.info("Loading driver from %s", config.driver_type)
-
-        driver_lib = import_module(config.driver_type)
-        members_of_driver_lib = inspect.getmembers(driver_lib)
-
-        driver_type = None
-        for member in members_of_driver_lib:
-            try:
-                if issubclass(member[1], Driver):
-                    self.log.debug("Found driver %s%s", member[0], member[1])
-                    driver_type = member[1]
-                    # break
-            except TypeError:
-                pass
-
-        if driver_type is None:
-            raise RuntimeError(
-                "Could not find Driver on module %s" % config.driver_type
-            )
-
-        self.driver = driver_type(
-            models=self.models, raw_telemetry=self.raw_telemetry, log=self.log
-        )
+        self._load_driver_from(config.driver_type)
 
         survey_topology = await self._handle_driver_configure_scheduler(config)
 
-        if is_uri(config.startup_database):
-            self.log.info(f"Loading scheduler snapshot from {config.startup_database}.")
-            await self._handle_load_snapshot(config.startup_database)
-        elif config.startup_database.strip():
-            raise RuntimeError(
-                f"Invalid startup_database: {config.startup_database.strip()}. "
-                "Make sure it is a valid and accessible URI."
-            )
-        else:
-            self.log.debug("No scheduler snapshot provided.")
+        await self._handle_startup_database_snapshot(config.startup_database)
 
         return survey_topology
 
@@ -1690,3 +1659,76 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         load = functools.partial(self.driver.load, config=dest)
         await loop.run_in_executor(None, load)
+
+    def _load_driver_from(self, driver_type: str) -> None:
+        """Utility method to load a driver from a driver type.
+
+        Parameters
+        ----------
+        driver_type : str
+            A driver module "import string", e.g.
+            "lsst.ts.scheduler.driver.driver".
+
+        Raises
+        ------
+        RuntimeError:
+            If a Driver cannot be found in the provided module.
+
+        Notes
+        -----
+
+        The `driver_type` parameter must specify a python module which defines
+        a subclass of `Driver`. The scheduler ships with a set of standard
+        drivers, which are defined in `lsst.ts.scheduler.driver`. For example,
+        `lsst.ts.scheduler.driver.feature_scheduler` defines `FeatureScheduler`
+        which is a subclass of `Driver` and implements the feature based
+        scheduler driver.
+
+        Users can also provide external drivers, as long as they subclass
+        `Driver` the CSC will be able to load it.
+        """
+        self.log.info("Loading driver from %s", driver_type)
+
+        driver_lib = import_module(driver_type)
+        members_of_driver_lib = inspect.getmembers(driver_lib)
+
+        driver_type = None
+        for member in members_of_driver_lib:
+            try:
+                if issubclass(member[1], Driver):
+                    self.log.debug("Found driver %s%s", member[0], member[1])
+                    driver_type = member[1]
+            except TypeError:
+                pass
+
+        if driver_type is None:
+            raise RuntimeError("Could not find Driver on module %s" % driver_type)
+
+        self.driver = driver_type(
+            models=self.models, raw_telemetry=self.raw_telemetry, log=self.log
+        )
+
+    async def _handle_startup_database_snapshot(self, startup_database: str) -> None:
+        """Handle startup database snapshot.
+
+        Parameters
+        ----------
+        startup_database : str
+            Uri of the startup database.
+
+        Raises
+        ------
+        RuntimeError
+            If startup_database is invalid.
+        """
+
+        if is_uri(startup_database):
+            self.log.info(f"Loading scheduler snapshot from {startup_database}.")
+            await self._handle_load_snapshot(startup_database)
+        elif startup_database.strip():
+            raise RuntimeError(
+                f"Invalid startup_database: {startup_database.strip()}. "
+                "Make sure it is a valid and accessible URI."
+            )
+        else:
+            self.log.debug("No scheduler snapshot provided.")
