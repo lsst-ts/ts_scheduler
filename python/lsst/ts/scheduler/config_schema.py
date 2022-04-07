@@ -80,7 +80,9 @@ properties:
         description: Is the stop tracking script standard?
         type: boolean
   startup_type:
-    description: The method used to startup the scheduler.
+    description: >-
+      The method used to startup the scheduler. See ts-scheduler.lsst.io for
+      more information about the definition of each of those options.
     type: string
     enum:
     - HOT
