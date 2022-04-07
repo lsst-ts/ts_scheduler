@@ -976,7 +976,35 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         return survey_topology
 
     async def configure_driver_warm(self, config: typing.Any) -> SurveyTopology:
-        raise NotImplementedError("Warm start not implemented.")
+        """Perform warm start.
+
+        This is mode is similar to hot start but with the exception that it
+        will always reload the driver, whereas hot start skips reloading the
+        driver if it is already defined.
+
+        See https://ts-scheduler.lsst.io/configuration/configuration.html for
+        more information.
+
+        Parameters
+        ----------
+        config : `types.SimpleNamespace`
+            Configuration, as described by ``schema/Scheduler.yaml``
+
+        Returns
+        -------
+        survey_topology: `SurveyTopology`
+            Survey topology
+        """
+        if self.driver is not None:
+            self.log.warning("WARM start: driver already defined. Resetting driver.")
+
+        self._load_driver_from(config.driver_type)
+
+        survey_topology = await self._handle_driver_configure_scheduler(config)
+
+        await self._handle_startup_database_snapshot(config.startup_database)
+
+        return survey_topology
 
     async def configure_driver_cold(self, config: typing.Any) -> SurveyTopology:
         raise NotImplementedError("Cold start not implemented.")
