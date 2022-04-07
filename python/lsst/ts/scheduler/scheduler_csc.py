@@ -42,7 +42,8 @@ from lsst.ts.idl.enums import ScriptQueue, Script
 
 from . import __version__
 from . import CONFIG_SCHEMA
-from .utils.csc_utils import NonFinalStates, SchedulerModes
+from .utils.csc_utils import SchedulerModes, NonFinalStates, is_uri
+
 from .utils.error_codes import (
     NO_QUEUE,
     PUT_ON_QUEUE,
@@ -251,6 +252,12 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         # Large file object available
         self.s3bucket_name = None  # Set by `configure`.
         self.s3bucket = None  # Set by `handle_summary_state`.
+
+        self.startup_types = dict(
+            HOT=self.configure_driver_hot,
+            WARM=self.configure_driver_warm,
+            COLD=self.configure_driver_cold,
+        )
 
     async def begin_enable(self, data):
         """Begin do_enable.
@@ -927,15 +934,41 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         Returns
         -------
-        survey_topology: `lsst.ts.scheduler.kernel.SurveyTopology`
+        survey_topology: `SurveyTopology`
+            Survey topology
+        """
+        return await self.startup_types[config.startup_type](config)
 
+    async def configure_driver_hot(self, config: typing.Any) -> SurveyTopology:
+        """Perform hot start.
+
+        This is the most versatile startup mode and is designed to rapidly
+        recover the state of the observatory. Nevertheless, it has the caveat
+        that it will skip configuring the drive altogether it the driver is
+        already configured. If you want to make sure the driver is reconfigured
+        use WARM or COLD start instead.
+
+        See https://ts-scheduler.lsst.io/configuration/configuration.html for
+        more information.
+
+        Parameters
+        ----------
+        config : `types.SimpleNamespace`
+            Configuration, as described by ``schema/Scheduler.yaml``
+
+        Returns
+        -------
+        survey_topology: `SurveyTopology`
+            Survey topology
         """
         if self.driver is not None:
-            self.log.warning("Driver already defined. Overwriting driver.")
-            # TODO: It is probably a good idea to tell driver to save its state
-            # before overwriting. So it is possible to recover.
+            self.log.warning(
+                "HOT start: driver already defined. Skipping driver configuration."
+            )
+            return self.driver.get_survey_topology(config)
 
-        self.log.debug("Loading driver from %s", config.driver_type)
+        self.log.info("Loading driver from %s", config.driver_type)
+
         driver_lib = import_module(config.driver_type)
         members_of_driver_lib = inspect.getmembers(driver_lib)
 
@@ -959,6 +992,25 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         )
 
         survey_topology = await self._handle_driver_configure_scheduler(config)
+
+        if is_uri(config.startup_database):
+            self.log.info(f"Loading scheduler snapshot from {config.startup_database}.")
+            await self._handle_load_snapshot(config.startup_database)
+        elif config.startup_database.strip():
+            raise RuntimeError(
+                f"Invalid startup_database: {config.startup_database.strip()}. "
+                "Make sure it is a valid and accessible URI."
+            )
+        else:
+            self.log.debug("No scheduler snapshot provided.")
+
+        return survey_topology
+
+    async def configure_driver_warm(self, config: typing.Any) -> SurveyTopology:
+        raise NotImplementedError("Warm start not implemented.")
+
+    async def configure_driver_cold(self, config: typing.Any) -> SurveyTopology:
+        raise NotImplementedError("Cold start not implemented.")
 
     async def get_queue(self, request=True):
         """Utility method to get the queue.
