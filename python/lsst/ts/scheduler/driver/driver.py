@@ -160,8 +160,8 @@ class Driver:
 
         Returns
         -------
-        survey_topology: `lsst.ts.scheduler.kernel.SurveyTopology`
-
+        survey_topology : ``SurveyTopology``
+            Survey topology.
         """
 
         if "parameters" in config.driver_configuration:
@@ -174,12 +174,27 @@ class Driver:
                     value,
                 )
 
-        survey_topology = SurveyTopology()
-
         if not hasattr(config, "driver_configuration"):
             raise RuntimeError(
                 "No driver_configuration section defined in configuration."
             )
+
+        return self.get_survey_topology(config)
+
+    def get_survey_topology(self, config) -> SurveyTopology:
+        """Get the survey topology.
+
+        Parameters
+        ----------
+        config : `types.SimpleNamespace`
+            Configuration, as described by ``schema/Scheduler.yaml``
+
+        Returns
+        -------
+        survey_topology : ``SurveyTopology``
+            Survey topology.
+        """
+        survey_topology = SurveyTopology()
 
         survey_topology.general_propos = config.driver_configuration.get(
             "general_propos", []
