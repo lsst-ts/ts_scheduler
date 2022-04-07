@@ -28,11 +28,9 @@ import logging
 import time
 import traceback
 import dataclasses
-
-from typing import Dict
+import typing
 
 import urllib.request
-from lsst.ts.scheduler.driver.driver_target import DriverTarget
 
 import numpy as np
 
@@ -56,6 +54,9 @@ from .utils.error_codes import (
 from .utils.parameters import SchedulerCscParameters
 from .utils.exceptions import UnableToFindTarget
 from .driver import Driver
+from .driver.survey_topology import SurveyTopology
+from .driver.driver_target import DriverTarget
+
 from . import TelemetryStreamHandler
 
 from lsst.ts.dateloc import ObservatoryLocation
@@ -881,7 +882,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             ],
         )
 
-    async def configure_telemetry_streams(self, config: Dict) -> None:
+    async def configure_telemetry_streams(self, config: typing.Dict) -> None:
         """Configure telemetry streams.
 
         Parameters
@@ -913,7 +914,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         for telemetry in self.telemetry_stream_handler.telemetry_streams:
             self.raw_telemetry[telemetry] = np.nan
 
-    def configure_driver(self, config):
+    async def configure_driver(self, config: typing.Any) -> SurveyTopology:
         """Load driver for selected scheduler and configure its basic
         parameters.
 
