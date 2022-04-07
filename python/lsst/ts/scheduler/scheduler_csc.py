@@ -471,22 +471,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 "Target production loop is running. Stop it before loading a file."
             )
 
-        loop = asyncio.get_running_loop()
-
-        try:
-            retrieve = functools.partial(
-                urllib.request.urlretrieve, url=data.uri, filename=""
-            )
-            dest, _ = await loop.run_in_executor(None, retrieve)
-        except urllib.request.URLError:
-            raise RuntimeError(
-                f"Could not retrieve {data.uri}. Make sure it is a valid and accessible URI."
-            )
-
-        self.log.debug(f"Loading user-define configuration from {data.uri} -> {dest}.")
-
-        load = functools.partial(self.driver.load, config=dest)
-        await loop.run_in_executor(None, load)
+        await self._handle_load_snapshot(data.uri)
 
     async def telemetry_loop(self):
         """Scheduler telemetry loop.
@@ -1588,3 +1573,28 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         self.driver.register_observation(target=target)
         if hasattr(self, "evt_observation"):
             await self.evt_observation.set_write(**dataclasses.asdict(target))
+
+    async def _handle_load_snapshot(self, uri: str) -> None:
+        """Handler loading a scheduler snapshot asynchronously.
+
+        Parameters
+        ----------
+        uri : str
+            Uri with the address of the snapshot.
+        """
+        loop = asyncio.get_running_loop()
+
+        try:
+            retrieve = functools.partial(
+                urllib.request.urlretrieve, url=uri, filename=""
+            )
+            dest, _ = await loop.run_in_executor(None, retrieve)
+        except urllib.request.URLError:
+            raise RuntimeError(
+                f"Could not retrieve {uri}. Make sure it is a valid and accessible URI."
+            )
+
+        self.log.debug(f"Loading user-define configuration from {uri} -> {dest}.")
+
+        load = functools.partial(self.driver.load, config=dest)
+        await loop.run_in_executor(None, load)
