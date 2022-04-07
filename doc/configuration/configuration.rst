@@ -110,19 +110,62 @@ These parameters are:
 
   The available options are:
 
-  * HOT; hot start.
+  * HOT; hot start (default).
 
-    In this mode the scheduler loads a snapshot of a previously executed and stored scheduler state.
-    The input (see startup_database_ further down) will be similar to the files stored in the LFOA as mentioned above.
+    This is the most versatile startup mode and is designed to rapidly restate the scheduler to an operation status.
+
+    The scheduler will check if it was previously configured, then perform the following actions;
+        
+    - If no (first time after a shutdown): 
+    
+      1.  Perform a fresh driver configuration.
+
+      2.  If a startup_database_ is provided, the Scheduler assumes it is a snapshot uri, and overrides the scheduling algorithm with the one pointed by this parameter.
+          If it fails to load the startup database as a snapshot, the start command will be rejected and the Scheduler will remain in standby.
+      
+    - If yes (scheduler was already configured and is being re-enabled, e.g. after a fault):
+
+      1.  Skip driver configuration and retain all previous state.
+          This also means it will ignore any startup_database_ provided.
+
+    Note that, to make sure the Scheduler will load a new configuration one should either use WARM or COLD start.
+    When executing in HOT start the Scheduler will default to using an already existing configuration.
 
   * WARM; warm start.
 
-    In this mode, the scheduler will start a driver with its initial empty setting, load a set of observations from a database and play those observations into the driver, like it would if the observations where being executed.
-    
-  * COLD; cold start (default).
+    This mode of operation works similarly to HOT start except that it always reconfigure the scheduler.
+    In the case the Scheduler will perform the following actions:
 
-    In this mode the scheduler will only initiate the driver and will not playback any observations.
+    1.  Perform a fresh configuration.
+
+    2.  If a startup_database_ is provided, the Scheduler assumes it is a snapshot uri, and overrides the scheduling algorithm with the one pointed by this parameter.
+        If it fails to load the startup database as a snapshot, the start command will be rejected and the Scheduler will remain in standby.
+
+    
+  * COLD; cold start.
+
+    This mode of operation allow one to reconstruct the state of the scheduler by playing back observations read from the EFD or from a local sqlite database.
+
+    After performing a fresh configuration (overriding any previous values) the Scheduler will perform the following actions:
+    
+    - If startup_database_ is empty; finish startup as soon as the configuration is done.
+
+    - If startup_database_ points to an existing file path:
+    
+      1.  Assume it is an observations database that the ``Driver``understands.
+      2.  Call :py:method:`Driver <lsst.ts.scheduler.driver.Driver.parse_observation_database>` to retrieve a list of observations
+      3.  Call :py:method:`Driver <lsst.ts.scheduler.driver.Driver.cold_start>`, passing in the result of the previous call.
+
+      If any of these steps fails, it will reject the ``start`` command and remain in STANDBY.
  
+    - If neither of the above;
+    
+      1.  Assume startup_database_ is an EFD query that retrieves a list of observations.
+      2.  If the result is empty, fail the startup process.
+      3.  Perform the query to the EFD and pass the results to :py:method:`Driver <lsst.ts.scheduler.driver.Driver.cold_start>`.
+
+      If any of these steps fails, it will reject the ``start`` command and remain in STANDBY.
+
 .. _startup_database:
 
 * startup_database; Path to a file holding scheduler state or observation database to be used on HOT or WARM start.
