@@ -251,13 +251,6 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         self.s3bucket_name = None  # Set by `configure`.
         self.s3bucket = None  # Set by `handle_summary_state`.
 
-    async def begin_start(self, data):
-        try:
-            await super().begin_start(data)
-        except Exception:
-            self.log.exception("Error in beging start")
-            raise
-
     async def begin_enable(self, data):
         """Begin do_enable.
 
