@@ -18,9 +18,11 @@
 #
 # You should have received a copy of the GNU General Public License
 
-__all__ = ["NonFinalStates", "SchedulerModes"]
+__all__ = ["NonFinalStates", "SchedulerModes", "is_uri"]
 
 import enum
+
+from urllib.parse import urlparse
 
 from lsst.ts.idl.enums import Script
 
@@ -46,3 +48,22 @@ class SchedulerModes(enum.IntEnum):
     NORMAL = 0
     MOCKS3 = enum.auto()
     SIMULATION = enum.auto()
+
+
+def is_uri(uri: str) -> bool:
+    """Check if input is a valid uri.
+
+    Parameters
+    ----------
+    uri : str
+        String to check if it is a valid uri.
+
+    Returns
+    -------
+    bool
+        True if uri is valid.
+    """
+
+    parse_result = urlparse(uri)
+
+    return len(parse_result.scheme) > 0 and len(parse_result.path) > 0
