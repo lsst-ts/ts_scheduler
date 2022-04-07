@@ -218,9 +218,23 @@ class FeatureScheduler(Driver):
         Parameters
         ----------
         observations : list of Observation objects
-
         """
-        raise RuntimeError("Cold start not supported by SequentialScheduler.")
+        for observation in observations:
+            self.scheduler.add_observation(observation)
+
+    def parse_observation_database(self, filename: str) -> None:
+        """Parse an observation database into a list of observations.
+
+        Parameters
+        ----------
+        filename : `str`
+
+        Returns
+        -------
+        observations : `list` of `DriverTarget`
+        """
+
+        return self.schema_converter.opsim2obs(filename=filename)
 
     def update_conditions(self):
         """Update conditions on the scheduler."""
