@@ -21,6 +21,9 @@
 import io
 import os
 import math
+import yaml
+import typing
+import pandas
 import pickle
 import pathlib
 import importlib
@@ -35,6 +38,7 @@ from lsst.ts.utils import index_generator
 from rubin_sim.site_models import Almanac
 from rubin_sim.utils import _raDec2Hpid
 from rubin_sim.scheduler.features import Conditions
+from rubin_sim.scheduler.utils import empty_observation
 
 from .driver import Driver, DriverParameters
 from .driver_target import DriverTarget
@@ -733,3 +737,88 @@ class FeatureScheduler(Driver):
         """
         # For now simply return the "notes" field.
         return observation["note"][0].split(":")[0]
+
+    def _get_driver_target_from_observation_data_frame(
+        self, observation_data_frame: typing.Tuple[pandas.Timestamp, pandas.Series]
+    ) -> FeatureSchedulerTarget:
+        """Convert an observation data frame into a FeatureSchedulerTarget.
+
+        Override super class method to deal with Feature Scheduler Target
+        custom requirements.
+
+        Parameters
+        ----------
+        observation_data_frame :  tuple [pandas.Timestamp, pandas.Series]
+            An observation data frame.
+
+        Returns
+        -------
+        target : FeatureSchedulerTarget
+            Feature scheduler target.
+        """
+
+        fbs_observation = self._get_fbs_observation_from_observation_data_frame(
+            observation_data_frame
+        )
+
+        (
+            observing_script_name,
+            observing_script_is_standard,
+        ) = self.get_survey_observing_script(
+            self._get_survey_name_from_observation(fbs_observation)
+        )
+
+        target = FeatureSchedulerTarget(
+            observing_script_name=observing_script_name,
+            observing_script_is_standard=observing_script_is_standard,
+            observation=np.array(fbs_observation, ndmin=1),
+            log=self.log,
+            **self.script_configuration,
+        )
+
+        return target
+
+    def _get_fbs_observation_from_observation_data_frame(
+        self, observation_data_frame: typing.Tuple[pandas.Timestamp, pandas.Series]
+    ) -> np.ndarray:
+        """Convert observation pandas data fram to an fbs observation.
+
+        Parameters
+        ----------
+        observation_data_frame :  tuple [pandas.Timestamp, pandas.Series]
+            An observation data frame.
+
+        Returns
+        -------
+        fbs_observation : np.ndarray
+            Feature scheduler observation.
+        """
+        fbs_observation = empty_observation()
+
+        for key in self.fbs_observation_named_parameter_map():
+            fbs_observation[key] = observation_data_frame[1][
+                self.fbs_observation_named_parameter_map()[key]
+            ]
+
+        additional_information = yaml.safe_load(
+            observation_data_frame[1]["additionalInformation"]
+        )
+
+        for name in fbs_observation.dtype.names:
+            if name not in self.fbs_observation_named_parameter_map():
+                fbs_observation[name] = additional_information[name]
+
+        return fbs_observation
+
+    @staticmethod
+    def fbs_observation_named_parameter_map() -> typing.Dict[str, str]:
+        return dict(
+            ID="targetId",
+            RA="ra",
+            dec="decl",
+            mjd="mjd",
+            exptime="exptime",
+            filter="filter",
+            rotSkyPos="rotSkyPos",
+            nexp="nexp",
+        )
