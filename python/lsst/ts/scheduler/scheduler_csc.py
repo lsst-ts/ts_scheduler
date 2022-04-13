@@ -1687,7 +1687,9 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         """
         self.driver.register_observation(target=target)
         if hasattr(self, "evt_observation"):
-            await self.evt_observation.set_write(**dataclasses.asdict(target))
+            await self.evt_observation.set_write(
+                **dataclasses.asdict(target.get_observation())
+            )
 
     async def _handle_driver_configure_scheduler(
         self, config: typing.Any
