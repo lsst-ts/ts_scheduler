@@ -208,6 +208,40 @@ class TestFeatureSchedulerDriver(unittest.TestCase):
             with self.subTest(target_1=target_1, target_2=target_2):
                 self.assertEqual(f"{target_1}", f"{target_2}")
 
+    def test_parse_observation_database(self):
+
+        self.configure_scheduler_for_test()
+        # self.files_to_delete.append(self.driver.observation_database_name)
+
+        # Run some observations
+        targets_run_1 = self.run_observations(register_observations=True)
+
+        observations = self.driver.parse_observation_database(
+            self.driver.observation_database_name
+        )
+
+        assert len(targets_run_1) == len(observations)
+
+        for target, observation in zip(targets_run_1, observations):
+            for item in [
+                "RA",
+                "dec",
+                "mjd",
+                "exptime",
+                "filter",
+                "rotSkyPos",
+                "nexp",
+                "airmass",
+            ]:
+                if isscalar(target.observation[item][0]):
+                    assert target.observation[item][0] == pytest.approx(
+                        observation.observation[item][0]
+                    )
+                else:
+                    assert (
+                        target.observation[item][0] == observation.observation[item][0]
+                    )
+
     def configure_scheduler_for_test(self):
 
         self.config.driver_configuration["scheduler_config"] = (
