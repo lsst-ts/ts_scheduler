@@ -18,8 +18,14 @@
 #
 # You should have received a copy of the GNU General Public License
 
-__all__ = ["NonFinalStates", "SchedulerModes", "is_uri"]
+__all__ = [
+    "NonFinalStates",
+    "SchedulerModes",
+    "is_uri",
+    "OBSERVATION_NAMED_PARAMETERS",
+]
 
+import re
 import enum
 
 from urllib.parse import urlparse
@@ -42,6 +48,19 @@ NonFinalStates = frozenset(
 )
 """Stores all non final state for scripts submitted to the queue.
 """
+
+efd_query_re = re.compile(r"SELECT (.*) FROM (.*) WHERE (.*)")
+
+OBSERVATION_NAMED_PARAMETERS = [
+    "targetId",
+    "ra",
+    "decl",
+    "mjd",
+    "exptime",
+    "filter",
+    "rotSkyPos",
+    "nexp",
+]
 
 
 class SchedulerModes(enum.IntEnum):
@@ -67,3 +86,19 @@ def is_uri(uri: str) -> bool:
     parse_result = urlparse(uri)
 
     return len(parse_result.scheme) > 0 and len(parse_result.path) > 0
+
+
+def is_valid_efd_query(entry: str) -> bool:
+    """Verify if input information is a valid EFD query.
+
+    Parameters
+    ----------
+    entry : str
+        String to check if it is a valid EFD query.
+
+    Returns
+    -------
+    bool
+        True if it is a valid EFD query.
+    """
+    return efd_query_re.match(entry) is not None
