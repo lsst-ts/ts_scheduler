@@ -20,6 +20,7 @@
 
 __all__ = ["SchedulerCSC"]
 
+import pathlib
 import shutil
 import asyncio
 import functools
@@ -42,7 +43,12 @@ from lsst.ts.idl.enums import ScriptQueue, Script
 
 from . import __version__
 from . import CONFIG_SCHEMA
-from .utils.csc_utils import SchedulerModes, NonFinalStates, is_uri
+from .utils.csc_utils import (
+    SchedulerModes,
+    NonFinalStates,
+    is_uri,
+    is_valid_efd_query,
+)
 
 from .utils.error_codes import (
     NO_QUEUE,
@@ -258,6 +264,13 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             WARM=self.configure_driver_warm,
             COLD=self.configure_driver_cold,
         )
+
+    async def begin_start(self, data):
+        try:
+            await super().begin_start(data)
+        except Exception:
+            self.log.exception("Error in beging start")
+            raise
 
     async def begin_enable(self, data):
         """Begin do_enable.
@@ -1007,7 +1020,44 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         return survey_topology
 
     async def configure_driver_cold(self, config: typing.Any) -> SurveyTopology:
-        raise NotImplementedError("Cold start not implemented.")
+        """Perform cold start.
+
+        Cold start is the slowest start up and, in general, will only be used
+        in cases where the scheduler configuration changed quite drastically
+        but one still wants to account previous observations into account. As
+        such, cold start will most likely only be used before the night starts
+        on some very limited situations.
+
+        In this case the scheduler stars by creating the driver, overriding any
+        previous driver.
+
+        Cold start has two ways of recreating playing back observations;
+        the user provides the path to a database that the driver can parse or
+        an EFD query that will return a series of observations.
+
+        See https://ts-scheduler.lsst.io/configuration/configuration.html for
+        more information.
+
+        Parameters
+        ----------
+        config : `types.SimpleNamespace`
+            Configuration, as described by ``schema/Scheduler.yaml``
+
+        Returns
+        -------
+        survey_topology: `SurveyTopology`
+            Survey topology
+        """
+        if self.driver is not None:
+            self.log.warning("COLD start: driver already defined. Resetting driver.")
+
+        self._load_driver_from(config.driver_type)
+
+        survey_topology = await self._handle_driver_configure_scheduler(config)
+
+        await self._handle_startup_database_observation_db(config.startup_database)
+
+        return survey_topology
 
     async def get_queue(self, request=True):
         """Utility method to get the queue.
@@ -1760,3 +1810,141 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             )
         else:
             self.log.debug("No scheduler snapshot provided.")
+
+    async def _handle_startup_database_observation_db(
+        self, startup_database: str
+    ) -> None:
+        """Handle startup database for observation database.
+
+        Parameters
+        ----------
+        startup_database : str
+            Path to a local database or EFD query.
+
+        Raises
+        ------
+        RuntimeError
+            If startup_database is invalid.
+        """
+
+        if not startup_database.strip():
+            self.log.info("No observation history information provided.")
+        elif pathlib.Path(startup_database).exists():
+            self.log.info(
+                f"Loading observation history from database: {startup_database}."
+            )
+            await self._handle_load_observations_from_db(database_path=startup_database)
+        elif is_valid_efd_query(startup_database):
+            await self._handle_load_observations_from_efd(efd_query=startup_database)
+        else:
+            error_msg = (
+                "Specified startup database does not exists and does not classify as an EFD query. "
+                f"Received: {startup_database}. "
+                "If this was supposed to be a path, it must be local to the CSC environment. "
+                "If this was supposed to be an EFD query, it should have the format: "
+                'SELECT * FROM "efd"."autogen"."lsst.sal.Scheduler.logevent_observation" WHERE '
+                "time >= '2021-06-09T00:00:00.000+00:00' AND time <= '2021-06-12T00:00:00.000+00:00'"
+            )
+            self.log.error(error_msg)
+            raise RuntimeError(error_msg)
+
+    async def _handle_load_observations_from_db(self, database_path: str) -> None:
+        """Handle loading observations from a database and playing them back
+        into the driver.
+
+        Parameters
+        ----------
+        database_path : str
+            Path to the local database file.
+        """
+        observations = await self._parse_observation_database(database_path)
+
+        await self._register_observations(observations)
+
+    async def _handle_load_observations_from_efd(self, efd_query: str) -> None:
+        """Handle loading observations from the EFD and playing them back into
+        the driver.
+
+        Parameters
+        ----------
+        efd_query : str
+            A valid EFD query that should return a list of observations.
+        """
+        observations = await self._query_observations_from_efd(efd_query)
+
+        self.log.info(
+            "Loading observation history from EFD. "
+            f"Query: {efd_query} yield {len(observations)} targets."
+        )
+
+        await self._register_observations(observations=observations)
+
+    async def _parse_observation_database(
+        self, database_path: str
+    ) -> typing.List[DriverTarget]:
+        """Parse observations database.
+
+        Parameters
+        ----------
+        database_path : str
+            Path to the local database file.
+
+        Returns
+        -------
+        list of DriverTargets
+            List of observations.
+        """
+        loop = asyncio.get_running_loop()
+
+        parse_observation_database = functools.partial(
+            self.driver.parse_observation_database,
+            filename=database_path,
+        )
+
+        return await loop.run_in_executor(None, parse_observation_database)
+
+    async def _query_observations_from_efd(
+        self, efd_query: str
+    ) -> typing.List[DriverTarget]:
+        """Query observations from EFD.
+
+        Parameters
+        ----------
+        efd_query : str
+            EFD query to retrieve list of observations.
+
+        Returns
+        -------
+        observations : list of DriverTarget
+            List of observations.
+        """
+        efd_observations = await self.telemetry_stream_handler.efd_client.query(
+            efd_query
+        )
+
+        loop = asyncio.get_running_loop()
+
+        convert_efd_observations_to_targets = functools.partial(
+            self.driver.convert_efd_observations_to_targets,
+            efd_observations=efd_observations,
+        )
+
+        return await loop.run_in_executor(None, convert_efd_observations_to_targets)
+
+    async def _register_observations(
+        self, observations: typing.List[DriverTarget]
+    ) -> None:
+        """Register a list of observations.
+
+        Parameters
+        ----------
+        observations : list of DriverTarget
+            List of observations.
+        """
+        if observations is None:
+            self.log.warning("No observations to register")
+            return
+        self.log.debug(f"Registering {len(observations)} observations.")
+        for observation in observations:
+            self.driver.register_observed_target(observation)
+        self.log.debug("Finished registering observations.")
