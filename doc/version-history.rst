@@ -4,6 +4,74 @@
 Version History
 ===============
 
+v1.13.0
+-------
+
+* In SchedulerCSC:
+
+  * Implement cold start. This startup method is able to load observations from a local sql database or from an EFD query.
+  * Implement warm start.
+  * Refactor ``configure_driver_hot``, separating its content into two new methods; ``_load_driver_from`` and ``_handle_startup``.
+  * Add methods to handle the different startup types; hot, warm and cold.
+  * Add ``_handle_driver_configure_scheduler`` coroutine to handle running ``driver.configure_scheduler``, which is a regular method.
+  * Update telemetry_loop so it will only go to fault if it cannot determine the observatory state if the CSC is in ENABLED state and running.
+  * Add _handle_load_snapshot method to handle retrieving snapshots and running drive.load. Update do_load to use it.
+  * Update typing and DriverTarget import statements.
+  * Remove unecessary override of begin_start method.
+  * Use register_observation when registering a target after observation was successfully completed.
+
+* In FeatureSchedulerDriver:
+
+  * Add methods to support converting ``observation`` from EFD queries into ``FeatureSchedulerTarget`` objects.
+  * Add a ``default_observation_database_name`` property that is used as the default value for ``observation_database_name``.
+  * Implement ``FeatureSchedulerDriver.parse_observation_database`` method.
+  * Implement ``cold_start`` and ``parse_observation_database`` methods.
+  * Implement ``register_observation``. 
+    The method will store the observations in a sqlite database that can later be loaded and played back during cold start.
+
+* In Driver base class:
+
+  * Add methods convert_efd_observations_to_targets and _get_driver_target_from_observation_data_frame to deal with cold start.
+  * Add get_survey_topology method to generate the survey topology and update configure_scheduler to use it.
+  * Add register_observation method.
+    This method should be called after the observation was successfully observed.
+  * Add type hints.
+
+* In ``utils/efd_utils``, add methods to mock querying the EFD for scheduler observations to use in unit testing cold start of the scheduler CSC.
+
+* In ``utils/csc_utils``, add methods to determine if a string is a valid EFD query, and a constant with the list of named parameters for an observation.
+
+* Add unit test for ``FeatureSchedulerDriver.parse_observation_database`` method.
+
+* Add new test utility submodule with a FeatureSchedulerSim class, to help simulate running the feature scheduler for unit testing.
+
+* Update configuration documentation with more detailed information about the different startup methods.
+
+* Update CSC unit tests to take into account new ``SchedulerCSC.telemetry_loop`` behavior.
+  CSC now only goes to FAULT if it cannot determine the observatory state if it is in ENABLED state and running.
+
+* Add test_csc_utils with unit tests for new is_uri utility method.
+
+* Add new csc_utils.is_uri method, to check if a string is a valid uri.
+
+* Update description of startup_type configuration parameter in config_schema.
+
+* Update FeatureScheduler unit tests to check register_observation data roundtrip (insertion and retrieval of data to a local databbase).
+
+* Add ``SchemaConverter`` utility for the feature scheduler.
+  This class converts observations into entries in a sqlite database and vice-versa.
+
+* In DriverTarget, implement get_observation and get_additional_information.
+
+* Add Observation data structure.
+
+* In efd_utils, fix mock imports.
+
+* Add type hints in DriverTarget.
+
+* Rename `Driver.register_observation` -> `Driver.register_observed_target`.
+
+
 v1.12.0
 -------
 
