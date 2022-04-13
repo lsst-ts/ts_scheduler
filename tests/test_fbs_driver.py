@@ -19,31 +19,18 @@
 # You should have received a copy of the GNU General Public License
 
 import os
-import types
 import pathlib
 import unittest
 import logging
 
-from astropy.time import Time
-
 from lsst.ts.scheduler.driver import (
-    FeatureScheduler,
     SurveyTopology,
     NoNsideError,
     NoSchedulerError,
 )
-
-from lsst.ts.observatory.model import Target
-from lsst.ts.observatory.model import ObservatoryModel
-from lsst.ts.observatory.model import ObservatoryState
-
-from lsst.ts.dateloc import ObservatoryLocation
-
-from lsst.ts.astrosky.model import AstronomicalSkyModel
-
-from rubin_sim.site_models.seeingModel import SeeingModel
-from rubin_sim.site_models.cloudModel import CloudModel
-from rubin_sim.site_models.downtimeModel import DowntimeModel
+from lsst.ts.scheduler.utils.test.feature_scheduler_sim import FeatureSchedulerSim
+from numpy import isscalar
+import pytest
 
 logging.basicConfig()
 
@@ -54,58 +41,30 @@ class TestFeatureSchedulerDriver(unittest.TestCase):
         cls.log = logging.getLogger("TestFeatureSchedulerDriver")
         return super().setUpClass()
 
-    def setUp(self):
-        # Need to set current time to something the sky brightness files
-        # available for testing have available (MJD: 59853.-59856.).
-        self.start_time = Time(59853.983, format="mjd", scale="tai")
-        # Step in time when there is no target (in seconds).
-        self.no_target_time_step = 120.0
-
-        self.raw_telemetry = dict()
-
-        self.raw_telemetry["timeHandler"] = None
-        self.raw_telemetry["scheduled_targets"] = []
-        self.raw_telemetry["observing_queue"] = []
-        self.raw_telemetry["observatoryState"] = None
-        self.raw_telemetry["bulkCloud"] = 0.0
-        self.raw_telemetry["seeing"] = 1.19
-
-        self.models = dict()
-
-        self.models["location"] = ObservatoryLocation()
-        self.models["location"].for_lsst()
-
-        self.models["observatory_model"] = ObservatoryModel(self.models["location"])
-        self.models["observatory_model"].configure_from_module()
-
-        self.models["observatory_model"].update_state(self.start_time.unix)
-
-        self.models["observatory_state"] = ObservatoryState()
-        self.models["observatory_state"].set(
-            self.models["observatory_model"].current_state
-        )
-
-        self.models["sky"] = AstronomicalSkyModel(self.models["location"])
-        self.models["seeing"] = SeeingModel()
-        self.models["cloud"] = CloudModel()
-        self.models["downtime"] = DowntimeModel()
-
-        self.driver = FeatureScheduler(
-            models=self.models, raw_telemetry=self.raw_telemetry
-        )
-
-        self.config = types.SimpleNamespace(
-            driver_configuration=dict(
-                scheduler_config="",
-                force=True,
-                default_observing_script_name="standard_visit.py",
-                default_observing_script_is_standard=True,
-                stop_tracking_observing_script_name="stop_tracking.py",
-                stop_tracking_observing_script_is_standard=True,
-            )
-        )
+    def setUp(self) -> None:
+        self.feature_scheduler_sim = FeatureSchedulerSim(self.log)
 
         self.files_to_delete = []
+
+    @property
+    def driver(self):
+        return self.feature_scheduler_sim.driver
+
+    @property
+    def start_time(self):
+        return self.feature_scheduler_sim.start_time
+
+    @property
+    def raw_telemetry(self):
+        return self.feature_scheduler_sim.raw_telemetry
+
+    @property
+    def models(self):
+        return self.feature_scheduler_sim.models
+
+    @property
+    def config(self):
+        return self.feature_scheduler_sim.config
 
     def test_configure_scheduler(self):
 
@@ -220,10 +179,6 @@ class TestFeatureSchedulerDriver(unittest.TestCase):
             self.assertAlmostEqual(observed_dec, target_dec)
             self.assertEqual(observed_note, target_note)
 
-    @unittest.skip("Not implemented yet.")
-    def test_load(self):
-        pass
-
     def test_save_and_reset_from_file(self):
 
         self.configure_scheduler_for_test()
@@ -300,69 +255,9 @@ class TestFeatureSchedulerDriver(unittest.TestCase):
 
     def run_observations(self, register_observations):
 
-        targets = []
-
-        self.driver.update_conditions()
-        current_time = self.driver.current_sunset
-        sunset_time = self.driver.current_sunset
-        sunrise_time = self.driver.current_sunrise
-        self.models["observatory_model"].update_state(current_time)
-
-        while current_time < sunrise_time:
-
-            self.log.debug(
-                f"current_time: {current_time}, sunset: {sunset_time}, sunrise: {sunrise_time}."
-            )
-
-            self.driver.update_conditions()
-
-            target = self.driver.select_next_target()
-
-            if target is None:
-                self.log.debug("No target produced by scheduler.")
-                current_time += self.no_target_time_step
-                self.models["observatory_model"].update_state(current_time)
-                self.models["observatory_state"].set(
-                    self.models["observatory_model"].current_state
-                )
-                self.driver.update_conditions()
-            else:
-
-                self.log.debug(f"[{len(targets)}]::{target}")
-
-                with self.subTest(msg="Request target {n_targets}."):
-                    self.assertIsInstance(target, Target, "Wrong target type.")
-                    self.assertGreater(
-                        target.num_exp,
-                        0,
-                        "Number of exposures should be greater than zero.",
-                    )
-                    self.assertEqual(
-                        len(target.exp_times),
-                        target.num_exp,
-                        "Size of exposure times table should be equal to number of exposures.",
-                    )
-                    self.assertGreater(
-                        target.slewtime,
-                        0.0,
-                        f"Slewtime must be larger then zero. {target.observation}",
-                    )
-
-                self.models["observatory_model"].observe(target)
-                self.models["observatory_state"].set(
-                    self.models["observatory_model"].current_state
-                )
-                current_time = self.models["observatory_state"].time
-                self.driver.register_observed_target(target)
-                targets.append(target)
-
-            if len(targets) > 10:
-                break
-
-        if register_observations:
-            for target in targets:
-                self.driver.register_observation(target)
-        return targets
+        return self.feature_scheduler_sim.run_observations(
+            register_observations=register_observations
+        )
 
     def tearDown(self):
         for filename in self.files_to_delete:
