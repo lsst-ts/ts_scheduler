@@ -22,6 +22,7 @@ import io
 import os
 import math
 import pickle
+import pathlib
 import importlib
 
 import numpy as np
@@ -76,6 +77,10 @@ class FeatureSchedulerParameters(DriverParameters):
 class FeatureScheduler(Driver):
     """Feature scheduler driver."""
 
+    default_observation_database_name = (
+        pathlib.Path.home() / "fbs_observation_database.sql"
+    )
+
     def __init__(self, models, raw_telemetry, parameters=None, log=None):
 
         self.scheduler = None
@@ -96,7 +101,7 @@ class FeatureScheduler(Driver):
 
         self.script_configuration = dict()
 
-        self.observation_database_name = "fbs_observation_database"
+        self.observation_database_name = self.default_observation_database_name
 
         self.schema_converter = SchemaConverter()
 
@@ -181,9 +186,10 @@ class FeatureScheduler(Driver):
             )
 
         if "observation_database_name" in config.driver_configuration:
-            self.observation_database_name = config.driver_configuration[
-                "observation_database_name"
-            ]
+            self.observation_database_name = pathlib.Path(
+                config.driver_configuration["observation_database_name"]
+            )
+            self.log.debug(f"Observation database: {self.observation_database_name}")
         else:
             self.log.warning(
                 "Observation database name not defined in driver configuration. "
@@ -488,7 +494,7 @@ class FeatureScheduler(Driver):
 
         self.schema_converter.obs2opsim(
             target.observation,
-            filename=self.observation_database_name,
+            filename=self.observation_database_name.as_posix(),
         )
 
         return super().register_observation(target)
