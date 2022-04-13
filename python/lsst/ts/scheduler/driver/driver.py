@@ -21,6 +21,7 @@
 import os
 import io
 import typing
+import pandas
 import logging
 
 from dataclasses import dataclass
@@ -529,3 +530,42 @@ class Driver:
                 self.default_observing_script_name,
                 self.default_observing_script_is_standard,
             )
+
+    def convert_efd_observations_to_targets(
+        self, efd_observations: pandas.DataFrame
+    ) -> typing.List[DriverTarget]:
+        """Convert EFD dataframe into list of driver targets.
+
+        Parameters
+        ----------
+        efd_observations : pandas.DataFrame
+            Data frame returned from a query to the EFD for observations.
+        """
+
+        observations = []
+
+        for observation_data_frame in efd_observations.iterrows():
+            observations.append(
+                self._get_driver_target_from_observation_data_frame(
+                    observation_data_frame=observation_data_frame
+                )
+            )
+
+        return observations
+
+    def _get_driver_target_from_observation_data_frame(
+        self, observation_data_frame: typing.Tuple[pandas.Timestamp, pandas.Series]
+    ) -> DriverTarget:
+        """Convert an observation data frame into a DriverTarget.
+
+        Parameters
+        ----------
+        observation_data_frame :  pandas.DataFrame
+            An observation data frame.
+        """
+
+        return DriverTarget(
+            observing_script_name=self.default_observing_script_name,
+            observing_script_is_standard=self.default_observing_script_is_standard,
+            targetid=observation_data_frame["targetId"],
+        )
