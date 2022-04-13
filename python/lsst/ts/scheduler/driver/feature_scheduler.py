@@ -234,7 +234,27 @@ class FeatureScheduler(Driver):
         observations : `list` of `DriverTarget`
         """
 
-        return self.schema_converter.opsim2obs(filename=filename)
+        fbs_observations = self.schema_converter.opsim2obs(filename=filename)
+        observations = []
+        for fbs_observation in fbs_observations:
+            (
+                observing_script_name,
+                observing_script_is_standard,
+            ) = self.get_survey_observing_script(
+                self._get_survey_name_from_observation(fbs_observation)
+            )
+
+            target = FeatureSchedulerTarget(
+                observing_script_name=observing_script_name,
+                observing_script_is_standard=observing_script_is_standard,
+                observation=np.array(fbs_observation, ndmin=1),
+                log=self.log,
+                **self.script_configuration,
+            )
+
+            observations.append(target)
+
+        return observations
 
     def update_conditions(self):
         """Update conditions on the scheduler."""
