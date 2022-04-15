@@ -20,6 +20,7 @@
 
 import os
 import io
+import types
 import typing
 import pandas
 import logging
@@ -147,7 +148,7 @@ class Driver:
         self.current_sunset = None
         self.current_sunrise = None
 
-    def configure_scheduler(self, config: typing.Any) -> SurveyTopology:
+    def configure_scheduler(self, config: types.SimpleNamespace) -> SurveyTopology:
         """This method is responsible for running the scheduler configuration
         and returning the survey topology, which specifies the number, name
         and type of projects running by the scheduler.
@@ -182,7 +183,7 @@ class Driver:
 
         return self.get_survey_topology(config)
 
-    def get_survey_topology(self, config) -> SurveyTopology:
+    def get_survey_topology(self, config: types.SimpleNamespace) -> SurveyTopology:
         """Get the survey topology.
 
         Parameters
@@ -332,12 +333,12 @@ class Driver:
 
         Parameters
         ----------
-        target : ``DriverTarget``
+        target : `DriverTarget`
             Observed target to register.
 
         Returns
         -------
-        Observation
+        `Observation`
             Registered observation.
         """
         self.log.log(WORDY, "Registering target %s.", target)
@@ -538,7 +539,7 @@ class Driver:
 
         Parameters
         ----------
-        efd_observations : pandas.DataFrame
+        efd_observations : `pandas.DataFrame`
             Data frame returned from a query to the EFD for observations.
         """
 

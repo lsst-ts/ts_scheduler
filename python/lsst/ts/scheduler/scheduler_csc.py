@@ -957,7 +957,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         This is the most versatile startup mode and is designed to rapidly
         recover the state of the observatory. Nevertheless, it has the caveat
-        that it will skip configuring the drive altogether it the driver is
+        that it will skip configuring the driver altogether if the driver is
         already configured. If you want to make sure the driver is reconfigured
         use WARM or COLD start instead.
 
@@ -1024,12 +1024,12 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         Cold start is the slowest start up and, in general, will only be used
         in cases where the scheduler configuration changed quite drastically
-        but one still wants to account previous observations into account. As
+        but one still wants to take previous observations into account. As
         such, cold start will most likely only be used before the night starts
-        on some very limited situations.
+        in some very limited situations.
 
-        In this case the scheduler stars by creating the driver, overriding any
-        previous driver.
+        In this case the scheduler starts by creating the driver, overriding
+        any previous driver.
 
         Cold start has two ways of recreating playing back observations;
         the user provides the path to a database that the driver can parse or

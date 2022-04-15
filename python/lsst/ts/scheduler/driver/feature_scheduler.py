@@ -221,13 +221,13 @@ class FeatureScheduler(Driver):
 
         return survey_topology
 
-    def cold_start(self, observations):
+    def cold_start(self, observations: typing.List[DriverTarget]) -> None:
         """Rebuilds the internal state of the scheduler from a list of
-        observations.
+        Targets.
 
         Parameters
         ----------
-        observations : list of Observation objects
+        observations : `list` of `DriverTarget`
         """
         for observation in observations:
             self.scheduler.add_observation(observation)
@@ -313,8 +313,11 @@ class FeatureScheduler(Driver):
 
         Returns
         -------
-        Target
+        desired_target : `Target`
+            Desidered target.
         """
+
+        desired_target = None
 
         if desired_observation is not None:
 
@@ -333,7 +336,7 @@ class FeatureScheduler(Driver):
                 self._desired_obs = None
                 return desired_target
         else:
-            return None
+            return desired_target
 
     def _get_validated_target_from_observation(self, observation):
         """Validate a feature based scheduler observation and convert it to a
@@ -748,12 +751,13 @@ class FeatureScheduler(Driver):
 
         Parameters
         ----------
-        observation_data_frame :  tuple [pandas.Timestamp, pandas.Series]
+        observation_data_frame :
+                `typing.Tuple` [`pandas.Timestamp`, `pandas.Series`]
             An observation data frame.
 
         Returns
         -------
-        target : FeatureSchedulerTarget
+        target : `FeatureSchedulerTarget`
             Feature scheduler target.
         """
 
@@ -785,12 +789,13 @@ class FeatureScheduler(Driver):
 
         Parameters
         ----------
-        observation_data_frame :  tuple [pandas.Timestamp, pandas.Series]
+        observation_data_frame :
+                `typing.Tuple` [`pandas.Timestamp`, `pandas.Series`]
             An observation data frame.
 
         Returns
         -------
-        fbs_observation : np.ndarray
+        fbs_observation : `np.ndarray`
             Feature scheduler observation.
         """
         fbs_observation = empty_observation()
@@ -812,6 +817,15 @@ class FeatureScheduler(Driver):
 
     @staticmethod
     def fbs_observation_named_parameter_map() -> typing.Dict[str, str]:
+        """Return the mapping between feature scheduler observation parameter
+        keywords and the `Observation` parameter name keywords
+
+        Returns
+        -------
+        `dict`
+            Mapping between fbs observations keywords and `Observation`
+            keywords.
+        """
         return dict(
             ID="targetId",
             RA="ra",

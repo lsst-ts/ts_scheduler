@@ -109,7 +109,7 @@ class DriverTarget(Target):
 
         Returns
         -------
-        config_str: str
+        config_str : `str`
         """
         if not self._observing_script_has_configuration:
             return ""
@@ -141,9 +141,9 @@ class DriverTarget(Target):
 
         Returns
         -------
-        observing_script_name : str
+        observing_script_name : `str`
             Name of the observing script.
-        observing_script_is_standard: bool
+        observing_script_is_standard: `bool`
             Is the observing script standard?
         """
         return self._observing_script_name, self._observing_script_is_standard
@@ -188,7 +188,7 @@ class DriverTarget(Target):
 
         Returns
         -------
-        Observation
+        `Observation`
             Observation object with information about the target.
         """
         return Observation(
@@ -208,7 +208,7 @@ class DriverTarget(Target):
 
         Returns
         -------
-        str
+        `str`
             Target additional information.
         """
         return ""

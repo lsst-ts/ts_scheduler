@@ -82,7 +82,7 @@ properties:
   startup_type:
     description: >-
       The method used to startup the scheduler. See ts-scheduler.lsst.io for
-      more information about the definition of each of those options.
+      more information about the definition of each of these options.
     type: string
     enum:
     - HOT

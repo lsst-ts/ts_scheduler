@@ -22,10 +22,9 @@ __all__ = ["FeatureSchedulerSim"]
 
 import logging
 import types
+import typing
 
 from astropy.time import Time
-
-from lsst.ts.scheduler.driver import FeatureScheduler
 
 from lsst.ts.observatory.model import ObservatoryModel
 from lsst.ts.observatory.model import ObservatoryState
@@ -38,29 +37,34 @@ from rubin_sim.site_models.seeingModel import SeeingModel
 from rubin_sim.site_models.cloudModel import CloudModel
 from rubin_sim.site_models.downtimeModel import DowntimeModel
 
+from ...driver import FeatureScheduler
+from ...driver.feature_scheduler_target import FeatureSchedulerTarget
+
 
 class FeatureSchedulerSim:
     """Utility class to simulate observations with the FeatureScheduler.
 
-    This class is used mostly for unit testing.
+    This class is used for unit testing.
     """
 
     def __init__(self, log: logging.Logger) -> None:
 
         self.log = log.getChild(__name__)
 
-        self.start_time = Time(59853.983, format="mjd", scale="tai")
+        self.mjd_start = 59853.983
+
+        self.start_time = Time(self.mjd_start, format="mjd", scale="tai")
         # Step in time when there is no target (in seconds).
         self.no_target_time_step = 120.0
 
-        self.raw_telemetry = dict()
-
-        self.raw_telemetry["timeHandler"] = None
-        self.raw_telemetry["scheduled_targets"] = []
-        self.raw_telemetry["observing_queue"] = []
-        self.raw_telemetry["observatoryState"] = None
-        self.raw_telemetry["bulkCloud"] = 0.0
-        self.raw_telemetry["seeing"] = 1.19
+        self.raw_telemetry = dict(
+            timeHandler=None,
+            scheduled_targets=[],
+            observing_queue=[],
+            observatoryState=None,
+            bulkCloud=0.0,
+            seeing=1.19,
+        )
 
         self.models = dict()
 
@@ -101,11 +105,24 @@ class FeatureSchedulerSim:
 
     def make_scheduler_configuration(
         self,
-        test_config_dir,
-        scheduler_config_name,
-        survey_observing_script=None,
-        observation_database_name=None,
-    ):
+        test_config_dir: str,
+        scheduler_config_name: str,
+        survey_observing_script: typing.Optional[str] = None,
+        observation_database_name: typing.Optional[str] = None,
+    ) -> None:
+        """Make a simple Scheduler configuration.
+
+        Parameters
+        ----------
+        test_config_dir : `str`
+            Directory with the test configuration.
+        scheduler_config_name : `str`
+            Name of the Scheduler configuration.
+        survey_observing_script : `str`, optional
+            Name of the survey observing script.
+        observation_database_name : `str`, optional
+            Name ot the observation database.
+        """
         self.config.driver_configuration["scheduler_config"] = test_config_dir.parents[
             1
         ].joinpath("data", "config", scheduler_config_name)
@@ -124,7 +141,14 @@ class FeatureSchedulerSim:
                 self.config.driver_configuration["observation_database_name"]
             )
 
-    def configure_scheduler_for_test(self, test_config_dir):
+    def configure_scheduler_for_test(self, test_config_dir: str) -> None:
+        """Configure the scheduler for testing using a simple configuration.
+
+        Parameters
+        ----------
+        test_config_dir : `str`
+            Directory with the test configuration.
+        """
 
         self.make_scheduler_configuration(
             test_config_dir=test_config_dir,
@@ -134,7 +158,23 @@ class FeatureSchedulerSim:
 
         self.driver.configure_scheduler(self.config)
 
-    def configure_scheduler_for_test_with_cwfs(self, test_config_dir):
+    def configure_scheduler_for_test_with_cwfs(self, test_config_dir: str) -> None:
+        """Configure the scheduler for testing using a configuration that, in
+        addition to a simple survey, defines a curvature wavefront sensing
+        (cwfs) survey using a custom observation database.
+
+        The feature scheduler threats cwfs surveys slighly different than any
+        other surveys, which is why we have a specific test for it.
+
+        Parameters
+        ----------
+        test_config_dir : `str`
+            Directory with the test configuration.
+
+        See Also
+        --------
+        configure_scheduler_for_test_with_cwfs_standard_obs_database
+        """
 
         self.make_scheduler_configuration(
             test_config_dir=test_config_dir,
@@ -152,8 +192,22 @@ class FeatureSchedulerSim:
         self.driver.configure_scheduler(self.config)
 
     def configure_scheduler_for_test_with_cwfs_standard_obs_database(
-        self, test_config_dir
-    ):
+        self, test_config_dir: str
+    ) -> None:
+        """Configure the scheduler for testing using a configuration that, in
+        addition to a simple survey, defines a curvature wavefront sensing
+        (cwfs) survey and uses a standard observation database.
+
+
+        Parameters
+        ----------
+        test_config_dir : `str`
+            Directory with the test configuration.
+
+        See Also
+        --------
+        configure_scheduler_for_test_with_cwfs
+        """
 
         self.make_scheduler_configuration(
             test_config_dir=test_config_dir,
@@ -169,7 +223,25 @@ class FeatureSchedulerSim:
         self.log.debug(f"Config: {self.config}")
         self.driver.configure_scheduler(self.config)
 
-    def run_observations(self, register_observations):
+    def run_observations(
+        self, register_observations: bool
+    ) -> typing.List[FeatureSchedulerTarget]:
+        """Run observations.
+
+        This method performs a small simulation of an observing night and
+        returns the targets produced by the scheduler.
+
+        Parameters
+        ----------
+        register_observations : `bool`
+            Should the observations be registered? This mean they will be
+            written to a sqlite database.
+
+        Returns
+        -------
+        targets : `typing.List[FeatureSchedulerTarget]`
+            List of targets.
+        """
 
         targets = []
 

@@ -207,7 +207,7 @@ telemetry:
                     in csc_logs.output
                 )
 
-    async def test_with_inexistent_startup_db(self):
+    async def test_with_nonexistent_startup_db(self):
 
         with self.generate_scheduler_snapshot() as startup_database, self.generate_configuration_override(
             startup_database=startup_database.as_uri(),

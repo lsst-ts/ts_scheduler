@@ -113,13 +113,13 @@ class SchemaConverter:
         filename: str,
     ) -> None:
         """Convert an array of observations into a pandas dataframe
-        with Opsim schema.
+        with Opsim schema and store it in a sqlite database.
 
         Parameters
         ----------
-        obs_array : np.ndarray
+        obs_array : `np.ndarray`
             Array of observations.
-        filename : str
+        filename : `str`
             Name of the database file.
         """
 
@@ -140,7 +140,7 @@ class SchemaConverter:
             )
 
     def opsim2obs(self, filename: str) -> np.ndarray:
-        """convert an opsim schema dataframe into an observation array.
+        """Convert an opsim schema dataframe into an observation array.
 
         Parameters
         ----------
