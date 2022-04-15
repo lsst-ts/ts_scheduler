@@ -21,7 +21,11 @@
 import io
 import os
 import math
+import yaml
+import typing
+import pandas
 import pickle
+import pathlib
 import importlib
 
 import numpy as np
@@ -34,10 +38,13 @@ from lsst.ts.utils import index_generator
 from rubin_sim.site_models import Almanac
 from rubin_sim.utils import _raDec2Hpid
 from rubin_sim.scheduler.features import Conditions
+from rubin_sim.scheduler.utils import empty_observation
 
-from .driver import Driver, DriverParameters, WORDY
+from .driver import Driver, DriverParameters
+from .driver_target import DriverTarget
+from .observation import Observation
 from .feature_scheduler_target import FeatureSchedulerTarget
-
+from ..utils import SchemaConverter
 
 __all__ = ["FeatureScheduler", "NoSchedulerError", "NoNsideError"]
 
@@ -74,6 +81,10 @@ class FeatureSchedulerParameters(DriverParameters):
 class FeatureScheduler(Driver):
     """Feature scheduler driver."""
 
+    default_observation_database_name = (
+        pathlib.Path.home() / "fbs_observation_database.sql"
+    )
+
     def __init__(self, models, raw_telemetry, parameters=None, log=None):
 
         self.scheduler = None
@@ -93,6 +104,10 @@ class FeatureScheduler(Driver):
         self.seed = 42
 
         self.script_configuration = dict()
+
+        self.observation_database_name = self.default_observation_database_name
+
+        self.schema_converter = SchemaConverter()
 
         super().__init__(models, raw_telemetry, parameters, log=log)
 
@@ -174,6 +189,19 @@ class FeatureScheduler(Driver):
                 ]
             )
 
+        if "observation_database_name" in config.driver_configuration:
+            self.observation_database_name = pathlib.Path(
+                config.driver_configuration["observation_database_name"]
+            )
+            self.log.debug(f"Observation database: {self.observation_database_name}")
+        else:
+            self.log.warning(
+                "Observation database name not defined in driver configuration. "
+                f"Using default: {self.observation_database_name}. "
+                "This database is used for warm start the scheduler, you might "
+                "want to define a destination with persistent storage."
+            )
+
         self.script_configuration = config.driver_configuration.get(
             "script_configuration", dict()
         )
@@ -193,16 +221,50 @@ class FeatureScheduler(Driver):
 
         return survey_topology
 
-    def cold_start(self, observations):
+    def cold_start(self, observations: typing.List[DriverTarget]) -> None:
         """Rebuilds the internal state of the scheduler from a list of
-        observations.
+        Targets.
 
         Parameters
         ----------
-        observations : list of Observation objects
-
+        observations : `list` of `DriverTarget`
         """
-        raise RuntimeError("Cold start not supported by SequentialScheduler.")
+        for observation in observations:
+            self.scheduler.add_observation(observation)
+
+    def parse_observation_database(self, filename: str) -> None:
+        """Parse an observation database into a list of observations.
+
+        Parameters
+        ----------
+        filename : `str`
+
+        Returns
+        -------
+        observations : `list` of `DriverTarget`
+        """
+
+        fbs_observations = self.schema_converter.opsim2obs(filename=filename)
+        observations = []
+        for fbs_observation in fbs_observations:
+            (
+                observing_script_name,
+                observing_script_is_standard,
+            ) = self.get_survey_observing_script(
+                self._get_survey_name_from_observation(fbs_observation)
+            )
+
+            target = FeatureSchedulerTarget(
+                observing_script_name=observing_script_name,
+                observing_script_is_standard=observing_script_is_standard,
+                observation=np.array(fbs_observation, ndmin=1),
+                log=self.log,
+                **self.script_configuration,
+            )
+
+            observations.append(target)
+
+        return observations
 
     def update_conditions(self):
         """Update conditions on the scheduler."""
@@ -251,8 +313,11 @@ class FeatureScheduler(Driver):
 
         Returns
         -------
-        Target
+        desired_target : `Target`
+            Desidered target.
         """
+
+        desired_target = None
 
         if desired_observation is not None:
 
@@ -271,7 +336,7 @@ class FeatureScheduler(Driver):
                 self._desired_obs = None
                 return desired_target
         else:
-            return None
+            return desired_target
 
     def _get_validated_target_from_observation(self, observation):
         """Validate a feature based scheduler observation and convert it to a
@@ -403,9 +468,11 @@ class FeatureScheduler(Driver):
 
         return self._get_validated_target_from_observation(observation=cwfs_observation)
 
-    def register_observation(self, observation):
+    def register_observed_target(self, target: DriverTarget) -> Observation:
         """Validates observation and returns a list of successfully completed
         observations.
+
+        Add target observation to the feature based scheduler.
 
         Parameters
         ----------
@@ -414,13 +481,30 @@ class FeatureScheduler(Driver):
 
         Returns
         -------
-        Python list of one or more Observations
+        Observation
         """
-        for obs in observation:
-            self.log.log(WORDY, f"Registering observation {obs}")
-            self.scheduler.add_observation(obs.observation[0])
 
-        return [observation]
+        self.scheduler.add_observation(target.observation[0])
+
+        return super().register_observed_target(target)
+
+    def register_observation(self, target: FeatureSchedulerTarget) -> None:
+        """Register observation.
+
+        Write the target observation into the observation database.
+
+        Parameters
+        ----------
+        target : `FeatureSchedulerTarget`
+            Target to register.
+        """
+
+        self.schema_converter.obs2opsim(
+            target.observation,
+            filename=self.observation_database_name.as_posix(),
+        )
+
+        return super().register_observation(target)
 
     def load(self, config):
         """Load a new set of targets."""
@@ -656,3 +740,99 @@ class FeatureScheduler(Driver):
         """
         # For now simply return the "notes" field.
         return observation["note"][0].split(":")[0]
+
+    def _get_driver_target_from_observation_data_frame(
+        self, observation_data_frame: typing.Tuple[pandas.Timestamp, pandas.Series]
+    ) -> FeatureSchedulerTarget:
+        """Convert an observation data frame into a FeatureSchedulerTarget.
+
+        Override super class method to deal with Feature Scheduler Target
+        custom requirements.
+
+        Parameters
+        ----------
+        observation_data_frame :
+                `typing.Tuple` [`pandas.Timestamp`, `pandas.Series`]
+            An observation data frame.
+
+        Returns
+        -------
+        target : `FeatureSchedulerTarget`
+            Feature scheduler target.
+        """
+
+        fbs_observation = self._get_fbs_observation_from_observation_data_frame(
+            observation_data_frame
+        )
+
+        (
+            observing_script_name,
+            observing_script_is_standard,
+        ) = self.get_survey_observing_script(
+            self._get_survey_name_from_observation(fbs_observation)
+        )
+
+        target = FeatureSchedulerTarget(
+            observing_script_name=observing_script_name,
+            observing_script_is_standard=observing_script_is_standard,
+            observation=np.array(fbs_observation, ndmin=1),
+            log=self.log,
+            **self.script_configuration,
+        )
+
+        return target
+
+    def _get_fbs_observation_from_observation_data_frame(
+        self, observation_data_frame: typing.Tuple[pandas.Timestamp, pandas.Series]
+    ) -> np.ndarray:
+        """Convert observation pandas data fram to an fbs observation.
+
+        Parameters
+        ----------
+        observation_data_frame :
+                `typing.Tuple` [`pandas.Timestamp`, `pandas.Series`]
+            An observation data frame.
+
+        Returns
+        -------
+        fbs_observation : `np.ndarray`
+            Feature scheduler observation.
+        """
+        fbs_observation = empty_observation()
+
+        for key in self.fbs_observation_named_parameter_map():
+            fbs_observation[key] = observation_data_frame[1][
+                self.fbs_observation_named_parameter_map()[key]
+            ]
+
+        additional_information = yaml.safe_load(
+            observation_data_frame[1]["additionalInformation"]
+        )
+
+        for name in fbs_observation.dtype.names:
+            if name not in self.fbs_observation_named_parameter_map():
+                fbs_observation[name] = additional_information[name]
+
+        return fbs_observation
+
+    @staticmethod
+    def fbs_observation_named_parameter_map() -> typing.Dict[str, str]:
+        """Return the mapping between feature scheduler observation parameter
+        keywords and the `Observation` parameter name keywords
+
+        Returns
+        -------
+        `dict`
+            Mapping between fbs observations keywords and `Observation`
+            keywords.
+        """
+        return dict(
+            ID="targetId",
+            RA="ra",
+            dec="decl",
+            mjd="mjd",
+            exptime="exptime",
+            filter="filter",
+            rotSkyPos="rotSkyPos",
+            nexp="nexp",
+        )

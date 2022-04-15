@@ -22,12 +22,17 @@ __all__ = ["get_efd_client", "get_mock_efd_client"]
 
 import astropy
 import pandas
-import unittest
 import warnings
+import yaml
 
 import numpy as np
 
 from typing import List, Any, Union
+from unittest.mock import AsyncMock, Mock
+
+from .csc_utils import efd_query_re
+from .fbs_utils import SchemaConverter
+from ..driver import feature_scheduler
 
 try:
     import lsst_efd_client
@@ -84,7 +89,7 @@ def get_efd_client(efd_name: str, mock: bool = False) -> Any:
     return efd_client
 
 
-def get_mock_efd_client(efd_name: str) -> unittest.mock.AsyncMock:
+def get_mock_efd_client(efd_name: str) -> AsyncMock:
     """Create a mock EFD client.
 
     Parameters
@@ -98,18 +103,19 @@ def get_mock_efd_client(efd_name: str) -> unittest.mock.AsyncMock:
         Mock EFD client.
     """
 
-    mock_efd_client = unittest.mock.AsyncMock()
+    mock_efd_client = AsyncMock()
 
     mock_efd_client.configure_mock(
         **{
             "select_time_series.side_effect": mock_select_time_series,
             "get_topics.side_effect": mock_get_topics,
             "get_fields.side_effect": mock_get_fields,
+            "query.side_effect": mock_query,
         },
     )
 
     mock_efd_client.attach_mock(
-        unittest.mock.Mock(
+        Mock(
             return_value=[
                 efd_name,
             ],
@@ -214,3 +220,82 @@ async def mock_get_fields(topic_name: str) -> List:
     )
 
     return fields[topic_name]
+
+
+async def mock_query(efd_query: str) -> pandas.DataFrame:
+    """Return a data frame for the associated query.
+
+    Parameters
+    ----------
+    efd_query : `str`
+        EFD query.
+
+    Returns
+    -------
+    result : `pandas.DataFrame`
+        Query results.
+    """
+
+    efd_query_match = efd_query_re.match(efd_query)
+
+    if efd_query_match.groups() == (
+        "*",
+        '"efd"."autogen"."lsst.sal.Scheduler.logevent_observation"',
+        "SchedulerID = 1",
+    ):
+        return get_observation_table()
+    else:
+        return pandas.DataFrame()
+
+
+def get_observation_table() -> pandas.DataFrame:
+    """Generate a table of observations and return as if it was an EFD
+    query.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Observation table.
+    """
+
+    schema_converter = SchemaConverter()
+
+    opsim_database = (
+        feature_scheduler.FeatureScheduler.default_observation_database_name
+    )
+
+    if not opsim_database.exists():
+        raise RuntimeError(f"No opsim database in {opsim_database!r}")
+
+    observations = schema_converter.opsim2obs(opsim_database.as_posix())
+
+    fbs_observation_keyword = list(
+        feature_scheduler.FeatureScheduler.fbs_observation_named_parameter_map()
+    )
+
+    additional_keywords = [
+        keyword
+        for keyword in observations.dtype.names
+        if keyword not in fbs_observation_keyword
+    ]
+    data = []
+
+    for observation in observations:
+        properties = [observation[keyword] for keyword in fbs_observation_keyword]
+        additional_properties = dict(
+            zip(
+                additional_keywords,
+                [str(observation[keyword]) for keyword in additional_keywords],
+            )
+        )
+        properties.append(yaml.safe_dump(additional_properties))
+        data.append(properties)
+    columns = [
+        feature_scheduler.FeatureScheduler.fbs_observation_named_parameter_map()[key]
+        for key in fbs_observation_keyword
+    ] + ["additionalInformation"]
+
+    return pandas.DataFrame(
+        data=data,
+        columns=columns,
+    )

@@ -20,6 +20,7 @@
 
 __all__ = ["SchedulerCSC"]
 
+import pathlib
 import shutil
 import asyncio
 import functools
@@ -27,7 +28,8 @@ import inspect
 import logging
 import time
 import traceback
-from typing import Dict
+import dataclasses
+import typing
 
 import urllib.request
 
@@ -41,7 +43,13 @@ from lsst.ts.idl.enums import ScriptQueue, Script
 
 from . import __version__
 from . import CONFIG_SCHEMA
-from .utils.csc_utils import NonFinalStates, SchedulerModes
+from .utils.csc_utils import (
+    SchedulerModes,
+    NonFinalStates,
+    is_uri,
+    is_valid_efd_query,
+)
+
 from .utils.error_codes import (
     NO_QUEUE,
     PUT_ON_QUEUE,
@@ -53,6 +61,9 @@ from .utils.error_codes import (
 from .utils.parameters import SchedulerCscParameters
 from .utils.exceptions import UnableToFindTarget
 from .driver import Driver
+from .driver.survey_topology import SurveyTopology
+from .driver.driver_target import DriverTarget
+
 from . import TelemetryStreamHandler
 
 from lsst.ts.dateloc import ObservatoryLocation
@@ -247,6 +258,12 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         # Large file object available
         self.s3bucket_name = None  # Set by `configure`.
         self.s3bucket = None  # Set by `handle_summary_state`.
+
+        self.startup_types = dict(
+            HOT=self.configure_driver_hot,
+            WARM=self.configure_driver_warm,
+            COLD=self.configure_driver_cold,
+        )
 
     async def begin_start(self, data):
         try:
@@ -474,22 +491,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 "Target production loop is running. Stop it before loading a file."
             )
 
-        loop = asyncio.get_running_loop()
-
-        try:
-            retrieve = functools.partial(
-                urllib.request.urlretrieve, url=data.uri, filename=""
-            )
-            dest, _ = await loop.run_in_executor(None, retrieve)
-        except urllib.request.URLError:
-            raise RuntimeError(
-                f"Could not retrieve {data.uri}. Make sure it is a valid and accessible URI."
-            )
-
-        self.log.debug(f"Loading user-define configuration from {data.uri} -> {dest}.")
-
-        load = functools.partial(self.driver.load, config=dest)
-        await loop.run_in_executor(None, load)
+        await self._handle_load_snapshot(data.uri)
 
     async def telemetry_loop(self):
         """Scheduler telemetry loop.
@@ -499,6 +501,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         """
 
+        failed_observatory_state_logged = False
         while self.run_loop:
 
             # Update observatory state and sleep at the same time.
@@ -507,14 +510,30 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     self.handle_observatory_state(),
                     asyncio.sleep(self.heartbeat_interval),
                 )
+                failed_observatory_state_logged = False
             except Exception:
-                self.log.exception("Failed to update observatory state.")
-                await self.fault(
-                    code=OBSERVATORY_STATE_UPDATE,
-                    report="Failed to update observatory state.",
-                    traceback=traceback.format_exc(),
-                )
-                return
+                if (
+                    self.summary_state == salobj.State.ENABLED
+                    and self.run_target_loop.is_set()
+                ):
+                    self.log.exception("Failed to update observatory state.")
+                    await self.fault(
+                        code=OBSERVATORY_STATE_UPDATE,
+                        report="Failed to update observatory state.",
+                        traceback=traceback.format_exc(),
+                    )
+                    return
+                elif not failed_observatory_state_logged:
+                    failed_observatory_state_logged = True
+                    message_text = (
+                        " but not running"
+                        if self.summary_state == salobj.State.ENABLED
+                        else ""
+                    )
+                    self.log.warning(
+                        "Failed to update observatory state. "
+                        f"Ignoring, scheduler in {self.summary_state!r}{message_text}."
+                    )
 
             await self.tel_observatoryState.set_write(
                 timestamp=self.models["observatory_state"].time,
@@ -736,7 +755,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         self.log.debug("Configuring Driver and Scheduler.")
 
-        survey_topology = self.configure_driver(config)
+        survey_topology = await self.configure_driver(config)
 
         await self.evt_surveyTopology.set_write(**survey_topology.as_dict())
 
@@ -885,7 +904,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             ],
         )
 
-    async def configure_telemetry_streams(self, config: Dict) -> None:
+    async def configure_telemetry_streams(self, config: typing.Dict) -> None:
         """Configure telemetry streams.
 
         Parameters
@@ -917,7 +936,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         for telemetry in self.telemetry_stream_handler.telemetry_streams:
             self.raw_telemetry[telemetry] = np.nan
 
-    def configure_driver(self, config):
+    async def configure_driver(self, config: typing.Any) -> SurveyTopology:
         """Load driver for selected scheduler and configure its basic
         parameters.
 
@@ -928,42 +947,120 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         Returns
         -------
-        survey_topology: `lsst.ts.scheduler.kernel.SurveyTopology`
+        survey_topology: `SurveyTopology`
+            Survey topology
+        """
+        return await self.startup_types[config.startup_type](config)
 
+    async def configure_driver_hot(self, config: typing.Any) -> SurveyTopology:
+        """Perform hot start.
+
+        This is the most versatile startup mode and is designed to rapidly
+        recover the state of the observatory. Nevertheless, it has the caveat
+        that it will skip configuring the driver altogether if the driver is
+        already configured. If you want to make sure the driver is reconfigured
+        use WARM or COLD start instead.
+
+        See https://ts-scheduler.lsst.io/configuration/configuration.html for
+        more information.
+
+        Parameters
+        ----------
+        config : `types.SimpleNamespace`
+            Configuration, as described by ``schema/Scheduler.yaml``
+
+        Returns
+        -------
+        survey_topology: `SurveyTopology`
+            Survey topology
         """
         if self.driver is not None:
-            self.log.warning("Driver already defined. Overwriting driver.")
-            # TODO: It is probably a good idea to tell driver to save its state
-            # before overwriting. So it is possible to recover.
-
-        self.log.debug("Loading driver from %s", config.driver_type)
-        driver_lib = import_module(config.driver_type)
-        members_of_driver_lib = inspect.getmembers(driver_lib)
-
-        driver_type = None
-        for member in members_of_driver_lib:
-            try:
-                if issubclass(member[1], Driver):
-                    self.log.debug("Found driver %s%s", member[0], member[1])
-                    driver_type = member[1]
-                    # break
-            except TypeError:
-                pass
-
-        if driver_type is None:
-            raise RuntimeError(
-                "Could not find Driver on module %s" % config.driver_type
+            self.log.warning(
+                "HOT start: driver already defined. Skipping driver configuration."
             )
+            return self.driver.get_survey_topology(config)
 
-        self.driver = driver_type(
-            models=self.models, raw_telemetry=self.raw_telemetry, log=self.log
-        )
+        self._load_driver_from(config.driver_type)
 
-        return self.driver.configure_scheduler(config)
+        survey_topology = await self._handle_driver_configure_scheduler(config)
+
+        await self._handle_startup_database_snapshot(config.startup_database)
+
+        return survey_topology
+
+    async def configure_driver_warm(self, config: typing.Any) -> SurveyTopology:
+        """Perform warm start.
+
+        This is mode is similar to hot start but with the exception that it
+        will always reload the driver, whereas hot start skips reloading the
+        driver if it is already defined.
+
+        See https://ts-scheduler.lsst.io/configuration/configuration.html for
+        more information.
+
+        Parameters
+        ----------
+        config : `types.SimpleNamespace`
+            Configuration, as described by ``schema/Scheduler.yaml``
+
+        Returns
+        -------
+        survey_topology: `SurveyTopology`
+            Survey topology
+        """
+        if self.driver is not None:
+            self.log.warning("WARM start: driver already defined. Resetting driver.")
+
+        self._load_driver_from(config.driver_type)
+
+        survey_topology = await self._handle_driver_configure_scheduler(config)
+
+        await self._handle_startup_database_snapshot(config.startup_database)
+
+        return survey_topology
+
+    async def configure_driver_cold(self, config: typing.Any) -> SurveyTopology:
+        """Perform cold start.
+
+        Cold start is the slowest start up and, in general, will only be used
+        in cases where the scheduler configuration changed quite drastically
+        but one still wants to take previous observations into account. As
+        such, cold start will most likely only be used before the night starts
+        in some very limited situations.
+
+        In this case the scheduler starts by creating the driver, overriding
+        any previous driver.
+
+        Cold start has two ways of recreating playing back observations;
+        the user provides the path to a database that the driver can parse or
+        an EFD query that will return a series of observations.
+
+        See https://ts-scheduler.lsst.io/configuration/configuration.html for
+        more information.
+
+        Parameters
+        ----------
+        config : `types.SimpleNamespace`
+            Configuration, as described by ``schema/Scheduler.yaml``
+
+        Returns
+        -------
+        survey_topology: `SurveyTopology`
+            Survey topology
+        """
+        if self.driver is not None:
+            self.log.warning("COLD start: driver already defined. Resetting driver.")
+
+        self._load_driver_from(config.driver_type)
+
+        survey_topology = await self._handle_driver_configure_scheduler(config)
+
+        await self._handle_startup_database_observation_db(config.startup_database)
+
+        return survey_topology
 
     async def get_queue(self, request=True):
         """Utility method to get the queue.
-
 
         Parameters
         ----------
@@ -1046,7 +1143,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     f"{target.note} observation completed successfully. "
                     "Registering observation."
                 )
-                self.driver.register_observation([target])
+                await self.register_observation(target)
                 # Remove related script from the list
                 del self.script_info[target.sal_index]
                 # target now simply disappears... Should I keep it in for
@@ -1383,7 +1480,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         for target in self.raw_telemetry["scheduled_targets"]:
             self.log.debug(f"Temporarily registering scheduled target: {target.note}.")
-            self.driver.register_observation([target])
+            self.driver.register_observed_target(target)
             self.models["observatory_model"].observe(target)
 
         # For now it will only generate enough targets to send to the queue
@@ -1418,7 +1515,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 self.log.debug(
                     f"Temporarily registering selected target: {target.note}."
                 )
-                self.driver.register_observation([target])
+                self.driver.register_observed_target(target)
 
                 # The following will playback the observations on the
                 # observatory model but will keep the observatory state
@@ -1579,3 +1676,277 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 del self.script_info[key]
                 if len(self.script_info) < self.parameters.max_scripts:
                     break
+
+    async def register_observation(self, target: DriverTarget) -> None:
+        """Register observation.
+
+        Parameters
+        ----------
+        observation : Observation
+            Observation to be registered.
+        """
+        self.driver.register_observation(target=target)
+        if hasattr(self, "evt_observation"):
+            await self.evt_observation.set_write(
+                **dataclasses.asdict(target.get_observation())
+            )
+
+    async def _handle_driver_configure_scheduler(
+        self, config: typing.Any
+    ) -> SurveyTopology:
+        """Handle configuring the scheduler asynchronously.
+
+        Parameters
+        ----------
+        config : `types.SimpleNamespace`
+            Configuration, as described by ``schema/Scheduler.yaml``
+
+        Returns
+        -------
+        survey_topology: `SurveyTopology`
+            Survey topology
+        """
+
+        configure_scheduler = functools.partial(
+            self.driver.configure_scheduler, config=config
+        )
+
+        return await asyncio.get_running_loop().run_in_executor(
+            None, configure_scheduler
+        )
+
+    async def _handle_load_snapshot(self, uri: str) -> None:
+        """Handler loading a scheduler snapshot asynchronously.
+
+        Parameters
+        ----------
+        uri : str
+            Uri with the address of the snapshot.
+        """
+        loop = asyncio.get_running_loop()
+
+        try:
+            retrieve = functools.partial(
+                urllib.request.urlretrieve, url=uri, filename=""
+            )
+            dest, _ = await loop.run_in_executor(None, retrieve)
+        except urllib.request.URLError:
+            raise RuntimeError(
+                f"Could not retrieve {uri}. Make sure it is a valid and accessible URI."
+            )
+
+        self.log.debug(f"Loading user-define configuration from {uri} -> {dest}.")
+
+        load = functools.partial(self.driver.load, config=dest)
+        await loop.run_in_executor(None, load)
+
+    def _load_driver_from(self, driver_type: str) -> None:
+        """Utility method to load a driver from a driver type.
+
+        Parameters
+        ----------
+        driver_type : str
+            A driver module "import string", e.g.
+            "lsst.ts.scheduler.driver.driver".
+
+        Raises
+        ------
+        RuntimeError:
+            If a Driver cannot be found in the provided module.
+
+        Notes
+        -----
+
+        The `driver_type` parameter must specify a python module which defines
+        a subclass of `Driver`. The scheduler ships with a set of standard
+        drivers, which are defined in `lsst.ts.scheduler.driver`. For example,
+        `lsst.ts.scheduler.driver.feature_scheduler` defines `FeatureScheduler`
+        which is a subclass of `Driver` and implements the feature based
+        scheduler driver.
+
+        Users can also provide external drivers, as long as they subclass
+        `Driver` the CSC will be able to load it.
+        """
+        self.log.info("Loading driver from %s", driver_type)
+
+        driver_lib = import_module(driver_type)
+        members_of_driver_lib = inspect.getmembers(driver_lib)
+
+        driver_type = None
+        for member in members_of_driver_lib:
+            try:
+                if issubclass(member[1], Driver):
+                    self.log.debug("Found driver %s%s", member[0], member[1])
+                    driver_type = member[1]
+            except TypeError:
+                pass
+
+        if driver_type is None:
+            raise RuntimeError("Could not find Driver on module %s" % driver_type)
+
+        self.driver = driver_type(
+            models=self.models, raw_telemetry=self.raw_telemetry, log=self.log
+        )
+
+    async def _handle_startup_database_snapshot(self, startup_database: str) -> None:
+        """Handle startup database snapshot.
+
+        Parameters
+        ----------
+        startup_database : str
+            Uri of the startup database.
+
+        Raises
+        ------
+        RuntimeError
+            If startup_database is invalid.
+        """
+
+        if is_uri(startup_database):
+            self.log.info(f"Loading scheduler snapshot from {startup_database}.")
+            await self._handle_load_snapshot(startup_database)
+        elif startup_database.strip():
+            raise RuntimeError(
+                f"Invalid startup_database: {startup_database.strip()}. "
+                "Make sure it is a valid and accessible URI."
+            )
+        else:
+            self.log.debug("No scheduler snapshot provided.")
+
+    async def _handle_startup_database_observation_db(
+        self, startup_database: str
+    ) -> None:
+        """Handle startup database for observation database.
+
+        Parameters
+        ----------
+        startup_database : str
+            Path to a local database or EFD query.
+
+        Raises
+        ------
+        RuntimeError
+            If startup_database is invalid.
+        """
+
+        if not startup_database.strip():
+            self.log.info("No observation history information provided.")
+        elif pathlib.Path(startup_database).exists():
+            self.log.info(
+                f"Loading observation history from database: {startup_database}."
+            )
+            await self._handle_load_observations_from_db(database_path=startup_database)
+        elif is_valid_efd_query(startup_database):
+            await self._handle_load_observations_from_efd(efd_query=startup_database)
+        else:
+            error_msg = (
+                "Specified startup database does not exists and does not classify as an EFD query. "
+                f"Received: {startup_database}. "
+                "If this was supposed to be a path, it must be local to the CSC environment. "
+                "If this was supposed to be an EFD query, it should have the format: "
+                'SELECT * FROM "efd"."autogen"."lsst.sal.Scheduler.logevent_observation" WHERE '
+                "time >= '2021-06-09T00:00:00.000+00:00' AND time <= '2021-06-12T00:00:00.000+00:00'"
+            )
+            self.log.error(error_msg)
+            raise RuntimeError(error_msg)
+
+    async def _handle_load_observations_from_db(self, database_path: str) -> None:
+        """Handle loading observations from a database and playing them back
+        into the driver.
+
+        Parameters
+        ----------
+        database_path : str
+            Path to the local database file.
+        """
+        observations = await self._parse_observation_database(database_path)
+
+        await self._register_observations(observations)
+
+    async def _handle_load_observations_from_efd(self, efd_query: str) -> None:
+        """Handle loading observations from the EFD and playing them back into
+        the driver.
+
+        Parameters
+        ----------
+        efd_query : str
+            A valid EFD query that should return a list of observations.
+        """
+        observations = await self._query_observations_from_efd(efd_query)
+
+        self.log.info(
+            "Loading observation history from EFD. "
+            f"Query: {efd_query} yield {len(observations)} targets."
+        )
+
+        await self._register_observations(observations=observations)
+
+    async def _parse_observation_database(
+        self, database_path: str
+    ) -> typing.List[DriverTarget]:
+        """Parse observations database.
+
+        Parameters
+        ----------
+        database_path : str
+            Path to the local database file.
+
+        Returns
+        -------
+        list of DriverTargets
+            List of observations.
+        """
+        loop = asyncio.get_running_loop()
+
+        parse_observation_database = functools.partial(
+            self.driver.parse_observation_database,
+            filename=database_path,
+        )
+
+        return await loop.run_in_executor(None, parse_observation_database)
+
+    async def _query_observations_from_efd(
+        self, efd_query: str
+    ) -> typing.List[DriverTarget]:
+        """Query observations from EFD.
+
+        Parameters
+        ----------
+        efd_query : str
+            EFD query to retrieve list of observations.
+
+        Returns
+        -------
+        observations : list of DriverTarget
+            List of observations.
+        """
+        efd_observations = await self.telemetry_stream_handler.efd_client.query(
+            efd_query
+        )
+
+        loop = asyncio.get_running_loop()
+
+        convert_efd_observations_to_targets = functools.partial(
+            self.driver.convert_efd_observations_to_targets,
+            efd_observations=efd_observations,
+        )
+
+        return await loop.run_in_executor(None, convert_efd_observations_to_targets)
+
+    async def _register_observations(
+        self, observations: typing.List[DriverTarget]
+    ) -> None:
+        """Register a list of observations.
+
+        Parameters
+        ----------
+        observations : list of DriverTarget
+            List of observations.
+        """
+        if observations is None:
+            self.log.warning("No observations to register")
+            return
+        self.log.debug(f"Registering {len(observations)} observations.")
+        for observation in observations:
+            self.driver.register_observed_target(observation)
+        self.log.debug("Finished registering observations.")
