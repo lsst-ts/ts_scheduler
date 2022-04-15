@@ -52,7 +52,7 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
     async def test_bin_script(self):
         await self.check_bin_script("Scheduler", 1, "run_scheduler.py")
 
-    async def test_fail_no_observatory_state(self):
+    async def test_no_observatory_state_ok_in_disabled(self):
         """Test CSC goes to FAULT if no observatory state."""
 
         async with self.make_csc(
@@ -64,15 +64,84 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
             try:
                 self.remote.evt_summaryState.flush()
 
-                try:
+                with self.assertLogs(self.csc.log) as csc_logs:
                     await self.remote.cmd_start.set_start(
                         timeout=LONG_TIMEOUT, configurationOverride="simple.yaml"
                     )
-                except asyncio.TimeoutError:
-                    pass
+
+                    await self.remote.tel_observatoryState.next(flush=True)
+
+                assert (
+                    "WARNING:Scheduler:Failed to update observatory state. "
+                    f"Ignoring, scheduler in {salobj.State.DISABLED!r}."
+                ) in csc_logs.output
 
                 await self.assert_next_summary_state(salobj.State.DISABLED, flush=False)
+                with self.assertRaises(asyncio.TimeoutError):
+                    await self.assert_next_summary_state(
+                        salobj.State.FAULT,
+                        flush=False,
+                        timeout=SHORT_TIMEOUT,
+                    )
+            finally:
+                await salobj.set_summary_state(self.remote, salobj.State.STANDBY)
 
+    async def test_no_observatory_state_ok_in_enabled_not_running(self):
+        """Test CSC goes to FAULT if no observatory state."""
+
+        async with self.make_csc(
+            config_dir=TEST_CONFIG_DIR,
+            initial_state=salobj.State.STANDBY,
+            simulation_mode=SchedulerModes.SIMULATION,
+        ):
+            await self.assert_next_sample(topic=self.remote.evt_errorCode, errorCode=0)
+            try:
+                self.remote.evt_summaryState.flush()
+
+                with self.assertLogs(self.csc.log) as csc_logs:
+
+                    await salobj.set_summary_state(
+                        self.remote, salobj.State.ENABLED, override="simple.yaml"
+                    )
+
+                    await self.remote.tel_observatoryState.next(flush=True)
+
+                assert (
+                    "WARNING:Scheduler:Failed to update observatory state. "
+                    f"Ignoring, scheduler in {salobj.State.ENABLED!r} but not running."
+                ) in csc_logs.output
+
+                await self.assert_next_summary_state(salobj.State.DISABLED, flush=False)
+                await self.assert_next_summary_state(salobj.State.ENABLED, flush=False)
+                with self.assertRaises(asyncio.TimeoutError):
+                    await self.assert_next_summary_state(
+                        salobj.State.FAULT,
+                        flush=False,
+                        timeout=SHORT_TIMEOUT,
+                    )
+            finally:
+                await salobj.set_summary_state(self.remote, salobj.State.STANDBY)
+
+    async def test_no_observatory_state_fault_in_enabled_running(self):
+        """Test CSC goes to FAULT if no observatory state."""
+
+        async with self.make_csc(
+            config_dir=TEST_CONFIG_DIR,
+            initial_state=salobj.State.STANDBY,
+            simulation_mode=SchedulerModes.SIMULATION,
+        ):
+            await self.assert_next_sample(topic=self.remote.evt_errorCode, errorCode=0)
+            try:
+                self.remote.evt_summaryState.flush()
+
+                await salobj.set_summary_state(
+                    self.remote, salobj.State.ENABLED, override="simple.yaml"
+                )
+
+                await self.remote.cmd_resume.start(timeout=SHORT_TIMEOUT)
+
+                await self.assert_next_summary_state(salobj.State.DISABLED, flush=False)
+                await self.assert_next_summary_state(salobj.State.ENABLED, flush=False)
                 await self.assert_next_summary_state(salobj.State.FAULT, flush=False)
 
                 # Check error code

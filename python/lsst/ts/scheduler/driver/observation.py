@@ -1,8 +1,8 @@
 # This file is part of ts_scheduler
 #
-# Developed for the LSST Telescope and Site Systems.
-# This product includes software developed by the LSST Project
-# (https://www.lsst.org).
+# Developed for the Vera C. Rubin Observatory Telescope and Site Systems.
+# This product includes software developed by the Vera C. Rubin Observatory
+# Project (https://www.lsst.org).
 # See the COPYRIGHT file at the top-level directory of this distribution
 # for details of code ownership.
 #
@@ -18,9 +18,23 @@
 #
 # You should have received a copy of the GNU General Public License
 
-from .csc_utils import *
-from .efd_utils import *
-from .error_codes import *
-from .exceptions import *
-from .parameters import *
-from .fbs_utils import *
+import dataclasses
+
+
+@dataclasses.dataclass
+class Observation:
+    """Dataclass for defining the observation data structure.
+
+    This is a convenience class to convert the observation information to
+    publish to the EFD.
+    """
+
+    targetId: int
+    ra: float
+    decl: float
+    rotSkyPos: float
+    mjd: float
+    exptime: float
+    filter: str
+    nexp: int
+    additionalInformation: str

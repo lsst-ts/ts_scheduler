@@ -19,12 +19,17 @@
 # You should have received a copy of the GNU General Public License
 
 import os
+import io
+import types
+import typing
+import pandas
 import logging
 
 from dataclasses import dataclass
 
 from .survey_topology import SurveyTopology
 from .driver_target import DriverTarget
+from .observation import Observation
 
 __all__ = ["Driver", "DriverParameters"]
 
@@ -44,7 +49,7 @@ class DriverParameters:
     night_boundary: float = -12.0
     new_moon_phase_threshold: float = 20.0
 
-    def setDefaults(self):
+    def setDefaults(self) -> None:
         """Set defaults for the LSST Scheduler's Driver."""
         self.night_boundary = -12.0
         self.new_moon_phase_threshold = 20.0
@@ -110,7 +115,13 @@ class Driver:
         Timestamp for the current sunrise.
     """
 
-    def __init__(self, models, raw_telemetry, parameters=None, log=None):
+    def __init__(
+        self,
+        models: typing.Dict[str, typing.Any],
+        raw_telemetry: typing.Dict[str, typing.Any],
+        parameters: typing.Optional[DriverParameters] = None,
+        log: typing.Optional[logging.Logger] = None,
+    ) -> None:
         if log is None:
             self.log = logging.getLogger(type(self).__name__)
         else:
@@ -137,7 +148,7 @@ class Driver:
         self.current_sunset = None
         self.current_sunrise = None
 
-    def configure_scheduler(self, config):
+    def configure_scheduler(self, config: types.SimpleNamespace) -> SurveyTopology:
         """This method is responsible for running the scheduler configuration
         and returning the survey topology, which specifies the number, name
         and type of projects running by the scheduler.
@@ -151,8 +162,8 @@ class Driver:
 
         Returns
         -------
-        survey_topology: `lsst.ts.scheduler.kernel.SurveyTopology`
-
+        survey_topology : ``SurveyTopology``
+            Survey topology.
         """
 
         if "parameters" in config.driver_configuration:
@@ -165,12 +176,27 @@ class Driver:
                     value,
                 )
 
-        survey_topology = SurveyTopology()
-
         if not hasattr(config, "driver_configuration"):
             raise RuntimeError(
                 "No driver_configuration section defined in configuration."
             )
+
+        return self.get_survey_topology(config)
+
+    def get_survey_topology(self, config: types.SimpleNamespace) -> SurveyTopology:
+        """Get the survey topology.
+
+        Parameters
+        ----------
+        config : `types.SimpleNamespace`
+            Configuration, as described by ``schema/Scheduler.yaml``
+
+        Returns
+        -------
+        survey_topology : ``SurveyTopology``
+            Survey topology.
+        """
+        survey_topology = SurveyTopology()
 
         survey_topology.general_propos = config.driver_configuration.get(
             "general_propos", []
@@ -202,7 +228,7 @@ class Driver:
 
         return survey_topology
 
-    def cold_start(self, observations):
+    def cold_start(self, observations: typing.List[Observation]) -> None:
         """Rebuilds the internal state of the scheduler from a list of
         observations.
 
@@ -213,7 +239,7 @@ class Driver:
         """
         raise NotImplementedError("Cold start is not implemented.")
 
-    def update_conditions(self):
+    def update_conditions(self) -> None:
         """Update driver internal conditions.
 
         When subclassing this method, make sure to call it at the start of the
@@ -276,7 +302,7 @@ class Driver:
                 f"[{self.night}]: Sunset/Sunrise: {self.current_sunset}/{self.current_sunrise} "
             )
 
-    def select_next_target(self):
+    def select_next_target(self) -> DriverTarget:
         """Picks a target and returns it as a target object.
 
         By default it will just return a dummy test target.
@@ -302,23 +328,39 @@ class Driver:
 
         return target
 
-    def register_observation(self, observation):
-        """Validates observation and returns a list of successfully completed
-        observations.
+    def register_observed_target(self, target: DriverTarget) -> Observation:
+        """Validates observed target and returns an observation.
 
         Parameters
         ----------
-        observation : Observation or a python list of Observations
+        target : `DriverTarget`
+            Observed target to register.
 
         Returns
         -------
-        Python list of one or more Observations
+        `Observation`
+            Registered observation.
         """
-        self.log.log(WORDY, "Registering observation %s.", observation)
+        self.log.log(WORDY, "Registering target %s.", target)
 
-        return [observation]
+        return target.get_observation()
 
-    def get_stop_tracking_target(self):
+    def register_observation(self, target: DriverTarget) -> None:
+        """Register observations.
+
+        This method should store the observation in a way that can be retrieved
+        afterwards by the driver.
+
+        The default implementation is not implemented.
+
+        Parameters
+        ----------
+        target : `DriverTarget`
+            Observation to register.
+        """
+        self.register_observed_target(target=target)
+
+    def get_stop_tracking_target(self) -> DriverTarget:
 
         target = DriverTarget(
             observing_script_name=self.stop_tracking_script_name,
@@ -329,7 +371,7 @@ class Driver:
 
         return target
 
-    def load(self, config):
+    def load(self, config: str) -> None:
         """Load a modifying configuration.
 
         The input is a file that the Driver must be able to parse. It should
@@ -354,7 +396,7 @@ class Driver:
         if not os.path.exists(config):
             raise RuntimeError(f"Input configuration file {config} does not exist.")
 
-    def save_state(self):
+    def save_state(self) -> None:
         """Save the current state of the scheduling algorithm to a file.
 
         Returns
@@ -364,7 +406,7 @@ class Driver:
         """
         raise NotImplementedError("Save state is is not implemented.")
 
-    def parse_observation_database(self, filename):
+    def parse_observation_database(self, filename: str) -> None:
         """Parse an observation database into a list of observations.
 
         Parameters
@@ -377,7 +419,7 @@ class Driver:
         """
         raise NotImplementedError("Parse observation database not implemented.")
 
-    def get_state_as_file_object(self):
+    def get_state_as_file_object(self) -> io.BytesIO:
         """Get the current state of the scheduling algorithm as a file object.
 
         Returns
@@ -387,11 +429,13 @@ class Driver:
         """
         raise NotImplementedError("Get state as file object not implemented.")
 
-    def reset_from_state(self, filename):
+    def reset_from_state(self, filename: str) -> None:
         """Load the state from a file."""
         raise NotImplementedError("Reset from state is not implemented.")
 
-    def configure_survey_observing_script(self, survey_observing_script):
+    def configure_survey_observing_script(
+        self, survey_observing_script: typing.Dict[str, typing.Any]
+    ) -> None:
         """Configure survey-based observing script.
 
         Parameters
@@ -430,7 +474,7 @@ class Driver:
                     f"Entry {survey_name} missing required key {missing}, got {provided_keys}."
                 )
 
-    def assert_survey_observing_script(self, survey_name):
+    def assert_survey_observing_script(self, survey_name: str) -> None:
         """Assert that the input survey name has a dedicated observing script.
 
         Parameters
@@ -449,7 +493,7 @@ class Driver:
             f"Current defined are: {set(self._survey_observing_script.keys())}"
         )
 
-    def get_survey_observing_script(self, survey_name):
+    def get_survey_observing_script(self, survey_name: str) -> typing.Tuple[str, bool]:
         """Return the appropriate survey observing script.
 
         If the script contains a especial script, return it, if not, return
@@ -487,3 +531,42 @@ class Driver:
                 self.default_observing_script_name,
                 self.default_observing_script_is_standard,
             )
+
+    def convert_efd_observations_to_targets(
+        self, efd_observations: pandas.DataFrame
+    ) -> typing.List[DriverTarget]:
+        """Convert EFD dataframe into list of driver targets.
+
+        Parameters
+        ----------
+        efd_observations : `pandas.DataFrame`
+            Data frame returned from a query to the EFD for observations.
+        """
+
+        observations = []
+
+        for observation_data_frame in efd_observations.iterrows():
+            observations.append(
+                self._get_driver_target_from_observation_data_frame(
+                    observation_data_frame=observation_data_frame
+                )
+            )
+
+        return observations
+
+    def _get_driver_target_from_observation_data_frame(
+        self, observation_data_frame: typing.Tuple[pandas.Timestamp, pandas.Series]
+    ) -> DriverTarget:
+        """Convert an observation data frame into a DriverTarget.
+
+        Parameters
+        ----------
+        observation_data_frame :  pandas.DataFrame
+            An observation data frame.
+        """
+
+        return DriverTarget(
+            observing_script_name=self.default_observing_script_name,
+            observing_script_is_standard=self.default_observing_script_is_standard,
+            targetid=observation_data_frame["targetId"],
+        )
