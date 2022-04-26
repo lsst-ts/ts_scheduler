@@ -4,6 +4,11 @@
 Version History
 ===============
 
+v1.13.1
+-------
+
+* Add special condition/error code for when the CSC fails to update telemetry.
+
 v1.13.0
 -------
 
