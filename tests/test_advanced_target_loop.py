@@ -34,7 +34,7 @@ from lsst.ts import salobj
 
 from lsst.ts.scheduler import SchedulerCSC
 from lsst.ts.scheduler.utils import SchedulerModes
-from lsst.ts.scheduler.utils.error_codes import NO_QUEUE
+from lsst.ts.scheduler.utils.error_codes import NO_QUEUE, UPDATE_TELEMETRY_ERROR
 from lsst.ts.scheduler.mock import ObservatoryStateMock
 
 try:
@@ -189,6 +189,44 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
         )
         assert data.errorCode == 0
 
+    async def test_fail_efd_query(self):
+
+        # enable queue...
+        await salobj.set_summary_state(
+            self.queue_remote,
+            salobj.State.ENABLED,
+        )
+
+        # Enable Scheduler
+        await salobj.set_summary_state(
+            self.scheduler_remote,
+            salobj.State.ENABLED,
+            override="advance_target_loop_sequential.yaml",
+        )
+
+        self.scheduler.telemetry_stream_handler.efd_client.configure_mock(
+            **{
+                "select_time_series.side_effect": self.mock_fail_select_time_series,
+            },
+        )
+
+        self.scheduler_remote.evt_errorCode.flush()
+        self.scheduler_remote.evt_summaryState.flush()
+
+        # Resume scheduler operation
+        await self.scheduler_remote.cmd_resume.start(timeout=STD_TIMEOUT)
+
+        evt_state = await self.scheduler_remote.evt_summaryState.next(
+            flush=False, timeout=STD_TIMEOUT
+        )
+        assert salobj.State(evt_state.summaryState) == salobj.State.FAULT
+
+        error_code = await self.scheduler_remote.evt_errorCode.next(
+            flush=False, timeout=STD_TIMEOUT
+        )
+
+        assert error_code.errorCode == UPDATE_TELEMETRY_ERROR
+
     async def test_with_queue(self):
         """Test the target production loop with queue.
 
@@ -291,6 +329,10 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
     def tearDown(self):
         for filename in glob.glob("./sequential_*.p"):
             os.remove(filename)
+
+    async def mock_fail_select_time_series(self, *args, **kwargs):
+
+        raise RuntimeError("This is a test.")
 
 
 if __name__ == "__main__":

@@ -51,6 +51,7 @@ from .utils.csc_utils import (
 )
 
 from .utils.error_codes import (
+    UPDATE_TELEMETRY_ERROR,
     NO_QUEUE,
     PUT_ON_QUEUE,
     SIMPLE_LOOP_ERROR,
@@ -59,7 +60,7 @@ from .utils.error_codes import (
     OBSERVATORY_STATE_UPDATE,
 )
 from .utils.parameters import SchedulerCscParameters
-from .utils.exceptions import UnableToFindTarget
+from .utils.exceptions import UnableToFindTarget, UpdateTelemetryError
 from .driver import Driver
 from .driver.survey_topology import SurveyTopology
 from .driver.driver_target import DriverTarget
@@ -608,27 +609,32 @@ class SchedulerCSC(salobj.ConfigurableCsc):
     async def update_telemetry(self):
         """Update data on all the telemetry values."""
 
-        if self.telemetry_stream_handler is not None:
-            self.log.debug("Updating telemetry stream.")
+        try:
+            if self.telemetry_stream_handler is not None:
+                self.log.debug("Updating telemetry stream.")
 
-            for telemetry in self.telemetry_stream_handler.telemetry_streams:
-                telemetry_data = await self.telemetry_stream_handler.retrive_telemetry(
-                    telemetry
-                )
+                for telemetry in self.telemetry_stream_handler.telemetry_streams:
+                    telemetry_data = (
+                        await self.telemetry_stream_handler.retrive_telemetry(telemetry)
+                    )
 
-                self.raw_telemetry[telemetry] = (
-                    telemetry_data[0] if len(telemetry_data) == 1 else telemetry_data
-                )
-        else:
-            self.log.debug("Telemetry stream not configured.")
+                    self.raw_telemetry[telemetry] = (
+                        telemetry_data[0]
+                        if len(telemetry_data) == 1
+                        else telemetry_data
+                    )
+            else:
+                self.log.debug("Telemetry stream not configured.")
 
-        self.models["observatory_model"].update_state(
-            utils.astropy_time_from_tai_unix(utils.current_tai()).unix
-        )
+            self.models["observatory_model"].update_state(
+                utils.astropy_time_from_tai_unix(utils.current_tai()).unix
+            )
 
-        loop = asyncio.get_event_loop()
+            loop = asyncio.get_event_loop()
 
-        await loop.run_in_executor(None, self.driver.update_conditions)
+            await loop.run_in_executor(None, self.driver.update_conditions)
+        except Exception as exception:
+            raise UpdateTelemetryError("Failed to update telemetry.") from exception
 
     async def put_on_queue(self, targets):
         """Given a list of targets, append them on the queue to be observed.
@@ -1437,6 +1443,14 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     await self.fault(
                         code=UNABLE_TO_FIND_TARGET,
                         report=f"Unable to find target in the next {self.max_time_no_target/60./60.} hours.",
+                        traceback=traceback.format_exc(),
+                    )
+                break
+            except UpdateTelemetryError:
+                if self.summary_state != salobj.State.FAULT:
+                    await self.fault(
+                        code=UPDATE_TELEMETRY_ERROR,
+                        report="Failed to update telemetry.",
                         traceback=traceback.format_exc(),
                     )
                 break

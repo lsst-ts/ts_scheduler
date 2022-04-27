@@ -18,8 +18,15 @@
 #
 # You should have received a copy of the GNU General Public License
 
-__all__ = ["UnableToFindTarget"]
+__all__ = [
+    "UnableToFindTarget",
+    "UpdateTelemetryError",
+]
 
 
 class UnableToFindTarget(Exception):
+    pass
+
+
+class UpdateTelemetryError(Exception):
     pass
