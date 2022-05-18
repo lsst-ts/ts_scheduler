@@ -49,6 +49,7 @@ from .utils.csc_utils import (
     NonFinalStates,
     is_uri,
     is_valid_efd_query,
+    OBSERVATION_NAMED_PARAMETERS,
 )
 
 from .utils.error_codes import (
@@ -208,6 +209,9 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         self.time_delta_no_target = 30.0
         # The maximum tolerable time without targets in seconds.
         self.max_time_no_target = 3600.0
+
+        # The maximum number of targets in the predicted schedule.
+        self.max_predicted_targets = 1000
 
         # Default command response timeout
         self.default_command_timeout = 60.0
@@ -1376,6 +1380,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     # target list is generated the first time the loop runs.
                     await self.generate_target_queue()
 
+                    await self.compute_predicted_schedule()
+
                 async with self.target_loop_lock:
 
                     # If it is the first pass get the current queue, otherwise
@@ -1764,6 +1770,76 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             await asyncio.sleep(0)
 
         return time_scheduler_evaluation, time_start, targets
+
+    async def compute_predicted_schedule(self):
+        """Compute the predicted schedule.
+
+        This method will start from the current time, play any target in the
+        queue, then compute targets for the next
+        config.predicted_scheduler_window hours.
+        """
+
+        if not hasattr(self, "evt_predictedSchedule"):
+            self.log.debug("No support for predicted scheduler.")
+            return
+
+        self.log.debug("Computing predicted schedule.")
+
+        async with self.current_scheduler_state(publish_lfoa=False):
+
+            # Synchronize observatory model state with current observatory
+            # state.
+            self.models["observatory_model"].set_state(self.models["observatory_state"])
+            self.models["observatory_model"].start_tracking(
+                self.models["observatory_state"].time
+            )
+
+            self.log.debug("Registering current scheduled targets.")
+
+            for target in self.raw_telemetry["scheduled_targets"]:
+                self.log.debug(
+                    f"Temporarily registering scheduled target: {target.note}."
+                )
+                self.driver.register_observed_target(target)
+                self.models["observatory_model"].observe(target)
+
+            (_, _, targets,) = await self._get_targets_in_time_window(
+                max_targets=self.max_predicted_targets,
+                time_window=self.parameters.predicted_scheduler_window * 60.0 * 60.0,
+            )
+
+            targets_info = [
+                dataclasses.asdict(target.get_observation()) for target in targets
+            ]
+
+            extra_nans = [np.nan] * (self.max_predicted_targets - len(targets))
+
+            predicted_schedule = dict(
+                [
+                    (
+                        param,
+                        np.array(
+                            [target[param] for target in targets_info] + extra_nans
+                        ),
+                    )
+                    for param in OBSERVATION_NAMED_PARAMETERS
+                    if param
+                    not in {
+                        "targetId",
+                    }
+                ]
+            )
+
+            predicted_schedule["numberOfTargets"] = len(targets_info)
+            predicted_schedule["instrumentConfiguration"] = ",".join(
+                predicted_schedule.pop("filter")[
+                    : predicted_schedule["numberOfTargets"]
+                ]
+            )
+
+            await self.evt_predictedSchedule.set_write(**predicted_schedule)
+
+        self.log.debug("Finished computing predicted schedule.")
 
     def callback_script_info(self, data):
         """This callback function will store in a dictionary information about
