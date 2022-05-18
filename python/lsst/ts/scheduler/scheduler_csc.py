@@ -1692,31 +1692,17 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             )
             return
 
-        loop = asyncio.get_running_loop()
+        time_evaluation, time_start, targets = await self._get_targets_in_time_window(
+            max_targets=1, time_window=self.max_time_no_target
+        )
 
-        time_start = self.models["observatory_model"].current_state.time
-        time_evaluation = time_start
-
-        self.models["observatory_model"].stop_tracking(time_evaluation)
-
-        target = None
-        while (
-            target is None and (time_evaluation - time_start) < self.max_time_no_target
-        ):
-            await loop.run_in_executor(None, self.driver.update_conditions)
-
-            time_evaluation += self.time_delta_no_target
-            self.models["observatory_model"].update_state(time_evaluation)
-
-            target = await loop.run_in_executor(None, self.driver.select_next_target)
-
-        if target is None:
+        if len(targets) == 0:
             raise UnableToFindTarget(
                 f"Could not determine next target in allotted window: {self.max_time_no_target}s."
             )
         else:
             delta_time = time_evaluation - time_start
-            self.log.debug(f"Next target: {target}.")
+            self.log.debug(f"Next target: {targets[0]}.")
             if delta_time > self.parameters.loop_sleep_time:
                 self.log.info(
                     f"Next target will be observable in {delta_time}s. Creating timer task."
@@ -1731,6 +1717,53 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 )
 
             return delta_time
+
+    async def _get_targets_in_time_window(self, max_targets, time_window):
+        """Get targets from the driver in given time window.
+
+        Parameters
+        ----------
+        max_targets : int
+            Maximum number of targets.
+        time_window : float
+            Lenght of time in the future to compute targets (in seconds).
+
+        Returns
+        -------
+        time_scheduler_evaluation : float
+            The time when the last evaluation was performed.
+        time_start : float
+            The time when the evaluation started.
+        targets : list of Target
+            List of targets.
+        """
+
+        loop = asyncio.get_running_loop()
+
+        time_start = self.models["observatory_model"].current_state.time
+        time_scheduler_evaluation = time_start
+
+        self.models["observatory_model"].stop_tracking(time_scheduler_evaluation)
+
+        targets = []
+        while (
+            len(targets) < max_targets
+            and (time_scheduler_evaluation - time_start) < time_window
+        ):
+            await loop.run_in_executor(None, self.driver.update_conditions)
+
+            target = await loop.run_in_executor(None, self.driver.select_next_target)
+
+            if target is None:
+                time_scheduler_evaluation += self.time_delta_no_target
+                self.models["observatory_model"].update_state(time_scheduler_evaluation)
+            else:
+                self.models["observatory_model"].observe(target)
+                targets.append(target)
+
+            await asyncio.sleep(0)
+
+        return time_scheduler_evaluation, time_start, targets
 
     def callback_script_info(self, data):
         """This callback function will store in a dictionary information about
