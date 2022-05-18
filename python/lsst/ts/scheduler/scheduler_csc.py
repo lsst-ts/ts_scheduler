@@ -49,6 +49,7 @@ from .utils.csc_utils import (
     NonFinalStates,
     is_uri,
     is_valid_efd_query,
+    support_command,
     OBSERVATION_NAMED_PARAMETERS,
 )
 
@@ -178,6 +179,11 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         initial_state=salobj.base_csc.State.STANDBY,
         simulation_mode=0,
     ):
+
+        if support_command("computePredictedSchedule"):
+            setattr(
+                self, "do_computePredictedSchedule", self._do_computePredictedSchedule
+            )
 
         super().__init__(
             name="Scheduler",
@@ -534,6 +540,34 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         )
 
         await self._handle_load_snapshot(data.uri)
+
+    async def _do_computePredictedSchedule(self, data):
+        """Compute and publish the predicted schedule.
+
+        This command can only be executed if the Scheduler is idle. It it is
+        currently running, the command will be rejected.
+
+        Parameters
+        ----------
+        data : `DataType`
+            Command data.
+        """
+
+        self.assert_enabled()
+
+        if self.run_target_loop.is_set():
+            raise RuntimeError(
+                "Scheduler is currently running. Note that the predicted schedule "
+                "is computed automatically while the Scheduler is running."
+            )
+
+        await self.cmd_computePredictedSchedule.ack_in_progress(
+            data,
+            timeout=self.default_command_timeout,
+            result="Computing predicted schedule.",
+        )
+
+        await self.compute_predicted_schedule()
 
     async def telemetry_loop(self):
         """Scheduler telemetry loop.
