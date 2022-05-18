@@ -28,6 +28,7 @@ import unittest
 from lsst.ts import salobj
 from lsst.ts.scheduler import SchedulerCSC
 from lsst.ts.scheduler.utils import SchedulerModes
+from lsst.ts.scheduler.utils.csc_utils import support_command
 from lsst.ts.scheduler.mock import ObservatoryStateMock
 from lsst.ts.scheduler.utils.error_codes import OBSERVATORY_STATE_UPDATE
 
@@ -172,7 +173,12 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
         ), ObservatoryStateMock():
 
             await self.check_standard_state_transitions(
-                enabled_commands=("resume", "stop", "load"),
+                enabled_commands=["resume", "stop", "load"]
+                + (
+                    ["computePredictedSchedule"]
+                    if support_command("computePredictedSchedule")
+                    else []
+                ),
                 override="simple.yaml",
             )
 
@@ -249,6 +255,37 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                     )
             finally:
                 await salobj.set_summary_state(self.remote, salobj.State.STANDBY)
+
+    # TODO: (DM-34905) Remove backward compatibility.
+    @unittest.skipIf(
+        not support_command("computePredictedSchedule"),
+        "Command 'computePredictedSchedule' not supported.",
+    )
+    async def test_compute_predicted_schedule(self):
+        async with self.make_csc(
+            config_dir=TEST_CONFIG_DIR,
+            initial_state=salobj.State.STANDBY,
+            simulation_mode=SchedulerModes.MOCKS3,
+        ), ObservatoryStateMock():
+
+            try:
+                await salobj.set_summary_state(
+                    self.remote,
+                    salobj.State.ENABLED,
+                    override="advance_target_loop_sequential.yaml",
+                )
+
+                await self.remote.cmd_computePredictedSchedule.start(
+                    timeout=SHORT_TIMEOUT
+                )
+
+                await self.assert_next_sample(topic=self.remote.evt_predictedSchedule)
+
+            finally:
+                await salobj.set_summary_state(
+                    self.remote,
+                    salobj.State.STANDBY,
+                )
 
 
 if __name__ == "__main__":
