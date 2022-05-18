@@ -4,6 +4,30 @@
 Version History
 ===============
 
+v1.14.0
+-------
+
+* In Scheduler CSC:
+
+  * Add new command `computePredictedSchedule`, using the new `support_command` utility to maintain backward compatibility.
+  * Publish general info.
+  * Publish time to next target.
+  * Add `compute_predicted_schedule` feature.
+    The method runs in the advance control loop just after generating the target queue.
+  * Add `_get_targets_in_time_window`, to run the scheduler into the future until it produces a set number of targets or reaches the end of the specified time window.
+  * Refactor `estimate_next_target` to use `_get_targets_in_time_window`.
+  * Add `current_scheduler_state` async context manager.
+    This context manager stores a snapshot, optionally publishes it to the lfoa, yields and then restores the state of the scheduler.
+  * Refactor `generate_target_queue` to use `current_scheduler_state` context manager to handle the snapshot.
+  * Send ack in progress for all commands with a timeout of 1 min.
+
+* Update advance target loop unit test to check that the predicted target queue was published as expected, as well as the new events `timeToNextTarget` and `generalInfo`.
+
+* In csc_utils, add `support_command` method, to determine if the CSC supports a specific command.
+  This is useful to provide backward compatibility with different xml versions.
+
+* Add unit test for new `computePredictedSchedule` command.
+
 v1.13.1
 -------
 
