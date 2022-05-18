@@ -208,6 +208,9 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         # The maximum tolerable time without targets in seconds.
         self.max_time_no_target = 3600.0
 
+        # Default command response timeout
+        self.default_command_timeout = 60.0
+
         # How long to wait for target loop to stop before killing it
         self.loop_die_timeout = 5.0
 
@@ -267,6 +270,13 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         )
 
     async def begin_start(self, data):
+
+        await self.cmd_start.ack_in_progress(
+            data,
+            timeout=self.default_command_timeout,
+            result="Starting CSC.",
+        )
+
         try:
             await super().begin_start(data)
         except Exception:
@@ -287,6 +297,12 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             Command data
 
         """
+
+        await self.cmd_enable.ack_in_progress(
+            data,
+            timeout=self.default_command_timeout,
+            result="Enabling CSC.",
+        )
 
         # Make sure event is not set so loops won't start once the CSC is
         # enabled.
@@ -373,6 +389,12 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             Command data
 
         """
+        await self.cmd_disable.ack_in_progress(
+            data,
+            timeout=self.default_command_timeout,
+            result="Disabling CSC.",
+        )
+
         try:
             if self.target_production_task is None:
                 # Nothing to do, just transition
@@ -449,6 +471,12 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         if not self.run_target_loop.is_set():
             raise RuntimeError("Target production loop is not running.")
 
+        await self.cmd_stop.ack_in_progress(
+            data,
+            timeout=self.default_command_timeout,
+            result="Stopping Scheduler execution.",
+        )
+
         self.run_target_loop.clear()
 
         if data.abort:
@@ -491,6 +519,12 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             raise RuntimeError(
                 "Target production loop is running. Stop it before loading a file."
             )
+
+        await self.cmd_load.ack_in_progress(
+            data,
+            timeout=self.default_command_timeout,
+            result="Loading snapshot.",
+        )
 
         await self._handle_load_snapshot(data.uri)
 
