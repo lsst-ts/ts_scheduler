@@ -1589,6 +1589,13 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                         - self.models["observatory_state"].time
                     )
 
+                    await self._publish_time_to_next_target(
+                        current_time=self.models["observatory_state"].time,
+                        wait_time=wait_time,
+                        ra=target.ra,
+                        dec=target.dec,
+                        rot_sky_pos=target.ang,
+                    )
 
                     self.targets_queue.append(target)
 
@@ -1709,6 +1716,14 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         else:
             delta_time = time_evaluation - time_start
             self.log.debug(f"Next target: {targets[0]}.")
+
+            await self._publish_time_to_next_target(
+                wait_time=delta_time,
+                ra=targets[0].ra,
+                dec=targets[0].dec,
+                rot_sky_pos=targets[0].ang,
+            )
+
             if delta_time > self.parameters.loop_sleep_time:
                 self.log.info(
                     f"Next target will be observable in {delta_time}s. Creating timer task."
@@ -2142,6 +2157,36 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         for observation in observations:
             self.driver.register_observed_target(observation)
         self.log.debug("Finished registering observations.")
+
+    async def _publish_time_to_next_target(
+        self, current_time, wait_time, ra, dec, rot_sky_pos
+    ):
+        """Publish next target event.
+
+        Parameters
+        ----------
+        current_time : float
+            Time when the next target was estimated.
+        wait_time : float
+            How long until the next target. This is zero if queue is operating
+            normally.
+        ra : float
+            Estimated RA of the target (in degrees).
+        dec : float
+            Estimated Declination of the target (in degrees).
+        rot_sky_pos : float
+            Estimated rotation angle (in degrees).
+        """
+
+        # TODO: Remove backward compatibility.
+        if hasattr(self, "evt_timeToNextTarget"):
+            await self.evt_timeToNextTarget.set_write(
+                currentTime=current_time,
+                waitTime=wait_time,
+                ra=ra,
+                decl=dec,
+                rotSkyPos=rot_sky_pos,
+            )
 
     @contextlib.asynccontextmanager
     async def current_scheduler_state(self, publish_lfoa):
