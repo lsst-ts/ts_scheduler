@@ -674,6 +674,9 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             loop = asyncio.get_event_loop()
 
             await loop.run_in_executor(None, self.driver.update_conditions)
+
+            await self._publish_general_info()
+
         except Exception as exception:
             raise UpdateTelemetryError("Failed to update telemetry.") from exception
 
@@ -2186,6 +2189,18 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 ra=ra,
                 decl=dec,
                 rotSkyPos=rot_sky_pos,
+            )
+
+    async def _publish_general_info(self):
+        """Publish general info event."""
+
+        # TODO: Remove backward compatibility.
+        if hasattr(self, "evt_generalInfo"):
+            await self.evt_generalInfo.set_write(
+                isNight=self.driver.is_night,
+                night=self.driver.night,
+                sunset=self.driver.current_sunset,
+                sunrise=self.driver.current_sunrise,
             )
 
     @contextlib.asynccontextmanager
