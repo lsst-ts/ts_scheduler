@@ -219,10 +219,11 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         # The maximum number of targets in the predicted schedule.
         self.max_predicted_targets = 1000
 
-        # Default command response timeout
+        # Default command response timeout, in seconds.
         self.default_command_timeout = 60.0
 
-        # How long to wait for target loop to stop before killing it
+        # How long to wait for target loop to stop before killing it, in
+        # seconds.
         self.loop_die_timeout = 5.0
 
         self.telemetry_stream_handler = None
@@ -544,7 +545,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
     async def _do_computePredictedSchedule(self, data):
         """Compute and publish the predicted schedule.
 
-        This command can only be executed if the Scheduler is idle. It it is
+        This command can only be executed if the Scheduler is idle. It is
         currently running, the command will be rejected.
 
         Parameters
@@ -1593,7 +1594,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             while len(self.targets_queue) <= self.parameters.n_targets + 1:
 
                 # Inside the loop we are running update_conditions directly
-                # from the driver instead if update_telemetry. This bypasses
+                # from the driver instead of update_telemetry. This bypasses
                 # the updates done by the CSC method.
                 await loop.run_in_executor(None, self.driver.update_conditions)
 
@@ -1659,12 +1660,12 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         Parameters
         ----------
-        publish_lfoa : bool
+        publish_lfoa : `bool`
             Publish current state to large file annex?
 
         Returns
         -------
-        str
+        `str`
             Path to the current scheduler state snapshot.
         """
 
@@ -1781,18 +1782,18 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         Parameters
         ----------
-        max_targets : int
+        max_targets : `int`
             Maximum number of targets.
-        time_window : float
+        time_window : `float`
             Lenght of time in the future to compute targets (in seconds).
 
         Returns
         -------
-        time_scheduler_evaluation : float
+        time_scheduler_evaluation : `float`
             The time when the last evaluation was performed.
-        time_start : float
+        time_start : `float`
             The time when the evaluation started.
-        targets : list of Target
+        targets : `list` of `Target`
             List of targets.
         """
 
@@ -2202,20 +2203,20 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         Parameters
         ----------
-        current_time : float
+        current_time : `float`
             Time when the next target was estimated.
-        wait_time : float
+        wait_time : `float`
             How long until the next target. This is zero if queue is operating
             normally.
-        ra : float
+        ra : `float`
             Estimated RA of the target (in degrees).
-        dec : float
+        dec : `float`
             Estimated Declination of the target (in degrees).
-        rot_sky_pos : float
+        rot_sky_pos : `float`
             Estimated rotation angle (in degrees).
         """
 
-        # TODO: Remove backward compatibility.
+        # TODO: (DM-34905) Remove backward compatibility.
         if hasattr(self, "evt_timeToNextTarget"):
             await self.evt_timeToNextTarget.set_write(
                 currentTime=current_time,
@@ -2228,7 +2229,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
     async def _publish_general_info(self):
         """Publish general info event."""
 
-        # TODO: Remove backward compatibility.
+        # TODO: (DM-34905) Remove backward compatibility.
         if hasattr(self, "evt_generalInfo"):
             await self.evt_generalInfo.set_write(
                 isNight=self.driver.is_night,
