@@ -22,6 +22,7 @@ __all__ = [
     "NonFinalStates",
     "SchedulerModes",
     "is_uri",
+    "support_command",
     "OBSERVATION_NAMED_PARAMETERS",
 ]
 
@@ -31,7 +32,8 @@ import enum
 from urllib.parse import urlparse
 
 from lsst.ts.idl.enums import Script
-
+from lsst.ts.salobj import parse_idl
+from lsst.ts.idl import get_idl_dir
 
 NonFinalStates = frozenset(
     (
@@ -102,3 +104,20 @@ def is_valid_efd_query(entry: str) -> bool:
         True if it is a valid EFD query.
     """
     return efd_query_re.match(entry) is not None
+
+
+def support_command(command_name: str) -> bool:
+    """Check if the CSC supports a particular command.
+
+    This is used to provide backward compatibility for new commands being added
+    to the CSC.
+
+    Returns
+    -------
+    `bool`
+        True if the CSC interface defines the command, False
+        otherwise.
+    """
+    idl_metadata = parse_idl("Scheduler", get_idl_dir() / "sal_revCoded_Scheduler.idl")
+
+    return f"command_{command_name}" in idl_metadata.topic_info
