@@ -20,6 +20,7 @@
 
 __all__ = ["SchedulerCSC"]
 
+import contextlib
 import pathlib
 import shutil
 import asyncio
@@ -48,6 +49,8 @@ from .utils.csc_utils import (
     NonFinalStates,
     is_uri,
     is_valid_efd_query,
+    support_command,
+    OBSERVATION_NAMED_PARAMETERS,
 )
 
 from .utils.error_codes import (
@@ -177,6 +180,11 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         simulation_mode=0,
     ):
 
+        if support_command("computePredictedSchedule"):
+            setattr(
+                self, "do_computePredictedSchedule", self._do_computePredictedSchedule
+            )
+
         super().__init__(
             name="Scheduler",
             config_schema=CONFIG_SCHEMA,
@@ -208,7 +216,14 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         # The maximum tolerable time without targets in seconds.
         self.max_time_no_target = 3600.0
 
-        # How long to wait for target loop to stop before killing it
+        # The maximum number of targets in the predicted schedule.
+        self.max_predicted_targets = 1000
+
+        # Default command response timeout, in seconds.
+        self.default_command_timeout = 60.0
+
+        # How long to wait for target loop to stop before killing it, in
+        # seconds.
         self.loop_die_timeout = 5.0
 
         self.telemetry_stream_handler = None
@@ -227,6 +242,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         # Lock for the event loop. This is used to synchronize actions that
         # will affect the target production loop.
         self.target_loop_lock = asyncio.Lock()
+
+        self.scheduler_state_lock = asyncio.Lock()
 
         self.driver = None
 
@@ -267,6 +284,13 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         )
 
     async def begin_start(self, data):
+
+        await self.cmd_start.ack_in_progress(
+            data,
+            timeout=self.default_command_timeout,
+            result="Starting CSC.",
+        )
+
         try:
             await super().begin_start(data)
         except Exception:
@@ -287,6 +311,12 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             Command data
 
         """
+
+        await self.cmd_enable.ack_in_progress(
+            data,
+            timeout=self.default_command_timeout,
+            result="Enabling CSC.",
+        )
 
         # Make sure event is not set so loops won't start once the CSC is
         # enabled.
@@ -373,6 +403,12 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             Command data
 
         """
+        await self.cmd_disable.ack_in_progress(
+            data,
+            timeout=self.default_command_timeout,
+            result="Disabling CSC.",
+        )
+
         try:
             if self.target_production_task is None:
                 # Nothing to do, just transition
@@ -449,6 +485,12 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         if not self.run_target_loop.is_set():
             raise RuntimeError("Target production loop is not running.")
 
+        await self.cmd_stop.ack_in_progress(
+            data,
+            timeout=self.default_command_timeout,
+            result="Stopping Scheduler execution.",
+        )
+
         self.run_target_loop.clear()
 
         if data.abort:
@@ -492,7 +534,41 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 "Target production loop is running. Stop it before loading a file."
             )
 
+        await self.cmd_load.ack_in_progress(
+            data,
+            timeout=self.default_command_timeout,
+            result="Loading snapshot.",
+        )
+
         await self._handle_load_snapshot(data.uri)
+
+    async def _do_computePredictedSchedule(self, data):
+        """Compute and publish the predicted schedule.
+
+        This command can only be executed if the Scheduler is idle. It is
+        currently running, the command will be rejected.
+
+        Parameters
+        ----------
+        data : `DataType`
+            Command data.
+        """
+
+        self.assert_enabled()
+
+        if self.run_target_loop.is_set():
+            raise RuntimeError(
+                "Scheduler is currently running. Note that the predicted schedule "
+                "is computed automatically while the Scheduler is running."
+            )
+
+        await self.cmd_computePredictedSchedule.ack_in_progress(
+            data,
+            timeout=self.default_command_timeout,
+            result="Computing predicted schedule.",
+        )
+
+        await self.compute_predicted_schedule()
 
     async def telemetry_loop(self):
         """Scheduler telemetry loop.
@@ -633,6 +709,9 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             loop = asyncio.get_event_loop()
 
             await loop.run_in_executor(None, self.driver.update_conditions)
+
+            await self._publish_general_info()
+
         except Exception as exception:
             raise UpdateTelemetryError("Failed to update telemetry.") from exception
 
@@ -1339,6 +1418,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     # target list is generated the first time the loop runs.
                     await self.generate_target_queue()
 
+                    await self.compute_predicted_schedule()
+
                 async with self.target_loop_lock:
 
                     # If it is the first pass get the current queue, otherwise
@@ -1471,76 +1552,90 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         This method will save the current state of the scheduler, play the
         scheduler for the future, generating a list of observations.
-
         """
-        last_scheduler_state_filename = await self.save_scheduler_state()
 
-        self.log.debug(f"Target queue contains {len(self.targets_queue)} targets.")
+        async with self.current_scheduler_state(publish_lfoa=True):
 
-        loop = asyncio.get_running_loop()
+            self.log.debug(f"Target queue contains {len(self.targets_queue)} targets.")
 
-        # Note that here it runs the update_telemetry method from the
-        # scheduler. This method will update the telemetry based on most
-        # current recent data in the system.
-        await self.update_telemetry()
+            loop = asyncio.get_running_loop()
 
-        # Synchronize observatory model state with current observatory state.
-        self.models["observatory_model"].set_state(self.models["observatory_state"])
-        self.models["observatory_model"].start_tracking(
-            self.models["observatory_state"].time
-        )
+            # Note that here it runs the update_telemetry method from the
+            # scheduler. This method will update the telemetry based on most
+            # current recent data in the system.
+            await self.update_telemetry()
 
-        self.log.debug("Registering current scheduled targets.")
+            # Synchronize observatory model state with current observatory
+            # state.
+            self.models["observatory_model"].set_state(self.models["observatory_state"])
+            self.models["observatory_model"].start_tracking(
+                self.models["observatory_state"].time
+            )
 
-        for target in self.raw_telemetry["scheduled_targets"]:
-            self.log.debug(f"Temporarily registering scheduled target: {target.note}.")
-            self.driver.register_observed_target(target)
-            self.models["observatory_model"].observe(target)
+            self.log.debug("Registering current scheduled targets.")
 
-        # For now it will only generate enough targets to send to the queue
-        # and leave one extra in the internal queue. In the future we will
-        # generate targets to fill the
-        # self.parameters.predicted_scheduler_window.
-        # But then we will have to improve how we handle the target generation
-        # and the check_targets_queue_condition.
-        self.log.debug(
-            f"Requesting {self.parameters.n_targets + 1} additional targets."
-        )
-
-        while len(self.targets_queue) <= self.parameters.n_targets + 1:
-
-            # Inside the loop we are running update_conditions directly from
-            # the driver instead if update_telemetry. This bypasses the updates
-            # done by the CSC method.
-            await loop.run_in_executor(None, self.driver.update_conditions)
-
-            target = await loop.run_in_executor(None, self.driver.select_next_target)
-
-            if target is None:
+            for target in self.raw_telemetry["scheduled_targets"]:
                 self.log.debug(
-                    f"No target from the scheduler. Stopping with {len(self.targets_queue)}."
-                )
-                if len(self.targets_queue) == 0:
-                    await self.handle_no_targets_on_queue()
-                break
-            else:
-                await self.reset_handle_no_targets_on_queue()
-
-                self.log.debug(
-                    f"Temporarily registering selected target: {target.note}."
+                    f"Temporarily registering scheduled target: {target.note}."
                 )
                 self.driver.register_observed_target(target)
-
-                # The following will playback the observations on the
-                # observatory model but will keep the observatory state
-                # unchanged
                 self.models["observatory_model"].observe(target)
 
-                self.targets_queue.append(target)
+            # For now it will only generate enough targets to send to the queue
+            # and leave one extra in the internal queue. In the future we will
+            # generate targets to fill the
+            # self.parameters.predicted_scheduler_window.
+            # But then we will have to improve how we handle the target
+            # generation and the check_targets_queue_condition.
+            self.log.debug(
+                f"Requesting {self.parameters.n_targets + 1} additional targets."
+            )
 
-        self.log.debug("Resetting scheduler state.")
-        self.driver.reset_from_state(last_scheduler_state_filename)
-        shutil.os.remove(last_scheduler_state_filename)
+            while len(self.targets_queue) <= self.parameters.n_targets + 1:
+
+                # Inside the loop we are running update_conditions directly
+                # from the driver instead of update_telemetry. This bypasses
+                # the updates done by the CSC method.
+                await loop.run_in_executor(None, self.driver.update_conditions)
+
+                target = await loop.run_in_executor(
+                    None, self.driver.select_next_target
+                )
+
+                if target is None:
+                    self.log.debug(
+                        f"No target from the scheduler. Stopping with {len(self.targets_queue)}."
+                    )
+                    if len(self.targets_queue) == 0:
+                        await self.handle_no_targets_on_queue()
+                    break
+                else:
+                    await self.reset_handle_no_targets_on_queue()
+
+                    self.log.debug(
+                        f"Temporarily registering selected target: {target.note}."
+                    )
+                    self.driver.register_observed_target(target)
+
+                    # The following will playback the observations on the
+                    # observatory model but will keep the observatory state
+                    # unchanged
+                    self.models["observatory_model"].observe(target)
+
+                    wait_time = (
+                        self.models["observatory_model"].current_state.time
+                        - self.models["observatory_state"].time
+                    )
+
+                    await self._publish_time_to_next_target(
+                        current_time=self.models["observatory_state"].time,
+                        wait_time=wait_time,
+                        ra=target.ra,
+                        dec=target.dec,
+                        rot_sky_pos=target.ang,
+                    )
+
+                    self.targets_queue.append(target)
 
         await self.check_targets_queue_condition()
 
@@ -1560,10 +1655,44 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         if len(self.targets_queue) == 0:
             self.targets_queue_condition.set_result(None)
 
-    async def save_scheduler_state(self):
-        """Save scheduler state to S3 bucket and publish event."""
+    async def save_scheduler_state(self, publish_lfoa):
+        """Save scheduler state to S3 bucket and publish event.
+
+        Parameters
+        ----------
+        publish_lfoa : `bool`
+            Publish current state to large file annex?
+
+        Returns
+        -------
+        `str`
+            Path to the current scheduler state snapshot.
+        """
 
         file_object = self.driver.get_state_as_file_object()
+        saved_scheduler_state_filename = self.driver.save_state()
+
+        if publish_lfoa:
+            scheduler_state_filename = "last_scheduler_state.p"
+            try:
+                await self._handle_lfoa(file_object=file_object)
+            except Exception:
+                self.log.exception(
+                    f"Could not upload file to S3 bucket. Keeping file {saved_scheduler_state_filename}."
+                )
+                return shutil.copy(
+                    saved_scheduler_state_filename, scheduler_state_filename
+                )
+            else:
+                return shutil.move(
+                    saved_scheduler_state_filename, scheduler_state_filename
+                )
+
+        else:
+            return saved_scheduler_state_filename
+
+    async def _handle_lfoa(self, file_object):
+        """Handle publishing large file object available (LFOA)."""
 
         key = self.s3bucket.make_key(
             salname=self.salinfo.name,
@@ -1573,22 +1702,13 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             suffix=".p",
         )
 
-        scheduler_state_filename = "last_scheduler_state.p"
-        saved_scheduler_state_filename = self.driver.save_state()
+        await self.s3bucket.upload(fileobj=file_object, key=key)
 
-        try:
-            await self.s3bucket.upload(fileobj=file_object, key=key)
-            url = f"{self.s3bucket.service_resource.meta.client.meta.endpoint_url}/{self.s3bucket.name}/{key}"
-            await self.evt_largeFileObjectAvailable.set_write(
-                url=url, generator=f"{self.salinfo.name}:{self.salinfo.index}"
-            )
-        except Exception:
-            self.log.exception(
-                f"Could not upload file {key} to S3. Keeping file {saved_scheduler_state_filename}."
-            )
-            return shutil.copy(saved_scheduler_state_filename, scheduler_state_filename)
-        else:
-            return shutil.move(saved_scheduler_state_filename, scheduler_state_filename)
+        url = f"{self.s3bucket.service_resource.meta.client.meta.endpoint_url}/{self.s3bucket.name}/{key}"
+
+        await self.evt_largeFileObjectAvailable.set_write(
+            url=url, generator=f"{self.salinfo.name}:{self.salinfo.index}"
+        )
 
     async def handle_no_targets_on_queue(self):
         """Handle condition where there are note more targets on the queue."""
@@ -1623,31 +1743,25 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             )
             return
 
-        loop = asyncio.get_running_loop()
+        time_evaluation, time_start, targets = await self._get_targets_in_time_window(
+            max_targets=1, time_window=self.max_time_no_target
+        )
 
-        time_start = self.models["observatory_model"].current_state.time
-        time_evaluation = time_start
-
-        self.models["observatory_model"].stop_tracking(time_evaluation)
-
-        target = None
-        while (
-            target is None and (time_evaluation - time_start) < self.max_time_no_target
-        ):
-            await loop.run_in_executor(None, self.driver.update_conditions)
-
-            time_evaluation += self.time_delta_no_target
-            self.models["observatory_model"].update_state(time_evaluation)
-
-            target = await loop.run_in_executor(None, self.driver.select_next_target)
-
-        if target is None:
+        if len(targets) == 0:
             raise UnableToFindTarget(
                 f"Could not determine next target in allotted window: {self.max_time_no_target}s."
             )
         else:
             delta_time = time_evaluation - time_start
-            self.log.debug(f"Next target: {target}.")
+            self.log.debug(f"Next target: {targets[0]}.")
+
+            await self._publish_time_to_next_target(
+                wait_time=delta_time,
+                ra=targets[0].ra,
+                dec=targets[0].dec,
+                rot_sky_pos=targets[0].ang,
+            )
+
             if delta_time > self.parameters.loop_sleep_time:
                 self.log.info(
                     f"Next target will be observable in {delta_time}s. Creating timer task."
@@ -1662,6 +1776,123 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 )
 
             return delta_time
+
+    async def _get_targets_in_time_window(self, max_targets, time_window):
+        """Get targets from the driver in given time window.
+
+        Parameters
+        ----------
+        max_targets : `int`
+            Maximum number of targets.
+        time_window : `float`
+            Lenght of time in the future to compute targets (in seconds).
+
+        Returns
+        -------
+        time_scheduler_evaluation : `float`
+            The time when the last evaluation was performed.
+        time_start : `float`
+            The time when the evaluation started.
+        targets : `list` of `Target`
+            List of targets.
+        """
+
+        loop = asyncio.get_running_loop()
+
+        time_start = self.models["observatory_model"].current_state.time
+        time_scheduler_evaluation = time_start
+
+        self.models["observatory_model"].stop_tracking(time_scheduler_evaluation)
+
+        targets = []
+        while (
+            len(targets) < max_targets
+            and (time_scheduler_evaluation - time_start) < time_window
+        ):
+            await loop.run_in_executor(None, self.driver.update_conditions)
+
+            target = await loop.run_in_executor(None, self.driver.select_next_target)
+
+            if target is None:
+                time_scheduler_evaluation += self.time_delta_no_target
+                self.models["observatory_model"].update_state(time_scheduler_evaluation)
+            else:
+                self.models["observatory_model"].observe(target)
+                targets.append(target)
+
+            await asyncio.sleep(0)
+
+        return time_scheduler_evaluation, time_start, targets
+
+    async def compute_predicted_schedule(self):
+        """Compute the predicted schedule.
+
+        This method will start from the current time, play any target in the
+        queue, then compute targets for the next
+        config.predicted_scheduler_window hours.
+        """
+
+        if not hasattr(self, "evt_predictedSchedule"):
+            self.log.debug("No support for predicted scheduler.")
+            return
+
+        self.log.debug("Computing predicted schedule.")
+
+        async with self.current_scheduler_state(publish_lfoa=False):
+
+            # Synchronize observatory model state with current observatory
+            # state.
+            self.models["observatory_model"].set_state(self.models["observatory_state"])
+            self.models["observatory_model"].start_tracking(
+                self.models["observatory_state"].time
+            )
+
+            self.log.debug("Registering current scheduled targets.")
+
+            for target in self.raw_telemetry["scheduled_targets"]:
+                self.log.debug(
+                    f"Temporarily registering scheduled target: {target.note}."
+                )
+                self.driver.register_observed_target(target)
+                self.models["observatory_model"].observe(target)
+
+            (_, _, targets,) = await self._get_targets_in_time_window(
+                max_targets=self.max_predicted_targets,
+                time_window=self.parameters.predicted_scheduler_window * 60.0 * 60.0,
+            )
+
+            targets_info = [
+                dataclasses.asdict(target.get_observation()) for target in targets
+            ]
+
+            extra_nans = [np.nan] * (self.max_predicted_targets - len(targets))
+
+            predicted_schedule = dict(
+                [
+                    (
+                        param,
+                        np.array(
+                            [target[param] for target in targets_info] + extra_nans
+                        ),
+                    )
+                    for param in OBSERVATION_NAMED_PARAMETERS
+                    if param
+                    not in {
+                        "targetId",
+                    }
+                ]
+            )
+
+            predicted_schedule["numberOfTargets"] = len(targets_info)
+            predicted_schedule["instrumentConfiguration"] = ",".join(
+                predicted_schedule.pop("filter")[
+                    : predicted_schedule["numberOfTargets"]
+                ]
+            )
+
+            await self.evt_predictedSchedule.set_write(**predicted_schedule)
+
+        self.log.debug("Finished computing predicted schedule.")
 
     def callback_script_info(self, data):
         """This callback function will store in a dictionary information about
@@ -1964,3 +2195,70 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         for observation in observations:
             self.driver.register_observed_target(observation)
         self.log.debug("Finished registering observations.")
+
+    async def _publish_time_to_next_target(
+        self, current_time, wait_time, ra, dec, rot_sky_pos
+    ):
+        """Publish next target event.
+
+        Parameters
+        ----------
+        current_time : `float`
+            Time when the next target was estimated.
+        wait_time : `float`
+            How long until the next target. This is zero if queue is operating
+            normally.
+        ra : `float`
+            Estimated RA of the target (in degrees).
+        dec : `float`
+            Estimated Declination of the target (in degrees).
+        rot_sky_pos : `float`
+            Estimated rotation angle (in degrees).
+        """
+
+        # TODO: (DM-34905) Remove backward compatibility.
+        if hasattr(self, "evt_timeToNextTarget"):
+            await self.evt_timeToNextTarget.set_write(
+                currentTime=current_time,
+                waitTime=wait_time,
+                ra=ra,
+                decl=dec,
+                rotSkyPos=rot_sky_pos,
+            )
+
+    async def _publish_general_info(self):
+        """Publish general info event."""
+
+        # TODO: (DM-34905) Remove backward compatibility.
+        if hasattr(self, "evt_generalInfo"):
+            await self.evt_generalInfo.set_write(
+                isNight=self.driver.is_night,
+                night=self.driver.night,
+                sunset=self.driver.current_sunset,
+                sunrise=self.driver.current_sunrise,
+            )
+
+    @contextlib.asynccontextmanager
+    async def current_scheduler_state(self, publish_lfoa):
+        """A context manager to handle storing the current scheduler state,
+        performing some operations on it and then resetting it to the
+        previous state.
+
+        Parameters
+        ----------
+        publish_lfoa : bool
+            Publish current state to large file annex?
+        """
+
+        async with self.scheduler_state_lock:
+
+            last_scheduler_state_filename = await self.save_scheduler_state(
+                publish_lfoa=publish_lfoa
+            )
+
+            try:
+                yield
+            finally:
+                self.log.debug("Resetting scheduler state.")
+                self.driver.reset_from_state(last_scheduler_state_filename)
+                shutil.os.remove(last_scheduler_state_filename)

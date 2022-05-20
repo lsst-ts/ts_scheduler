@@ -326,6 +326,35 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
             self.log.debug(f"{telemetry}={self.scheduler.raw_telemetry[telemetry]}")
             assert np.isfinite(self.scheduler.raw_telemetry[telemetry])
 
+        if hasattr(self.scheduler_remote, "evt_predictedSchedule"):
+            # Check predicted Schedule was published
+            predicted_schedule = self.scheduler_remote.evt_predictedSchedule.get()
+
+            assert predicted_schedule is not None, "Predicted schedule not published"
+            assert (
+                predicted_schedule.numberOfTargets > 0
+            ), "Number of targets in predicted schedule is zero."
+
+        if hasattr(self.scheduler_remote, "evt_timeToNextTarget"):
+            # Check time to next target
+            n_time_to_next_target = 0
+            while (
+                time_to_next_target := self.scheduler_remote.evt_timeToNextTarget.get_oldest()
+            ) is not None:
+                self.log.debug(f"{n_time_to_next_target}::{time_to_next_target}")
+                n_time_to_next_target += 1
+                assert time_to_next_target.waitTime > 0, "Wait time in the past"
+            assert n_time_to_next_target >= self.received_targets, (
+                "Not enough time to next target events published. "
+                f"Expected at least {self.received_targets} got {n_time_to_next_target}."
+            )
+
+        if hasattr(self.scheduler_remote, "evt_generalInfo"):
+            # check generalInfo was published
+            general_info = self.scheduler_remote.evt_generalInfo.get()
+
+            assert general_info is not None, "General info was not published"
+
     def tearDown(self):
         for filename in glob.glob("./sequential_*.p"):
             os.remove(filename)
