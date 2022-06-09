@@ -18,7 +18,10 @@
 #
 # You should have received a copy of the GNU General Public License
 
-__all__ = ["SchedulerCSC"]
+__all__ = [
+    "SchedulerCSC",
+    "run_scheduler",
+]
 
 import contextlib
 import pathlib
@@ -2299,3 +2302,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 self.log.debug("Resetting scheduler state.")
                 self.driver.reset_from_state(last_scheduler_state_filename)
                 shutil.os.remove(last_scheduler_state_filename)
+
+
+def run_scheduler() -> None:
+    """Run the Scheduler CSC."""
+    asyncio.run(SchedulerCSC.amain(index=True))
