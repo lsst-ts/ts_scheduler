@@ -1638,10 +1638,12 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 )
 
                 if target is None:
-                    self.log.debug(
-                        f"No target from the scheduler. Stopping with {len(self.targets_queue)}."
+                    n_scheduled_targets = len(self.raw_telemetry["scheduled_targets"])
+                    self.log.warning(
+                        f"No target from the scheduler. Stopping with {len(self.targets_queue)}. "
+                        f"Number of scheduled targets is {n_scheduled_targets}."
                     )
-                    if len(self.targets_queue) == 0:
+                    if len(self.targets_queue) == 0 and n_scheduled_targets == 0:
                         await self.handle_no_targets_on_queue()
                     break
                 else:
