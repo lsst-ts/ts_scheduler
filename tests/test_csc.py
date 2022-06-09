@@ -19,6 +19,7 @@
 # You should have received a copy of the GNU General Public License
 
 import asyncio
+import contextlib
 import os
 import glob
 import logging
@@ -60,7 +61,7 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
             config_dir=TEST_CONFIG_DIR,
             initial_state=salobj.State.STANDBY,
             simulation_mode=SchedulerModes.SIMULATION,
-        ):
+        ), self.make_script_queue(running=True):
             await self.assert_next_sample(topic=self.remote.evt_errorCode, errorCode=0)
             try:
                 self.remote.evt_summaryState.flush()
@@ -70,7 +71,9 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                         timeout=LONG_TIMEOUT, configurationOverride="simple.yaml"
                     )
 
-                    await self.remote.tel_observatoryState.next(flush=True)
+                    await self.remote.tel_observatoryState.next(
+                        flush=True, timeout=SHORT_TIMEOUT
+                    )
 
                 assert (
                     "WARNING:Scheduler:Failed to update observatory state. "
@@ -94,7 +97,7 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
             config_dir=TEST_CONFIG_DIR,
             initial_state=salobj.State.STANDBY,
             simulation_mode=SchedulerModes.SIMULATION,
-        ):
+        ), self.make_script_queue(running=True):
             await self.assert_next_sample(topic=self.remote.evt_errorCode, errorCode=0)
             try:
                 self.remote.evt_summaryState.flush()
@@ -123,14 +126,14 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
             finally:
                 await salobj.set_summary_state(self.remote, salobj.State.STANDBY)
 
-    async def test_no_observatory_state_fault_in_enabled_running(self):
+    async def test_no_observatory_state_fault_in_enabled_running_queue_running(self):
         """Test CSC goes to FAULT if no observatory state."""
 
         async with self.make_csc(
             config_dir=TEST_CONFIG_DIR,
             initial_state=salobj.State.STANDBY,
             simulation_mode=SchedulerModes.SIMULATION,
-        ):
+        ), self.make_script_queue(running=True):
             await self.assert_next_sample(topic=self.remote.evt_errorCode, errorCode=0)
             try:
                 self.remote.evt_summaryState.flush()
@@ -149,6 +152,35 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                 await self.assert_next_sample(
                     topic=self.remote.evt_errorCode, errorCode=OBSERVATORY_STATE_UPDATE
                 )
+            finally:
+                await salobj.set_summary_state(self.remote, salobj.State.STANDBY)
+
+    async def test_no_observatory_state_ok_in_enabled_running_queue_pause(self):
+        """Test CSC goes to FAULT if no observatory state."""
+
+        async with self.make_csc(
+            config_dir=TEST_CONFIG_DIR,
+            initial_state=salobj.State.STANDBY,
+            simulation_mode=SchedulerModes.SIMULATION,
+        ), self.make_script_queue(running=False):
+            await self.assert_next_sample(topic=self.remote.evt_errorCode, errorCode=0)
+            try:
+                self.remote.evt_summaryState.flush()
+
+                await salobj.set_summary_state(
+                    self.remote, salobj.State.ENABLED, override="simple.yaml"
+                )
+
+                await self.remote.cmd_resume.start(timeout=SHORT_TIMEOUT)
+
+                await self.assert_next_summary_state(salobj.State.DISABLED, flush=False)
+                await self.assert_next_summary_state(salobj.State.ENABLED, flush=False)
+                with self.assertRaises(asyncio.TimeoutError):
+                    await self.assert_next_summary_state(
+                        salobj.State.FAULT,
+                        flush=False,
+                        timeout=SHORT_TIMEOUT,
+                    )
             finally:
                 await salobj.set_summary_state(self.remote, salobj.State.STANDBY)
 
@@ -286,6 +318,14 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                     self.remote,
                     salobj.State.STANDBY,
                 )
+
+    @contextlib.asynccontextmanager
+    async def make_script_queue(self, running: bool) -> None:
+
+        self.log.debug("Make queue.")
+        async with salobj.Controller("ScriptQueue", index=1) as queue:
+            await queue.evt_queue.set_write(running=running)
+            yield
 
 
 if __name__ == "__main__":
