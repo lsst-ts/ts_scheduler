@@ -7,9 +7,11 @@ source:
   path: ../
 
 build:
-  noarch: generic
+  noarch: python
   script: python -m pip install --no-deps --ignore-installed .
-
+  entry_points:
+    - run_scheduler = lsst.ts.scheduler:run_scheduler
+ 
 test:
   requires:
     - ts-conda-build =0.3
@@ -25,8 +27,9 @@ test:
     - python
     - tests
     - setup.cfg
+    - pyproject.toml
   commands:
-    - rs_download_data
+    - rs_download_data -d skybrightness,skybrightness_pre,skybrightness_pre_small,throughputs,site_models
     - py.test -vsx
 
 requirements:
