@@ -1796,6 +1796,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             self.log.debug(f"Next target: {targets[0]}.")
 
             await self._publish_time_to_next_target(
+                current_time=time_evaluation,
                 wait_time=delta_time,
                 ra=targets[0].ra,
                 dec=targets[0].dec,
