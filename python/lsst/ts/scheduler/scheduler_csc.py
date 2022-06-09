@@ -589,9 +589,11 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 )
                 failed_observatory_state_logged = False
             except Exception:
+                queue = await self.get_queue(request=False)
                 if (
                     self.summary_state == salobj.State.ENABLED
                     and self.run_target_loop.is_set()
+                    and queue.running
                 ):
                     self.log.exception("Failed to update observatory state.")
                     await self.fault(
@@ -602,11 +604,32 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     return
                 elif not failed_observatory_state_logged:
                     failed_observatory_state_logged = True
-                    message_text = (
-                        " but not running"
+                    additional_messages: typing.List[str] = []
+                    additional_messages.append(
+                        " not running"
                         if self.summary_state == salobj.State.ENABLED
+                        and not self.run_target_loop.is_set()
                         else ""
                     )
+                    additional_messages.append(
+                        " queue not running"
+                        if self.summary_state == salobj.State.ENABLED
+                        and not queue.running
+                        else ""
+                    )
+
+                    message_text = ""
+
+                    n_message = 0
+                    for message in additional_messages:
+                        if len(message) > 0:
+                            if n_message == 0:
+                                message_text += " but"
+                            else:
+                                message_text += " and"
+                            n_message += 1
+                            message_text += message
+
                     self.log.warning(
                         "Failed to update observatory state. "
                         f"Ignoring, scheduler in {self.summary_state!r}{message_text}."
@@ -1144,53 +1167,65 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         return survey_topology
 
-    async def get_queue(self, request=True):
+    async def get_queue(self, request: bool = True) -> salobj.type_hints.BaseMsgType:
         """Utility method to get the queue.
 
         Parameters
         ----------
-        request: bool
+        request : `bool`
             Issue request for queue state?
 
         Returns
         -------
         queue: `ScriptQueue_logevent_queueC`
             SAL Topic with information about the queue.
-
         """
 
         self.log.debug("Getting queue.")
 
         self.queue_remote.evt_queue.flush()
 
+        queue: typing.Union[salobj.type_hints.BaseMsgType, None] = None
+
         try:
             if request:
-                await self.queue_remote.cmd_showQueue.start(
-                    timeout=self.parameters.cmd_timeout
-                )
-            try:
-                queue = await self.queue_remote.evt_queue.next(
-                    flush=False, timeout=self.parameters.cmd_timeout
-                )
-            except asyncio.TimeoutError:
-                self.log.debug("No state from queue. Requesting...")
-                self.queue_remote.evt_queue.flush()
-                await self.queue_remote.cmd_showQueue.start(
-                    timeout=self.parameters.cmd_timeout
-                )
-                queue = await self.queue_remote.evt_queue.next(
-                    flush=False, timeout=self.parameters.cmd_timeout
-                )
+                queue = await self._request_queue_state()
+            else:
+                try:
+                    queue = await self.queue_remote.evt_queue.aget(
+                        timeout=self.parameters.cmd_timeout
+                    )
+                except asyncio.TimeoutError:
+                    self.log.debug("No state from queue. Requesting...")
+                    queue = await self._request_queue_state()
         except salobj.AckError as e:
             self.log.error("No response from queue...")
             await self.fault(
                 code=NO_QUEUE,
-                report="Error no response from queue.",
+                report="No response from queue.",
                 traceback=traceback.format_exc(),
             )
             raise e
         else:
+            assert queue is not None
             return queue
+
+    async def _request_queue_state(self) -> salobj.type_hints.BaseMsgType:
+        """Request queue state.
+
+        Returns
+        -------
+        queue : `ScriptQueue.logevent_queue`
+            Queue state.
+        """
+        self.queue_remote.evt_queue.flush()
+
+        await self.queue_remote.cmd_showQueue.start(timeout=self.parameters.cmd_timeout)
+        queue = await self.queue_remote.evt_queue.next(
+            flush=False, timeout=self.parameters.cmd_timeout
+        )
+
+        return queue
 
     async def check_scheduled(self):
         """Loop through the scheduled targets list, check status and tell
