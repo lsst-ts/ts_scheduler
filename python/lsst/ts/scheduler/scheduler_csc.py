@@ -1753,19 +1753,22 @@ class SchedulerCSC(salobj.ConfigurableCsc):
     async def handle_no_targets_on_queue(self):
         """Handle condition where there are note more targets on the queue."""
         if self._no_target_handled:
-            self.log.debug("No targets condition already handled. Ignoring.")
-            return
+            self.log.debug(
+                "No targets condition already handled, "
+                "estimating time to next target."
+            )
+        else:
+            self.log.warning(
+                "Handling no targets on queue condition. "
+                "This consist of queuing a stop tracking script and estimating "
+                "the time until the next target."
+            )
 
-        self.log.warning(
-            "Handling no targets on queue condition. "
-            "This consist of queuing a stop tracking script and estimating the time until the next target."
-        )
+            self._no_target_handled = True
 
-        self._no_target_handled = True
+            stop_tracking_target = self.driver.get_stop_tracking_target()
 
-        stop_tracking_target = self.driver.get_stop_tracking_target()
-
-        await self.put_on_queue([stop_tracking_target])
+            await self.put_on_queue([stop_tracking_target])
 
         await self.estimate_next_target()
 
