@@ -51,7 +51,7 @@ class FeatureSchedulerSim:
 
         self.log = log.getChild(__name__)
 
-        self.mjd_start = 59853.983
+        self.mjd_start = 60110.983
 
         self.start_time = Time(self.mjd_start, format="mjd", scale="tai")
         # Step in time when there is no target (in seconds).
