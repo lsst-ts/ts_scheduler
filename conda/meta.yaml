@@ -29,7 +29,7 @@ test:
     - setup.cfg
     - pyproject.toml
   commands:
-    - rs_download_data -d skybrightness,skybrightness_pre,skybrightness_pre_small,throughputs,site_models
+    - rs_download_data -d skybrightness,skybrightness_pre,throughputs,site_models
     - py.test -vsx
 
 requirements:
