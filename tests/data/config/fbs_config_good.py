@@ -153,7 +153,7 @@ if __name__ == "config":
 
     camera_ddf_rot_limit = 75.0
 
-    observatory = Model_observatory(nside=nside, mjd_start=59853.1)
+    observatory = Model_observatory(nside=nside, mjd_start=60110.983)
     conditions = observatory.return_conditions()
 
     footprints_hp = standard_goals(nside=nside)
