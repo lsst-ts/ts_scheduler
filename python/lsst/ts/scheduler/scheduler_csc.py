@@ -1752,7 +1752,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         )
 
     async def handle_no_targets_on_queue(self):
-        """Handle condition where there are note more targets on the queue."""
+        """Handle condition when there are no more targets on the queue."""
         if self._no_target_handled:
             self.log.debug(
                 "No targets condition already handled, "
