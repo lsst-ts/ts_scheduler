@@ -32,6 +32,7 @@ from rubin_sim.scheduler.utils import empty_observation
 
 from lsst.ts.observatory.model import ObservatoryModel
 from lsst.ts.scheduler.driver.feature_scheduler_target import FeatureSchedulerTarget
+from lsst.ts.scheduler.utils.test.feature_scheduler_sim import MJD_START
 
 
 class TestFeatureSchedulerTarget(unittest.TestCase):
@@ -40,7 +41,7 @@ class TestFeatureSchedulerTarget(unittest.TestCase):
         self.observatory_model = ObservatoryModel()
         self.observatory_model.configure_from_module()
 
-        start_time = Time(60110.983, format="mjd", scale="tai")
+        start_time = Time(MJD_START, format="mjd", scale="tai")
 
         self.observatory_model.update_state(start_time.unix)
 
