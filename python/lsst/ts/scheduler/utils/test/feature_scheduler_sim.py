@@ -82,6 +82,7 @@ class FeatureSchedulerSim:
         )
 
         self.models["sky"] = AstronomicalSkyModel(self.models["location"])
+        self.models["sky"].sky_brightness_pre.load_length = 7
         self.models["seeing"] = SeeingModel()
         self.models["cloud"] = CloudModel()
         self.models["downtime"] = DowntimeModel()
