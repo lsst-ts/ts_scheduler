@@ -4,6 +4,20 @@
 Version History
 ===============
 
+v1.15.0
+-------
+
+* Update conda build to use pyproject.toml.
+
+* General updates in the tests and codebase to work with latest version of ``rubin-sim``.
+
+* In Scheduler CSC:
+
+  * Update telemetry loop such that the CSC will only go to FAULT if it cannot determine the observatory state in case the CSC is in enabled, is running and the queue is also running.
+  * Update ``generate_target_queue`` such that it will only execute ``handle_no_targets_on_queue`` if no targets were found and there are no scheduled targets.
+  * Fix publishing time to next target in ``estimate_next_target``.
+  * In Scheduler refactor handle_no_targets_on_queue to always run ``estimate_next_target`` but only schedule stop tracking target once per occurrence.
+
 v1.14.0
 -------
 
