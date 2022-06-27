@@ -1,5 +1,7 @@
 import numpy as np
 
+from lsst.ts.scheduler.utils.test.feature_scheduler_sim import MJD_START
+
 import rubin_sim.scheduler.basis_functions as bf
 import rubin_sim.scheduler.detailers as detailers
 
@@ -10,9 +12,7 @@ from rubin_sim.scheduler.surveys import Greedy_survey
 
 
 def gen_cwfs_survey(nside, survey_name, time_gap_min):
-    sun_alt_limit = -12.0
     bfs = [
-        bf.Not_twilight_basis_function(sun_alt_limit=sun_alt_limit),
         bf.Slewtime_basis_function(nside=nside),
         bf.Moon_avoidance_basis_function(nside=nside),
         bf.Zenith_shadow_mask_basis_function(min_alt=28.0, max_alt=85.5, nside=nside),
@@ -165,7 +165,8 @@ if __name__ == "config":
 
     camera_ddf_rot_limit = 75.0
 
-    observatory = Model_observatory(nside=nside, mjd_start=59853.1)
+    observatory = Model_observatory(nside=nside, mjd_start=MJD_START)
+    observatory.sky_model.load_length = 3
     conditions = observatory.return_conditions()
 
     footprints_hp = standard_goals(nside=nside)
@@ -177,7 +178,7 @@ if __name__ == "config":
         footprints.footprints[i, :] = footprints_hp[key]
 
     greedy = gen_greedy_surveys(nside, nexp=1, footprints=footprints, seed=seed)
-    cwfs = gen_cwfs_survey(nside=nside, survey_name="cwfs", time_gap_min=30.0)
+    cwfs = gen_cwfs_survey(nside=nside, survey_name="cwfs", time_gap_min=5.0)
 
     surveys = [cwfs, greedy]
 
