@@ -1,5 +1,7 @@
 import numpy as np
 
+from lsst.ts.scheduler.utils.test.feature_scheduler_sim import MJD_START
+
 from rubin_sim.scheduler.modelObservatory import Model_observatory
 from rubin_sim.scheduler.schedulers import Core_scheduler
 from rubin_sim.scheduler.utils import standard_goals, Footprint
@@ -153,7 +155,8 @@ if __name__ == "config":
 
     camera_ddf_rot_limit = 75.0
 
-    observatory = Model_observatory(nside=nside, mjd_start=59853.1)
+    observatory = Model_observatory(nside=nside, mjd_start=MJD_START)
+    observatory.sky_model.load_length = 3
     conditions = observatory.return_conditions()
 
     footprints_hp = standard_goals(nside=nside)

@@ -564,12 +564,10 @@ class FeatureScheduler(Driver):
             self.conditions.FWHMeff[key][good] = fwhm_eff[i, :]
 
         # sky brightness
-        self.conditions.skybrightness = self.models["sky"].sky_brightness.returnMags(
+        self.conditions.skybrightness = self.models[
+            "sky"
+        ].sky_brightness_pre.returnMags(
             self.conditions.mjd,
-            airmass_mask=False,
-            planet_mask=False,
-            moon_mask=False,
-            zenith_mask=False,
         )
 
         self.conditions.mounted_filters = self.models[

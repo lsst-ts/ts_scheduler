@@ -18,7 +18,7 @@
 #
 # You should have received a copy of the GNU General Public License
 
-__all__ = ["FeatureSchedulerSim"]
+__all__ = ["FeatureSchedulerSim", "MJD_START"]
 
 import logging
 import types
@@ -40,6 +40,8 @@ from rubin_sim.site_models.downtimeModel import DowntimeModel
 from ...driver import FeatureScheduler
 from ...driver.feature_scheduler_target import FeatureSchedulerTarget
 
+MJD_START = 60110.983
+
 
 class FeatureSchedulerSim:
     """Utility class to simulate observations with the FeatureScheduler.
@@ -51,7 +53,7 @@ class FeatureSchedulerSim:
 
         self.log = log.getChild(__name__)
 
-        self.mjd_start = 59853.983
+        self.mjd_start = MJD_START
 
         self.start_time = Time(self.mjd_start, format="mjd", scale="tai")
         # Step in time when there is no target (in seconds).
@@ -82,6 +84,7 @@ class FeatureSchedulerSim:
         )
 
         self.models["sky"] = AstronomicalSkyModel(self.models["location"])
+        self.models["sky"].sky_brightness_pre.load_length = 7
         self.models["seeing"] = SeeingModel()
         self.models["cloud"] = CloudModel()
         self.models["downtime"] = DowntimeModel()

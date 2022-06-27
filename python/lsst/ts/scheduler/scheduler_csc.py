@@ -18,7 +18,10 @@
 #
 # You should have received a copy of the GNU General Public License
 
-__all__ = ["SchedulerCSC"]
+__all__ = [
+    "SchedulerCSC",
+    "run_scheduler",
+]
 
 import contextlib
 import pathlib
@@ -589,9 +592,11 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 )
                 failed_observatory_state_logged = False
             except Exception:
+                queue = await self.get_queue(request=False)
                 if (
                     self.summary_state == salobj.State.ENABLED
                     and self.run_target_loop.is_set()
+                    and queue.running
                 ):
                     self.log.exception("Failed to update observatory state.")
                     await self.fault(
@@ -602,11 +607,32 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     return
                 elif not failed_observatory_state_logged:
                     failed_observatory_state_logged = True
-                    message_text = (
-                        " but not running"
+                    additional_messages: typing.List[str] = []
+                    additional_messages.append(
+                        " not running"
                         if self.summary_state == salobj.State.ENABLED
+                        and not self.run_target_loop.is_set()
                         else ""
                     )
+                    additional_messages.append(
+                        " queue not running"
+                        if self.summary_state == salobj.State.ENABLED
+                        and not queue.running
+                        else ""
+                    )
+
+                    message_text = ""
+
+                    n_message = 0
+                    for message in additional_messages:
+                        if len(message) > 0:
+                            if n_message == 0:
+                                message_text += " but"
+                            else:
+                                message_text += " and"
+                            n_message += 1
+                            message_text += message
+
                     self.log.warning(
                         "Failed to update observatory state. "
                         f"Ignoring, scheduler in {self.summary_state!r}{message_text}."
@@ -669,6 +695,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         )
         self.models["observatory_state"] = ObservatoryState()
         self.models["sky"] = AstronomicalSkyModel(self.models["location"])
+        self.models["sky"].sky_brightness_pre.load_length = 7
         self.models["seeing"] = SeeingModel()
         self.models["cloud"] = CloudModel()
         self.models["downtime"] = DowntimeModel()
@@ -1144,53 +1171,65 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         return survey_topology
 
-    async def get_queue(self, request=True):
+    async def get_queue(self, request: bool = True) -> salobj.type_hints.BaseMsgType:
         """Utility method to get the queue.
 
         Parameters
         ----------
-        request: bool
+        request : `bool`
             Issue request for queue state?
 
         Returns
         -------
         queue: `ScriptQueue_logevent_queueC`
             SAL Topic with information about the queue.
-
         """
 
         self.log.debug("Getting queue.")
 
         self.queue_remote.evt_queue.flush()
 
+        queue: typing.Union[salobj.type_hints.BaseMsgType, None] = None
+
         try:
             if request:
-                await self.queue_remote.cmd_showQueue.start(
-                    timeout=self.parameters.cmd_timeout
-                )
-            try:
-                queue = await self.queue_remote.evt_queue.next(
-                    flush=False, timeout=self.parameters.cmd_timeout
-                )
-            except asyncio.TimeoutError:
-                self.log.debug("No state from queue. Requesting...")
-                self.queue_remote.evt_queue.flush()
-                await self.queue_remote.cmd_showQueue.start(
-                    timeout=self.parameters.cmd_timeout
-                )
-                queue = await self.queue_remote.evt_queue.next(
-                    flush=False, timeout=self.parameters.cmd_timeout
-                )
+                queue = await self._request_queue_state()
+            else:
+                try:
+                    queue = await self.queue_remote.evt_queue.aget(
+                        timeout=self.parameters.cmd_timeout
+                    )
+                except asyncio.TimeoutError:
+                    self.log.debug("No state from queue. Requesting...")
+                    queue = await self._request_queue_state()
         except salobj.AckError as e:
             self.log.error("No response from queue...")
             await self.fault(
                 code=NO_QUEUE,
-                report="Error no response from queue.",
+                report="No response from queue.",
                 traceback=traceback.format_exc(),
             )
             raise e
         else:
+            assert queue is not None
             return queue
+
+    async def _request_queue_state(self) -> salobj.type_hints.BaseMsgType:
+        """Request queue state.
+
+        Returns
+        -------
+        queue : `ScriptQueue.logevent_queue`
+            Queue state.
+        """
+        self.queue_remote.evt_queue.flush()
+
+        await self.queue_remote.cmd_showQueue.start(timeout=self.parameters.cmd_timeout)
+        queue = await self.queue_remote.evt_queue.next(
+            flush=False, timeout=self.parameters.cmd_timeout
+        )
+
+        return queue
 
     async def check_scheduled(self):
         """Loop through the scheduled targets list, check status and tell
@@ -1603,10 +1642,12 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 )
 
                 if target is None:
-                    self.log.debug(
-                        f"No target from the scheduler. Stopping with {len(self.targets_queue)}."
+                    n_scheduled_targets = len(self.raw_telemetry["scheduled_targets"])
+                    self.log.warning(
+                        f"No target from the scheduler. Stopping with {len(self.targets_queue)}. "
+                        f"Number of scheduled targets is {n_scheduled_targets}."
                     )
-                    if len(self.targets_queue) == 0:
+                    if len(self.targets_queue) == 0 and n_scheduled_targets == 0:
                         await self.handle_no_targets_on_queue()
                     break
                 else:
@@ -1711,21 +1752,24 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         )
 
     async def handle_no_targets_on_queue(self):
-        """Handle condition where there are note more targets on the queue."""
+        """Handle condition when there are no more targets on the queue."""
         if self._no_target_handled:
-            self.log.debug("No targets condition already handled. Ignoring.")
-            return
+            self.log.debug(
+                "No targets condition already handled, "
+                "estimating time to next target."
+            )
+        else:
+            self.log.warning(
+                "Handling no targets on queue condition. "
+                "This consist of queuing a stop tracking script and estimating "
+                "the time until the next target."
+            )
 
-        self.log.warning(
-            "Handling no targets on queue condition. "
-            "This consist of queuing a stop tracking script and estimating the time until the next target."
-        )
+            self._no_target_handled = True
 
-        self._no_target_handled = True
+            stop_tracking_target = self.driver.get_stop_tracking_target()
 
-        stop_tracking_target = self.driver.get_stop_tracking_target()
-
-        await self.put_on_queue([stop_tracking_target])
+            await self.put_on_queue([stop_tracking_target])
 
         await self.estimate_next_target()
 
@@ -1756,6 +1800,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             self.log.debug(f"Next target: {targets[0]}.")
 
             await self._publish_time_to_next_target(
+                current_time=time_evaluation,
                 wait_time=delta_time,
                 ra=targets[0].ra,
                 dec=targets[0].dec,
@@ -2262,3 +2307,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 self.log.debug("Resetting scheduler state.")
                 self.driver.reset_from_state(last_scheduler_state_filename)
                 shutil.os.remove(last_scheduler_state_filename)
+
+
+def run_scheduler() -> None:
+    """Run the Scheduler CSC."""
+    asyncio.run(SchedulerCSC.amain(index=True))
