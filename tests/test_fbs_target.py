@@ -156,7 +156,7 @@ class TestFeatureSchedulerTarget(unittest.TestCase):
         )
 
         script_config_expected = {
-            "object_name": observation["note"][0],
+            "object_name": observation["note"][0].split(":", maxsplit=1)[-1],
             "object_dec": Angle(float(observation["dec"][0]), unit=units.rad).to_string(
                 unit=units.degree, sep=":"
             ),
@@ -186,7 +186,7 @@ class TestFeatureSchedulerTarget(unittest.TestCase):
         )
 
         script_config_expected = {
-            "object_name": observation["note"][0],
+            "object_name": observation["note"][0].split(":", maxsplit=1)[-1],
             "object_dec": Angle(float(observation["dec"][0]), unit=units.rad).to_string(
                 unit=units.degree, sep=":"
             ),
