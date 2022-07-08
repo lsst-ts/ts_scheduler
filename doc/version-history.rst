@@ -4,6 +4,11 @@
 Version History
 ===============
 
+v1.15.1
+-------
+
+* Improve how feature scheduler driver sets the object name and program on scripts.
+
 v1.15.0
 -------
 

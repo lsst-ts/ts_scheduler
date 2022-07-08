@@ -111,7 +111,7 @@ class FeatureSchedulerTarget(DriverTarget):
             for key in additional_script_config:
                 script_config[key] = additional_script_config[key]
 
-            script_config["program"] = survey_name.rsplit("_", maxsplit=1)[0]
+            script_config["program"] = survey_name
 
             return yaml.safe_dump(script_config)
 
@@ -137,7 +137,7 @@ class FeatureSchedulerTarget(DriverTarget):
 
     def _get_script_config_spec(self):
         script_config = {
-            "object_name": str(self.observation["note"][0]),
+            "object_name": str(self.observation["note"][0]).split(":", maxsplit=1)[-1],
             "object_dec": str(
                 Angle(float(self.observation["dec"][0]), unit=units.rad).to_string(
                     unit=units.degree, sep=":"
