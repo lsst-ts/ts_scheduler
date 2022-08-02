@@ -1959,7 +1959,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         # a named tuple so it is possible to access the data the same way if
         # the topic itself was stored.
 
-        self.script_info[data.salIndex] = data
+        self.script_info[data.scriptSalIndex] = data
 
         # Make sure the size of script info is smaller then the maximum allowed
         script_info_size = len(self.script_info)
