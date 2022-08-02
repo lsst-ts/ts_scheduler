@@ -1241,7 +1241,6 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             `True` if all checked scripts where Done or in non-final state.
             `False` if no scheduled targets to check or if one or more scripts
             ended up a failed or unrecognized state.
-
         """
         ntargets = len(self.raw_telemetry["scheduled_targets"])
 
