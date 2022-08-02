@@ -48,6 +48,7 @@ logging.basicConfig()
 
 I0 = scriptqueue.script_queue.SCRIPT_INDEX_MULT  # initial Script SAL index
 STD_TIMEOUT = 15.0
+SCRIPT_TIMEOUT = 30.0
 TEST_CONFIG_DIR = pathlib.Path(__file__).parents[1].joinpath("tests", "data", "config")
 
 
@@ -267,7 +268,7 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
         await salobj.set_summary_state(
             self.scheduler_remote,
             salobj.State.ENABLED,
-            override="advance_target_loop_sequential.yaml",
+            override="advance_target_loop_sequential_std_visit.yaml",
         )
 
         # Resume scheduler operation
@@ -281,6 +282,12 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
             if time.time() - start_time > self.target_test_timeout:
                 break
             await asyncio.sleep(10)
+
+        # Wait for one script to finish executing
+        try:
+            await self.queue_remote.evt_queue.next(flush=True, timeout=SCRIPT_TIMEOUT)
+        except Exception:
+            self.log.exception("Timeout waiting for queue state.")
 
         # Test over, unsubscribe callbacks
         self.scheduler_remote.evt_summaryState.callback = None
@@ -354,6 +361,10 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
             general_info = self.scheduler_remote.evt_generalInfo.get()
 
             assert general_info is not None, "General info was not published"
+
+        observation = self.scheduler_remote.evt_observation.get()
+
+        assert observation is not None, "Observation was not published."
 
     def tearDown(self):
         for filename in glob.glob("./sequential_*.p"):
