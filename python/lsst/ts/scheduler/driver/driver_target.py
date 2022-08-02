@@ -162,7 +162,7 @@ class DriverTarget(Target):
 
         topic_target["targetId"] = self.targetid
         topic_target["filter"] = self.filter
-        topic_target["requestTime"] = self.time
+        topic_target["requestTime"] = self.obs_time
         topic_target["ra"] = self.ra
         topic_target["decl"] = self.dec
         topic_target["skyAngle"] = self.ang
