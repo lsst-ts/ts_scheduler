@@ -683,22 +683,22 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         )
 
     def init_models(self):
-        """Initialize but not configure needed models.
-
-        Returns
-        -------
-
-        """
-        self.models["location"] = ObservatoryLocation()
-        self.models["observatory_model"] = ObservatoryModel(
-            self.models["location"], logging.DEBUG
-        )
-        self.models["observatory_state"] = ObservatoryState()
-        self.models["sky"] = AstronomicalSkyModel(self.models["location"])
-        self.models["sky"].sky_brightness_pre.load_length = 7
-        self.models["seeing"] = SeeingModel()
-        self.models["cloud"] = CloudModel()
-        self.models["downtime"] = DowntimeModel()
+        """Initialize but not configure needed models."""
+        try:
+            self.models["location"] = ObservatoryLocation()
+            self.models["observatory_model"] = ObservatoryModel(
+                self.models["location"], logging.DEBUG
+            )
+            self.models["observatory_state"] = ObservatoryState()
+            self.models["sky"] = AstronomicalSkyModel(self.models["location"])
+            self.models["sky"].sky_brightness_pre.load_length = 7
+            self.models["seeing"] = SeeingModel()
+            self.models["cloud"] = CloudModel()
+            self.models["downtime"] = DowntimeModel()
+        except Exception as e:
+            self.log.error("Failed to initialize models, resetting.")
+            self.models = dict()
+            raise e
 
     def init_telemetry(self):
         """Initialized telemetry streams."""
