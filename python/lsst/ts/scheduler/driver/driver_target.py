@@ -125,7 +125,7 @@ class DriverTarget(Target):
             "dec": str(
                 Angle(self.dec, unit=units.degree).to_string(unit=units.degree, sep=":")
             ),
-            "name": str(self.note),
+            "name": str(self.note).split(":", maxsplit=1)[-1],
             "rot_sky": float(self.ang),
             "obs_time": float(self.obs_time),
             "num_exp": int(self.num_exp),
