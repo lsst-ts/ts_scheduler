@@ -1251,7 +1251,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         self.log.debug(f"Checking {ntargets} scheduled targets")
 
         retval = True
-        for i in range(ntargets):
+        for _ in range(ntargets):
             target = self.raw_telemetry["scheduled_targets"].pop(0)
             if target.sal_index in self.script_info:
                 info = self.script_info[target.sal_index]
@@ -1861,7 +1861,11 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 time_scheduler_evaluation += self.time_delta_no_target
                 self.models["observatory_model"].update_state(time_scheduler_evaluation)
             else:
+                target.obs_time = self.models["observatory_model"].dateprofile.mjd
                 self.models["observatory_model"].observe(target)
+                time_scheduler_evaluation = self.models[
+                    "observatory_model"
+                ].current_state.time
                 targets.append(target)
 
             await asyncio.sleep(0)
