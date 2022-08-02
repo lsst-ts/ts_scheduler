@@ -8,7 +8,7 @@ source:
 
 build:
   noarch: python
-  script: python -m pip install --no-deps --ignore-installed .
+  script: {{ PYTHON }} -m pip install --no-deps --ignore-installed .
   entry_points:
     - run_scheduler = lsst.ts.scheduler:run_scheduler
  
@@ -23,6 +23,7 @@ test:
     - ts-astrosky-model
     - ts-dateloc
     - rubin-sim
+    - rsync
   source_files:
     - python
     - tests
@@ -30,17 +31,21 @@ test:
     - pyproject.toml
   commands:
     - rs_download_data -d skybrightness,skybrightness_pre,throughputs,site_models
-    - py.test -vsx
+    - pytest -vsx
 
 requirements:
   host:
-    - python
+    - python {{ python }}
     - pip
     - setuptools_scm
     - setuptools
-    - pytest-runner
+  build:
+    - python {{ python }}
+    - setuptools_scm
+    - setuptools
+    - ts-conda-build =0.3
   run:
-    - python
+    - python {{ python }}
     - setuptools
     - setuptools_scm
     - ts-idl
