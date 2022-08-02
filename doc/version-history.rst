@@ -4,6 +4,65 @@
 Version History
 ===============
 
+v1.15.2
+-------
+
+* Delete examples directory with old, unused jupyter notebooks.
+
+* Update doc/conf.py to ignore style checks.
+
+* Add new test configurations for the Scheduler.
+
+* Add test fixture to download the required sky brightness files for the tests.
+  The fixture is configured with a ``session`` scope and with ``autouse=True``, so tests dont need to request them.
+  The fixture first tests to see if a suitabe sky brightness file exists and then proceeds to download it if not.
+  If it can not file a suitable file in the server it fails with a ``RuntimeError``.
+
+* In ``DriverTarget``, fix parsing note into target name.
+
+  Split the name in the first colon (``:``) and use the last part of the split.
+  This works such that:
+
+  * ``PROJECT:TARGET_NAME`` -> ``TARGET_NAME``
+
+  * ``TARGET_NAME`` -> ``TARGET_NAME``
+
+  * ``PROJECT:TARGET_NAME:ADDITIONAL_INFO`` -> ``TARGET_NAME:ADDITIONAL_INFO``
+
+* In ``DriverTarget`` set ``requestTime`` from ``obs_time`` instead of ``time``.
+
+* In ``SchedulerCSC`` update ``init_models`` such that it will reset the models if it fails to configure one of them.
+  This fixes an issue with the SchedulerCSC when it fails to setup a model due to transient reasons (e.g. lack of sky brightness files or misconfiguration) which then requires restarting the CSC when the condition is corrected.
+  With this the CSC no longer needs to be restarted.
+
+* Remove empty line in ``SchedulerCSC.check_scheduled`` docstring.
+
+* In ``SchedulerCSC._get_targets_in_time_window`` fix 2 issues found during testing.
+
+    * The ``predictedScheduler.mjd`` fields were all set to zero, because ``target.obs_time`` is not set by the driver, because all observations are configured to be taken as soon as possible.
+      Set the time for ``time_scheduler_evaluation``.
+
+    * At each loop with a successful observation, update ``time_scheduler_evaluation`` to be at the end of the observation.
+      This issue was causing the Scheduler to compute all the 1000 maximum observations.
+
+* In ``SchedulerCSC.callback_script_info`` fix setting the script_info index to use ``data.scriptSalIndex`` instead of ``data.salIndex``.
+  The index is supposed to be the index of the SAL Script and not of the ScriptQueue.
+  This was causing observations to not be properly registered by the scheduler.
+
+
+* In ``test_advanced_target_loop`` update ``test_with_queue`` to use ``advance_target_loop_sequential_std_visit`` configuration, wait for at least one script to finish executing and add check that observation event was published.
+
+* In test_csc, update ``test_compute_predicted_schedule`` to use new ``advance_target_loop_fbs`` configuration and expand checks so it verifies the size of the computed predicted schedule and the values.
+
+* Fix ``standard_visit`` test script and update script to only wait for a second before finishing.
+  This script is used in unit tests.
+
+* Add pre-commit-config file with configuration for pre-commit hooks.
+
+* Update pyproject.toml with configuration for isort.
+
+* Sort imports with isort.
+
 v1.15.1
 -------
 
