@@ -19,6 +19,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import os
 import typing
 import pytest
 import pathlib
@@ -152,3 +153,30 @@ def get_skybrightness_data() -> None:
     if not has_required_sky_file(sky_brightness_data_dir, mjd):
         # Download file
         download_sky_file(sky_brightness_data_dir, mjd)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def start_ospl_daemon() -> None:
+    """Start ospl daemon."""
+
+    # Check if a daemon is already running
+    output = subprocess.run(["ospl", "status", "-e"])
+
+    if output.returncode > 2:
+        print("ospl daemon not running, starting with local no-network config.")
+
+        # daemon is not running, select local no-network ospl config to start
+        # process.
+        ospl_config = pathlib.Path(
+            "./tests/data/ospl/ospl-shmem-debug-no-network.xml"
+        ).resolve()
+
+        old_ospl_config = os.environ["OSPL_URI"]
+
+        os.environ["OSPL_URI"] = ospl_config.as_uri()
+        subprocess.run(["ospl", "start"])
+
+        yield
+
+        subprocess.run(["ospl", "stop"])
+        os.environ["OSPL_URI"] = old_ospl_config
