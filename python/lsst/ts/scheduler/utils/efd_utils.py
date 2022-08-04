@@ -20,19 +20,18 @@
 
 __all__ = ["get_efd_client", "get_mock_efd_client"]
 
-import astropy
-import pandas
 import warnings
-import yaml
-
-import numpy as np
-
-from typing import List, Any, Union
+from typing import Any, List, Union
 from unittest.mock import AsyncMock, Mock
 
+import astropy
+import numpy as np
+import pandas
+import yaml
+
+from ..driver import feature_scheduler
 from .csc_utils import efd_query_re
 from .fbs_utils import SchemaConverter
-from ..driver import feature_scheduler
 
 try:
     import lsst_efd_client

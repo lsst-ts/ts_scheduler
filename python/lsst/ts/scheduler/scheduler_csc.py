@@ -23,68 +23,59 @@ __all__ = [
     "run_scheduler",
 ]
 
-import contextlib
-import pathlib
-import shutil
 import asyncio
+import contextlib
+import dataclasses
 import functools
 import inspect
 import logging
+import pathlib
+import shutil
 import time
 import traceback
-import dataclasses
 import typing
-
 import urllib.request
-
-import numpy as np
-
 from importlib import import_module
 
-from lsst.ts import utils
-from lsst.ts import salobj
-from lsst.ts.idl.enums import ScriptQueue, Script
+import numpy as np
+from lsst.ts.astrosky.model import AstronomicalSkyModel
+from lsst.ts.astrosky.model import version as astrosky_version
+from lsst.ts.dateloc import ObservatoryLocation
+from lsst.ts.dateloc import version as dateloc_version
+from lsst.ts.idl.enums import Script, ScriptQueue
+from lsst.ts.observatory.model import ObservatoryModel, ObservatoryState
+from lsst.ts.observatory.model import version as obs_mod_version
+from rubin_sim.site_models.cloudModel import CloudModel
+from rubin_sim.site_models.downtimeModel import DowntimeModel
+from rubin_sim.site_models.seeingModel import SeeingModel
+from rubin_sim.version import __version__ as rubin_sim_version
 
-from . import __version__
-from . import CONFIG_SCHEMA
+from lsst.ts import salobj, utils
+
+from . import CONFIG_SCHEMA, __version__
+from .driver import Driver
+from .driver.driver_target import DriverTarget
+from .driver.survey_topology import SurveyTopology
+from .telemetry_stream_handler import TelemetryStreamHandler
 from .utils.csc_utils import (
-    SchedulerModes,
+    OBSERVATION_NAMED_PARAMETERS,
     NonFinalStates,
+    SchedulerModes,
     is_uri,
     is_valid_efd_query,
     support_command,
-    OBSERVATION_NAMED_PARAMETERS,
 )
-
 from .utils.error_codes import (
-    UPDATE_TELEMETRY_ERROR,
+    ADVANCE_LOOP_ERROR,
     NO_QUEUE,
+    OBSERVATORY_STATE_UPDATE,
     PUT_ON_QUEUE,
     SIMPLE_LOOP_ERROR,
-    ADVANCE_LOOP_ERROR,
     UNABLE_TO_FIND_TARGET,
-    OBSERVATORY_STATE_UPDATE,
+    UPDATE_TELEMETRY_ERROR,
 )
-from .utils.parameters import SchedulerCscParameters
 from .utils.exceptions import UnableToFindTarget, UpdateTelemetryError
-from .driver import Driver
-from .driver.survey_topology import SurveyTopology
-from .driver.driver_target import DriverTarget
-
-from . import TelemetryStreamHandler
-
-from lsst.ts.dateloc import ObservatoryLocation
-from lsst.ts.dateloc import version as dateloc_version
-from lsst.ts.observatory.model import ObservatoryModel
-from lsst.ts.observatory.model import version as obs_mod_version
-from lsst.ts.observatory.model import ObservatoryState
-from lsst.ts.astrosky.model import AstronomicalSkyModel
-from lsst.ts.astrosky.model import version as astrosky_version
-
-from rubin_sim.site_models.seeingModel import SeeingModel
-from rubin_sim.version import __version__ as rubin_sim_version
-from rubin_sim.site_models.cloudModel import CloudModel
-from rubin_sim.site_models.downtimeModel import DowntimeModel
+from .utils.parameters import SchedulerCscParameters
 
 
 class SchedulerCSC(salobj.ConfigurableCsc):

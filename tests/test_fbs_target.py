@@ -18,19 +18,17 @@
 #
 # You should have received a copy of the GNU General Public License
 
-import yaml
 import math
 import unittest
 
 import numpy as np
-
+import yaml
+from astropy import units
 from astropy.coordinates import Angle
 from astropy.time import Time
-from astropy import units
-
+from lsst.ts.observatory.model import ObservatoryModel
 from rubin_sim.scheduler.utils import empty_observation
 
-from lsst.ts.observatory.model import ObservatoryModel
 from lsst.ts.scheduler.driver.feature_scheduler_target import FeatureSchedulerTarget
 from lsst.ts.scheduler.utils.test.feature_scheduler_sim import MJD_START
 

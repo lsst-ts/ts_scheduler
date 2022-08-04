@@ -17,15 +17,13 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-import yaml
 import logging
 import typing
 
 import numpy as np
-
+import yaml
 from astropy import units
 from astropy.coordinates import Angle
-
 from lsst.ts.observatory.model import Target
 
 from .observation import Observation

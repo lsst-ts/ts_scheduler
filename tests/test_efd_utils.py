@@ -18,11 +18,11 @@
 #
 # You should have received a copy of the GNU General Public License
 
-import pandas
 import unittest
 
-from astropy.time import Time, TimeDelta
+import pandas
 from astropy import units
+from astropy.time import Time, TimeDelta
 
 from lsst.ts.scheduler.utils import get_efd_client, get_mock_efd_client
 

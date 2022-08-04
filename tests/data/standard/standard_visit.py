@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 __all__ = ["StandardVisit"]
 
-import yaml
 import asyncio
 
+import yaml
 from lsst.ts.salobj import BaseScript
 
 

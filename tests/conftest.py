@@ -20,15 +20,15 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
-import typing
-import pytest
 import pathlib
 import subprocess
+import typing
 
 import numpy as np
+import pytest
+from rubin_sim.data import get_data_dir
 
 from lsst.ts import utils
-from rubin_sim.data import get_data_dir
 
 
 def has_required_sky_file(path: pathlib.Path, mjd: float) -> bool:

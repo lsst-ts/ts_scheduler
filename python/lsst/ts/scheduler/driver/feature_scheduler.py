@@ -18,33 +18,30 @@
 #
 # You should have received a copy of the GNU General Public License
 
-import io
-import os
-import math
-import yaml
-import typing
-import pandas
-import pickle
-import pathlib
 import importlib
+import io
+import math
+import os
+import pathlib
+import pickle
+import typing
 
-import numpy as np
 import healpy as hp
-
+import numpy as np
+import pandas
+import yaml
 from astropy.time import Time
-
 from lsst.ts.utils import index_generator
-
-from rubin_sim.site_models import Almanac
-from rubin_sim.utils import _raDec2Hpid
 from rubin_sim.scheduler.features import Conditions
 from rubin_sim.scheduler.utils import empty_observation
+from rubin_sim.site_models import Almanac
+from rubin_sim.utils import _raDec2Hpid
 
+from ..utils import SchemaConverter
 from .driver import Driver, DriverParameters
 from .driver_target import DriverTarget
-from .observation import Observation
 from .feature_scheduler_target import FeatureSchedulerTarget
-from ..utils import SchemaConverter
+from .observation import Observation
 
 __all__ = ["FeatureScheduler", "NoSchedulerError", "NoNsideError"]
 

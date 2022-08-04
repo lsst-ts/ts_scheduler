@@ -20,9 +20,9 @@
 
 import asyncio
 import contextlib
-import os
 import glob
 import logging
+import os
 import pathlib
 import unittest
 
@@ -30,9 +30,9 @@ import numpy as np
 
 from lsst.ts import salobj
 from lsst.ts.scheduler import SchedulerCSC
+from lsst.ts.scheduler.mock import ObservatoryStateMock
 from lsst.ts.scheduler.utils import SchedulerModes
 from lsst.ts.scheduler.utils.csc_utils import support_command
-from lsst.ts.scheduler.mock import ObservatoryStateMock
 from lsst.ts.scheduler.utils.error_codes import OBSERVATORY_STATE_UPDATE
 
 SHORT_TIMEOUT = 5.0

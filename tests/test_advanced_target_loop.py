@@ -18,24 +18,22 @@
 #
 # You should have received a copy of the GNU General Public License
 
-import os
-import glob
-import time
 import asyncio
+import glob
 import logging
+import os
 import pathlib
-import unittest
+import time
 import typing
+import unittest
 
 import numpy as np
 
-from lsst.ts import utils
-from lsst.ts import salobj
-
+from lsst.ts import salobj, utils
 from lsst.ts.scheduler import SchedulerCSC
+from lsst.ts.scheduler.mock import ObservatoryStateMock
 from lsst.ts.scheduler.utils import SchedulerModes
 from lsst.ts.scheduler.utils.error_codes import NO_QUEUE, UPDATE_TELEMETRY_ERROR
-from lsst.ts.scheduler.mock import ObservatoryStateMock
 
 try:
     with_scriptqueue = True

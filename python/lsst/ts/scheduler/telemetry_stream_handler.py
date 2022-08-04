@@ -21,18 +21,16 @@
 __all__ = ["TelemetryStreamHandler"]
 
 import logging
+from typing import Any, Dict, List
+
 import numpy
-
-from typing import Any, List, Dict
-
 from astropy import units
 from astropy.time import Time, TimeDelta
 
-
 from lsst.ts import salobj
 
-from .utils import get_efd_client
 from . import CONFIG_SCHEMA
+from .utils import get_efd_client
 
 
 class TelemetryStreamHandler:

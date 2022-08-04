@@ -20,19 +20,17 @@
 
 import io
 import os
-import yaml
 import pickle
-import jsonschema
 
 import astropy.units as u
-from astropy.time import Time
+import jsonschema
+import yaml
 from astropy.coordinates import Angle
-
+from astropy.time import Time
 from lsst.ts.utils import index_generator
 
 from .driver import Driver, DriverParameters
 from .driver_target import DriverTarget
-
 
 __all__ = ["SequentialParameters", "SequentialScheduler"]
 
