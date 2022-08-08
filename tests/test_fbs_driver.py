@@ -18,19 +18,16 @@
 #
 # You should have received a copy of the GNU General Public License
 
+import logging
 import os
 import pathlib
 import unittest
-import logging
 
-from lsst.ts.scheduler.driver import (
-    SurveyTopology,
-    NoNsideError,
-    NoSchedulerError,
-)
-from lsst.ts.scheduler.utils.test.feature_scheduler_sim import FeatureSchedulerSim
-from numpy import isscalar
 import pytest
+from numpy import isscalar
+
+from lsst.ts.scheduler.driver import NoNsideError, NoSchedulerError, SurveyTopology
+from lsst.ts.scheduler.utils.test.feature_scheduler_sim import FeatureSchedulerSim
 
 logging.basicConfig()
 

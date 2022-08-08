@@ -18,13 +18,14 @@
 #
 # You should have received a copy of the GNU General Public License
 
-import types
 import logging
-import unittest
 import pathlib
+import types
+import unittest
+
+from lsst.ts.observatory.model import Target
 
 from lsst.ts.scheduler.driver import Driver, SurveyTopology
-from lsst.ts.observatory.model import Target
 
 logging.basicConfig()
 

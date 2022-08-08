@@ -18,26 +18,21 @@
 #
 # You should have received a copy of the GNU General Public License
 
-import os
-import types
-import pathlib
-import unittest
 import logging
-
-from lsst.ts.utils import current_tai
-
-from lsst.ts.scheduler.driver import SequentialScheduler, SurveyTopology
-from lsst.ts.observatory.model import Target
-from lsst.ts.observatory.model import ObservatoryModel
-from lsst.ts.observatory.model import ObservatoryState
-
-from lsst.ts.dateloc import ObservatoryLocation
+import os
+import pathlib
+import types
+import unittest
 
 from lsst.ts.astrosky.model import AstronomicalSkyModel
-
-from rubin_sim.site_models.seeingModel import SeeingModel
+from lsst.ts.dateloc import ObservatoryLocation
+from lsst.ts.observatory.model import ObservatoryModel, ObservatoryState, Target
+from lsst.ts.utils import current_tai
 from rubin_sim.site_models.cloudModel import CloudModel
 from rubin_sim.site_models.downtimeModel import DowntimeModel
+from rubin_sim.site_models.seeingModel import SeeingModel
+
+from lsst.ts.scheduler.driver import SequentialScheduler, SurveyTopology
 
 logging.basicConfig()
 

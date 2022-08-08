@@ -18,11 +18,11 @@
 #
 # You should have received a copy of the GNU General Public License
 
-import yaml
 import math
 
-from astropy.coordinates import Angle
+import yaml
 from astropy import units
+from astropy.coordinates import Angle
 
 from .driver_target import DriverTarget
 

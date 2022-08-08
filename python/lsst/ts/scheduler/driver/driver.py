@@ -18,18 +18,18 @@
 #
 # You should have received a copy of the GNU General Public License
 
-import os
 import io
+import logging
+import os
 import types
 import typing
-import pandas
-import logging
-
 from dataclasses import dataclass
 
-from .survey_topology import SurveyTopology
+import pandas
+
 from .driver_target import DriverTarget
 from .observation import Observation
+from .survey_topology import SurveyTopology
 
 __all__ = ["Driver", "DriverParameters"]
 
