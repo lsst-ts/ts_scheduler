@@ -1,0 +1,80 @@
+<OpenSplice>
+    <Domain>
+        <Name>${LSST_DDS_DOMAIN_NAME:-ospl_sp_ddsi}</Name>
+        <Id>${LSST_DDS_DOMAIN_ID:-0}</Id>
+        <Description>Federated deployment using shared-memory and standard DDSI networking.</Description>
+        <Database>
+            <Size>${LSST_DDS_SHMEM_SIZE:-504857600}</Size>
+        </Database>
+        <Report verbosity="DEBUG"/>
+        <Service name="durability">
+            <Command>durability</Command>
+        </Service>
+        <Service enabled="false" name="cmsoap">
+            <Command>cmsoap</Command>
+        </Service>
+        <ResourceLimits>
+            <MaxSamples>
+                <WarnAt>50000</WarnAt>
+            </MaxSamples>
+        </ResourceLimits>
+        <Daemon>
+            <shmMonitor>
+                <Scheduling>
+                    <Class>Default</Class>
+                    <Priority>0</Priority>
+                </Scheduling>
+                <StackSize>6000000</StackSize>
+            </shmMonitor>
+            <Watchdog>
+                <Scheduling>
+                    <Class>Default</Class>
+                    <Priority>0</Priority>
+                </Scheduling>
+                <StackSize>6000000</StackSize>
+            </Watchdog>
+            <KernelManager>
+                <Scheduling>
+                    <Class>Default</Class>
+                    <Priority>0</Priority>
+                </Scheduling>
+                <StackSize>6000000</StackSize>
+            </KernelManager>
+            <GarbageCollector>
+                <Scheduling>
+                    <Class>Default</Class>
+                    <Priority>0</Priority>
+                </Scheduling>
+                <StackSize>6000000</StackSize>
+            </GarbageCollector>
+            <ResendManager>
+                <Scheduling>
+                    <Class>Default</Class>
+                    <Priority>0</Priority>
+                </Scheduling>
+                <StackSize>6000000</StackSize>
+            </ResendManager>
+        </Daemon>
+        <Listeners>
+            <StackSize>6000000</StackSize>
+        </Listeners>
+    </Domain>
+    <DurabilityService name="durability">
+        <Tracing>
+            <Verbosity>${LSST_DURABILITY_SERVICE_TRACING_VERBOSITY:-FINER}</Verbosity>
+            <OutputFile>${LSST_DURABILITY_SERVICE_TRACING_OUTPUT:-durability.log}</OutputFile>
+        </Tracing>
+        <NameSpaces>
+            <NameSpace name="defaultNamespace">
+                <Partition>${LSST_DDS_PARTITION_PREFIX}*</Partition>
+            </NameSpace>
+            <Policy alignee="${LSST_DDS_ALIGNEE:-Lazy}" aligner="${LSST_DDS_ALIGNER:-false}" durability="Durable" masterPriority="${O
+SPL_MASTER_PRIORITY:-1}" nameSpace="defaultNamespace"/>
+        </NameSpaces>
+    </DurabilityService>
+    <TunerService name="cmsoap">
+        <Server>
+            <PortNr>50000</PortNr>
+        </Server>
+    </TunerService>
+</OpenSplice>

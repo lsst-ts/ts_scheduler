@@ -22,11 +22,10 @@ __all__ = ["ObservatoryStateMock"]
 
 import asyncio
 
-from lsst.ts import utils
-from lsst.ts import salobj
-
 from lsst.ts.dateloc import ObservatoryLocation
 from lsst.ts.observatory.model import ObservatoryModel
+
+from lsst.ts import salobj, utils
 
 
 class ObservatoryStateMock:

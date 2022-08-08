@@ -25,17 +25,12 @@ import types
 import typing
 
 from astropy.time import Time
-
-from lsst.ts.observatory.model import ObservatoryModel
-from lsst.ts.observatory.model import ObservatoryState
-
-from lsst.ts.dateloc import ObservatoryLocation
-
 from lsst.ts.astrosky.model import AstronomicalSkyModel
-
-from rubin_sim.site_models.seeingModel import SeeingModel
+from lsst.ts.dateloc import ObservatoryLocation
+from lsst.ts.observatory.model import ObservatoryModel, ObservatoryState
 from rubin_sim.site_models.cloudModel import CloudModel
 from rubin_sim.site_models.downtimeModel import DowntimeModel
+from rubin_sim.site_models.seeingModel import SeeingModel
 
 from ...driver import FeatureScheduler
 from ...driver.feature_scheduler_target import FeatureSchedulerTarget

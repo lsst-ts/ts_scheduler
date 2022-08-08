@@ -22,7 +22,6 @@ import logging
 import unittest
 
 import numpy as np
-
 from jsonschema.exceptions import ValidationError
 
 from lsst.ts.scheduler import TelemetryStreamHandler

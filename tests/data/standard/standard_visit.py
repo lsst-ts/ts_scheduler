@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 __all__ = ["StandardVisit"]
 
-import yaml
 import asyncio
 
+import yaml
 from lsst.ts.salobj import BaseScript
 
 
@@ -50,15 +50,6 @@ properties:
         description: The ID of the associated OpSim field for the target.
         type: integer
         default: 0
-    band_filter:
-        anyOf:
-            - type: array
-                minItems: 1
-                items:
-                type: string
-            - type: string
-        description: The single character name of the associated band filter.
-        default: ""
     ra:
         type: number
         description: The right ascension (degrees) of the target.
@@ -67,24 +58,31 @@ properties:
         type: number
         description: The declination (degrees) of the target.
         default: 0.
-    ang:
-        type: number
-        description: The sky angle (degrees) of the target.
-        default: 0.
-    num_exp:
-        type: integer
-        description: The number of requested exposures for the target.
-        default:  0
-    exp_times:
-        type: array
-        items:
-            type: number
-        description: The set of exposure times for the target. Needs to length of num_exp.
-        default: []
+    name:
+        type: string
+        description: Target name.
+        default: non_standard_visit_target
     program:
         type: string
         description: Program.
         default: ""
+    ang:
+        type: number
+        description: The sky angle (degrees) of the target.
+        default: 0.
+    instrument_setup:
+        type: array
+        items:
+            type: object
+            additionalProperties: false
+            required:
+                - exptime
+                - filter
+            properties:
+                exptime:
+                    type: number
+                filter:
+                    type: string
 additionalProperties: false
         """
         return yaml.safe_load(schema_yaml)
@@ -94,14 +92,12 @@ additionalProperties: false
 
         self.log.info("Configure started")
 
-        self.targetid = config.targetid
+        self.target_id = config.target_id
         self.fieldid = config.fieldid
-        self.filter = config.band_filter
         self.ra = config.ra
         self.dec = config.dec
         self.ang = config.ang
-        self.num_exp = config.num_exp
-        self.exp_times = config.exp_times
+        self.instrument_setup = config.instrument_setup
 
         self.log.info("Configure succeeded")
 
@@ -113,7 +109,7 @@ additionalProperties: false
         metadata
 
         """
-        metadata.duration = sum(self.exp_times)
+        metadata.duration = sum([setup["exptime"] for setup in self.instrument_setup])
 
     async def run(self):
         """Mock standard visit."""
@@ -122,7 +118,7 @@ additionalProperties: false
         await self.checkpoint("start")
 
         self.log.info("Mocking exposure")
-        await asyncio.sleep(sum(self.exp_times))
+        await asyncio.sleep(1.0)
 
         await self.checkpoint("end")
         self.log.info("Run succeeded")

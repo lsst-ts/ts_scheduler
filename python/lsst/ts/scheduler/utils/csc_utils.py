@@ -26,14 +26,13 @@ __all__ = [
     "OBSERVATION_NAMED_PARAMETERS",
 ]
 
-import re
 import enum
-
+import re
 from urllib.parse import urlparse
 
+from lsst.ts.idl import get_idl_dir
 from lsst.ts.idl.enums import Script
 from lsst.ts.salobj import parse_idl
-from lsst.ts.idl import get_idl_dir
 
 NonFinalStates = frozenset(
     (

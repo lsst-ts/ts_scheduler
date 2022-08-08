@@ -1,14 +1,12 @@
 import numpy as np
-
-from lsst.ts.scheduler.utils.test.feature_scheduler_sim import MJD_START
-
 import rubin_sim.scheduler.basis_functions as bf
 import rubin_sim.scheduler.detailers as detailers
-
 from rubin_sim.scheduler.modelObservatory import Model_observatory
 from rubin_sim.scheduler.schedulers import Core_scheduler
-from rubin_sim.scheduler.utils import standard_goals, Footprint
 from rubin_sim.scheduler.surveys import Greedy_survey
+from rubin_sim.scheduler.utils import Footprint, standard_goals
+
+from lsst.ts.scheduler.utils.test.feature_scheduler_sim import MJD_START
 
 
 def gen_cwfs_survey(nside, survey_name, time_gap_min):

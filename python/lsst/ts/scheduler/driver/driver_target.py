@@ -17,15 +17,13 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-import yaml
 import logging
 import typing
 
 import numpy as np
-
+import yaml
 from astropy import units
 from astropy.coordinates import Angle
-
 from lsst.ts.observatory.model import Target
 
 from .observation import Observation
@@ -125,7 +123,7 @@ class DriverTarget(Target):
             "dec": str(
                 Angle(self.dec, unit=units.degree).to_string(unit=units.degree, sep=":")
             ),
-            "name": str(self.note),
+            "name": str(self.note).split(":", maxsplit=1)[-1],
             "rot_sky": float(self.ang),
             "obs_time": float(self.obs_time),
             "num_exp": int(self.num_exp),
@@ -162,7 +160,7 @@ class DriverTarget(Target):
 
         topic_target["targetId"] = self.targetid
         topic_target["filter"] = self.filter
-        topic_target["requestTime"] = self.time
+        topic_target["requestTime"] = self.obs_time
         topic_target["ra"] = self.ra
         topic_target["decl"] = self.dec
         topic_target["skyAngle"] = self.ang

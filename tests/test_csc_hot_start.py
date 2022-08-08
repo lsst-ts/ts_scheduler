@@ -18,18 +18,16 @@
 #
 # You should have received a copy of the GNU General Public License
 
-import pickle
+import contextlib
+import importlib
 import logging
 import pathlib
+import pickle
 import unittest
-import importlib
-import contextlib
 
 from lsst.ts import salobj
-
 from lsst.ts.scheduler import SchedulerCSC
 from lsst.ts.scheduler.utils import SchedulerModes
-
 
 SHORT_TIMEOUT = 5.0
 LONG_TIMEOUT = 30.0

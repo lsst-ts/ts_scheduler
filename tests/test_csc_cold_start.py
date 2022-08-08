@@ -18,18 +18,16 @@
 #
 # You should have received a copy of the GNU General Public License
 
+import contextlib
 import logging
 import pathlib
 import typing
 import unittest
-import contextlib
 
 from lsst.ts import salobj
-
 from lsst.ts.scheduler import SchedulerCSC
 from lsst.ts.scheduler.utils import SchedulerModes
 from lsst.ts.scheduler.utils.test.feature_scheduler_sim import FeatureSchedulerSim
-
 
 SHORT_TIMEOUT = 5.0
 LONG_TIMEOUT = 30.0

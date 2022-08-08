@@ -20,17 +20,19 @@
 
 import asyncio
 import contextlib
-import os
 import glob
 import logging
+import os
 import pathlib
 import unittest
 
+import numpy as np
+
 from lsst.ts import salobj
 from lsst.ts.scheduler import SchedulerCSC
+from lsst.ts.scheduler.mock import ObservatoryStateMock
 from lsst.ts.scheduler.utils import SchedulerModes
 from lsst.ts.scheduler.utils.csc_utils import support_command
-from lsst.ts.scheduler.mock import ObservatoryStateMock
 from lsst.ts.scheduler.utils.error_codes import OBSERVATORY_STATE_UPDATE
 
 SHORT_TIMEOUT = 5.0
@@ -304,14 +306,47 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                 await salobj.set_summary_state(
                     self.remote,
                     salobj.State.ENABLED,
-                    override="advance_target_loop_sequential.yaml",
+                    override="advance_target_loop_fbs.yaml",
                 )
 
                 await self.remote.cmd_computePredictedSchedule.start(
                     timeout=SHORT_TIMEOUT
                 )
 
-                await self.assert_next_sample(topic=self.remote.evt_predictedSchedule)
+                predicted_schedule = await self.assert_next_sample(
+                    topic=self.remote.evt_predictedSchedule
+                )
+                exptimes = np.array(predicted_schedule.exptime)
+                predicted_observing_time = np.sum(exptimes[~np.isnan(exptimes)])
+
+                assert predicted_schedule.numberOfTargets > 0
+                assert predicted_observing_time < 2.0 * 60.0 * 60.0
+
+                for i, (ra, dec, rotSkyPos, mjd, exptime, nexp) in enumerate(
+                    zip(
+                        predicted_schedule.ra,
+                        predicted_schedule.decl,
+                        predicted_schedule.rotSkyPos,
+                        predicted_schedule.mjd,
+                        predicted_schedule.exptime,
+                        predicted_schedule.nexp,
+                    )
+                ):
+                    if i < predicted_schedule.numberOfTargets:
+                        assert np.isscalar(ra)
+                        assert np.isscalar(dec)
+                        assert np.isscalar(rotSkyPos)
+                        assert np.isscalar(mjd)
+                        assert np.isscalar(exptime)
+                        assert np.isscalar(nexp)
+                        assert mjd > 0.0
+                    else:
+                        assert np.isnan(ra)
+                        assert np.isnan(dec)
+                        assert np.isnan(rotSkyPos)
+                        assert np.isnan(mjd)
+                        assert np.isnan(exptime)
+                        assert np.isnan(nexp)
 
             finally:
                 await salobj.set_summary_state(

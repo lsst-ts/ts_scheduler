@@ -19,15 +19,14 @@ def gen_greedy_surveys(
     max_alt=76.0,
     moon_distance=30.0,
     ignore_obs="DD",
-    m5_weight=3.0,
     footprint_weight=0.3,
     slewtime_weight=3.0,
     stayfilter_weight=3.0,
     footprints=None,
     seed=42,
 ):
-    """
-    Make a quick set of greedy surveys
+    """Generate a feature scheduler survey configuration that does not employ
+    any daylight constraints. Useful for unit testing.
 
     This is a convienence function to generate a list of survey objects that
     can be used with lsst.sims.featureScheduler.schedulers.Core_scheduler.
@@ -54,8 +53,6 @@ def gen_greedy_surveys(
         The mask radius to apply around the moon (degrees).
     ignore_obs : str or list of str ('DD')
         Ignore observations by surveys that include the given substring(s).
-    m5_weight : float (3.)
-        The weight for the 5-sigma depth difference basis function.
     footprint_weight : float (0.3)
         The weight on the survey footprint basis function.
     slewtime_weight : float (3.)
@@ -82,11 +79,7 @@ def gen_greedy_surveys(
     )
 
     for filtername in filters:
-        bfs = []
-        bfs.append(
-            (bf.M5_diff_basis_function(filtername=filtername, nside=nside), m5_weight)
-        )
-        bfs.append(
+        bfs = [
             (
                 bf.Footprint_basis_function(
                     filtername=filtername,
@@ -95,37 +88,20 @@ def gen_greedy_surveys(
                     nside=nside,
                 ),
                 footprint_weight,
-            )
-        )
-        bfs.append(
+            ),
             (
                 bf.Slewtime_basis_function(filtername=filtername, nside=nside),
                 slewtime_weight,
-            )
-        )
-        bfs.append(
-            (bf.Strict_filter_basis_function(filtername=filtername), stayfilter_weight)
-        )
-        # Masks, give these 0 weight
-        bfs.append(
+            ),
+            (bf.Strict_filter_basis_function(filtername=filtername), stayfilter_weight),
             (
                 bf.Zenith_shadow_mask_basis_function(
                     nside=nside, shadow_minutes=shadow_minutes, max_alt=max_alt
                 ),
                 0,
-            )
-        )
-        bfs.append(
-            (
-                bf.Moon_avoidance_basis_function(
-                    nside=nside, moon_distance=moon_distance
-                ),
-                0,
-            )
-        )
-
-        bfs.append((bf.Filter_loaded_basis_function(filternames=filtername), 0))
-        bfs.append((bf.Planet_mask_basis_function(nside=nside), 0))
+            ),
+            (bf.Filter_loaded_basis_function(filternames=filtername), 0),
+        ]
 
         weights = [val[1] for val in bfs]
         basis_functions = [val[0] for val in bfs]
