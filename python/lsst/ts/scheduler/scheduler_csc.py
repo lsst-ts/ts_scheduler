@@ -1483,7 +1483,10 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
             if not self.next_target_timer.done():
                 self.log.debug("Waiting next target timer task...")
-                await self.next_target_timer
+                async with self.detailed_state(
+                    detailed_state=DetailedState.WAITING_NEXT_TARGET_TIMER_TASK
+                ):
+                    await self.next_target_timer
 
             await self.run_target_loop.wait()
 
