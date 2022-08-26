@@ -1244,7 +1244,9 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             self.log.debug("No scheduled targets to check.")
             return False
 
-        self.log.debug(f"Checking {ntargets} scheduled targets")
+        self.log.info(f"Checking {ntargets} scheduled targets")
+
+        report = "Check scheduled report:"
 
         retval = True
         for _ in range(ntargets):
@@ -1258,8 +1260,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
             if info.scriptState == Script.ScriptState.DONE:
                 # Script completed successfully
-                self.log.debug(
-                    f"{target.note} observation completed successfully. "
+                report += (
+                    f"\n\t{target.note} observation completed successfully. "
                     "Registering observation."
                 )
                 await self.register_observation(target)
@@ -1271,22 +1273,22 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 # script in a non-final state, just put it back on the list.
                 self.raw_telemetry["scheduled_targets"].append(target)
             elif info.scriptState == Script.ScriptState.FAILED:
-                self.log.warning(
-                    f"{target.note} failed. Not registering observation.",
-                )
+                report += f"\n\t{target.note} failed. Not registering observation."
                 # Remove related script from the list
                 del self.script_info[target.sal_index]
                 retval = False
             else:
-                self.log.error(
-                    "Unrecognized state [%i] for observation %i for target %s.",
-                    info.scriptState,
-                    target.sal_index,
-                    target,
+                report += (
+                    (
+                        f"\n\tUnrecognized state [{info.scriptState}] for observation "
+                        f"{target.sal_index} for target {target}."
+                    ),
                 )
                 # Remove related script from the list
                 del self.script_info[target.sal_index]
                 retval = False
+
+        self.log.info(report)
 
         return retval
 
