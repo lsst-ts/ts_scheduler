@@ -180,3 +180,7 @@ def start_ospl_daemon() -> None:
 
         subprocess.run(["ospl", "stop"])
         os.environ["OSPL_URI"] = old_ospl_config
+    else:
+        print(f"ospl status {output.returncode}... Nothing to do.")
+
+        yield
