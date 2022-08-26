@@ -562,9 +562,11 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         try:
             # Need to be running to compute predicted schedule
             await self._transition_idle_to_running()
-            
-            await self.compute_predicted_schedule()
 
+            self._tasks["compute_predicted_schedule"] = asyncio.create_task(
+                self.compute_predicted_schedule()
+            )
+            await self._tasks["compute_predicted_schedule"]
         finally:
             # Going back to idle.
             await self._transition_running_to_idle()
