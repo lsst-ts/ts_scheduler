@@ -269,6 +269,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         # Future to store the results or target_queue check.
         self.targets_queue_condition = utils.make_done_future()
+        self._should_compute_predicted_schedule = False
 
         # Task with a timer to evaluate next target when none is produced by
         # the scheduler.
@@ -1476,6 +1477,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         self.targets_queue = []
         self.targets_queue_condition = utils.make_done_future()
+        self._should_compute_predicted_schedule = False
 
         while self.summary_state == salobj.State.ENABLED and self.run_loop:
 
@@ -1486,21 +1488,9 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             await self.run_target_loop.wait()
 
             try:
-                if (
-                    self.targets_queue_condition.done()
-                    and self.targets_queue_condition.result() is None
-                ):
-                    # The condition in which we have to generate a target queue
-                    # is when the targets_queue_condition future is done and
-                    # its result is None. If the future is not done, the task
-                    # that checks the queue is still ongoing. If the results is
-                    # different than None it means the queue is ok and it does
-                    # not need to be generated.
-                    # Note that this is also the initial condition, so the
-                    # target list is generated the first time the loop runs.
-                    await self.generate_target_queue()
+                if self.need_to_generate_target_queue:
 
-                    await self.compute_predicted_schedule()
+                    await self.generate_target_queue()
 
                 async with self.target_loop_lock:
 
@@ -1525,6 +1515,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                         and len(self.targets_queue) > 0
                     ):
                         await self.queue_targets()
+                    elif self.need_to_compute_predicted_schedule:
+                        await self.compute_predicted_schedule()
                     else:
                         # Now it would be time for the scheduler to sleep while
                         # it waits for the targets in the queue to execute. We
@@ -1605,6 +1597,40 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 self.log.exception("Error on advance target production loop.")
                 break
 
+    @property
+    def need_to_generate_target_queue(self) -> bool:
+        """Check if we need to generate target queue.
+
+        The condition in which we have to generate a target queue is when the
+        `targets_queue_condition` future is done and its result is `None`. If
+        the future is not done, the task that checks the queue is still
+        ongoing. If the results is different than `None` it means the queue is
+        ok and it does not need to be generated.
+
+        Note that this is also the initial condition, so the target list is
+        generated the first time the loop runs.
+
+        Returns
+        -------
+        `bool`
+            `True` if we need to call generate target queue, `False` otherwise.
+        """
+        return (
+            self.targets_queue_condition.done()
+            and self.targets_queue_condition.result() is None
+        )
+
+    @property
+    def need_to_compute_predicted_schedule(self) -> bool:
+        """Check if we need to compute the predicted schedule.
+
+        Returns
+        -------
+        `bool`
+            `True` if `compute_predicted_schedule` needs to run.
+        """
+        return self._should_compute_predicted_schedule
+
     @set_detailed_state(detailed_state=DetailedState.GENERATING_TARGET_QUEUE)
     async def generate_target_queue(self):
         """Generate target queue.
@@ -1671,6 +1697,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                         await self.handle_no_targets_on_queue()
                     break
                 else:
+                    self._should_compute_predicted_schedule = True
+
                     await self.reset_handle_no_targets_on_queue()
 
                     self.log.debug(
@@ -1906,7 +1934,9 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             self.log.debug("No support for predicted scheduler.")
             return
 
-        self.log.debug("Computing predicted schedule.")
+        self.log.info("Computing predicted schedule.")
+
+        self._should_compute_predicted_schedule = False
 
         async with self.current_scheduler_state(publish_lfoa=False):
 
