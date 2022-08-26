@@ -21,6 +21,7 @@
 __all__ = [
     "UnableToFindTargetError",
     "UpdateTelemetryError",
+    "FailedToQueueTargetsError",
 ]
 
 
@@ -29,4 +30,8 @@ class UnableToFindTargetError(Exception):
 
 
 class UpdateTelemetryError(Exception):
+    pass
+
+
+class FailedToQueueTargetsError(Exception):
     pass
