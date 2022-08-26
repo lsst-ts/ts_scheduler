@@ -1479,6 +1479,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         self.targets_queue_condition = utils.make_done_future()
         self._should_compute_predicted_schedule = False
 
+        self.log.info("Starting target production loop.")
+
         while self.summary_state == salobj.State.ENABLED and self.run_loop:
 
             if not self.next_target_timer.done():
