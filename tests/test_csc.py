@@ -361,6 +361,57 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                     salobj.State.STANDBY,
                 )
 
+    # TODO: (DM-34905) Remove backward compatibility.
+    @unittest.skipIf(
+        not support_command("computePredictedSchedule"),
+        "Command 'computePredictedSchedule' not supported.",
+    )
+    async def test_disable_while_computing_predicted_schedule(self):
+        async with self.make_csc(
+            config_dir=TEST_CONFIG_DIR,
+            initial_state=salobj.State.STANDBY,
+            simulation_mode=SchedulerModes.MOCKS3,
+        ), ObservatoryStateMock():
+
+            try:
+                await salobj.set_summary_state(
+                    self.remote,
+                    salobj.State.ENABLED,
+                    override="advance_target_loop_fbs.yaml",
+                )
+
+                # Reduce CSC loop_die_timeout so test will run faster
+                self.csc.loop_die_timeout = 2.0
+
+                self.remote.evt_detailedState.flush()
+
+                compute_predicted_schedule_cmd_task = asyncio.create_task(
+                    self.remote.cmd_computePredictedSchedule.start(
+                        timeout=SHORT_TIMEOUT
+                    )
+                )
+
+                while True:
+                    detailed_state = await self.remote.evt_detailedState.next(
+                        flush=False,
+                        timeout=SHORT_TIMEOUT,
+                    )
+                    if (
+                        detailed_state.substate
+                        == DetailedState.COMPUTING_PREDICTED_SCHEDULE
+                    ):
+                        await self.remote.cmd_disable.start(timeout=SHORT_TIMEOUT)
+                        break
+
+                with self.assertRaises(salobj.AckError):
+                    await compute_predicted_schedule_cmd_task
+
+            finally:
+                await salobj.set_summary_state(
+                    self.remote,
+                    salobj.State.STANDBY,
+                )
+
     @contextlib.asynccontextmanager
     async def make_script_queue(self, running: bool) -> None:
 
