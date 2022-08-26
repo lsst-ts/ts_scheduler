@@ -76,6 +76,7 @@ from .utils.error_codes import (
     UPDATE_TELEMETRY_ERROR,
 )
 from .utils.exceptions import (
+    FailedToQueueTargetsError,
     UnableToFindTargetError,
     UpdateTelemetryError,
 )
@@ -1523,39 +1524,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                         and queue.length < self.parameters.n_targets + 1
                         and len(self.targets_queue) > 0
                     ):
-                        # TODO: publish detailed state indicating that the
-                        # scheduler is selecting a target
-
-                        # Take a target from the queue
-                        target = self.targets_queue.pop(0)
-
-                        current_tai = utils.current_tai()
-
-                        if target.obs_time > current_tai:
-                            delta_t = current_tai - target.obs_time
-                            self.log.debug(
-                                f"Target observing time in the future. Waiting {delta_t}s"
-                            )
-                            await asyncio.sleep(delta_t)
-
-                        # This method receives a list of targets and return a
-                        # list of script ids
-                        await self.put_on_queue([target])
-
-                        if target.sal_index > 0:
-                            self.raw_telemetry["scheduled_targets"].append(target)
-                        else:
-                            self.log.error(
-                                "Could not add target to the queue: %s", target
-                            )
-                            await self.fault(
-                                code=PUT_ON_QUEUE,
-                                report=f"Could not add target to the queue: {target}",
-                            )
-
-                        # TODO: publish detailed state indicating that the
-                        # scheduler has finished the target selection
-
+                        await self.queue_targets()
                     else:
                         # Now it would be time for the scheduler to sleep while
                         # it waits for the targets in the queue to execute. We
@@ -1613,6 +1582,14 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     await self.fault(
                         code=UPDATE_TELEMETRY_ERROR,
                         report="Failed to update telemetry.",
+                        traceback=traceback.format_exc(),
+                    )
+                break
+            except FailedToQueueTargetsError:
+                if self.summary_state != salobj.State.FAULT:
+                    await self.fault(
+                        code=PUT_ON_QUEUE,
+                        report="Could not add target to the queue",
                         traceback=traceback.format_exc(),
                     )
                 break
@@ -1986,6 +1963,34 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             await self.evt_predictedSchedule.set_write(**predicted_schedule)
 
         self.log.debug("Finished computing predicted schedule.")
+
+    @set_detailed_state(detailed_state=DetailedState.QUEUEING_TARGET)
+    async def queue_targets(self):
+        """Send targets to the script queue.
+
+        Raises
+        ------
+        `FailedToQueueTargetsError`
+            If fails to add target to the queue.
+        """
+        # Take a target from the queue
+        target = self.targets_queue.pop(0)
+
+        current_tai = utils.current_tai()
+
+        if target.obs_time > current_tai:
+            delta_t = current_tai - target.obs_time
+            self.log.debug(f"Target observing time in the future. Waiting {delta_t}s")
+            await asyncio.sleep(delta_t)
+
+        await self.put_on_queue([target])
+
+        if target.sal_index > 0:
+            self.raw_telemetry["scheduled_targets"].append(target)
+        else:
+            raise FailedToQueueTargetsError(
+                f"Could not add target to the queue: {target}"
+            )
 
     def callback_script_info(self, data):
         """This callback function will store in a dictionary information about
