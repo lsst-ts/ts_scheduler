@@ -4,6 +4,87 @@
 Version History
 ===============
 
+v1.16.0
+-------
+
+* In ``utils/csc_utils``, add ``DetailedState`` enumeration.
+
+  This enumeration will be removed once we release a version of ts-idl with it.
+  For now it will be kept here for backward compatibility.
+
+* In ``utils/exceptions``:
+
+  * Rename exception ``UnableToFindTarget`` to ``UnableToFindTargetError``.
+
+  * Add new exception ``FailedToQueueTargetsError``.
+
+* In ``scheduler_csc``:
+
+  * Fix typo in ``begin_start`` exception logging.
+
+  * Improve handling simulation mode and DRY operation mode in ``begin_enabled`` by merging condition into a single if statement.
+
+  * Background tasks management refactor:
+
+    Add a ``_tasks`` dictionary to store all background tasks that need to be managed by the CSC when going in and out of disabled state.
+    Move tasks ``target_production_task`` and ``telemetry_loop_task`` to this new dictionary.
+    Add methods ``_stop_all_background_tasks`` and ``_stop_background_task`` to handle stopping background tasks.
+
+    In ``begin_disable``, replace inline management of stopping ``target_production_task`` with call to ``_stop_all_background_tasks``.
+
+    In ``handle_summary_state``, replace management of ``telemetry_loop_task`` with call to ``_stop_all_background_tasks``.
+
+  * Add detailed state transition facility.
+
+    The detailed state transition is mostly managed using a decorator.
+    Methods decorated with ``set_detailed_state`` will first acquire a detailed state lock, guaranteeing no other detailed state transition can happen at the same time.
+    Then they assert that the detailed state is ``RUNNING``, otherwise they cannot go into one of the operational sub states.
+    Next, the state switches to the desired new detailed state, executes the decorated coroutine and, once it is done, returns the system to ``RUNNING``.
+    There are also methods to send the CSC from IDLE to ``RUNNING`` and vise-versa.
+
+  * Refactoring ``advance_target_loop``.
+
+    * Extract method to add targets to the queue into a new method ``queue_targets``.
+      This method will switch the detailed state to ``QUEUEING_TARGET`` and execute the operations previously done inline in ``advance_target_loop``.
+      If the method fails to produce targets and fails to find a target in the future, it raises a new exception ``FailedToQueueTargetsError``.
+
+    * Change how ``generate_target_queue`` and ``compute_predicted_schedule`` runs.
+
+      Instead of calling them sequentially, which causes a delay in producing targets, call ``generate_target_queue`` first and then, while waiting for targets to execute, call ``compute_predicted_schedule``.
+      This new way improves over the previous implementation but still leaves room for conditions where ``compute_predicted_schedule`` can take longer to execute than the targets to be observed and then lead to additional delay.
+      Nevertheless, conditions like this were only observed with the AuxTel configuration, which is a lot heavier than the one for the main telescope, and because there was a bug in the predictive loop which would continue to compute targets until the queue was filled up.
+
+    * Update to future-proof against deprecated feature in python>3.11.
+      Stop using coroutine directly in ``asyncio.wait`` and schedule a task with ``asyncio.create_task`` instead.
+
+    * In situations where the ``generate_target_queue`` can't find a suitable target for the immediate future but succeeds in finding one in the future, the method waits for a timer task.
+      When this condition happens, switch the detailed state to ``WAITING_NEXT_TARGET_TIMER_TASK``.
+
+    * Add info log message before entering the loop.
+
+  * Minor cosmetic updates on ``check_scheduled`` to improve logging information.
+
+    Instead of sending a debug message inside the loop, collect the messages and log them all in a single message at the end.
+
+  * Rename exception ``UnableToFindTarget`` to ``UnableToFindTargetError``.
+
+  * Change how ``_do_computePredictedSchedule`` executes ``compute_predicted_schedule``.
+
+    Instead of awaiting for the method directly, run it in a background task that is included in the ``_tasks`` dictionary.
+    This way, if the CSC is disabled while executing ``compute_predicted_schedule``, the ``_stop_all_background_tasks`` will handle stopping the computation.
+
+* In ``tests/test_advanced_target_loop.py``, update unit tests to check the DetailedState events published by the CSC.
+
+* In ``tests/test_csc.py`` add new ``test_disable_while_computing_predicted_schedule`` unit test to check that the ``computing_predicted_schedule`` is interrupted if the CSC is sent to DISABLED state.
+
+* In ``tests/test_csc.py``, check that CSC publishes detailed state on startup with the correct value.
+
+* In ``tests/conftest.py``:
+  
+  * Fix start_ospl_daemon fixture handling condition where the ospl daemon is already running.
+
+  * Update address of the sky brightness server in ``download_sky_file`` utility method.
+
 v1.15.2
 -------
 
