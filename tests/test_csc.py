@@ -32,7 +32,7 @@ from lsst.ts import salobj
 from lsst.ts.scheduler import SchedulerCSC
 from lsst.ts.scheduler.mock import ObservatoryStateMock
 from lsst.ts.scheduler.utils import SchedulerModes
-from lsst.ts.scheduler.utils.csc_utils import support_command
+from lsst.ts.scheduler.utils.csc_utils import DetailedState, support_command
 from lsst.ts.scheduler.utils.error_codes import OBSERVATORY_STATE_UPDATE
 
 SHORT_TIMEOUT = 5.0
@@ -206,6 +206,8 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
             simulation_mode=SchedulerModes.SIMULATION,
         ), ObservatoryStateMock():
 
+            self.remote.evt_detailedState.flush()
+
             await self.check_standard_state_transitions(
                 enabled_commands=["resume", "stop", "load"]
                 + (
@@ -214,6 +216,11 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                     else []
                 ),
                 override="simple.yaml",
+            )
+            await self.assert_next_sample(
+                self.remote.evt_detailedState,
+                flush=False,
+                substate=DetailedState.IDLE,
             )
 
     async def test_configuration(self):
