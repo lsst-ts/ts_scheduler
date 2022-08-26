@@ -1546,7 +1546,6 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                                 name="check_targets_queue_condition",
                             )
 
-                        timer_task = asyncio.sleep(self.parameters.loop_sleep_time)
                         # Using the asycio.wait with a timeout will simply
                         # return at the end without cancelling the task. If the
                         # check takes less then the loop_sleep_time, we still
@@ -1554,9 +1553,12 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                         # why we have the additional task.
                         # The following await will not take more or less than
                         # approximately self.parameters.loop_sleep_time.
+
                         await asyncio.wait(
                             [
-                                timer_task,
+                                asyncio.create_task(
+                                    asyncio.sleep(self.parameters.loop_sleep_time)
+                                ),
                                 targets_queue_condition_task,
                             ],
                             timeout=self.parameters.loop_sleep_time,
