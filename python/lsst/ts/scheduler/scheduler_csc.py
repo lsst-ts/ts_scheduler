@@ -59,6 +59,7 @@ from .driver.survey_topology import SurveyTopology
 from .telemetry_stream_handler import TelemetryStreamHandler
 from .utils.csc_utils import (
     OBSERVATION_NAMED_PARAMETERS,
+    DetailedState,
     NonFinalStates,
     SchedulerModes,
     is_uri,
@@ -242,6 +243,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         self.scheduler_state_lock = asyncio.Lock()
 
+        self._detailed_state_lock = asyncio.Lock()
+
         self.driver = None
 
         # Stores the coroutine for the target production.
@@ -279,6 +282,38 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             WARM=self.configure_driver_warm,
             COLD=self.configure_driver_cold,
         )
+
+    def set_detailed_state(detailed_state):
+        """A class decorator for coroutine to facilitate setting/resetting
+        detailed state.
+
+        Parameters
+        ----------
+        detailed_state : `DetailedState`
+            Detailed state to switch to before awaiting the coroutine.
+
+        Notes
+        -----
+        When decorating a coroutine with `set_detailed_state`, you specify the
+        associated detailed state and it will wrap the call with
+        `async with detailed_state` context manager, causing it to switch to
+        the provided detailed state before awaiting the coroutine and switching
+        back to the previous detailed state when it is done.
+
+        The `detailed_state` context manager will acquire a lock when setting
+        the detailed state. The idea is that you can only execute one detailed
+        state at a time so beware not to call a method that changes the
+        detailed state from a another, to avoid dead locks.
+        """
+
+        def decorator(coroutine):
+            async def detailed_state_wrapper(self, *args, **kwargs):
+                async with self.detailed_state(detailed_state):
+                    await coroutine(self, *args, **kwargs)
+
+            return detailed_state_wrapper
+
+        return decorator
 
     async def begin_start(self, data):
 
@@ -387,6 +422,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 self.s3bucket.stop_mock()
             self.s3bucket = None
 
+        await self.evt_detailedState.set_write(substate=DetailedState.IDLE)
+
     async def begin_disable(self, data):
         """Transition from `State.ENABLED` to `State.DISABLED`. This
         transition will be made in a gentle way, meaning that it will wait for
@@ -465,6 +502,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         if self.run_target_loop.is_set():
             raise RuntimeError("Target production loop already running.")
 
+        await self._transition_idle_to_running()
+
         self.run_target_loop.set()
 
     async def do_stop(self, data):
@@ -495,6 +534,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 await self.remove_from_queue(self.raw_telemetry["scheduled_targets"])
 
         await self.reset_handle_no_targets_on_queue()
+
+        await self._transition_running_to_idle()
 
     async def stop_next_target_timer_task(self):
 
@@ -565,7 +606,15 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             result="Computing predicted schedule.",
         )
 
-        await self.compute_predicted_schedule()
+        try:
+            # Need to be running to compute predicted schedule
+            await self._transition_idle_to_running()
+            
+            await self.compute_predicted_schedule()
+
+        finally:
+            # Going back to idle.
+            await self._transition_running_to_idle()
 
     async def telemetry_loop(self):
         """Scheduler telemetry loop.
@@ -1579,6 +1628,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 self.log.exception("Error on advance target production loop.")
                 break
 
+    @set_detailed_state(detailed_state=DetailedState.GENERATING_TARGET_QUEUE)
     async def generate_target_queue(self):
         """Generate target queue.
 
@@ -1866,6 +1916,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         return time_scheduler_evaluation, time_start, targets
 
+    @set_detailed_state(detailed_state=DetailedState.COMPUTING_PREDICTED_SCHEDULE)
     async def compute_predicted_schedule(self):
         """Compute the predicted schedule.
 
@@ -1963,6 +2014,20 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 del self.script_info[key]
                 if len(self.script_info) < self.parameters.max_scripts:
                     break
+
+    def assert_idle(self):
+        """Assert detailed state is idle."""
+        assert self.evt_detailedState.data.substate == DetailedState.IDLE, (
+            "Detailed state must be IDLE, currently in "
+            f"{DetailedState(self.evt_detailedState.data.substate)!r}."
+        )
+
+    def assert_running(self):
+        """Assert detailed state is running."""
+        assert self.evt_detailedState.data.substate == DetailedState.RUNNING, (
+            "Detailed state must be RUNNING, currently in "
+            f"{DetailedState(self.evt_detailedState.data.substate)!r}."
+        )
 
     async def register_observation(self, target: DriverTarget) -> None:
         """Register observation.
@@ -2279,6 +2344,50 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 sunset=self.driver.current_sunset,
                 sunrise=self.driver.current_sunrise,
             )
+
+    async def _transition_idle_to_running(self) -> None:
+        """Transition detailed state from idle to running."""
+
+        async with self._detailed_state_lock:
+
+            self.assert_idle()
+
+            await self.evt_detailedState.set_write(substate=DetailedState.RUNNING)
+
+    async def _transition_running_to_idle(self) -> None:
+        """Transition detailed state from idle to running."""
+
+        async with self._detailed_state_lock:
+
+            self.assert_running()
+
+            await self.evt_detailedState.set_write(substate=DetailedState.IDLE)
+
+    @contextlib.asynccontextmanager
+    async def detailed_state(self, detailed_state):
+        """Context manager to set the detailed state for an operation then
+        return it to the initial value after it executes.
+
+        This method will acquire a lock to prevent executing a detailed state
+        operation inside another.
+
+        Parameters
+        ----------
+        detailed_state : `DetailedState`
+            Detailed state value.
+        """
+        async with self._detailed_state_lock:
+
+            initial_detailed_state = self.evt_detailedState.data.substate
+
+            self.assert_running()
+
+            await self.evt_detailedState.set_write(substate=detailed_state)
+
+            try:
+                yield
+            finally:
+                await self.evt_detailedState.set_write(substate=initial_detailed_state)
 
     @contextlib.asynccontextmanager
     async def current_scheduler_state(self, publish_lfoa):
