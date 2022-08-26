@@ -248,8 +248,11 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         self.driver = None
 
+        # dictionary to store background tasks
+        self._tasks = dict()
+
         # Stores the coroutine for the target production.
-        self.target_production_task = None
+        self._tasks["target_production_task"] = None
 
         # A flag to indicate that the event loop is running
         self.run_loop = False
@@ -258,7 +261,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         self.queue_remote.evt_script.callback = self.callback_script_info
 
         # Telemetry loop. This will take care of observatory state.
-        self.telemetry_loop_task = None
+        self._tasks["telemetry_loop_task"] = None
 
         # List of targets used in the ADVANCE target loop
         self.targets_queue = []
@@ -358,23 +361,23 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         if self.simulation_mode == SchedulerModes.SIMULATION:
             self.log.debug("Running in simulation mode. No target production loop.")
-            self.target_production_task = None
+            self._tasks["target_production_task"] = None
 
         elif self.parameters.mode == "SIMPLE":
 
-            self.target_production_task = asyncio.create_task(
+            self._tasks["target_production_task"] = asyncio.create_task(
                 self.simple_target_production_loop()
             )
 
         elif self.parameters.mode == "ADVANCE":
 
-            self.target_production_task = asyncio.create_task(
+            self._tasks["target_production_task"] = asyncio.create_task(
                 self.advance_target_production_loop()
             )
 
         elif self.parameters.mode == "DRY":
 
-            self.target_production_task = None
+            self._tasks["target_production_task"] = None
 
         else:
             # This will just reject the command
@@ -387,9 +390,11 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         telemetry loop is running. Shutdown the telemetry loop if in STANDBY.
         """
 
-        if self.disabled_or_enabled and self.telemetry_loop_task is None:
+        if self.disabled_or_enabled and self._tasks["telemetry_loop_task"] is None:
             self.run_loop = True
-            self.telemetry_loop_task = asyncio.create_task(self.telemetry_loop())
+            self._tasks["telemetry_loop_task"] = asyncio.create_task(
+                self.telemetry_loop()
+            )
 
             await self.reset_handle_no_targets_on_queue()
 
@@ -399,26 +404,9 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     name=self.s3bucket_name, domock=mock_s3, create=mock_s3
                 )
 
-        elif (
-            self.summary_state == salobj.State.STANDBY
-            and self.telemetry_loop_task is not None
-        ):
-            self.run_loop = False
-            try:
-                await asyncio.wait_for(
-                    self.telemetry_loop_task, timeout=self.loop_die_timeout
-                )
-            except asyncio.TimeoutError:
-                self.log.debug("Timeout waiting for telemetry loop to finish.")
-                self.telemetry_loop_task.cancel()
-                try:
-                    await self.telemetry_loop_task
-                except asyncio.CancelledError:
-                    self.log.debug("Telemetry loop cancelled.")
-                except Exception:
-                    self.log.exception("Unexpected error cancelling telemetry loop.")
-            finally:
-                self.telemetry_loop_task = None
+        elif self.summary_state == salobj.State.STANDBY:
+
+            await self._stop_all_background_tasks()
 
             if self.s3bucket is not None:
                 self.s3bucket.stop_mock()
@@ -445,44 +433,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             result="Disabling CSC.",
         )
 
-        try:
-            if self.target_production_task is None:
-                # Nothing to do, just transition
-                self.log.warning("No target production loop running.")
-            else:
-                # need to cancel target production task before changing state.
-                # Note if we are here we must be in enable state. The target
-                # production task should always be None if we are not enabled.
-                # self.target_production_task.cancel()
-                self.log.debug(
-                    "Setting run loop flag to False and waiting for "
-                    "target loop to finish..."
-                )
-                # Will set flag to False so the loop will stop at the earliest
-                # convenience
-                self.run_target_loop.clear()
-                self.run_loop = False
-                wait_start = time.time()
-                while not self.target_production_task.done():
-                    await asyncio.sleep(self.parameters.loop_sleep_time)
-                    elapsed = time.time() - wait_start
-                    self.log.debug(
-                        f"Waiting target loop to finish (elapsed: {elapsed:0.2f} s, "
-                        f"timeout: {self.loop_die_timeout} s)..."
-                    )
-                    if elapsed > self.loop_die_timeout:
-                        self.log.warning("Target loop not stopping, cancelling it...")
-                        self.target_production_task.cancel()
-                        break
-
-                try:
-                    await self.target_production_task
-                except asyncio.CancelledError:
-                    self.log.info("Target production task cancelled...")
-        except Exception:
-            self.log.exception("Error while disabling the Scheduler. Ignoring...")
-        finally:
-            self.target_production_task = None
+        await self._stop_all_background_tasks()
 
     async def do_resume(self, data):
         """Resume target production loop.
@@ -2404,6 +2355,66 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             self.assert_running()
 
             await self.evt_detailedState.set_write(substate=DetailedState.IDLE)
+
+    async def _stop_all_background_tasks(self) -> None:
+        """Stop all background tasks."""
+
+        self.log.debug(
+            "Setting run loop flag to False and waiting for tasks to finish..."
+        )
+
+        # Will set flag to False so the loop will stop at the earliest
+        # convenience
+        self.run_target_loop.clear()
+        self.run_loop = False
+
+        await asyncio.gather(
+            *[
+                self._stop_background_task(task_name=task_name)
+                for task_name in self._tasks
+            ]
+        )
+
+    async def _stop_background_task(self, task_name) -> None:
+        """Stop a background task.
+
+        Parameters
+        ----------
+        task_name : str
+            Name of the background task.
+        """
+        try:
+            task = self._tasks.get(task_name)
+
+            if task is None:
+                # Nothing to do
+                self.log.info(f"No {task_name} task.")
+            else:
+                wait_start = time.time()
+                while not task.done():
+                    await asyncio.sleep(self.parameters.loop_sleep_time)
+                    elapsed = time.time() - wait_start
+                    self.log.debug(
+                        f"Waiting {task_name} to finish (elapsed: {elapsed:0.2f} s, "
+                        f"timeout: {self.loop_die_timeout} s)..."
+                    )
+                    if elapsed > self.loop_die_timeout:
+                        self.log.warning(
+                            f"Task {task_name} not stopping, cancelling it..."
+                        )
+                        task.cancel()
+                        break
+
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    self.log.info(f"{task_name} cancelled...")
+        except Exception:
+            self.log.exception(
+                f"Error while stopping background task {task_name}. Ignoring..."
+            )
+        finally:
+            self._tasks[task_name] = None
 
     @contextlib.asynccontextmanager
     async def detailed_state(self, detailed_state):
