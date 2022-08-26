@@ -74,7 +74,10 @@ from .utils.error_codes import (
     UNABLE_TO_FIND_TARGET,
     UPDATE_TELEMETRY_ERROR,
 )
-from .utils.exceptions import UnableToFindTarget, UpdateTelemetryError
+from .utils.exceptions import (
+    UnableToFindTargetError,
+    UpdateTelemetryError,
+)
 from .utils.parameters import SchedulerCscParameters
 
 
@@ -1546,7 +1549,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
             except asyncio.CancelledError:
                 break
-            except UnableToFindTarget:
+            except UnableToFindTargetError:
                 # If there is an exception and not in FAULT, go to FAULT state
                 # and log the exception...
                 if self.summary_state != salobj.State.FAULT:
@@ -1782,7 +1785,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         )
 
         if len(targets) == 0:
-            raise UnableToFindTarget(
+            raise UnableToFindTargetError(
                 f"Could not determine next target in allotted window: {self.max_time_no_target}s."
             )
         else:
