@@ -70,6 +70,35 @@ class SchedulerModes(enum.IntEnum):
     SIMULATION = enum.auto()
 
 
+# TODO (DM-36037): Remove DetailedState enumeration from Scheduler once ts-idl
+# is released.
+class DetailedState(enum.IntEnum):
+    """Detailed state enumeration for the Scheduler.
+
+    This enumeration is added here temporarily to support publishing this
+    information with the current version of ts-idl. Once the new version of
+    ts-idl package is released and deployed this can be removed.
+    """
+
+    # Scheduler is idle. This will be the detailed state when the Scheduler is
+    # not in ENABLED state or is in enabled but not running.
+    IDLE = enum.auto()
+    # Scheduler is running but not doing anything in particular.
+    RUNNING = enum.auto()
+    # Scheduler is running and waiting for the "next_target_timer_task" to
+    # finish. This condition happens when there is no target to observe, the
+    # scheduler estimates how long until there is a target to observe and
+    # create a timer to wait for.
+    WAITING_NEXT_TARGET_TIMER_TASK = enum.auto()
+    # Scheduler is generating the target queue. This consists of processing the
+    # telemetry data to produce the targets to observe.
+    GENERATING_TARGET_QUEUE = enum.auto()
+    # Scheduler is computing the predicted queue.
+    COMPUTING_PREDICTED_SCHEDULE = enum.auto()
+    # Scheduler is queueing targets.
+    QUEUEING_TARGET = enum.auto()
+
+
 def is_uri(uri: str) -> bool:
     """Check if input is a valid uri.
 
