@@ -359,8 +359,16 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         # enabled.
         self.run_target_loop.clear()
 
-        if self.simulation_mode == SchedulerModes.SIMULATION:
-            self.log.debug("Running in simulation mode. No target production loop.")
+        if (
+            self.simulation_mode == SchedulerModes.SIMULATION
+            or self.parameters.mode == "DRY"
+        ):
+
+            self.log.info(
+                "Running with no target production loop. "
+                f"Operation mode: {self.parameters.mode}. "
+                f"Simulation mode: {self.simulation_mode}. "
+            )
             self._tasks["target_production_task"] = None
 
         elif self.parameters.mode == "SIMPLE":
@@ -374,10 +382,6 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             self._tasks["target_production_task"] = asyncio.create_task(
                 self.advance_target_production_loop()
             )
-
-        elif self.parameters.mode == "DRY":
-
-            self._tasks["target_production_task"] = None
 
         else:
             # This will just reject the command
