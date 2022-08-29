@@ -19,14 +19,19 @@
 # You should have received a copy of the GNU General Public License
 
 __all__ = [
-    "UnableToFindTarget",
+    "UnableToFindTargetError",
     "UpdateTelemetryError",
+    "FailedToQueueTargetsError",
 ]
 
 
-class UnableToFindTarget(Exception):
+class UnableToFindTargetError(Exception):
     pass
 
 
 class UpdateTelemetryError(Exception):
+    pass
+
+
+class FailedToQueueTargetsError(Exception):
     pass

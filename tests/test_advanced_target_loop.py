@@ -33,6 +33,7 @@ from lsst.ts import salobj, utils
 from lsst.ts.scheduler import SchedulerCSC
 from lsst.ts.scheduler.mock import ObservatoryStateMock
 from lsst.ts.scheduler.utils import SchedulerModes
+from lsst.ts.scheduler.utils.csc_utils import DetailedState
 from lsst.ts.scheduler.utils.error_codes import NO_QUEUE, UPDATE_TELEMETRY_ERROR
 
 try:
@@ -119,6 +120,15 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
                 self.observatory_mock.close(),
             )
 
+    async def assert_detailed_state_sequence(self, expected_detailed_states):
+
+        for expected_detailed_state in expected_detailed_states:
+            detailed_state = await self.scheduler_remote.evt_detailedState.next(
+                flush=False,
+                timeout=STD_TIMEOUT,
+            )
+            assert DetailedState(detailed_state.substate) == expected_detailed_state
+
     async def test_no_queue(self):
         """Test the simple target production loop.
 
@@ -143,6 +153,8 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
             salobj.State.ENABLED,
             override="advance_target_loop_sequential.yaml",
         )
+
+        self.scheduler_remote.evt_detailedState.flush()
 
         # Resume scheduler operation
         await self.scheduler_remote.cmd_resume.start(timeout=STD_TIMEOUT)
@@ -173,6 +185,17 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
             flush=False, timeout=STD_TIMEOUT
         )
         assert data.errorCode == NO_QUEUE
+
+        expected_detailed_states = (
+            DetailedState.RUNNING,
+            DetailedState.GENERATING_TARGET_QUEUE,
+            DetailedState.RUNNING,
+            DetailedState.IDLE,
+        )
+
+        await self.assert_detailed_state_sequence(
+            expected_detailed_states=expected_detailed_states
+        )
 
         # recover from fault state sending it to STANDBY
         await self.scheduler_remote.cmd_standby.start(timeout=STD_TIMEOUT)
@@ -212,6 +235,8 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
         self.scheduler_remote.evt_errorCode.flush()
         self.scheduler_remote.evt_summaryState.flush()
 
+        self.scheduler_remote.evt_detailedState.flush()
+
         # Resume scheduler operation
         await self.scheduler_remote.cmd_resume.start(timeout=STD_TIMEOUT)
 
@@ -225,6 +250,17 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
         )
 
         assert error_code.errorCode == UPDATE_TELEMETRY_ERROR
+
+        expected_detailed_states = (
+            DetailedState.RUNNING,
+            DetailedState.GENERATING_TARGET_QUEUE,
+            DetailedState.RUNNING,
+            DetailedState.IDLE,
+        )
+
+        await self.assert_detailed_state_sequence(
+            expected_detailed_states=expected_detailed_states
+        )
 
     async def test_with_queue(self):
         """Test the target production loop with queue.
@@ -269,6 +305,8 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
             override="advance_target_loop_sequential_std_visit.yaml",
         )
 
+        self.scheduler_remote.evt_detailedState.flush()
+
         # Resume scheduler operation
         await self.scheduler_remote.cmd_resume.start(timeout=STD_TIMEOUT)
 
@@ -295,6 +333,22 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
 
         # Test completed, pausing scheduler
         await self.scheduler_remote.cmd_stop.start(timeout=STD_TIMEOUT)
+
+        expected_detailed_states = (
+            DetailedState.RUNNING,
+            DetailedState.GENERATING_TARGET_QUEUE,
+            DetailedState.RUNNING,
+            DetailedState.QUEUEING_TARGET,
+            DetailedState.RUNNING,
+            DetailedState.QUEUEING_TARGET,
+            DetailedState.RUNNING,
+            DetailedState.COMPUTING_PREDICTED_SCHEDULE,
+            DetailedState.RUNNING,
+        )
+
+        await self.assert_detailed_state_sequence(
+            expected_detailed_states=expected_detailed_states
+        )
 
         # Scheduler should be in ENABLED state.
         self.assertEqual(

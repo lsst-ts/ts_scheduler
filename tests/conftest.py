@@ -26,7 +26,9 @@ import typing
 
 import numpy as np
 import pytest
+import requests
 from rubin_sim.data import get_data_dir
+from rubin_sim.data.rs_download_sky import MyHTMLParser
 
 from lsst.ts import utils
 
@@ -103,10 +105,14 @@ def find_sky_file(source: str, mjd: float) -> str:
         Remote source file.
     """
 
-    output = subprocess.run(
-        ["rsync", "-avn", "--progress", source, "/tmp/"], capture_output=True
-    )
-    sky_files = [line for line in output.stdout.decode().split("\n") if ".h5" in line]
+    source_html_content = requests.get(source)
+
+    parser = MyHTMLParser()
+
+    parser.feed(source_html_content.text)
+    parser.close()
+
+    sky_files = parser.filenames
 
     sky_brightness_dates_range = parse_dates_range(sky_files)
 
@@ -131,15 +137,23 @@ def download_sky_file(path: pathlib.Path, mjd: float) -> None:
     mjd : `float`
         MJD of the test.
     """
-    source = "lsst-rsync.ncsa.illinois.edu::sim/sims_skybrightness_pre/h5/"
+    source = "https://s3df.slac.stanford.edu/groups/rubin/static/sim-data/sims_skybrightness_pre/h5/"
 
     if not path.exists():
         path.mkdir(parents=True)
 
     sky_file = find_sky_file(source, mjd)
 
-    print(f"Downloading sky brightness file {source + sky_file} -> {path.as_posix()}")
-    subprocess.run(["rsync", "-av", "--progress", source + sky_file, path.as_posix()])
+    sky_file_path = path / sky_file
+
+    print(
+        f"Downloading sky brightness file {source + sky_file} -> {sky_file_path.as_posix()}"
+    )
+
+    sky_file_content = requests.get(source + sky_file)
+
+    with open(sky_file_path.as_posix(), "wb") as f:
+        f.write(sky_file_content.content)
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -180,3 +194,7 @@ def start_ospl_daemon() -> None:
 
         subprocess.run(["ospl", "stop"])
         os.environ["OSPL_URI"] = old_ospl_config
+    else:
+        print(f"ospl status {output.returncode}... Nothing to do.")
+
+        yield
