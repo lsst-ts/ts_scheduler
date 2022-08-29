@@ -412,7 +412,9 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 self.s3bucket.stop_mock()
             self.s3bucket = None
 
-        await self.evt_detailedState.set_write(substate=DetailedState.IDLE)
+        await self.evt_detailedState.set_write(
+            substate=DetailedState.IDLE, force_output=True
+        )
 
     async def begin_disable(self, data):
         """Transition from `State.ENABLED` to `State.DISABLED`. This
