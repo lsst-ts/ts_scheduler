@@ -331,7 +331,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         try:
             await super().begin_start(data)
         except Exception:
-            self.log.exception("Error in beging start")
+            self.log.exception("Error in begin start")
             raise
 
     async def begin_enable(self, data):
