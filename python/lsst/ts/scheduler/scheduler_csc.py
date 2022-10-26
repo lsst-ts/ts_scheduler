@@ -180,10 +180,17 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         simulation_mode=0,
     ):
 
-        if support_command("computePredictedSchedule"):
-            setattr(
-                self, "do_computePredictedSchedule", self._do_computePredictedSchedule
-            )
+        compatibility_commands = dict(
+            computePredictedSchedule=self._do_computePredictedSchedule,
+            addBlock=self._do_addBlock,
+            getBlockStatus=self._do_getBlockStatus,
+            removeBlock=self._do_removeBlock,
+            validateBlock=self._do_validateBlock,
+        )
+
+        for command_name, command_method in compatibility_commands.items():
+            if support_command(command_name):
+                setattr(self, f"do_{command_name}", command_method)
 
         super().__init__(
             name="Scheduler",
@@ -545,6 +552,70 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         finally:
             # Going back to idle.
             await self._transition_running_to_idle()
+
+    async def _do_addBlock(self, data):
+        """Implement add block command.
+
+        Parameters
+        ----------
+        data : `DataType`
+            Command data.
+
+        Raises
+        ------
+        NotImplementedError
+            Command not implemented yet.
+        """
+        self.assert_enabled()
+        raise NotImplementedError("Command not implemented yet.")
+
+    async def _do_getBlockStatus(self, data):
+        """Implement get block status command.
+
+        Parameters
+        ----------
+        data : `DataType`
+            Command data.
+
+        Raises
+        ------
+        NotImplementedError
+            Command not implemented yet.
+        """
+        self.assert_enabled()
+        raise NotImplementedError("Command not implemented yet.")
+
+    async def _do_removeBlock(self, data):
+        """Implement remove block command.
+
+        Parameters
+        ----------
+        data : `DataType`
+            Command data.
+
+        Raises
+        ------
+        NotImplementedError
+            Command not implemented yet.
+        """
+        self.assert_enabled()
+        raise NotImplementedError("Command not implemented yet.")
+
+    async def _do_validateBlock(self, data):
+        """Implement validate block command.
+
+        Parameters
+        ----------
+        data : `DataType`
+            Command data.
+
+        Raises
+        ------
+        NotImplementedError
+            Command not implemented yet.
+        """
+        self.assert_enabled()
+        raise NotImplementedError("Command not implemented yet.")
 
     async def telemetry_loop(self):
         """Scheduler telemetry loop.
