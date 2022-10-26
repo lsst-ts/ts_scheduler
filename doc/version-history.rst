@@ -4,6 +4,40 @@
 Version History
 ===============
 
+v1.17.0
+-------
+
+* Add new submodule ``utils/scheduled_targets_info.py`` defining a data class ``ScheduledTargetsinfo``` which holds information about scheduled targets.
+
+  This is going to be used by the ``check_scheduled_targets`` method in the (new) ``Model`` class to return information about targets that were verified.
+  This is part of a refactor of the ``SchedulerCSC`` code which extracts into the ``Model`` class some of the functionality related to the control loop operation, reducing the amount of code in the CSC and improving separation of concerns.
+
+* Add new submodule ``model.py`` which implements the ``Model`` class.
+
+  This class holds the bulk of the logic behind the control loop operations.
+  It contains the following information from the ``SchedulerCSC`` class:
+
+  * telemetry_stream_handler: Handle retrieval of telemetry from the EFD.
+  * models: Dictionary with the available models.
+  * raw_telemetry: Dictionary with all the raw telemetry values.
+  * script_info: Dictionary with information about queued scripts.
+  * driver: Instance of the scheduler driver, that encapsulates the mechanism to drive the scheduling algorithm.
+
+  In addition, the ``Model`` class now extracts from the CSC class all the logic to manage these resources, such that the CSC can call the model to execute the required operations.
+  The idea is to improve the separation of concerns, improving the maintainability of the package, and reducing bloat in the CSC code.
+
+* In ``scheduler_csc.py``:
+
+  * Refactor ``SchedulerCSC`` to use the new ``Model`` class.
+
+    This removes a lot of the logic interacting with the ``Driver`` to generate targets into the ``Model`` class, reducing the amount of code and operations implemented in the CSC.
+
+  * Add compatibility with xml 13.
+
+  * Extract the ``set_detailed_state`` decorator from the CSC into the utility package.
+
+  * Remove ``set_detailed_state`` and use method defined in ``utils/csc_utils.py``.
+
 v1.16.0
 -------
 
