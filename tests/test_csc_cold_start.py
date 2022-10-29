@@ -18,6 +18,7 @@
 #
 # You should have received a copy of the GNU General Public License
 
+import asyncio
 import contextlib
 import logging
 import pathlib
@@ -57,6 +58,12 @@ class TestSchedulerCscColdStart(
             initial_state=initial_state,
             simulation_mode=simulation_mode,
         )
+
+    async def wait_lifeness(self):
+        try:
+            await self.remote.evt_heartbeat.next(flush=True, timeout=LONG_TIMEOUT)
+        except asyncio.TimeoutError:
+            raise RuntimeError(f"No heartbeats from CSC after {LONG_TIMEOUT}s.")
 
     @contextlib.contextmanager
     def generate_configuration_override(
@@ -121,8 +128,8 @@ class TestSchedulerCscColdStart(
                 "SchedulerID = 1"
             )
         finally:
-            if self.csc.driver.observation_database_name.exists():
-                self.csc.driver.observation_database_name.unlink()
+            if self.csc.model.driver.observation_database_name.exists():
+                self.csc.model.driver.observation_database_name.unlink()
 
     def _get_configuration(
         self, startup_database: str, scheduler_config_path: str
@@ -172,6 +179,8 @@ telemetry:
                 simulation_mode=SchedulerModes.MOCKS3,
             ):
 
+                await self.wait_lifeness()
+
                 with self.assertLogs(self.csc.log, level=logging.DEBUG) as csc_logs:
                     await salobj.set_summary_state(
                         remote=self.remote,
@@ -180,11 +189,11 @@ telemetry:
                     )
 
                 assert (
-                    f"INFO:Scheduler:Loading driver from {self.driver_type}"
+                    f"INFO:Scheduler.Model:Loading driver from {self.driver_type}"
                     in csc_logs.output
                 )
                 assert (
-                    "INFO:Scheduler:No observation history information provided."
+                    "INFO:Scheduler.Model:No observation history information provided."
                     in csc_logs.output
                 )
 
@@ -201,6 +210,8 @@ telemetry:
                 simulation_mode=SchedulerModes.MOCKS3,
             ):
 
+                await self.wait_lifeness()
+
                 with self.assertLogs(self.csc.log, level=logging.DEBUG) as csc_logs:
                     await salobj.set_summary_state(
                         remote=self.remote,
@@ -209,11 +220,11 @@ telemetry:
                     )
 
                 assert (
-                    f"INFO:Scheduler:Loading driver from {self.driver_type}"
+                    f"INFO:Scheduler.Model:Loading driver from {self.driver_type}"
                     in csc_logs.output
                 )
                 assert (
-                    "INFO:Scheduler:Loading observation history from database: "
+                    "INFO:Scheduler.Model:Loading observation history from database: "
                     f"{startup_database.as_posix()}." in csc_logs.output
                 )
 
@@ -232,8 +243,10 @@ telemetry:
                 simulation_mode=SchedulerModes.MOCKS3,
             ):
 
+                await self.wait_lifeness()
+
                 expected_error_msg = (
-                    "ERROR:Scheduler:Specified startup database does not exists "
+                    "ERROR:Scheduler.Model:Specified startup database does not exists "
                     "and does not classify as an EFD query. "
                     f"Received: {startup_database}. "
                     "If this was supposed to be a path, it must be local to the CSC environment. "
@@ -267,6 +280,7 @@ telemetry:
                 initial_state=salobj.State.STANDBY,
                 simulation_mode=SchedulerModes.MOCKS3,
             ):
+                await self.wait_lifeness()
 
                 with self.assertLogs(self.csc.log, level=logging.DEBUG) as csc_logs:
                     await salobj.set_summary_state(
@@ -276,11 +290,11 @@ telemetry:
                     )
 
                 assert (
-                    f"INFO:Scheduler:Loading driver from {self.driver_type}"
+                    f"INFO:Scheduler.Model:Loading driver from {self.driver_type}"
                     in csc_logs.output
                 )
                 assert (
-                    "INFO:Scheduler:Loading observation history from EFD. "
+                    "INFO:Scheduler.Model:Loading observation history from EFD. "
                     f"Query: {startup_database} yield {self.expected_number_of_targets} targets."
                     in csc_logs.output
                 )
@@ -296,6 +310,7 @@ telemetry:
                 initial_state=salobj.State.STANDBY,
                 simulation_mode=SchedulerModes.MOCKS3,
             ):
+                await self.wait_lifeness()
 
                 with self.assertLogs(self.csc.log, level=logging.DEBUG) as csc_logs:
                     await salobj.set_summary_state(
@@ -320,7 +335,7 @@ telemetry:
                     self.log.debug(log)
 
                 assert (
-                    f"INFO:Scheduler:Loading driver from {self.driver_type}"
+                    f"INFO:Scheduler.Model:Loading driver from {self.driver_type}"
                     in csc_logs.output
                 )
                 assert (
@@ -329,13 +344,13 @@ telemetry:
                             log
                             for log in csc_logs.output
                             if log
-                            == f"INFO:Scheduler:Loading driver from {self.driver_type}"
+                            == f"INFO:Scheduler.Model:Loading driver from {self.driver_type}"
                         ]
                     )
                     == 2
                 )
                 assert (
-                    "WARNING:Scheduler:COLD start: driver already defined. "
+                    "WARNING:Scheduler.Model:COLD start: driver already defined. "
                     "Resetting driver." in csc_logs.output
                 )
                 assert (
@@ -345,7 +360,7 @@ telemetry:
                             for log in csc_logs.output
                             if log
                             == (
-                                "WARNING:Scheduler:COLD start: driver already defined. "
+                                "WARNING:Scheduler.Model:COLD start: driver already defined. "
                                 "Resetting driver."
                             )
                         ]

@@ -226,7 +226,7 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
             override="advance_target_loop_sequential.yaml",
         )
 
-        self.scheduler.telemetry_stream_handler.efd_client.configure_mock(
+        self.scheduler.model.telemetry_stream_handler.efd_client.configure_mock(
             **{
                 "select_time_series.side_effect": self.mock_fail_select_time_series,
             },
@@ -380,10 +380,14 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
         )
 
         # Check that telemetry stream was queried
-        self.scheduler.telemetry_stream_handler.efd_client.select_time_series.assert_awaited()
-        for telemetry in self.scheduler.telemetry_stream_handler.telemetry_streams:
-            self.log.debug(f"{telemetry}={self.scheduler.raw_telemetry[telemetry]}")
-            assert np.isfinite(self.scheduler.raw_telemetry[telemetry])
+        self.scheduler.model.telemetry_stream_handler.efd_client.select_time_series.assert_awaited()
+        for (
+            telemetry
+        ) in self.scheduler.model.telemetry_stream_handler.telemetry_streams:
+            self.log.debug(
+                f"{telemetry}={self.scheduler.model.raw_telemetry[telemetry]}"
+            )
+            assert np.isfinite(self.scheduler.model.raw_telemetry[telemetry])
 
         if hasattr(self.scheduler_remote, "evt_predictedSchedule"):
             # Check predicted Schedule was published
