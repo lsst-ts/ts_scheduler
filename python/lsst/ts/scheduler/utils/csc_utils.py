@@ -24,6 +24,7 @@ __all__ = [
     "is_uri",
     "support_command",
     "OBSERVATION_NAMED_PARAMETERS",
+    "set_detailed_state",
 ]
 
 import enum
@@ -149,3 +150,36 @@ def support_command(command_name: str) -> bool:
     idl_metadata = parse_idl("Scheduler", get_idl_dir() / "sal_revCoded_Scheduler.idl")
 
     return f"command_{command_name}" in idl_metadata.topic_info
+
+
+def set_detailed_state(detailed_state):
+    """A class decorator for coroutine to facilitate setting/resetting
+    detailed state.
+
+    Parameters
+    ----------
+    detailed_state : `DetailedState`
+        Detailed state to switch to before awaiting the coroutine.
+
+    Notes
+    -----
+    When decorating a coroutine with `set_detailed_state`, you specify the
+    associated detailed state and it will wrap the call with
+    `async with detailed_state` context manager, causing it to switch to
+    the provided detailed state before awaiting the coroutine and switching
+    back to the previous detailed state when it is done.
+
+    The `detailed_state` context manager will acquire a lock when setting
+    the detailed state. The idea is that you can only execute one detailed
+    state at a time so beware not to call a method that changes the
+    detailed state from a another, to avoid dead locks.
+    """
+
+    def decorator(coroutine):
+        async def detailed_state_wrapper(self, *args, **kwargs):
+            async with self.detailed_state(detailed_state):
+                await coroutine(self, *args, **kwargs)
+
+        return detailed_state_wrapper
+
+    return decorator

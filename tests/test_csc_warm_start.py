@@ -169,11 +169,12 @@ telemetry:
                     )
 
                 assert (
-                    f"INFO:Scheduler:Loading driver from {self.driver_type}"
+                    f"INFO:Scheduler.Model:Loading driver from {self.driver_type}"
                     in csc_logs.output
                 )
                 assert (
-                    "DEBUG:Scheduler:No scheduler snapshot provided." in csc_logs.output
+                    "DEBUG:Scheduler.Model:No scheduler snapshot provided."
+                    in csc_logs.output
                 )
 
     async def test_with_startup_db(self):
@@ -197,11 +198,11 @@ telemetry:
                     )
 
                 assert (
-                    f"INFO:Scheduler:Loading driver from {self.driver_type}"
+                    f"INFO:Scheduler.Model:Loading driver from {self.driver_type}"
                     in csc_logs.output
                 )
                 assert (
-                    f"INFO:Scheduler:Loading scheduler snapshot from {startup_database.as_uri()}."
+                    f"INFO:Scheduler.Model:Loading scheduler snapshot from {startup_database.as_uri()}."
                     in csc_logs.output
                 )
 
@@ -298,7 +299,7 @@ telemetry:
                     self.log.debug(log)
 
                 assert (
-                    f"INFO:Scheduler:Loading driver from {self.driver_type}"
+                    f"INFO:Scheduler.Model:Loading driver from {self.driver_type}"
                     in csc_logs.output
                 )
                 assert (
@@ -307,25 +308,27 @@ telemetry:
                             log
                             for log in csc_logs.output
                             if log
-                            == f"INFO:Scheduler:Loading driver from {self.driver_type}"
+                            == f"INFO:Scheduler.Model:Loading driver from {self.driver_type}"
                         ]
                     )
                     == 2
                 )
                 assert (
-                    "DEBUG:Scheduler:No scheduler snapshot provided." in csc_logs.output
+                    "DEBUG:Scheduler.Model:No scheduler snapshot provided."
+                    in csc_logs.output
                 )
                 assert (
                     len(
                         [
                             log
                             for log in csc_logs.output
-                            if log == "DEBUG:Scheduler:No scheduler snapshot provided."
+                            if log
+                            == "DEBUG:Scheduler.Model:No scheduler snapshot provided."
                         ]
                     )
                     == 2
                 )
                 assert (
-                    "WARNING:Scheduler:WARM start: driver already defined. "
+                    "WARNING:Scheduler.Model:WARM start: driver already defined. "
                     "Resetting driver." in csc_logs.output
                 )

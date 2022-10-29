@@ -17,7 +17,7 @@ pipeline{
                 sh """
                     su - saluser
                     source /home/saluser/.setup.sh
-                    conda install -y -c lsstts ts-idl ts-utils ts-salobj ts-scriptqueue ts-observatory-model ts-astrosky-model ts-dateloc rubin-sim
+                    mamba install -y -c lsstts ts-idl ts-utils ts-salobj ts-scriptqueue ts-observatory-model ts-astrosky-model ts-dateloc rubin-sim
                     pip install -e .
                     pip install -r doc/requirements.txt
                     package-docs build
