@@ -26,12 +26,10 @@ __all__ = [
 import asyncio
 import contextlib
 import dataclasses
-import inspect
 import shutil
 import time
 import traceback
 import typing
-from importlib import import_module
 
 import numpy as np
 from lsst.ts.astrosky.model import version as astrosky_version
@@ -43,7 +41,6 @@ from rubin_sim.version import __version__ as rubin_sim_version
 from lsst.ts import salobj, utils
 
 from . import CONFIG_SCHEMA, __version__
-from .driver import Driver
 from .driver.driver_target import DriverTarget
 from .model import Model
 from .utils.csc_utils import (
@@ -1586,54 +1583,6 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             await self.evt_observation.set_write(
                 **dataclasses.asdict(target.get_observation())
             )
-
-    def _load_driver_from(self, driver_type: str) -> None:
-        """Utility method to load a driver from a driver type.
-
-        Parameters
-        ----------
-        driver_type : str
-            A driver module "import string", e.g.
-            "lsst.ts.scheduler.driver.driver".
-
-        Raises
-        ------
-        RuntimeError:
-            If a Driver cannot be found in the provided module.
-
-        Notes
-        -----
-
-        The `driver_type` parameter must specify a python module which defines
-        a subclass of `Driver`. The scheduler ships with a set of standard
-        drivers, which are defined in `lsst.ts.scheduler.driver`. For example,
-        `lsst.ts.scheduler.driver.feature_scheduler` defines `FeatureScheduler`
-        which is a subclass of `Driver` and implements the feature based
-        scheduler driver.
-
-        Users can also provide external drivers, as long as they subclass
-        `Driver` the CSC will be able to load it.
-        """
-        self.log.info("Loading driver from %s", driver_type)
-
-        driver_lib = import_module(driver_type)
-        members_of_driver_lib = inspect.getmembers(driver_lib)
-
-        driver_type = None
-        for member in members_of_driver_lib:
-            try:
-                if issubclass(member[1], Driver):
-                    self.log.debug("Found driver %s%s", member[0], member[1])
-                    driver_type = member[1]
-            except TypeError:
-                pass
-
-        if driver_type is None:
-            raise RuntimeError("Could not find Driver on module %s" % driver_type)
-
-        self.driver = driver_type(
-            models=self.models, raw_telemetry=self.raw_telemetry, log=self.log
-        )
 
     async def _publish_time_to_next_target(
         self, current_time, wait_time, ra, dec, rot_sky_pos
