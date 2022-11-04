@@ -435,7 +435,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         if data.abort:
             async with self.target_loop_lock:
-                await self.remove_from_queue(self.raw_telemetry["scheduled_targets"])
+                await self.remove_from_queue(self.model.get_scheduled_targets())
+                self.model.reset_scheduled_targets()
 
         await self.reset_handle_no_targets_on_queue()
 
