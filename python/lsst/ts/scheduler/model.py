@@ -378,6 +378,16 @@ class Model:
         """
         self.raw_telemetry["scheduled_targets"].append(target)
 
+    def get_scheduled_targets(self) -> list[DriverTarget]:
+        """Return the list of scheduled targets.
+
+        Returns
+        -------
+        list[DriverTarget]
+            List of currently scheduled targets.
+        """
+        return self.raw_telemetry["scheduled_targets"]
+
     def callback_script_info(self, data):
         """This callback function will store in a dictionary information about
         the scripts.
