@@ -262,6 +262,55 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
             expected_detailed_states=expected_detailed_states
         )
 
+    async def test_abort(self):
+        """Test sending the stop command with abort=True.
+
+        Running the stop command with abort=False is already tested in
+        test_with_queue.
+        """
+        # enable queue...
+        await salobj.set_summary_state(
+            self.queue_remote,
+            salobj.State.ENABLED,
+        )
+
+        await salobj.set_summary_state(
+            self.scheduler_remote,
+            salobj.State.ENABLED,
+            override="advance_target_loop_sequential_std_visit.yaml",
+        )
+
+        # Resume scheduler operation
+        await self.scheduler_remote.cmd_resume.start(timeout=STD_TIMEOUT)
+
+        # Wait for 1 observation to complete.
+        await self.scheduler_remote.evt_observation.next(
+            flush=True, timeout=SCRIPT_TIMEOUT
+        )
+
+        # Test completed, pausing scheduler
+        await self.scheduler_remote.cmd_stop.set_start(timeout=STD_TIMEOUT, abort=True)
+
+        try:
+            detailed_state = await self.scheduler_remote.evt_detailedState.next(
+                flush=True, timeout=STD_TIMEOUT
+            )
+        except asyncio.TimeoutError:
+            detailed_state = await self.scheduler_remote.evt_detailedState.aget(
+                timeout=STD_TIMEOUT
+            )
+
+        try:
+            queue = await self.queue_remote.evt_queue.next(
+                flush=True, timeout=STD_TIMEOUT
+            )
+        except asyncio.TimeoutError:
+            queue = await self.queue_remote.evt_queue.aget(timeout=STD_TIMEOUT)
+
+        assert DetailedState(detailed_state.substate) == DetailedState.IDLE
+        assert queue.currentSalIndex == 0
+        assert queue.length == 0
+
     async def test_with_queue(self):
         """Test the target production loop with queue.
 

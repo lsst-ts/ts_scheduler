@@ -4,6 +4,18 @@
 Version History
 ===============
 
+v1.17.1
+-------
+
+In ``SchedulerCSC``:
+
+  * Fix issue with ``._publish_general_info``.
+  * Improve error handling in telemetry loop.
+  * Fix ``do_stop`` method when called with the ``abort`` option.
+  * Remove method that was moved to the ``Model`` class.
+
+In ``Model``, add new ``get_scheduled_targets`` method to retrieve the scheduled targets.
+
 v1.17.0
 -------
 
