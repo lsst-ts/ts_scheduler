@@ -658,7 +658,15 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 **self.model.get_observatory_state()
             )
 
-            await self._publish_general_info()
+            try:
+                await asyncio.wait_for(
+                    self._publish_general_info(),
+                    timeout=self.heartbeat_interval,
+                )
+            except asyncio.TimeoutError:
+                self.log.debug("Timeout computing general info.")
+            except Exception:
+                self.log.exception("Error computing general info. Ignoring...")
 
     async def handle_observatory_state(self):
         """Handle observatory state."""
@@ -1661,7 +1669,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         """Publish general info event."""
 
         if self.evt_detailedState.data.substate == DetailedState.IDLE:
-            await self.model.update_conditions()
+            async with self._detailed_state_lock:
+                await self.model.update_telemetry()
 
         general_info = self.model.get_general_info()
 
