@@ -4,6 +4,11 @@
 Version History
 ===============
 
+v1.17.1
+-------
+
+* Fix issue with ``SchedulerCSC._publish_general_info`` and improve error handling in telemetry loop.
+
 v1.17.0
 -------
 
