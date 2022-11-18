@@ -29,12 +29,13 @@ import dataclasses
 import shutil
 import time
 import traceback
+import types
 import typing
 
 import numpy as np
 from lsst.ts.astrosky.model import version as astrosky_version
 from lsst.ts.dateloc import version as dateloc_version
-from lsst.ts.idl.enums import ScriptQueue
+from lsst.ts.idl.enums import Scheduler, ScriptQueue
 from lsst.ts.observatory.model import version as obs_mod_version
 from rubin_sim.version import __version__ as rubin_sim_version
 
@@ -758,21 +759,33 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             s3instance=config.s3instance,
         )
 
-        self.parameters.driver_type = config.driver_type
-        self.parameters.startup_type = config.startup_type
-        self.parameters.startup_database = config.startup_database
-        self.parameters.mode = config.mode
-        self.parameters.n_targets = config.n_targets
-        self.parameters.predicted_scheduler_window = config.predicted_scheduler_window
-        self.parameters.loop_sleep_time = config.loop_sleep_time
-        self.parameters.cmd_timeout = config.cmd_timeout
-        self.parameters.observing_script = config.observing_script
-        self.parameters.observing_script_is_standard = (
-            config.observing_script_is_standard
-        )
-        self.parameters.max_scripts = config.max_scripts
+        instance = Scheduler.SalIndex(self.salinfo.index)
 
-        survey_topology = await self.model.configure(config)
+        settings = types.SimpleNamespace(
+            **(
+                config.maintel
+                if instance == Scheduler.SalIndex.MAIN_TEL
+                else config.auxtel
+            )
+        )
+
+        self.log.debug(f"Settings for {instance!r}: {settings}")
+
+        self.parameters.driver_type = settings.driver_type
+        self.parameters.startup_type = settings.startup_type
+        self.parameters.startup_database = settings.startup_database
+        self.parameters.mode = settings.mode
+        self.parameters.n_targets = settings.n_targets
+        self.parameters.predicted_scheduler_window = settings.predicted_scheduler_window
+        self.parameters.loop_sleep_time = settings.loop_sleep_time
+        self.parameters.cmd_timeout = settings.cmd_timeout
+        self.parameters.observing_script = settings.observing_script
+        self.parameters.observing_script_is_standard = (
+            settings.observing_script_is_standard
+        )
+        self.parameters.max_scripts = settings.max_scripts
+
+        survey_topology = await self.model.configure(settings)
 
         await self.evt_surveyTopology.set_write(**survey_topology.as_dict())
 
@@ -794,129 +807,135 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             self.log.warning("No 'dependenciesVersions' event.")
 
         await self.evt_obsSiteConfig.set_write(
-            observatoryName=config.models["location"]["obs_site"]["name"],
-            latitude=config.models["location"]["obs_site"]["latitude"],
-            longitude=config.models["location"]["obs_site"]["longitude"],
-            height=config.models["location"]["obs_site"]["height"],
+            observatoryName=settings.models["location"]["obs_site"]["name"],
+            latitude=settings.models["location"]["obs_site"]["latitude"],
+            longitude=settings.models["location"]["obs_site"]["longitude"],
+            height=settings.models["location"]["obs_site"]["height"],
         )
 
         await self.evt_telescopeConfig.set_write(
-            altitudeMinpos=config.models["observatory_model"]["telescope"][
+            altitudeMinpos=settings.models["observatory_model"]["telescope"][
                 "altitude_minpos"
             ],
-            altitudeMaxpos=config.models["observatory_model"]["telescope"][
+            altitudeMaxpos=settings.models["observatory_model"]["telescope"][
                 "altitude_maxpos"
             ],
-            azimuthMinpos=config.models["observatory_model"]["telescope"][
+            azimuthMinpos=settings.models["observatory_model"]["telescope"][
                 "azimuth_minpos"
             ],
-            azimuthMaxpos=config.models["observatory_model"]["telescope"][
+            azimuthMaxpos=settings.models["observatory_model"]["telescope"][
                 "azimuth_maxpos"
             ],
-            altitudeMaxspeed=config.models["observatory_model"]["telescope"][
+            altitudeMaxspeed=settings.models["observatory_model"]["telescope"][
                 "altitude_maxspeed"
             ],
-            altitudeAccel=config.models["observatory_model"]["telescope"][
+            altitudeAccel=settings.models["observatory_model"]["telescope"][
                 "altitude_accel"
             ],
-            altitudeDecel=config.models["observatory_model"]["telescope"][
+            altitudeDecel=settings.models["observatory_model"]["telescope"][
                 "altitude_decel"
             ],
-            azimuthMaxspeed=config.models["observatory_model"]["telescope"][
+            azimuthMaxspeed=settings.models["observatory_model"]["telescope"][
                 "azimuth_maxspeed"
             ],
-            azimuthAccel=config.models["observatory_model"]["telescope"][
+            azimuthAccel=settings.models["observatory_model"]["telescope"][
                 "azimuth_accel"
             ],
-            azimuthDecel=config.models["observatory_model"]["telescope"][
+            azimuthDecel=settings.models["observatory_model"]["telescope"][
                 "azimuth_decel"
             ],
-            settleTime=config.models["observatory_model"]["telescope"]["settle_time"],
+            settleTime=settings.models["observatory_model"]["telescope"]["settle_time"],
         )
 
         await self.evt_rotatorConfig.set_write(
-            positionMin=config.models["observatory_model"]["rotator"]["minpos"],
-            positionMax=config.models["observatory_model"]["rotator"]["maxpos"],
-            positionFilterChange=config.models["observatory_model"]["rotator"][
+            positionMin=settings.models["observatory_model"]["rotator"]["minpos"],
+            positionMax=settings.models["observatory_model"]["rotator"]["maxpos"],
+            positionFilterChange=settings.models["observatory_model"]["rotator"][
                 "filter_change_pos"
             ],
-            speedMax=config.models["observatory_model"]["rotator"]["maxspeed"],
-            accel=config.models["observatory_model"]["rotator"]["accel"],
-            decel=config.models["observatory_model"]["rotator"]["decel"],
-            followSky=config.models["observatory_model"]["rotator"]["follow_sky"],
-            resumeAngle=config.models["observatory_model"]["rotator"]["resume_angle"],
+            speedMax=settings.models["observatory_model"]["rotator"]["maxspeed"],
+            accel=settings.models["observatory_model"]["rotator"]["accel"],
+            decel=settings.models["observatory_model"]["rotator"]["decel"],
+            followSky=settings.models["observatory_model"]["rotator"]["follow_sky"],
+            resumeAngle=settings.models["observatory_model"]["rotator"]["resume_angle"],
         )
 
         await self.evt_domeConfig.set_write(
-            altitudeMaxspeed=config.models["observatory_model"]["dome"][
+            altitudeMaxspeed=settings.models["observatory_model"]["dome"][
                 "altitude_maxspeed"
             ],
-            altitudeAccel=config.models["observatory_model"]["dome"]["altitude_accel"],
-            altitudeDecel=config.models["observatory_model"]["dome"]["altitude_decel"],
-            altitudeFreerange=config.models["observatory_model"]["dome"][
+            altitudeAccel=settings.models["observatory_model"]["dome"][
+                "altitude_accel"
+            ],
+            altitudeDecel=settings.models["observatory_model"]["dome"][
+                "altitude_decel"
+            ],
+            altitudeFreerange=settings.models["observatory_model"]["dome"][
                 "altitude_freerange"
             ],
-            azimuthMaxspeed=config.models["observatory_model"]["dome"][
+            azimuthMaxspeed=settings.models["observatory_model"]["dome"][
                 "azimuth_maxspeed"
             ],
-            azimuthAccel=config.models["observatory_model"]["dome"]["azimuth_accel"],
-            azimuthDecel=config.models["observatory_model"]["dome"]["azimuth_decel"],
-            azimuthFreerange=config.models["observatory_model"]["dome"][
+            azimuthAccel=settings.models["observatory_model"]["dome"]["azimuth_accel"],
+            azimuthDecel=settings.models["observatory_model"]["dome"]["azimuth_decel"],
+            azimuthFreerange=settings.models["observatory_model"]["dome"][
                 "azimuth_freerange"
             ],
-            settleTime=config.models["observatory_model"]["dome"]["settle_time"],
+            settleTime=settings.models["observatory_model"]["dome"]["settle_time"],
         )
 
         await self.evt_slewConfig.set_write(
-            prereqDomalt=config.models["observatory_model"]["slew"]["prereq_domalt"],
-            prereqDomaz=config.models["observatory_model"]["slew"]["prereq_domaz"],
-            prereqDomazSettle=config.models["observatory_model"]["slew"][
+            prereqDomalt=settings.models["observatory_model"]["slew"]["prereq_domalt"],
+            prereqDomaz=settings.models["observatory_model"]["slew"]["prereq_domaz"],
+            prereqDomazSettle=settings.models["observatory_model"]["slew"][
                 "prereq_domazsettle"
             ],
-            prereqTelalt=config.models["observatory_model"]["slew"]["prereq_telalt"],
-            prereqTelaz=config.models["observatory_model"]["slew"]["prereq_telaz"],
-            prereqTelOpticsOpenLoop=config.models["observatory_model"]["slew"][
+            prereqTelalt=settings.models["observatory_model"]["slew"]["prereq_telalt"],
+            prereqTelaz=settings.models["observatory_model"]["slew"]["prereq_telaz"],
+            prereqTelOpticsOpenLoop=settings.models["observatory_model"]["slew"][
                 "prereq_telopticsopenloop"
             ],
-            prereqTelOpticsClosedLoop=config.models["observatory_model"]["slew"][
+            prereqTelOpticsClosedLoop=settings.models["observatory_model"]["slew"][
                 "prereq_telopticsclosedloop"
             ],
-            prereqTelSettle=config.models["observatory_model"]["slew"][
+            prereqTelSettle=settings.models["observatory_model"]["slew"][
                 "prereq_telsettle"
             ],
-            prereqTelRot=config.models["observatory_model"]["slew"]["prereq_telrot"],
-            prereqFilter=config.models["observatory_model"]["slew"]["prereq_filter"],
-            prereqExposures=config.models["observatory_model"]["slew"][
+            prereqTelRot=settings.models["observatory_model"]["slew"]["prereq_telrot"],
+            prereqFilter=settings.models["observatory_model"]["slew"]["prereq_filter"],
+            prereqExposures=settings.models["observatory_model"]["slew"][
                 "prereq_exposures"
             ],
-            prereqReadout=config.models["observatory_model"]["slew"]["prereq_readout"],
+            prereqReadout=settings.models["observatory_model"]["slew"][
+                "prereq_readout"
+            ],
         )
 
         await self.evt_opticsLoopCorrConfig.set_write(
-            telOpticsOlSlope=config.models["observatory_model"]["optics_loop_corr"][
+            telOpticsOlSlope=settings.models["observatory_model"]["optics_loop_corr"][
                 "tel_optics_ol_slope"
             ],
-            telOpticsClAltLimit=config.models["observatory_model"]["optics_loop_corr"][
-                "tel_optics_cl_alt_limit"
-            ],
-            telOpticsClDelay=config.models["observatory_model"]["optics_loop_corr"][
+            telOpticsClAltLimit=settings.models["observatory_model"][
+                "optics_loop_corr"
+            ]["tel_optics_cl_alt_limit"],
+            telOpticsClDelay=settings.models["observatory_model"]["optics_loop_corr"][
                 "tel_optics_cl_delay"
             ],
         )
 
         await self.evt_parkConfig.set_write(
-            telescopeAltitude=config.models["observatory_model"]["park"][
+            telescopeAltitude=settings.models["observatory_model"]["park"][
                 "telescope_altitude"
             ],
-            telescopeAzimuth=config.models["observatory_model"]["park"][
+            telescopeAzimuth=settings.models["observatory_model"]["park"][
                 "telescope_azimuth"
             ],
-            telescopeRotator=config.models["observatory_model"]["park"][
+            telescopeRotator=settings.models["observatory_model"]["park"][
                 "telescope_rotator"
             ],
-            domeAltitude=config.models["observatory_model"]["park"]["dome_altitude"],
-            domeAzimuth=config.models["observatory_model"]["park"]["dome_azimuth"],
-            filterPosition=config.models["observatory_model"]["park"][
+            domeAltitude=settings.models["observatory_model"]["park"]["dome_altitude"],
+            domeAzimuth=settings.models["observatory_model"]["park"]["dome_azimuth"],
+            filterPosition=settings.models["observatory_model"]["park"][
                 "filter_position"
             ],
         )
