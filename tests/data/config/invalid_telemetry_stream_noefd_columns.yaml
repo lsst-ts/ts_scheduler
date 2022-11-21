@@ -1,9 +1,10 @@
-driver_configuration:
-  general_propos:
-    - Test
-telemetry:
-  efd_name: summit_efd
-  streams:
-    - name: seeing
-      efd_table: lsst.sal.DIMM.logevent_dimmMeasurement
-      efd_delta_time: 300.0
+maintel:
+  driver_configuration:
+    general_propos:
+      - Test
+  telemetry:
+    efd_name: summit_efd
+    streams:
+      - name: seeing
+        efd_table: lsst.sal.DIMM.logevent_dimmMeasurement
+        efd_delta_time: 300.0

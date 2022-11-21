@@ -1,3 +1,4 @@
-driver_configuration:
-  general_propos:
-    - Test
+maintel:
+  driver_configuration:
+    general_propos:
+      - Test
