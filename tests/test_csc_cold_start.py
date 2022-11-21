@@ -136,40 +136,41 @@ class TestSchedulerCscColdStart(
     ) -> str:
 
         return f"""
-mode: ADVANCE
-startup_type: COLD
-startup_database: >-
+maintel:
+  mode: ADVANCE
+  startup_type: COLD
+  startup_database: >-
     {startup_database}
-driver_type: {self.driver_type}
-driver_configuration:
-  scheduler_config: {scheduler_config_path}
-telemetry:
-  efd_name: summit_efd
-  streams:
-    - name: seeing
-      efd_table: lsst.sal.DIMM.logevent_dimmMeasurement
-      efd_columns:
-        - fwhm
-      efd_delta_time: 300.0
-      fill_value: null
-    - name: wind_speed
-      efd_table: lsst.sal.WeatherStation.windSpeed
-      efd_columns:
-        - avg2M
-      efd_delta_time: 300.0
-      fill_value: null
-    - name: wind_direction
-      efd_table: lsst.sal.WeatherStation.windDirection
-      efd_columns:
-        - avg2M
-      efd_delta_time: 300.0
-      fill_value: null
+  driver_type: {self.driver_type}
+  driver_configuration:
+    scheduler_config: {scheduler_config_path}
+  telemetry:
+    efd_name: summit_efd
+    streams:
+      - name: seeing
+        efd_table: lsst.sal.DIMM.logevent_dimmMeasurement
+        efd_columns:
+          - fwhm
+        efd_delta_time: 300.0
+        fill_value: null
+      - name: wind_speed
+        efd_table: lsst.sal.WeatherStation.windSpeed
+        efd_columns:
+          - avg2M
+        efd_delta_time: 300.0
+        fill_value: null
+      - name: wind_direction
+        efd_table: lsst.sal.WeatherStation.windDirection
+        efd_columns:
+          - avg2M
+        efd_delta_time: 300.0
+        fill_value: null
 """
 
     async def test_no_startup_db(self):
 
         with self.generate_configuration_override(
-            startup_database="",
+            startup_database=" ",
             scheduler_config_path=self.scheduler_config_path.as_posix(),
         ) as override_path:
 

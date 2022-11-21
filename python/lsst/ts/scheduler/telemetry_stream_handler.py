@@ -263,6 +263,6 @@ class TelemetryStreamHandler:
 
     @property
     def telemetry_stream_schema(self) -> Dict:
-        return CONFIG_SCHEMA["properties"]["telemetry"]["properties"]["streams"][
-            "items"
-        ]
+        return CONFIG_SCHEMA["definitions"]["instance_specific_config"]["telemetry"][
+            "properties"
+        ]["streams"]["items"]

@@ -4,6 +4,12 @@
 Version History
 ===============
 
+v1.18.0
+-------
+
+* Update CSC configuration schema to use an instance-based approach.
+  This allows us to define the configuration for auxtel and maintel in a single configuration.
+
 v1.17.1
 -------
 
