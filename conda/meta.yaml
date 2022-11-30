@@ -22,7 +22,7 @@ test:
     - ts-observatory-model
     - ts-astrosky-model
     - ts-dateloc
-    - rubin-sim
+    - rubin-sim =0
     - rsync
   source_files:
     - python
@@ -54,4 +54,4 @@ requirements:
     - ts-observatory-model
     - ts-astrosky-model
     - ts-dateloc
-    - rubin-sim
+    - rubin-sim =0
