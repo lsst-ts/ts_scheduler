@@ -309,8 +309,7 @@ class Driver:
 
         Returns
         -------
-        Target
-
+        `DriverTarget`
         """
         self.log.log(WORDY, "Selecting next target.")
 
@@ -327,6 +326,18 @@ class Driver:
         target.propid_list = [0]
 
         return target
+
+    def select_next_targets(self) -> list[DriverTarget]:
+        """Select a list of targets.
+
+        By default it will just return a dummy test target.
+
+        Returns
+        -------
+        `list` [`DriverTarget`]
+        """
+
+        return [self.select_next_target()]
 
     def register_observed_target(self, target: DriverTarget) -> Observation:
         """Validates observed target and returns an observation.

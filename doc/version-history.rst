@@ -4,6 +4,23 @@
 Version History
 ===============
 
+v1.19.0
+-------
+
+* In ``model.py``:
+
+  * Add new ``select_next_targets`` method that calls the ``driver.select_next_targets`` method to retrieve a list of targets.
+  * Update ``generate_target_queue`` to use the ``select_next_targets`` instead.
+
+* In ``driver/feature_scheduler.py``, implement ``select_next_targets`` method.
+
+  This method first runs ``scheduler.request_observation`` to get a single observation and prompt the feature scheduler to compute its internal queue.
+  Then it checks if the scheduler queue has more targets, gets them all and flushes the queue.
+
+* In ``driver/driver.py``, add new ``select_next_targets`` method that returns a list of targets instead of a single target.
+
+* Update conda recipe to restrict rubin-sim compatibility to version 0.
+
 v1.18.0
 -------
 

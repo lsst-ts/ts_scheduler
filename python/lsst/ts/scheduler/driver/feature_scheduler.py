@@ -278,8 +278,8 @@ class FeatureScheduler(Driver):
         # queue.
         self.next_observation_mjd = self.models["observatory_model"].dateprofile.mjd
 
-    def select_next_target(self):
-        """Picks a target and returns it as a target object.
+    def select_next_target(self) -> FeatureSchedulerTarget:
+        """Pick a target and return it as a target object.
 
         Returns
         -------
@@ -300,6 +300,45 @@ class FeatureScheduler(Driver):
 
         return self._handle_desired_observation(desired_observation=desired_obs)
 
+    def select_next_targets(self) -> list[FeatureSchedulerTarget]:
+        """Pick a target and return it as a list of target objects.
+
+        Instead of requesting a single target like `select_next_target`, this
+        method will inquire the scheduling algorithm for a list of potential
+        next targets.
+
+        Returns
+        -------
+        desired_observations: `list`[`FeatureSchedulerTarget`]
+            List of desired observations.
+        """
+        if self.next_observation_mjd is None:
+            raise RuntimeError(
+                "Time for next observation not set. "
+                "Call `update_conditions` before requesting a target."
+            )
+
+        desired_obs = self.scheduler.request_observation(mjd=self.next_observation_mjd)
+
+        desired_observations = [
+            self._handle_desired_observation(desired_observation=desired_obs),
+        ]
+
+        if self._desired_obs is not None:
+            desired_observations.append(
+                self._get_validated_target_from_observation(self._desired_obs)
+            )
+            self._desired_obs = None
+
+        if len(self.scheduler.queue) > 0:
+            desired_observations += [
+                self._get_validated_target_from_observation(observation)
+                for observation in self.scheduler.queue
+            ]
+            self.scheduler.flush_queue()
+
+        return desired_observations
+
     def _handle_desired_observation(self, desired_observation):
         """Handler desired observation.
 
@@ -311,7 +350,7 @@ class FeatureScheduler(Driver):
         Returns
         -------
         desired_target : `Target`
-            Desidered target.
+            Desired target.
         """
 
         desired_target = None
