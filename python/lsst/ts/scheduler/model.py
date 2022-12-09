@@ -581,6 +581,9 @@ class Model:
                 break
             else:
                 for target in targets:
+                    if target is None:
+                        self.log.debug("No target, skipping...")
+                        continue
                     self.log.debug(
                         f"Temporarily registering selected targets: {target.note}."
                     )
