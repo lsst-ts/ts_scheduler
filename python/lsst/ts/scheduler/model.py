@@ -581,6 +581,9 @@ class Model:
                 break
             else:
                 for target in targets:
+                    if target is None:
+                        self.log.debug("No target, skipping...")
+                        continue
                     self.log.debug(
                         f"Temporarily registering selected targets: {target.note}."
                     )
@@ -699,7 +702,7 @@ class Model:
         `int`
             Number of target in the scheduled targets list.
         """
-        return len(self.raw_telemetry["scheduled_targets"])
+        return len(self.raw_telemetry.get("scheduled_targets", []))
 
     def get_observatory_state(self) -> dict[str, float | int | bool | str]:
         """Get current observatory state.
