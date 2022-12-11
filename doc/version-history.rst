@@ -4,6 +4,14 @@
 Version History
 ===============
 
+v1.19.1
+-------
+
+* In ``model.py``:
+
+  * Update ``Model.get_number_of_scheduled_targets`` to work when ``scheduled_targets`` is not set in the ``raw_telemetry`` dictionary.
+  * Update ``Model.generate_target_queue`` to check if ``target`` in ``targets`` list is ``None`` and skip it.
+
 v1.19.0
 -------
 
