@@ -28,9 +28,8 @@ from lsst.ts.astrosky.model import AstronomicalSkyModel
 from lsst.ts.dateloc import ObservatoryLocation
 from lsst.ts.observatory.model import ObservatoryModel, ObservatoryState, Target
 from lsst.ts.utils import current_tai
-from rubin_sim.site_models.cloudModel import CloudModel
-from rubin_sim.site_models.downtimeModel import DowntimeModel
-from rubin_sim.site_models.seeingModel import SeeingModel
+from rubin_sim.site_models.cloud_model import CloudModel
+from rubin_sim.site_models.seeing_model import SeeingModel
 
 from lsst.ts.scheduler.driver import SequentialScheduler, SurveyTopology
 
@@ -68,7 +67,6 @@ class TestSchedulerDriver(unittest.TestCase):
         self.models["sky"].sky_brightness_pre.load_length = 7
         self.models["seeing"] = SeeingModel()
         self.models["cloud"] = CloudModel()
-        self.models["downtime"] = DowntimeModel()
 
         self.driver = SequentialScheduler(
             models=self.models,

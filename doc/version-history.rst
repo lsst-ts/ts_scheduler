@@ -4,6 +4,13 @@
 Version History
 ===============
 
+v1.20.0
+-------
+
+* Upgrade scheduler CSC codebase to be compatible with rubin-sim 1.
+* Remove unused ``requirements.txt`` file.
+* Remove use of the deprecated ``DowntimeModel`` class.
+
 v1.19.1
 -------
 

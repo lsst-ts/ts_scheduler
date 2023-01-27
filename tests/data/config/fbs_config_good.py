@@ -1,9 +1,9 @@
 import numpy as np
 import rubin_sim.scheduler.basis_functions as bf
 import rubin_sim.scheduler.detailers as detailers
-from rubin_sim.scheduler.modelObservatory import Model_observatory
-from rubin_sim.scheduler.schedulers import Core_scheduler
-from rubin_sim.scheduler.surveys import Greedy_survey
+from rubin_sim.scheduler.model_observatory import ModelObservatory
+from rubin_sim.scheduler.schedulers import CoreScheduler
+from rubin_sim.scheduler.surveys import GreedySurvey
 from rubin_sim.scheduler.utils import Footprint, standard_goals
 
 from lsst.ts.scheduler.utils.test.feature_scheduler_sim import MJD_START
@@ -30,7 +30,7 @@ def gen_greedy_surveys(
     Make a quick set of greedy surveys
 
     This is a convienence function to generate a list of survey objects that
-    can be used with lsst.sims.featureScheduler.schedulers.Core_scheduler.
+    can be used with lsst.sims.featureScheduler.schedulers.CoreScheduler.
     To ensure we are robust against changes in the sims_featureScheduler
     codebase, all kwargs are explicitly set.
 
@@ -77,18 +77,18 @@ def gen_greedy_surveys(
     }
 
     surveys = []
-    detailer = detailers.Camera_rot_detailer(
+    detailer = detailers.CameraRotDetailer(
         min_rot=np.min(camera_rot_limits), max_rot=np.max(camera_rot_limits)
     )
 
     for filtername in filters:
         bfs = []
         bfs.append(
-            (bf.M5_diff_basis_function(filtername=filtername, nside=nside), m5_weight)
+            (bf.M5DiffBasisFunction(filtername=filtername, nside=nside), m5_weight)
         )
         bfs.append(
             (
-                bf.Footprint_basis_function(
+                bf.FootprintBasisFunction(
                     filtername=filtername,
                     footprint=footprints,
                     out_of_bounds_val=np.nan,
@@ -99,17 +99,17 @@ def gen_greedy_surveys(
         )
         bfs.append(
             (
-                bf.Slewtime_basis_function(filtername=filtername, nside=nside),
+                bf.SlewtimeBasisFunction(filtername=filtername, nside=nside),
                 slewtime_weight,
             )
         )
         bfs.append(
-            (bf.Strict_filter_basis_function(filtername=filtername), stayfilter_weight)
+            (bf.StrictFilterBasisFunction(filtername=filtername), stayfilter_weight)
         )
         # Masks, give these 0 weight
         bfs.append(
             (
-                bf.Zenith_shadow_mask_basis_function(
+                bf.ZenithShadowMaskBasisFunction(
                     nside=nside, shadow_minutes=shadow_minutes, max_alt=max_alt
                 ),
                 0,
@@ -117,20 +117,18 @@ def gen_greedy_surveys(
         )
         bfs.append(
             (
-                bf.Moon_avoidance_basis_function(
-                    nside=nside, moon_distance=moon_distance
-                ),
+                bf.MoonAvoidanceBasisFunction(nside=nside, moon_distance=moon_distance),
                 0,
             )
         )
 
-        bfs.append((bf.Filter_loaded_basis_function(filternames=filtername), 0))
-        bfs.append((bf.Planet_mask_basis_function(nside=nside), 0))
+        bfs.append((bf.FilterLoadedBasisFunction(filternames=filtername), 0))
+        bfs.append((bf.PlanetMaskBasisFunction(nside=nside), 0))
 
         weights = [val[1] for val in bfs]
         basis_functions = [val[0] for val in bfs]
         surveys.append(
-            Greedy_survey(
+            GreedySurvey(
                 basis_functions,
                 weights,
                 exptime=exptime,
@@ -154,18 +152,18 @@ if __name__ == "config":
 
     camera_ddf_rot_limit = 75.0
 
-    observatory = Model_observatory(nside=nside, mjd_start=MJD_START)
+    observatory = ModelObservatory(nside=nside, mjd_start=MJD_START)
     observatory.sky_model.load_length = 3
     conditions = observatory.return_conditions()
 
     footprints_hp = standard_goals(nside=nside)
 
     footprints = Footprint(
-        conditions.mjd_start, sun_RA_start=conditions.sun_RA_start, nside=nside
+        conditions.mjd_start, sun_ra_start=conditions.sun_ra_start, nside=nside
     )
     for i, key in enumerate(footprints_hp):
         footprints.footprints[i, :] = footprints_hp[key]
 
     greedy = gen_greedy_surveys(nside, nexp=1, footprints=footprints, seed=seed)
     surveys = [greedy]
-    scheduler = Core_scheduler(surveys, nside=nside)
+    scheduler = CoreScheduler(surveys, nside=nside)
