@@ -35,7 +35,7 @@ from lsst.ts.utils import index_generator
 from rubin_sim.scheduler.features import Conditions
 from rubin_sim.scheduler.utils import empty_observation
 from rubin_sim.site_models import Almanac
-from rubin_sim.utils import _raDec2Hpid
+from rubin_sim.utils import _ra_dec2_hpid
 
 from ..utils import SchemaConverter
 from .driver import Driver, DriverParameters
@@ -420,7 +420,7 @@ class FeatureScheduler(Driver):
             target.observation["night"] = self.conditions.night
             target.observation["slewtime"] = slew_time
 
-            hpid = _raDec2Hpid(self.nside, target.ra_rad, target.dec_rad)
+            hpid = _ra_dec2_hpid(self.nside, target.ra_rad, target.dec_rad)
 
             target.observation["skybrightness"] = self.conditions.skybrightness[
                 target.filter
@@ -596,13 +596,15 @@ class FeatureScheduler(Driver):
         seeing_dict = self.models["seeing"](FWHM_500, airmass[good])
         fwhm_eff = seeing_dict["fwhmEff"]
         for i, key in enumerate(self.models["seeing"].filter_list):
-            self.conditions.FWHMeff[key].fill(np.nan)
-            self.conditions.FWHMeff[key][good] = fwhm_eff[i, :]
+            _fwhm_eff = np.empty(hp.nside2npix(self.conditions.nside))
+            _fwhm_eff.fill(np.nan)
+            _fwhm_eff[good] = fwhm_eff[i, :]
+            self.conditions.fwhm_eff[key] = _fwhm_eff
 
         # sky brightness
         self.conditions.skybrightness = self.models[
             "sky"
-        ].sky_brightness_pre.returnMags(
+        ].sky_brightness_pre.return_mags(
             self.conditions.mjd,
         )
 
@@ -640,14 +642,14 @@ class FeatureScheduler(Driver):
         for key in sun_moon_info:
             sun_moon_info[key] = sun_moon_info[key].max()
 
-        self.conditions.moonPhase = sun_moon_info["moonPhase"]
-        self.conditions.moonAlt = sun_moon_info["moonAlt"]
-        self.conditions.moonAz = sun_moon_info["moonAz"]
-        self.conditions.moonRA = sun_moon_info["moonRA"]
-        self.conditions.moonDec = sun_moon_info["moonDec"]
-        self.conditions.sunAlt = sun_moon_info["sunAlt"]
-        self.conditions.sunRA = sun_moon_info["sunRA"]
-        self.conditions.sunDec = sun_moon_info["sunDec"]
+        self.conditions.moon_phase = sun_moon_info["moonPhase"]
+        self.conditions.moon_alt = sun_moon_info["moonAlt"]
+        self.conditions.moon_az = sun_moon_info["moonAz"]
+        self.conditions.moon_ra = sun_moon_info["moonRA"]
+        self.conditions.moon_dec = sun_moon_info["moonDec"]
+        self.conditions.sun_alt = sun_moon_info["sunAlt"]
+        self.conditions.sun_ra = sun_moon_info["sunRA"]
+        self.conditions.sun_dec = sun_moon_info["sunDec"]
 
         # Again using observatory_model for information as it will account for
         # any observation in the queue.
@@ -655,12 +657,12 @@ class FeatureScheduler(Driver):
             self.models["observatory_model"].dateprofile.lst_rad * 12.0 / np.pi % 24.0
         )
 
-        self.conditions.telRA = self.models["observatory_model"].current_state.ra_rad
-        self.conditions.telDec = self.models["observatory_model"].current_state.dec_rad
-        self.conditions.telAlt = self.models["observatory_model"].current_state.alt_rad
-        self.conditions.telAz = self.models["observatory_model"].current_state.az_rad
+        self.conditions.tel_ra = self.models["observatory_model"].current_state.ra_rad
+        self.conditions.tel_dec = self.models["observatory_model"].current_state.dec_rad
+        self.conditions.tel_alt = self.models["observatory_model"].current_state.alt_rad
+        self.conditions.tel_az = self.models["observatory_model"].current_state.az_rad
 
-        self.conditions.rotTelPos = self.models[
+        self.conditions.rot_tel_pos = self.models[
             "observatory_model"
         ].current_state.rot_rad
         self.conditions.cumulative_azimuth_rad = self.models[

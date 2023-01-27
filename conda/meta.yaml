@@ -20,9 +20,9 @@ test:
     - ts-salobj {{ salobj_version }}
     - ts-scriptqueue
     - ts-observatory-model
-    - ts-astrosky-model
+    - ts-astrosky-model >=1.4
     - ts-dateloc
-    - rubin-sim =0
+    - rubin-sim =1
     - rsync
   source_files:
     - python
@@ -52,6 +52,6 @@ requirements:
     - ts-utils
     - ts-salobj
     - ts-observatory-model
-    - ts-astrosky-model
+    - ts-astrosky-model >=1.4
     - ts-dateloc
-    - rubin-sim =0
+    - rubin-sim =1
