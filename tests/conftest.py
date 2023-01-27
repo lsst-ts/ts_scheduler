@@ -27,7 +27,7 @@ import typing
 import numpy as np
 import pytest
 import requests
-from rubin_sim.data import get_data_dir
+from rubin_sim.data.data_sets import get_data_dir
 from rubin_sim.data.rs_download_sky import MyHTMLParser
 
 from lsst.ts import utils
