@@ -26,6 +26,7 @@ import functools
 import io
 import logging
 import pathlib
+import types
 import typing
 import urllib.request
 
@@ -34,16 +35,17 @@ from lsst.ts.astrosky.model import AstronomicalSkyModel
 from lsst.ts.dateloc import ObservatoryLocation
 from lsst.ts.idl.enums import Script
 from lsst.ts.observatory.model import ObservatoryModel, ObservatoryState
+from lsst.ts.salobj.type_hints import BaseDdsDataType
 from rubin_sim.site_models.cloud_model import CloudModel
 from rubin_sim.site_models.seeing_model import SeeingModel
 
-from lsst.ts import utils
+from lsst.ts import observing, utils
 
 from .driver import Driver, DriverFactory, DriverType
 from .driver.driver_target import DriverTarget
 from .driver.survey_topology import SurveyTopology
 from .telemetry_stream_handler import TelemetryStreamHandler
-from .utils.csc_utils import NonFinalStates, is_uri, is_valid_efd_query
+from .utils.csc_utils import FailedStates, NonFinalStates, is_uri, is_valid_efd_query
 from .utils.exceptions import UpdateTelemetryError
 from .utils.scheduled_targets_info import ScheduledTargetsInfo
 
@@ -55,47 +57,83 @@ class Model:
     instantiates the model and offload the operations to it, which allows for
     better separation of concerns and cleaner code on the CSC part.
 
+    Parameters
+    ----------
+    log : `logging.Logger`
+        Logger class to create child from.
+    config_dir : pathlib.Path
+        Directory containing configuration files.
+
     Attributes
     ----------
+    log : `logging.Logger`
+        Class logger instance.
+    config_dir : `pathlib.Path`
+        Directory containing configuration files.
     telemetry_stream_handler : `TelemetryStreamHandler`
         Object to handle telemetry streams.
+    time_delta_no_target : `float`
+        How far to step into the future when there are no targets, in seconds.
     models : `dict`[`str`, `Any`]
         Dictionary to store the scheduler models.
     raw_telemetry : `dict`[`str`, `Any`]
         Dictionary to store raw telemetry.
+    script_info : `dict`[`int`, `BaseDdsDataType`]
+        Dictionary to store information about the scripts sent to the
+        script queue.
+    observing_blocks : `dict`[`str`, `observing.ObservingBlock`]
+        Observing blocks.
     driver : `Driver`
-        Lock for the scheduler detailed state.
+        Scheduler driver.
+    max_scripts : `int`
+        Maximum number of scripts to keep track of.
+    startup_type : dict[str, coroutine]
+        Dictionary with the startup types and functions.
     """
 
-    def __init__(self, log) -> None:
+    def __init__(self, log: logging.Logger, config_dir: pathlib.Path) -> None:
         self.log = log.getChild(type(self).__name__)
 
-        self.telemetry_stream_handler = None
+        self.config_dir = config_dir
+
+        self.telemetry_stream_handler: TelemetryStreamHandler = None
 
         # How far to step into the future when there's not targets in seconds
         self.time_delta_no_target = 30.0
 
         # Dictionary to store the scheduler models
-        self.models = dict()
+        self.models: dict[str, typing.Any] = dict()
 
         # Dictionary to store raw telemetry
-        self.raw_telemetry = dict()
+        self.raw_telemetry: dict[str, typing.Any] = dict()
 
         # Dictionary to store information about the scripts put on the queue
-        self.script_info = dict()
+        self.script_info: dict[int, BaseDdsDataType] = dict()
+
+        # Dictionary to store observing blocks
+        self.observing_blocks: dict[str, observing.ObservingBlock] = dict()
 
         # Scheduler driver instance.
         self.driver: Driver | None = None
 
         self.max_scripts = 0
 
-        self.startup_types = dict(
+        self.startup_types: dict[
+            str, typing.Coroutine[typing.Any, typing.Any, SurveyTopology]
+        ] = dict(
             HOT=self.configure_driver_hot,
             WARM=self.configure_driver_warm,
             COLD=self.configure_driver_cold,
         )
 
-    async def configure(self, config):
+    async def configure(self, config: types.SimpleNamespace) -> None:
+        """Configure model.
+
+        Parameters
+        ----------
+        config : `types.SimpleNamespace`
+            Model configuration.
+        """
         self.log.debug("Configuring telemetry streams.")
 
         self.max_scripts = config.max_scripts
@@ -124,20 +162,22 @@ class Model:
             else:
                 self.log.warning(f"No configuration for {model}. Skipping.")
 
+        await self.load_observing_blocks(config.path_observing_blocks)
+
         self.log.debug("Configuring Driver and Scheduler.")
 
         return await self.configure_driver(config)
 
-    def init_telemetry(self):
+    def init_telemetry(self) -> None:
         """Initialize telemetry streams."""
 
         # List of scheduled targets and script ids
-        self.raw_telemetry["scheduled_targets"] = None
+        self.reset_scheduled_targets()
 
         # List of things on the observatory queue
         self.raw_telemetry["observing_queue"] = []
 
-    def init_models(self):
+    def init_models(self) -> None:
         """Initialize but not configure needed models."""
         try:
             self.models["location"] = ObservatoryLocation()
@@ -185,6 +225,29 @@ class Model:
 
         for telemetry in self.telemetry_stream_handler.telemetry_streams:
             self.raw_telemetry[telemetry] = np.nan
+
+    async def load_observing_blocks(self, path: str) -> None:
+        """Load observing blocks from the provided path.
+
+        The method will glob the provided path for all json files and load them
+        as observing blocks.
+
+        Parameters
+        ----------
+        path : `str`
+            Path to the observing blocks directory relative to the
+            configuration path.
+        """
+        path_observing_blocks = self.config_dir.joinpath(path)
+
+        if not path_observing_blocks.exists():
+            raise RuntimeError(
+                "Provided observing block directory does not exists. "
+                f"Got {path_observing_blocks.absolute()}"
+            )
+        for observing_block_file in path_observing_blocks.glob("*.json"):
+            observing_block = observing.ObservingBlock.parse_file(observing_block_file)
+            self.observing_blocks[observing_block.program] = observing_block
 
     async def configure_driver(self, config: typing.Any) -> SurveyTopology:
         """Load driver for selected scheduler and configure its basic
@@ -290,7 +353,6 @@ class Model:
 
         Parameters
         ----------
-
         config : `types.SimpleNamespace`
             Configuration, as described by ``schema/Scheduler.yaml``
 
@@ -347,15 +409,22 @@ class Model:
 
         Returns
         -------
-        list[DriverTarget]
+        `list`[`DriverTarget`]
             List of currently scheduled targets.
         """
         return self.raw_telemetry["scheduled_targets"]
 
-    def callback_script_info(self, data):
+    def callback_script_info(self, data: BaseDdsDataType) -> None:
         """This callback function will store in a dictionary information about
         the scripts.
 
+        Parameters
+        ----------
+        data : `BaseDdsDataType`
+            Script info topic data.
+
+        Notes
+        -----
         The method will store information about any script that is placed in
         the queue so that the scheduler can access information about those if
         needed. It then, tracks the size of the dictionary where this
@@ -389,7 +458,9 @@ class Model:
         scheduled_targets_info : `ScheduledTargetsInfo`
             Information about scheduled targets.
         """
-        number_of_targets = len(self.raw_telemetry["scheduled_targets"])
+        scheduled_targets = self.get_scheduled_targets()
+
+        number_of_targets = len(scheduled_targets)
 
         scheduled_targets_info = ScheduledTargetsInfo()
 
@@ -398,16 +469,25 @@ class Model:
         report = ""
 
         for _ in range(number_of_targets):
-            target = self.raw_telemetry["scheduled_targets"].pop(0)
-            if target.sal_index in self.script_info:
-                info = self.script_info[target.sal_index]
-            else:
-                # No information on script on queue, put it back and continue
+            target = scheduled_targets.pop(0)
+            sal_indices = target.get_sal_indices()
+
+            script_info = [
+                self.script_info[sal_index]
+                for sal_index in sal_indices
+                if sal_index in self.script_info
+            ]
+
+            if not script_info or len(script_info) != len(sal_indices):
+                # No information on all scripts on queue,
+                # put it back and continue
                 self.raw_telemetry["scheduled_targets"].append(target)
                 continue
 
-            if info.scriptState == Script.ScriptState.DONE:
-                # Script completed successfully
+            scripts_state = [info.scriptState for info in script_info]
+
+            if all([state == Script.ScriptState.DONE for state in scripts_state]):
+                # All scripts completed successfully
                 report += (
                     f"\n\t{target.note} observation completed successfully. "
                     "Registering observation."
@@ -416,30 +496,43 @@ class Model:
                 self.driver.register_observation(target)
                 scheduled_targets_info.observed.append(target)
                 # Remove related script from the list
-                self.script_info.pop(target.sal_index)
+                for index in sal_indices:
+                    self.script_info.pop(index)
                 # target now simply disappears... Should I keep it in for
                 # future refs?
-            elif info.scriptState in NonFinalStates:
-                # script in a non-final state, just put it back on the list.
+            elif any([state in NonFinalStates for state in scripts_state]):
+                # one or more script in a non-final state, just put it back on
+                # the list.
                 self.raw_telemetry["scheduled_targets"].append(target)
-            elif info.scriptState == Script.ScriptState.FAILED:
+            elif any([state in FailedStates for state in scripts_state]):
+                # one or more script failed
                 report += f"\n\t{target.note} failed. Not registering observation."
                 # Remove related script from the list
-                scheduled_targets_info.failed.append(target.sal_index)
-                self.script_info.pop(target.sal_index)
+                scheduled_targets_info.failed.extend(sal_indices)
+                for index in sal_indices:
+                    self.script_info.pop(index)
             else:
                 report += (
                     (
-                        f"\n\tUnrecognized state [{info.scriptState}] for observation "
-                        f"{target.sal_index} for target {target}."
+                        f"\n\tOne or more state unrecognized [{scripts_state}] for observations "
+                        f"{sal_indices} for target {target}."
                     ),
                 )
-                scheduled_targets_info.unrecognized.append(target.sal_index)
+                scheduled_targets_info.unrecognized.extend(sal_indices)
                 # Remove related script from the list
-                self.script_info.pop(target.sal_index)
+                for index in sal_indices:
+                    self.script_info.pop(index)
 
         if report:
-            self.log.debug(f"Check scheduled report: {report}")
+            report_log_level = (
+                logging.DEBUG
+                if len(scheduled_targets_info.failed) == 0
+                and len(scheduled_targets_info.unrecognized) == 0
+                else logging.INFO
+            )
+            self.log.log(
+                level=report_log_level, msg=f"Check scheduled report: {report}"
+            )
 
         return scheduled_targets_info
 
@@ -448,7 +541,7 @@ class Model:
 
         Returns
         -------
-        dict[str, bool | float | int | str]
+        `dict`[`str`, `bool` | `float` | `int` | `str`]
             Dictionary with general information.
         """
         return dict(
@@ -671,7 +764,7 @@ class Model:
 
         Returns
         -------
-        dict[str, float | int | bool | str]
+        `dict`[`str`, `float` | `int` | `bool` | `str`]
             Observatory state.
         """
         return dict(
@@ -727,7 +820,7 @@ class Model:
 
         Returns
         -------
-        tuple[io.BytesIO, str]
+        `tuple`[`io.BytesIO`, `str`]
             Tuple with driver state and a name of the file with a stored
             version.
         """
@@ -775,7 +868,7 @@ class Model:
 
         Parameters
         ----------
-        startup_database : str
+        startup_database : `str`
             Uri of the startup database.
 
         Raises
@@ -802,7 +895,7 @@ class Model:
 
         Parameters
         ----------
-        startup_database : str
+        startup_database : `str`
             Path to a local database or EFD query.
 
         Raises
@@ -838,7 +931,7 @@ class Model:
 
         Parameters
         ----------
-        database_path : str
+        database_path : `str`
             Path to the local database file.
         """
         observations = await self._parse_observation_database(database_path)
@@ -851,7 +944,7 @@ class Model:
 
         Parameters
         ----------
-        efd_query : str
+        efd_query : `str`
             A valid EFD query that should return a list of observations.
         """
         observations = await self._query_observations_from_efd(efd_query)
@@ -868,7 +961,7 @@ class Model:
 
         Parameters
         ----------
-        uri : str
+        uri : `str`
             Uri with the address of the snapshot.
         """
         loop = asyncio.get_running_loop()
@@ -895,7 +988,7 @@ class Model:
 
         Parameters
         ----------
-        observations : list of DriverTarget
+        observations : `list`[`DriverTarget`]
             List of observations.
         """
         if observations is None:
@@ -913,12 +1006,12 @@ class Model:
 
         Parameters
         ----------
-        database_path : str
+        database_path : `str`
             Path to the local database file.
 
         Returns
         -------
-        list of DriverTargets
+        `list`[`DriverTargets`]
             List of observations.
         """
         loop = asyncio.get_running_loop()
@@ -937,12 +1030,12 @@ class Model:
 
         Parameters
         ----------
-        efd_query : str
+        efd_query : `str`
             EFD query to retrieve list of observations.
 
         Returns
         -------
-        observations : list of DriverTarget
+        observations : `list`[`DriverTargets`]
             List of observations.
         """
         efd_observations = await self.telemetry_stream_handler.efd_client.query(
