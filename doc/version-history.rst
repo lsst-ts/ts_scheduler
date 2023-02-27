@@ -4,6 +4,80 @@
 Version History
 ===============
 
+v2.0.0
+------
+
+.. Unreleased! Remove this comment before releasing it!
+.. This is part of a major refactor of the Scheduler to include the observing block feature.
+.. It will be spread over several PRs untill the feature is fully implemented.
+.. In the meantime use Release Candidate (in the develop branch) to deploy at the summit.
+
+* Update unit tests to conform with the refactor done in the code to implement the obsrving block feature.
+
+  * Add test observing blocks.
+
+  * Update test observing list for the ``Sequence`` driver.
+
+  * Update test SAL Scripts (both standard and external).
+
+  * Update all tests data configuration files to be compatible with new configuration schema.
+
+  * Add ``tests/test_driver_target.py`` with unit test for the ``DriverTarget`` class.
+
+* In ``utils/test/feature_scheduler_sim.py``, refactor of the ``FeatureSchedulerSim`` to support the observing block feature.
+
+* In ``scheduler_csc.py``, major refactor of the ``SchedulerCSC`` to implement the observing block feature.
+
+  For now only implement the integration with the scheduling algorithm throught the ``Model`` class.
+  Future updates will include the capability to execute user-defined observing blocks.
+
+* In ``model.py``:
+
+  * Major refactor of the ``Model`` class to implement the observing block feature.
+
+  * Refactor ``Model.load_driver`` to use new ``DriverFactory`` class to load the driver instance.
+
+* Add new submodule ``driver/driver_factory.py``, defining a ``DriverFactory`` class.
+
+  This provides a better way to generate the driver class from an input option.
+
+* In ``utils/parameters.py``, update default value for ``SchedulerCscParameters.driver_type`` to account for changes in the schema.
+
+* In ``telemetry_stream_handler.py``, update ``TelemetryStreamHandler.telemetry_stream_schema`` to account for updates done in the schema.
+
+* In ``config_schema.py``, major refactor of the CSC configuration schema to support observing block and improve schema validation.
+
+  Improvements include:
+
+  * Make driver selection a fixed enumeration.
+  * Have separate session for the different types of drivers.
+  * Use conditional schema to match the selected driver to its configuration, making the appropriate session required according to the selected driver.
+  * Make all sub-schemas fixed, do not accept additional properties.
+
+* In ``utils/fbs_utils.py``, minor cosmetic update in ``SchemaConverter`` to extract the code that converts and opsim database into a pandas dataframe into its own method.
+
+* In ``utils/csc_utils.py``, add new ``FailedStates`` set to include all the possible failed states a script might have.
+
+* In ``driver/survey_topology.py``, implement some minor cosmetic improvements to ``SurveyTopology`` class.
+
+* In ``driver/feature_scheduler.py``, refactor ``FeatureScheduler`` to accomodate changes done in the ``Driver`` class and implement the observing block feature.
+
+* In ``driver/sequential.py``, refactor the ``Sequential`` class to account for the changes done in ``Driver`` and implement the new observing block feature.
+
+* In ``driver/driver.py``, refactor the ``Driver`` class to accomodate the changes done in ``DriverTarget`` and integrate with the observing block feature.
+
+* In ``driver/feature_scheduler_target.py``, refactor ``FeatureSchedulerTarget`` to conform with the new ``DriverTarget`` interface and integrate it with the observing block feature.
+
+* In ``driver/driver_target.py``, refactor ``DriverTarget`` class to integrate it with the observing block system.
+
+  This class contains the main integration of the scheduler with the observing block system since this is the one in charge of converting an observing target into an observing script, which now becomes an observing block which can be multiple scripts.
+
+* Update conda recipe to include new ``ts_observing`` dependency.
+
+  This package has the modules required to interface with the "observing blocks", which is the main change introduce in this branch.
+
+* Update pre commit config file.
+
 v1.20.0
 -------
 
