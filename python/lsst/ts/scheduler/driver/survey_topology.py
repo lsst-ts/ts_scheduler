@@ -18,13 +18,19 @@
 #
 # You should have received a copy of the GNU General Public License
 
+from lsst.ts.salobj.type_hints import BaseDdsDataType
+
 __all__ = ["SurveyTopology"]
 
 
-class SurveyTopology(object):
-    def __init__(self):
+class SurveyTopology:
+    """Stores information about survey topology.
 
-        # self.num_props = 0
+    Survey topology is basically an account of how many proposals are defined,
+    the type of proposal and their names.
+    """
+
+    def __init__(self) -> None:
         self.num_general_props = 0
         self.num_seq_props = 0
 
@@ -32,25 +38,25 @@ class SurveyTopology(object):
         self.sequence_propos = []
 
     @property
-    def num_props(self):
+    def num_props(self) -> int:
+        """Total number of proposals."""
         return self.num_seq_props + self.num_general_props
 
-    def from_topic(self, topic):
+    def from_topic(self, topic: BaseDdsDataType) -> None:
+        """Update internal information from the topic data."""
 
         self.num_general_props = topic.num_general_props
         self.num_seq_props = topic.num_seq_props
 
-        # self.num_props = self.num_general_props + self.num_seq_props
-
         self.general_propos = topic.general_propos.split(",")
         self.sequence_propos = topic.sequence_propos.split(",")
 
-    def as_dict(self):
+    def as_dict(self) -> dict[str, int | list[str]]:
         """Return survey topology as a dictionary.
 
         Returns
         -------
-        dict
+        `dict`
             Dictionary with survey topology data.
         """
 
