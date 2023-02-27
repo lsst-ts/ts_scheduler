@@ -1,0 +1,19 @@
+{
+    "name": "CurvatureWavefrontSensing",
+    "program": "cwfs",
+    "constraints": [],
+    "scripts": [
+        {
+            "name": "cwfs",
+            "standard": false,
+            "parameters": {
+                "find_target": {
+                    "az": "$az",
+                    "el": "$el",
+                    "mag_limit": 8.0
+                },
+                "program": "$program"
+            }
+        }
+    ]
+}
