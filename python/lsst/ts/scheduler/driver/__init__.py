@@ -19,6 +19,7 @@
 # You should have received a copy of the GNU General Public License
 
 from .driver import *
+from .driver_factory import *
 from .feature_scheduler import *
 from .sequential import *
 from .survey_topology import *
