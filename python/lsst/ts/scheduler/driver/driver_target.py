@@ -19,12 +19,14 @@
 # You should have received a copy of the GNU General Public License
 import logging
 import typing
+from string import Template
 
 import numpy as np
 import yaml
 from astropy import units
 from astropy.coordinates import Angle
 from lsst.ts.observatory.model import Target
+from lsst.ts.observing import ObservingBlock
 
 from .observation import Observation
 
@@ -37,10 +39,8 @@ class DriverTarget(Target):
 
     Parameters
     ----------
-    observing_script_name : str
-        Name of the observing script.
-    observing_script_is_standard: bool
-        Is the observing script standard?
+    observing_block : ObservingBlock
+        Observing block for this target.
     targetid : int
         A unique identifier for the given target.
     fieldid : int
@@ -65,10 +65,7 @@ class DriverTarget(Target):
 
     def __init__(
         self,
-        observing_script_name: str,
-        observing_script_is_standard: bool,
-        observing_script_has_configuration: bool = True,
-        sal_index: int = 0,
+        observing_block: ObservingBlock,
         targetid: int = 0,
         fieldid: int = 0,
         band_filter: str = "",
@@ -79,16 +76,14 @@ class DriverTarget(Target):
         num_exp: float = 0,
         exp_times: typing.List[float] = [],
         log: typing.Optional[logging.Logger] = None,
+        note: str = "Target",
     ) -> None:
         if log is None:
             self.log = logging.getLogger(type(self).__name__)
         else:
             self.log = log.getChild(type(self).__name__)
 
-        self._observing_script_name = observing_script_name
-        self._observing_script_is_standard = observing_script_is_standard
-        self._observing_script_has_configuration = observing_script_has_configuration
-        self.sal_index = sal_index
+        self.observing_block = observing_block
         self.obs_time = obs_time
         super().__init__(
             targetid=targetid,
@@ -100,51 +95,154 @@ class DriverTarget(Target):
             num_exp=num_exp,
             exp_times=exp_times,
         )
+        self.note = note
+        self._sal_indices = []
 
-    def get_script_config(self) -> str:
-        """Returns a yaml string representation of a dictionary with the
-        configuration to be used for the observing script.
+    def get_sal_indices(self) -> list[int]:
+        """Get the list of SAL indices for the target scripts.
 
         Returns
         -------
-        config_str : `str`
+        `list`[`int`]
+            List of SAL indices.
         """
-        if not self._observing_script_has_configuration:
-            return ""
+        return self._sal_indices
 
-        script_config = {
+    def add_sal_index(self, sal_index: int) -> None:
+        """Add SAL index.
+
+        Parameters
+        ----------
+        sal_index : `int`
+            Index of a SAL Script that is executing this observation.
+
+        Raises
+        ------
+        RuntimeError
+            If sal_index is non-consecutive.
+        """
+        if sal_index in self._sal_indices:
+            self.log.warning(f"Index {sal_index} already included.")
+            return
+        elif len(self._sal_indices) > 0 and sal_index != self._sal_indices[-1] + 1:
+            raise RuntimeError(
+                "Non-consecutive SAL index for target observations. "
+                f"Got {sal_index}, currently with {self._sal_indices}."
+            )
+
+        self._sal_indices.append(sal_index)
+
+    def format_config(self) -> None:
+        """Format the observing scripts configuration using the information
+        for the driver.
+
+        Raises
+        ------
+        RuntimeError
+            If formatting fails, log the original exception and then raise a
+            `RuntimeError`.
+        """
+        script_config = self.get_script_config()
+        for observing_script in self.observing_block.scripts:
+            observing_script_config = observing_script.get_script_configuration()
+            try:
+                observing_script_config = Template(observing_script_config).substitute(
+                    **script_config
+                )
+                observing_script.parameters = yaml.safe_load(
+                    Template(observing_script_config).substitute(**script_config)
+                )
+            except Exception:
+                self.log.exception(
+                    f"Error parsing script configuration for observing block: {self.observing_block}."
+                )
+                raise RuntimeError(
+                    f"Failed to parse configuration: {observing_script_config}"
+                )
+
+    def get_script_config(self) -> dict:
+        """Returns a dictionary with the parameters to be used for the
+        observing scripts.
+
+        Returns
+        -------
+        script_config : `dict`
+            Script configuration.
+        """
+        return {
             "targetid": int(self.targetid),
             "band_filter": str(self.filter),
-            "ra": str(
-                Angle(self.ra, unit=units.degree).to_string(
-                    unit=units.hourangle, sep=":"
-                )
-            ),
-            "dec": str(
-                Angle(self.dec, unit=units.degree).to_string(unit=units.degree, sep=":")
-            ),
-            "name": str(self.note).split(":", maxsplit=1)[-1],
+            "name": self.get_target_name(),
+            "ra": self.get_ra(),
+            "dec": self.get_dec(),
             "rot_sky": float(self.ang),
+            "alt": float(self.alt),
+            "az": float(self.az),
+            "rot": float(self.rot),
             "obs_time": float(self.obs_time),
             "num_exp": int(self.num_exp),
             "exp_times": [float(exptime) for exptime in self.exp_times],
             "estimated_slew_time": float(self.slewtime),
+            "program": self.observing_block.program,
         }
 
-        return yaml.safe_dump(script_config)
+    def get_dec(self) -> str:
+        """Get declination formatted as a colon-separated hexagesimal string.
 
-    def get_observing_script(self) -> typing.Tuple[str, str]:
-        """Returns the name of the observing script and whether it is a
-        standard script or not.
+        The returned value is wrapped within single quote ('00:00:00.0') such
+        that it can be safely used in yaml string formatting.
 
         Returns
         -------
-        observing_script_name : `str`
-            Name of the observing script.
-        observing_script_is_standard: `bool`
-            Is the observing script standard?
+        `str`
+            Declination as hexagesimal string (DD:MM:SS.S).
         """
-        return self._observing_script_name, self._observing_script_is_standard
+        dec = str(
+            Angle(self.dec, unit=units.degree).to_string(
+                unit=units.degree, sep=":", alwayssign=True
+            )
+        )
+        return f"{dec!r}"
+
+    def get_ra(self) -> str:
+        """Get right right ascension formatted as a colon-separated hexagesimal
+        string.
+
+        The returned value is wrapped within single quote ('00:00:00.0') such
+        that it can be safely used in yaml string formatting.
+
+        Returns
+        -------
+        `str`
+            Right ascension as hexagesimal string (HH:MM:SS.S).
+        """
+        ra = str(
+            Angle(self.ra, unit=units.degree).to_string(
+                unit=units.hourangle, sep=":", alwayssign=True
+            )
+        )
+        return f"{ra!r}"
+
+    def get_target_name(self) -> str:
+        """Parse the note field to get the target name.
+
+        Returns
+        -------
+        `str`
+            Target name.
+        """
+        return str(self.note).split(":", maxsplit=1)[-1]
+
+    def get_observing_block(self) -> ObservingBlock:
+        """Get observing block for this target.
+
+        Returns
+        -------
+        `ObservingBlock`
+            Observing Block.
+        """
+        self.format_config()
+        return self.observing_block
 
     def as_dict(
         self, exposure_times_size: int = 10, proposal_id_size: int = 5
