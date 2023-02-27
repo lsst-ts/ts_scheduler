@@ -49,7 +49,6 @@ class TelemetryStreamHandler:
         log: logging.Logger,
         efd_name: str,
     ) -> None:
-
         self.log = log.getChild(type(self).__name__)
 
         self.efd_name: str = efd_name
@@ -263,6 +262,6 @@ class TelemetryStreamHandler:
 
     @property
     def telemetry_stream_schema(self) -> Dict:
-        return CONFIG_SCHEMA["definitions"]["instance_specific_config"]["telemetry"][
-            "properties"
-        ]["streams"]["items"]
+        return CONFIG_SCHEMA["definitions"]["instance_specific_config"]["properties"][
+            "telemetry"
+        ]["properties"]["streams"]["items"]
