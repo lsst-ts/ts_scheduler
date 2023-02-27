@@ -20,6 +20,7 @@
 
 __all__ = [
     "NonFinalStates",
+    "FailedStates",
     "SchedulerModes",
     "is_uri",
     "support_command",
@@ -45,11 +46,18 @@ NonFinalStates = frozenset(
         Script.ScriptState.ENDING,
         Script.ScriptState.STOPPING,
         Script.ScriptState.FAILING,
-        Script.ScriptState.STOPPED,
     )
 )
 """Stores all non final state for scripts submitted to the queue.
 """
+
+FailedStates = frozenset(
+    (
+        Script.ScriptState.STOPPED,
+        Script.ScriptState.FAILED,
+        Script.ScriptState.CONFIGURE_FAILED,
+    )
+)
 
 efd_query_re = re.compile(r"SELECT (.*) FROM (.*) WHERE (.*)")
 
