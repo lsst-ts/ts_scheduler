@@ -23,13 +23,11 @@ __all__ = ["Model"]
 
 import asyncio
 import functools
-import inspect
 import io
 import logging
 import pathlib
 import typing
 import urllib.request
-from importlib import import_module
 
 import numpy as np
 from lsst.ts.astrosky.model import AstronomicalSkyModel
@@ -41,7 +39,7 @@ from rubin_sim.site_models.seeing_model import SeeingModel
 
 from lsst.ts import utils
 
-from .driver import Driver
+from .driver import Driver, DriverFactory, DriverType
 from .driver.driver_target import DriverTarget
 from .driver.survey_topology import SurveyTopology
 from .telemetry_stream_handler import TelemetryStreamHandler
@@ -70,7 +68,6 @@ class Model:
     """
 
     def __init__(self, log) -> None:
-
         self.log = log.getChild(type(self).__name__)
 
         self.telemetry_stream_handler = None
@@ -88,7 +85,7 @@ class Model:
         self.script_info = dict()
 
         # Scheduler driver instance.
-        self.driver = None
+        self.driver: Driver | None = None
 
         self.max_scripts = 0
 
@@ -99,7 +96,6 @@ class Model:
         )
 
     async def configure(self, config):
-
         self.log.debug("Configuring telemetry streams.")
 
         self.max_scripts = config.max_scripts
@@ -315,51 +311,21 @@ class Model:
         return survey_topology
 
     def load_driver(self, driver_type: str) -> None:
-        """Utility method to load a driver from a driver type.
+        """Utility method to load a driver from a driver type name.
 
         Parameters
         ----------
-        driver_type : str
-            A driver module "import string", e.g.
-            "lsst.ts.scheduler.driver.driver".
-
-        Raises
-        ------
-        RuntimeError:
-            If a Driver cannot be found in the provided module.
-
-        Notes
-        -----
-
-        The `driver_type` parameter must specify a python module which defines
-        a subclass of `Driver`. The scheduler ships with a set of standard
-        drivers, which are defined in `lsst.ts.scheduler.driver`. For example,
-        `lsst.ts.scheduler.driver.feature_scheduler` defines `FeatureScheduler`
-        which is a subclass of `Driver` and implements the feature based
-        scheduler driver.
-
-        Users can also provide external drivers, as long as they subclass
-        `Driver` the CSC will be able to load it.
+        driver_type : `str`
+            Name of the driver type. Available options are in `DriveType`.
         """
-        self.log.info(f"Loading driver from {driver_type}")
+        self.log.info(f"Loading driver {driver_type}")
 
-        driver_lib = import_module(driver_type)
-        members_of_driver_lib = inspect.getmembers(driver_lib)
-
-        driver_type = None
-        for member in members_of_driver_lib:
-            try:
-                if issubclass(member[1], Driver):
-                    self.log.debug(f"Found driver {member[0]}{member[1]}")
-                    driver_type = member[1]
-            except TypeError:
-                pass
-
-        if driver_type is None:
-            raise RuntimeError("Could not find Driver on module %s" % driver_type)
-
-        self.driver = driver_type(
-            models=self.models, raw_telemetry=self.raw_telemetry, log=self.log
+        self.driver = DriverFactory.get_driver(
+            driver_type=DriverType(driver_type),
+            models=self.models,
+            raw_telemetry=self.raw_telemetry,
+            observing_blocks=self.observing_blocks,
+            log=self.log,
         )
 
     def reset_scheduled_targets(self) -> None:
@@ -557,7 +523,6 @@ class Model:
         self.log.debug(f"Requesting {max_targets} additional targets.")
 
         for _ in range(max_targets):
-
             # Inside the loop we are running update_conditions directly
             # from the driver instead of update_telemetry. This bypasses
             # the updates done by the CSC method.
@@ -670,7 +635,6 @@ class Model:
             len(targets) < max_targets
             and (time_scheduler_evaluation - time_start) < time_window
         ):
-
             await loop.run_in_executor(None, self.driver.update_conditions)
 
             await asyncio.sleep(0)
