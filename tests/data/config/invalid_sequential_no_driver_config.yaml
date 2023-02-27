@@ -1,8 +1,6 @@
 maintel:
   mode: ADVANCE
   driver_type: sequential
-  sequential_driver_configuration:
-    observing_list: tests/data/test_observing_list.yaml
   telemetry:
     efd_name: summit_efd
     streams:

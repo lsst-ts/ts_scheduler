@@ -1,15 +1,14 @@
 s3instance: cp
 auxtel:
+  path_observing_blocks: ../observing_blocks
   cmd_timeout: 60.0
   driver_configuration:
-    default_observing_script_is_standard: true
-    default_observing_script_name: standard_visit.py
     parameters:
       new_moon_phase_threshold: 20.0
       night_boundary: -12.0
     stop_tracking_observing_script_is_standard: true
     stop_tracking_observing_script_name: stop_tracking.py
-  driver_type: lsst.ts.scheduler.driver.driver
+  driver_type: driver
   loop_sleep_time: 1.0
   max_scripts: 100
   mode: SIMPLE
@@ -137,23 +136,21 @@ auxtel:
       exclude_planets: true
   n_targets: 1
   observing_script: standard_visit.py
-  observing_script_is_standard: true
   predicted_scheduler_window: 2.0
   startup_database: ' '
   startup_type: HOT
   telemetry:
     efd_name: summit_efd
 maintel:
+  path_observing_blocks: ../observing_blocks
   cmd_timeout: 60.0
   driver_configuration:
-    default_observing_script_is_standard: true
-    default_observing_script_name: standard_visit.py
     parameters:
       new_moon_phase_threshold: 20.0
       night_boundary: -12.0
     stop_tracking_observing_script_is_standard: true
     stop_tracking_observing_script_name: stop_tracking.py
-  driver_type: lsst.ts.scheduler.driver.driver
+  driver_type: driver
   loop_sleep_time: 1.0
   max_scripts: 100
   mode: SIMPLE
@@ -281,7 +278,6 @@ maintel:
       exclude_planets: true
   n_targets: 1
   observing_script: standard_visit.py
-  observing_script_is_standard: true
   predicted_scheduler_window: 2.0
   startup_database: ' '
   startup_type: HOT
