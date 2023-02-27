@@ -45,9 +45,8 @@ class TestSchedulerCscColdStart(
         cls.log = logging.getLogger("TestSchedulerCSC")
 
     def setUp(self) -> None:
-
         self.scheduler_config_path = TEST_CONFIG_DIR / "fbs_config_good.py"
-        self.driver_type = "lsst.ts.scheduler.driver.feature_scheduler"
+        self.driver_type = "feature_scheduler"
 
         return super().setUp()
 
@@ -71,17 +70,15 @@ class TestSchedulerCscColdStart(
         startup_database: str,
         scheduler_config_path: str,
     ) -> typing.Generator[pathlib.Path, None, None]:
-
         configuration_override = TEST_CONFIG_DIR / "fbs_test_cold_start.yaml"
 
         try:
             with open(configuration_override, "w") as fp:
-                fp.write(
-                    self._get_configuration(
-                        startup_database=startup_database,
-                        scheduler_config_path=scheduler_config_path,
-                    )
+                configuration = self._get_configuration(
+                    startup_database=startup_database,
+                    scheduler_config_path=scheduler_config_path,
                 )
+                fp.write(configuration)
 
             yield configuration_override
         finally:
@@ -90,14 +87,15 @@ class TestSchedulerCscColdStart(
 
     @contextlib.contextmanager
     def generate_scheduler_database(self) -> typing.Generator[pathlib.Path, None, None]:
-
         feature_scheduler_sim = FeatureSchedulerSim(self.log)
 
         feature_scheduler_sim.configure_scheduler_for_test_with_cwfs(TEST_CONFIG_DIR)
 
-        observation_database_path = feature_scheduler_sim.config.driver_configuration[
-            "observation_database_name"
-        ]
+        observation_database_path = (
+            feature_scheduler_sim.config.feature_scheduler_driver_configuration[
+                "observation_database_name"
+            ]
+        )
 
         try:
             feature_scheduler_sim.run_observations(register_observations=True)
@@ -134,7 +132,6 @@ class TestSchedulerCscColdStart(
     def _get_configuration(
         self, startup_database: str, scheduler_config_path: str
     ) -> str:
-
         return f"""
 maintel:
   mode: ADVANCE
@@ -142,7 +139,7 @@ maintel:
   startup_database: >-
     {startup_database}
   driver_type: {self.driver_type}
-  driver_configuration:
+  {self.driver_type}_driver_configuration:
     scheduler_config: {scheduler_config_path}
   telemetry:
     efd_name: summit_efd
@@ -168,18 +165,15 @@ maintel:
 """
 
     async def test_no_startup_db(self):
-
         with self.generate_configuration_override(
             startup_database=" ",
             scheduler_config_path=self.scheduler_config_path.as_posix(),
         ) as override_path:
-
             async with self.make_csc(
                 config_dir=TEST_CONFIG_DIR,
                 initial_state=salobj.State.STANDBY,
                 simulation_mode=SchedulerModes.MOCKS3,
             ):
-
                 await self.wait_lifeness()
 
                 with self.assertLogs(self.csc.log, level=logging.DEBUG) as csc_logs:
@@ -190,7 +184,7 @@ maintel:
                     )
 
                 assert (
-                    f"INFO:Scheduler.Model:Loading driver from {self.driver_type}"
+                    f"INFO:Scheduler.Model:Loading driver {self.driver_type}"
                     in csc_logs.output
                 )
                 assert (
@@ -199,18 +193,15 @@ maintel:
                 )
 
     async def test_with_startup_db(self):
-
         with self.generate_scheduler_database() as startup_database, self.generate_configuration_override(
             startup_database=startup_database.as_posix(),
             scheduler_config_path=self.scheduler_config_path.as_posix(),
         ) as override_path:
-
             async with self.make_csc(
                 config_dir=TEST_CONFIG_DIR,
                 initial_state=salobj.State.STANDBY,
                 simulation_mode=SchedulerModes.MOCKS3,
             ):
-
                 await self.wait_lifeness()
 
                 with self.assertLogs(self.csc.log, level=logging.DEBUG) as csc_logs:
@@ -221,7 +212,7 @@ maintel:
                     )
 
                 assert (
-                    f"INFO:Scheduler.Model:Loading driver from {self.driver_type}"
+                    f"INFO:Scheduler.Model:Loading driver {self.driver_type}"
                     in csc_logs.output
                 )
                 assert (
@@ -230,20 +221,18 @@ maintel:
                 )
 
     async def test_with_inexistent_startup_db(self):
-
         with self.generate_scheduler_database() as startup_database, self.generate_configuration_override(
             startup_database=startup_database.as_posix(),
             scheduler_config_path=self.scheduler_config_path.as_posix(),
         ) as override_path:
-
-            startup_database.unlink()
+            if startup_database.exists():
+                startup_database.unlink()
 
             async with self.make_csc(
                 config_dir=TEST_CONFIG_DIR,
                 initial_state=salobj.State.STANDBY,
                 simulation_mode=SchedulerModes.MOCKS3,
             ):
-
                 await self.wait_lifeness()
 
                 expected_error_msg = (
@@ -268,12 +257,10 @@ maintel:
                 assert expected_error_msg in csc_logs.output
 
     async def test_with_efd_query(self):
-
         with self.generate_scheduler_efd_database() as startup_database, self.generate_configuration_override(
             startup_database=startup_database,
             scheduler_config_path=self.scheduler_config_path.as_posix(),
         ) as override_path:
-
             self.log.debug(f"startup database: {startup_database}")
 
             async with self.make_csc(
@@ -284,14 +271,19 @@ maintel:
                 await self.wait_lifeness()
 
                 with self.assertLogs(self.csc.log, level=logging.DEBUG) as csc_logs:
-                    await salobj.set_summary_state(
-                        remote=self.remote,
-                        state=salobj.State.DISABLED,
-                        override=override_path.name,
-                    )
+                    try:
+                        await salobj.set_summary_state(
+                            remote=self.remote,
+                            state=salobj.State.DISABLED,
+                            override=override_path.name,
+                        )
+                    except Exception:
+                        for record, message in zip(csc_logs.records, csc_logs.output):
+                            self.log.log(record.levelno, message)
+                        raise
 
                 assert (
-                    f"INFO:Scheduler.Model:Loading driver from {self.driver_type}"
+                    f"INFO:Scheduler.Model:Loading driver {self.driver_type}"
                     in csc_logs.output
                 )
                 assert (
@@ -305,7 +297,6 @@ maintel:
             startup_database="",
             scheduler_config_path=self.scheduler_config_path.as_posix(),
         ) as override_path:
-
             async with self.make_csc(
                 config_dir=TEST_CONFIG_DIR,
                 initial_state=salobj.State.STANDBY,
@@ -336,7 +327,7 @@ maintel:
                     self.log.debug(log)
 
                 assert (
-                    f"INFO:Scheduler.Model:Loading driver from {self.driver_type}"
+                    f"INFO:Scheduler.Model:Loading driver {self.driver_type}"
                     in csc_logs.output
                 )
                 assert (
@@ -345,7 +336,7 @@ maintel:
                             log
                             for log in csc_logs.output
                             if log
-                            == f"INFO:Scheduler.Model:Loading driver from {self.driver_type}"
+                            == f"INFO:Scheduler.Model:Loading driver {self.driver_type}"
                         ]
                     )
                     == 2

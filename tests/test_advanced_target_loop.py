@@ -108,7 +108,6 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
         )
 
     async def asyncTearDown(self):
-
         try:
             await salobj.set_summary_state(self.scheduler_remote, salobj.State.STANDBY)
         finally:
@@ -121,13 +120,19 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
             )
 
     async def assert_detailed_state_sequence(self, expected_detailed_states):
-
         for expected_detailed_state in expected_detailed_states:
             detailed_state = await self.scheduler_remote.evt_detailedState.next(
                 flush=False,
                 timeout=STD_TIMEOUT,
             )
-            assert DetailedState(detailed_state.substate) == expected_detailed_state
+            with self.subTest(
+                expected_detailed_state=expected_detailed_state,
+                msg=f"Expected detailed state {expected_detailed_state!r}.",
+            ):
+                self.log.debug(
+                    f"{DetailedState(detailed_state.substate)!r} x {expected_detailed_state!r}"
+                )
+                assert DetailedState(detailed_state.substate) == expected_detailed_state
 
     async def test_no_queue(self):
         """Test the simple target production loop.
@@ -212,7 +217,6 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
         assert data.errorCode == 0
 
     async def test_fail_efd_query(self):
-
         # enable queue...
         await salobj.set_summary_state(
             self.queue_remote,
@@ -361,7 +365,7 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
 
         self.scheduler_remote.evt_summaryState.callback = assert_enable
 
-        # Need to time this test and timeout if it takes took long
+        # Need to time this test and timeout if it takes too long
         start_time = time.time()
         while self.received_targets < self.expected_targets:
             if time.time() - start_time > self.target_test_timeout:
@@ -476,7 +480,6 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
             os.remove(filename)
 
     async def mock_fail_select_time_series(self, *args, **kwargs):
-
         raise RuntimeError("This is a test.")
 
 
