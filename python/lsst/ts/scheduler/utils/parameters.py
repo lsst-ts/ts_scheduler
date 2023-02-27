@@ -27,7 +27,7 @@ from dataclasses import dataclass
 class SchedulerCscParameters:
     """Configuration of the LSST Scheduler's Model."""
 
-    driver_type: str = "lsst.ts.scheduler.driver.driver"
+    driver_type: str = "driver"
     # Choose a driver to use. This should be an import string that
     # is passed to `importlib.import_module()`. Model will look for
     # a subclass of Driver class inside the module.
@@ -89,7 +89,7 @@ class SchedulerCscParameters:
 
     def set_defaults(self):
         """Set defaults for the LSST Scheduler's Driver."""
-        self.driver_type = "lsst.ts.scheduler.driver.driver"
+        self.driver_type = "driver"
         self.startup_type = "HOT"
         self.startup_database = ""
         self.mode = "SIMPLE"

@@ -100,7 +100,6 @@ class SimpleTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
         )
 
     async def asyncTearDown(self):
-
         try:
             await salobj.set_summary_state(self.scheduler_remote, salobj.State.STANDBY)
         finally:

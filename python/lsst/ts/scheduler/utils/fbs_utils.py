@@ -139,22 +139,21 @@ class SchemaConverter:
             )
 
     def opsim2obs(self, filename: str) -> np.ndarray:
-        """Convert an opsim schema dataframe into an observation array.
+        """Read an opsim database and return an observation array.
 
         Parameters
         ----------
         filename : `str`
             Path to the observation database.
+
+        Returns
+        -------
+        `np.ndarray`
+            A numpy named array with observations. The format is defined by
+            the feature scheduler observation.
         """
 
-        con = sqlite3.connect(filename)
-        df = pd.read_sql("select * from observations;", con)
-        for key in self.angles_rad2deg:
-            df[key] = np.radians(df[key])
-        for key in self.angles_hours2deg:
-            df[key] = df[key] * 24.0 / 360.0
-
-        df = df.rename(index=str, columns=self.convert_dict)
+        df = self.opsim2df(filename)
 
         blank = empty_observation()
         final_result = np.empty(df.shape[0], dtype=blank.dtype)
@@ -164,3 +163,26 @@ class SchemaConverter:
                 final_result[key] = df[key].values
 
         return final_result
+
+    def opsim2df(self, filename: str) -> pd.DataFrame:
+        """Read an opsim database and return a pandas data frame.
+
+        Parameters
+        ----------
+        filename : `str`
+            Path to an sqlite3 opsim database.
+
+        Returns
+        -------
+        `pd.DataFrame`
+            Observations from the database.
+        """
+        con = sqlite3.connect(filename)
+        df = pd.read_sql("select * from observations;", con)
+        for key in self.angles_rad2deg:
+            df[key] = np.radians(df[key])
+        for key in self.angles_hours2deg:
+            df[key] = df[key] * 24.0 / 360.0
+
+        df = df.rename(index=str, columns=self.convert_dict)
+        return df

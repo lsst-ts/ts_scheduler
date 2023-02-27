@@ -33,7 +33,6 @@ class TestEfdUtils(unittest.IsolatedAsyncioTestCase):
         assert isinstance(mock_efd_client, unittest.mock.AsyncMock)
 
     async def test_get_mock_efd_client(self):
-
         mock_efd_client = get_mock_efd_client("mock_efd")
 
         assert isinstance(mock_efd_client, unittest.mock.AsyncMock)

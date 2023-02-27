@@ -25,6 +25,7 @@ import unittest
 
 from lsst.ts.observatory.model import Target
 
+from lsst.ts import observing
 from lsst.ts.scheduler.driver import Driver, SurveyTopology
 
 logging.basicConfig()
@@ -32,26 +33,71 @@ logging.basicConfig()
 
 class TestSchedulerDriver(unittest.TestCase):
     def setUp(self):
-        self.driver = Driver(models={}, raw_telemetry={})
+        script1 = observing.ObservingScript(
+            name="slew",
+            standard=True,
+            parameters={
+                "name": "$name",
+                "ra": "$ra",
+                "dec": "$dec",
+                "rot_sky": "$rot_sky",
+                "estimated_slew_time": "$estimated_slew_time",
+                "obs_time": "$obs_time",
+                "note": "Static note will be preserved.",
+            },
+        )
+        script2 = observing.ObservingScript(
+            name="standard_visit",
+            standard=True,
+            parameters={
+                "exp_times": "$exp_times",
+                "band_filter": "$band_filter",
+                "program": "$program",
+                "note": "Static note will be preserved.",
+            },
+        )
+
+        standard_visit_block = observing.ObservingBlock(
+            name="StandardVisit",
+            program="WFD",
+            scripts=[script1, script2],
+            constraints=[observing.AirmassConstraint(max=1.5)],
+        )
+
+        survey_1 = observing.ObservingBlock(
+            name="StandardVisit",
+            program="Survey1",
+            scripts=[script1, script2],
+            constraints=[observing.AirmassConstraint(max=1.5)],
+        )
+
+        survey_2 = observing.ObservingBlock(
+            name="StandardVisit",
+            program="Survey2",
+            scripts=[script1, script2],
+            constraints=[observing.AirmassConstraint(max=1.5)],
+        )
+
+        observing_blocks = {
+            standard_visit_block.program: standard_visit_block,
+            survey_1.program: survey_1,
+            survey_2.program: survey_2,
+        }
+
+        self.driver = Driver(
+            models={}, raw_telemetry={}, observing_blocks=observing_blocks
+        )
 
     def test_configure_scheduler(self):
-
         survey_topology, config = self.configure_scheduler_for_test()
 
         assert isinstance(survey_topology, SurveyTopology)
-        assert survey_topology.num_general_props == 1
-        assert survey_topology.general_propos[0] == "Test"
+        assert survey_topology.num_general_props == 3
+        assert survey_topology.general_propos[0] == "WFD"
+        assert survey_topology.general_propos[1] == "Survey1"
+        assert survey_topology.general_propos[2] == "Survey2"
         assert len(survey_topology.general_propos) == survey_topology.num_general_props
         assert len(survey_topology.sequence_propos) == survey_topology.num_seq_props
-
-        self.assertEqual(
-            self.driver.default_observing_script_name,
-            config.driver_configuration["default_observing_script_name"],
-        )
-        self.assertEqual(
-            self.driver.default_observing_script_is_standard,
-            config.driver_configuration["default_observing_script_is_standard"],
-        )
 
     def test_select_next_target(self):
         target = self.driver.select_next_target()
@@ -78,285 +124,37 @@ class TestSchedulerDriver(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             self.driver.load(bad_config)
 
-    def test_configure_survey_observing_script(self):
-
-        survey_observing_script = dict(
-            survey_1=dict(
-                observing_script_name="survey1_script",
-                observing_script_is_standard=True,
-            ),
-            survey_2=dict(
-                observing_script_name="survey2_script",
-                observing_script_is_standard=False,
-            ),
-        )
-
-        self.driver.configure_survey_observing_script(survey_observing_script)
-
-        self.assertEqual(survey_observing_script, self.driver._survey_observing_script)
-
-    def test_configure_survey_observing_script_bad_input_missing_is_standard(self):
-
-        survey_observing_script = dict(
-            survey_1=dict(
-                observing_script_name="survey1_script",
-            ),
-            survey_2=dict(
-                observing_script_name="survey2_script",
-                observing_script_is_standard=False,
-            ),
-        )
-        with self.assertRaises(RuntimeError):
-            self.driver.configure_survey_observing_script(survey_observing_script)
-
-    def test_configure_survey_observing_script_bad_input_missing_name(self):
-
-        survey_observing_script = dict(
-            survey_1=dict(
-                observing_script_is_standard=True,
-            ),
-            survey_2=dict(
-                observing_script_name="survey2_script",
-                observing_script_is_standard=False,
-            ),
-        )
-        with self.assertRaises(RuntimeError):
-            self.driver.configure_survey_observing_script(survey_observing_script)
-
     def test_assert_survey_observing_script(self):
-
-        self.configure_scheduler_for_test()
-
-        _, config = self.configure_scheduler_for_test(
-            additional_driver_configuration=dict(
-                survey_observing_script=dict(
-                    survey_1=dict(
-                        observing_script_name="survey1_script",
-                        observing_script_is_standard=True,
-                    ),
-                    survey_2=dict(
-                        observing_script_name="survey2_script",
-                        observing_script_is_standard=False,
-                    ),
-                )
-            )
-        )
-
-        self.driver.assert_survey_observing_script("survey_1")
+        self.driver.assert_survey_observing_script("Survey1")
 
         with self.assertRaises(AssertionError):
-            self.driver.assert_survey_observing_script("survey_3")
+            self.driver.assert_survey_observing_script("Survey3")
 
-    def test_get_survey_observing_script_only_default(self):
+    def test_get_survey_observing_script(self):
+        observing_block = self.driver.get_survey_observing_block("Survey1")
 
-        self.configure_scheduler_for_test()
+        assert observing_block.name == "StandardVisit"
 
-        (
-            observing_script_name,
-            observing_script_is_standard,
-        ) = self.driver.get_survey_observing_script("survey_1")
+    def test_get_stop_tracking_target(self):
+        _, config = self.configure_scheduler_for_test()
 
-        self.assertEqual(
-            observing_script_name, self.driver.default_observing_script_name
-        )
-        self.assertEqual(
-            observing_script_is_standard,
-            self.driver.default_observing_script_is_standard,
-        )
+        stop_tracking_target = self.driver.get_stop_tracking_target()
 
-    def test_get_survey_observing_script_with_customization(self):
-
-        _, config = self.configure_scheduler_for_test(
-            additional_driver_configuration=dict(
-                survey_observing_script=dict(
-                    survey_1=dict(
-                        observing_script_name="survey1_script",
-                        observing_script_is_standard=True,
-                    ),
-                    survey_2=dict(
-                        observing_script_name="survey2_script",
-                        observing_script_is_standard=False,
-                    ),
-                )
-            )
+        assert stop_tracking_target.observing_block.name == "StopTracking"
+        assert stop_tracking_target.observing_block.program == "_Internal"
+        assert (
+            stop_tracking_target.observing_block.scripts[0].name
+            == config.driver_configuration["stop_tracking_observing_script_name"]
         )
-
-        (
-            observing_script_name,
-            observing_script_is_standard,
-        ) = self.driver.get_survey_observing_script("survey_3")
-
-        self.assertEqual(
-            observing_script_name, self.driver.default_observing_script_name
-        )
-        self.assertEqual(
-            observing_script_is_standard,
-            self.driver.default_observing_script_is_standard,
-        )
-
-        for survey_name in config.driver_configuration["survey_observing_script"]:
-            (
-                observing_script_name,
-                observing_script_is_standard,
-            ) = self.driver.get_survey_observing_script(survey_name)
-
-            self.assertEqual(
-                observing_script_name,
-                config.driver_configuration["survey_observing_script"][survey_name][
-                    "observing_script_name"
-                ],
-            )
-            self.assertEqual(
-                observing_script_is_standard,
-                config.driver_configuration["survey_observing_script"][survey_name][
-                    "observing_script_is_standard"
-                ],
-            )
-
-    @unittest.skip("Cannot run this as-is: needs updating")
-    def test_init(self):
-
-        self.assertEqual(len(self.driver.fields_dict), 5292)
-        self.assertEqual(len(self.driver.science_proposal_list), 1)
-        self.assertEqual(self.driver.science_proposal_list[0].name, "weak_lensing")
-
-    @unittest.skip("Cannot run this as-is: needs updating")
-    def test_compute_slewtime_cost(self):
-
-        self.assertAlmostEquals(
-            self.driver.compute_slewtime_cost(0), -0.034, delta=1e-3
-        )
-        self.assertAlmostEquals(
-            self.driver.compute_slewtime_cost(2), -0.020, delta=1e-3
-        )
-        self.assertAlmostEquals(
-            self.driver.compute_slewtime_cost(3), -0.014, delta=1e-3
-        )
-        self.assertAlmostEquals(
-            self.driver.compute_slewtime_cost(4), -0.007, delta=1e-3
-        )
-        self.assertAlmostEquals(self.driver.compute_slewtime_cost(5), 0.000, delta=1e-3)
-        self.assertAlmostEquals(
-            self.driver.compute_slewtime_cost(10), 0.034, delta=1e-3
-        )
-        self.assertAlmostEquals(
-            self.driver.compute_slewtime_cost(30), 0.171, delta=1e-3
-        )
-        self.assertAlmostEquals(
-            self.driver.compute_slewtime_cost(60), 0.377, delta=1e-3
-        )
-        self.assertAlmostEquals(
-            self.driver.compute_slewtime_cost(120), 0.791, delta=1e-3
-        )
-        self.assertAlmostEquals(
-            self.driver.compute_slewtime_cost(150), 1.000, delta=1e-3
-        )
-        self.assertAlmostEquals(
-            self.driver.compute_slewtime_cost(200), 1.350, delta=1e-3
-        )
-
-    @unittest.skip("Cannot run this as-is: needs updating")
-    def test_startsurvey_startnight(self):
-
-        lsst_start_timestamp = 1640995200.0
-
-        self.assertAlmostEquals(self.driver.time, 0.0, delta=1e-1)
-        self.assertEqual(self.driver.survey_started, False)
-        self.assertEqual(self.driver.isnight, False)
-        self.assertAlmostEquals(self.driver.sunset_timestamp, 0.0, delta=1e-1)
-        self.assertAlmostEquals(self.driver.sunrise_timestamp, 0.0, delta=1e-1)
-        self.assertEqual(
-            len(self.driver.science_proposal_list[0].tonight_fields_list), 0
-        )
-        self.assertEqual(self.driver.science_proposal_list[0].survey_targets_goal, 0)
-
-        time = lsst_start_timestamp
-        night = 1
-        self.driver.update_time(time, night)
-        self.assertAlmostEquals(self.driver.time, 1640995200.0, delta=1e-1)
-        self.assertEqual(self.driver.survey_started, True)
-        self.assertEqual(self.driver.isnight, False)
-        self.assertAlmostEquals(self.driver.sunset_timestamp, 1640998122.8, delta=1e-1)
-        self.assertAlmostEquals(self.driver.sunrise_timestamp, 1641026665.8, delta=1e-1)
-        self.assertEqual(
-            len(self.driver.science_proposal_list[0].tonight_fields_list), 0
-        )
-        self.assertEqual(self.driver.science_proposal_list[0].survey_targets_goal, 0)
-
-        time = 1640998122
-        self.driver.update_time(time, night)
-        self.assertAlmostEquals(self.driver.time, 1640998122.0, delta=1e-1)
-        self.assertEqual(self.driver.survey_started, True)
-        self.assertEqual(self.driver.isnight, False)
-        self.assertAlmostEquals(self.driver.sunset_timestamp, 1640998122.8, delta=1e-1)
-        self.assertAlmostEquals(self.driver.sunrise_timestamp, 1641026665.8, delta=1e-1)
-        self.assertEqual(
-            len(self.driver.science_proposal_list[0].tonight_fields_list), 0
-        )
-        self.assertEqual(self.driver.science_proposal_list[0].survey_targets_goal, 0)
-
-        time = 1641000000
-        self.driver.update_time(time, night)
-        self.assertAlmostEquals(self.driver.time, 1641000000.0, delta=1e-1)
-        self.assertEqual(self.driver.survey_started, True)
-        self.assertEqual(self.driver.isnight, True)
-        self.assertAlmostEquals(self.driver.sunset_timestamp, 1640998122.8, delta=1e-1)
-        self.assertAlmostEquals(self.driver.sunrise_timestamp, 1641026665.8, delta=1e-1)
-        self.assertEqual(
-            len(self.driver.science_proposal_list[0].tonight_fields_list), 1515
-        )
-        self.assertEqual(
-            self.driver.science_proposal_list[0].survey_targets_goal, 1522575
-        )
-
-        time = 1641010980
-        self.driver.update_time(time, night)
-        self.assertAlmostEquals(self.driver.time, 1641010980.0, delta=1e-1)
-        self.assertEqual(self.driver.survey_started, True)
-        self.assertEqual(self.driver.isnight, True)
-        self.assertAlmostEquals(self.driver.sunset_timestamp, 1640998122.8, delta=1e-1)
-        self.assertAlmostEquals(self.driver.sunrise_timestamp, 1641026665.8, delta=1e-1)
-        self.assertEqual(
-            len(self.driver.science_proposal_list[0].tonight_fields_list), 1515
-        )
-        self.assertEqual(
-            self.driver.science_proposal_list[0].survey_targets_goal, 1522575
-        )
-
-        time = 1641086669
-        self.driver.update_time(time, night)
-        self.assertAlmostEquals(self.driver.time, 1641086669.0, delta=1e-1)
-        self.assertEqual(self.driver.survey_started, True)
-        self.assertEqual(self.driver.isnight, False)
-        self.assertAlmostEquals(self.driver.sunset_timestamp, 1641084532.8, delta=1e-1)
-        self.assertAlmostEquals(self.driver.sunrise_timestamp, 1641113113.8, delta=1e-1)
-        self.assertEqual(
-            len(self.driver.science_proposal_list[0].tonight_fields_list), 1515
-        )
-        self.assertEqual(
-            self.driver.science_proposal_list[0].survey_targets_goal, 1522575
-        )
-
-        time = 1641114000
-        self.driver.update_time(time, night)
-        self.assertAlmostEquals(self.driver.time, 1641114000.0, delta=1e-1)
-        self.assertEqual(self.driver.survey_started, True)
-        self.assertEqual(self.driver.isnight, True)
-        self.assertAlmostEquals(self.driver.sunset_timestamp, 1641084532.8, delta=1e-1)
-        self.assertAlmostEquals(self.driver.sunrise_timestamp, 1641113113.8, delta=1e-1)
-        self.assertEqual(
-            len(self.driver.science_proposal_list[0].tonight_fields_list), 1519
-        )
-        self.assertEqual(
-            self.driver.science_proposal_list[0].survey_targets_goal, 1537650
+        assert (
+            stop_tracking_target.observing_block.scripts[0].standard
+            == config.driver_configuration["stop_tracking_observing_script_is_standard"]
         )
 
     def configure_scheduler_for_test(self, additional_driver_configuration=None):
         config = types.SimpleNamespace(
             driver_configuration=dict(
-                general_propos=["Test"],
-                default_observing_script_name="standard_visit.py",
-                default_observing_script_is_standard=True,
+                general_propos=["WFD", "Survey1", "Survey2"],
                 stop_tracking_observing_script_name="stop_tracking.py",
                 stop_tracking_observing_script_is_standard=True,
             )
@@ -368,9 +166,6 @@ class TestSchedulerDriver(unittest.TestCase):
                 ]
 
         return self.driver.configure_scheduler(config), config
-
-    def tearDown(self):
-        pass
 
 
 if __name__ == "__main__":

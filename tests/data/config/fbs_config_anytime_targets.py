@@ -123,7 +123,6 @@ def gen_greedy_surveys(
 
 
 if __name__ == "config":
-
     nside = 32
     per_night = True  # Dither DDF per night
     seed = 42

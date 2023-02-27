@@ -1,0 +1,30 @@
+{
+    "name": "StandardVisit",
+    "program": "Survey2",
+    "constraints": [],
+    "scripts": [
+        {
+            "name": "slew",
+            "standard": true,
+            "parameters": {
+                "name": "$name",
+                "ra": "$ra",
+                "dec": "$dec",
+                "rot_sky": "$rot_sky",
+                "estimated_slew_time": "$estimated_slew_time",
+                "obs_time": "$obs_time",
+                "note": "Static note will be preserved."
+            }
+        },
+        {
+            "name": "standard_visit",
+            "standard": true,
+            "parameters": {
+                "exp_times": "$exp_times",
+                "band_filter": "$band_filter",
+                "program": "$program",
+                "note": "Static note will be preserved."
+            }
+        }
+    ]
+}

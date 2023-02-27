@@ -163,7 +163,6 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         initial_state=salobj.base_csc.State.STANDBY,
         simulation_mode=0,
     ):
-
         compatibility_commands = dict(
             computePredictedSchedule=self._do_computePredictedSchedule,
             addBlock=self._do_addBlock,
@@ -244,7 +243,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         self._tasks["telemetry_loop_task"] = None
 
         # List of targets used in the ADVANCE target loop
-        self.targets_queue = []
+        self.targets_queue: list[DriverTarget] = []
 
         # keep track whether a "no new target" condition was handled by the
         # scheduler.
@@ -262,12 +261,11 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         self.s3bucket_name = None  # Set by `configure`.
         self.s3bucket = None  # Set by `handle_summary_state`.
 
-        self.model = Model(self.log)
+        self.model = Model(log=self.log, config_dir=self.config_dir)
         # Add callback to script info
         self.queue_remote.evt_script.callback = self.model.callback_script_info
 
     async def begin_start(self, data):
-
         await self.cmd_start.ack_in_progress(
             data,
             timeout=self.default_command_timeout,
@@ -309,7 +307,6 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             self.simulation_mode == SchedulerModes.SIMULATION
             or self.parameters.mode == "DRY"
         ):
-
             self.log.info(
                 "Running with no target production loop. "
                 f"Operation mode: {self.parameters.mode}. "
@@ -318,13 +315,11 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             self._tasks["target_production_task"] = None
 
         elif self.parameters.mode == "SIMPLE":
-
             self._tasks["target_production_task"] = asyncio.create_task(
                 self.simple_target_production_loop()
             )
 
         elif self.parameters.mode == "ADVANCE":
-
             self._tasks["target_production_task"] = asyncio.create_task(
                 self.advance_target_production_loop()
             )
@@ -355,7 +350,6 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 )
 
         elif self.summary_state == salobj.State.STANDBY:
-
             await self._stop_all_background_tasks()
 
             if self.s3bucket is not None:
@@ -444,7 +438,6 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         await self._transition_running_to_idle()
 
     async def stop_next_target_timer_task(self):
-
         if not self.next_target_timer.done():
             self.log.debug("Cancelling next target timer.")
             self.next_target_timer.cancel()
@@ -598,7 +591,6 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         failed_observatory_state_logged = False
         while self.run_loop:
-
             # Update observatory state and sleep at the same time.
             try:
                 await asyncio.gather(
@@ -676,7 +668,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         self.model.set_observatory_state(current_target_state=current_target_state)
 
-    async def put_on_queue(self, targets):
+    async def put_on_queue(self, targets: list[DriverTarget]) -> None:
         """Given a list of targets, append them on the queue to be observed.
         Each target sal_index attribute is updated with the unique identifier
         value (salIndex) returned by the queue.
@@ -684,36 +676,31 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         Parameters
         ----------
-        targets : `list`
+        targets : `list` [`DriverTarget`]
             A list of targets to put on the queue.
-
         """
 
         for target in targets:
-            (
-                observing_script,
-                observing_script_is_standard,
-            ) = target.get_observing_script()
+            observing_block = target.get_observing_block()
 
-            self.queue_remote.cmd_add.set(
-                path=observing_script,
-                config=target.get_script_config(),
-                isStandard=observing_script_is_standard,
-                location=ScriptQueue.Location.LAST,
-                logLevel=self.log.getEffectiveLevel(),
-            )
+            self.log.debug(f"Adding target {target.targetid} scripts on the queue.")
 
-            self.log.debug(f"Putting target {target.targetid} on the queue.")
-            add_task = await self.queue_remote.cmd_add.start(
-                timeout=self.parameters.cmd_timeout
-            )
+            for script in observing_block.scripts:
+                add_task = await self.queue_remote.cmd_add.set_start(
+                    path=script.name,
+                    config=script.get_script_configuration(),
+                    isStandard=script.standard,
+                    location=ScriptQueue.Location.LAST,
+                    logLevel=self.log.getEffectiveLevel(),
+                    timeout=self.parameters.cmd_timeout,
+                )
+
+                target.add_sal_index(int(add_task.result))
 
             # publishes target event
             await self.evt_target.set_write(**target.as_dict())
 
-            target.sal_index = int(add_task.result)
-
-    async def remove_from_queue(self, targets):
+    async def remove_from_queue(self, targets: list[DriverTarget]) -> None:
         """Given a list of targets, remove them from the queue.
 
         Parameters
@@ -723,13 +710,20 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         """
 
+        sal_indices_to_remove = [target.get_sal_indices() for target in targets]
+        scripts_to_stop = [
+            sal_index
+            for sal_indices in sal_indices_to_remove
+            for sal_index in sal_indices
+        ]
+
         stop_scripts = self.queue_remote.cmd_stopScripts.DataType()
 
-        stop_scripts.length = len(targets)
+        stop_scripts.length = len(scripts_to_stop)
         stop_scripts.terminate = False
 
-        for i in range(stop_scripts.length):
-            stop_scripts.salIndices[i] = targets[i].sal_index
+        for i, sal_index in enumerate(scripts_to_stop):
+            stop_scripts.salIndices[i] = sal_index
 
         await self.queue_remote.cmd_stopScripts.start(
             stop_scripts, timeout=self.parameters.cmd_timeout
@@ -779,10 +773,6 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         self.parameters.predicted_scheduler_window = settings.predicted_scheduler_window
         self.parameters.loop_sleep_time = settings.loop_sleep_time
         self.parameters.cmd_timeout = settings.cmd_timeout
-        self.parameters.observing_script = settings.observing_script
-        self.parameters.observing_script_is_standard = (
-            settings.observing_script_is_standard
-        )
         self.parameters.max_scripts = settings.max_scripts
 
         survey_topology = await self.model.configure(settings)
@@ -1057,12 +1047,10 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         first_pass = True
 
         while self.summary_state == salobj.State.ENABLED and self.run_loop:
-
             await self.run_target_loop.wait()
 
             try:
                 async with self.target_loop_lock:
-
                     # If it is the first pass get the current queue, otherwise
                     # wait for the queue to change or get the latest if there's
                     # some
@@ -1101,7 +1089,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                         # list of script ids
                         await self.put_on_queue([target])
 
-                        if target.sal_index > 0:
+                        if target.get_sal_indices():
                             self.model.add_scheduled_target(target)
                         else:
                             self.log.error(
@@ -1156,14 +1144,13 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         first_pass = True
         targets_queue_condition_task = utils.make_done_future()
 
-        self.targets_queue = []
+        self.targets_queue: list[DriverTarget] = []
         self.targets_queue_condition = utils.make_done_future()
         self._should_compute_predicted_schedule = False
 
         self.log.info("Starting target production loop.")
 
         while self.summary_state == salobj.State.ENABLED and self.run_loop:
-
             if not self.next_target_timer.done():
                 self.log.debug("Waiting next target timer task...")
                 async with self.detailed_state(
@@ -1175,11 +1162,9 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
             try:
                 if self.need_to_generate_target_queue:
-
                     await self.generate_target_queue()
 
                 async with self.target_loop_lock:
-
                     # If it is the first pass get the current queue, otherwise
                     # wait for the queue to change or get the latest if there's
                     # some
@@ -1197,7 +1182,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     # next will be waiting.
                     if (
                         queue.running
-                        and queue.length < self.parameters.n_targets + 1
+                        and self.model.get_number_of_scheduled_targets()
+                        < self.parameters.n_targets + 1
                         and len(self.targets_queue) > 0
                     ):
                         await self.queue_targets()
@@ -1319,7 +1305,6 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         """
 
         async with self.current_scheduler_state(publish_lfoa=True):
-
             self.log.debug(f"Target queue contains {len(self.targets_queue)} targets.")
 
             async for observatory_time, wait_time, target in self.model.generate_target_queue(
@@ -1507,11 +1492,14 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         self._should_compute_predicted_schedule = False
 
         async with self.current_scheduler_state(publish_lfoa=False):
-
             self.model.synchronize_observatory_model()
             self.model.register_scheduled_targets(targets_queue=self.targets_queue)
 
-            (_, _, targets,) = await self.model.generate_targets_in_time_window(
+            (
+                _,
+                _,
+                targets,
+            ) = await self.model.generate_targets_in_time_window(
                 max_targets=self.max_predicted_targets,
                 time_window=self.parameters.predicted_scheduler_window * 60.0 * 60.0,
             )
@@ -1570,7 +1558,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         await self.put_on_queue([target])
 
-        if target.sal_index > 0:
+        if target.get_sal_indices():
             self.model.add_scheduled_target(target)
         else:
             raise FailedToQueueTargetsError(
@@ -1651,7 +1639,6 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         """Transition detailed state from idle to running."""
 
         async with self._detailed_state_lock:
-
             self.assert_idle()
 
             await self.evt_detailedState.set_write(substate=DetailedState.RUNNING)
@@ -1660,7 +1647,6 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         """Transition detailed state from idle to running."""
 
         async with self._detailed_state_lock:
-
             self.assert_running()
 
             await self.evt_detailedState.set_write(substate=DetailedState.IDLE)
@@ -1739,7 +1725,6 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             Detailed state value.
         """
         async with self._detailed_state_lock:
-
             initial_detailed_state = self.evt_detailedState.data.substate
 
             self.assert_running()
@@ -1764,7 +1749,6 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         """
 
         async with self.scheduler_state_lock:
-
             last_scheduler_state_filename = await self.save_scheduler_state(
                 publish_lfoa=publish_lfoa
             )

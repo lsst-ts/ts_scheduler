@@ -26,19 +26,22 @@ import unittest
 
 from lsst.ts.astrosky.model import AstronomicalSkyModel
 from lsst.ts.dateloc import ObservatoryLocation
-from lsst.ts.observatory.model import ObservatoryModel, ObservatoryState, Target
+from lsst.ts.observatory.model import ObservatoryModel, ObservatoryState
 from lsst.ts.utils import current_tai
 from rubin_sim.site_models.cloud_model import CloudModel
 from rubin_sim.site_models.seeing_model import SeeingModel
 
 from lsst.ts.scheduler.driver import SequentialScheduler, SurveyTopology
+from lsst.ts.scheduler.utils.test import FeatureSchedulerSim
 
-logging.basicConfig()
 
+class TestSequentialScheduler(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.log = logging.getLogger("TestSequentialScheduler")
+        return super().setUpClass()
 
-class TestSchedulerDriver(unittest.TestCase):
     def setUp(self):
-
         self.raw_telemetry = dict()
 
         self.raw_telemetry["timeHandler"] = None
@@ -71,25 +74,26 @@ class TestSchedulerDriver(unittest.TestCase):
         self.driver = SequentialScheduler(
             models=self.models,
             raw_telemetry=self.raw_telemetry,
+            observing_blocks=FeatureSchedulerSim.get_observing_blocks(),
+            log=self.log,
         )
 
         self.config = types.SimpleNamespace(
-            driver_configuration=dict(
+            sequential_driver_configuration=dict(
                 observing_list=pathlib.Path(__file__)
                 .parents[1]
                 .joinpath("tests", "data", "test_observing_list.yaml"),
-                general_propos=["Test"],
-                default_observing_script_name="standard_visit.py",
-                default_observing_script_is_standard=True,
+            ),
+            driver_configuration=dict(
                 stop_tracking_observing_script_name="stop_tracking.py",
                 stop_tracking_observing_script_is_standard=True,
-            )
+                general_propos=["Test"],
+            ),
         )
 
         self.files_to_delete = []
 
     def test_configure_scheduler(self):
-
         survey_topology = self.driver.configure_scheduler(self.config)
 
         assert isinstance(survey_topology, SurveyTopology)
@@ -105,7 +109,6 @@ class TestSchedulerDriver(unittest.TestCase):
         self.assertGreater(n_targets, 0)
 
     def test_load(self):
-
         config = (
             pathlib.Path(__file__)
             .parents[1]
@@ -115,7 +118,6 @@ class TestSchedulerDriver(unittest.TestCase):
         self.driver.load(config)
 
     def test_save_and_reset_from_file(self):
-
         self.driver.configure_scheduler(self.config)
 
         # Store copy of the state dictionary
@@ -139,27 +141,20 @@ class TestSchedulerDriver(unittest.TestCase):
         n_targets = 0
 
         while True:
-
             self.driver.update_conditions()
 
             target = self.driver.select_next_target()
 
-            print(target)
-
             if target is None:
+                self.log.debug("No target from driver. Stopping...")
                 break
             else:
-                with self.subTest(msg="Request target {n_targets}."):
-                    self.assertIsInstance(target, Target)
-                    self.assertGreater(target.num_exp, 0)
-                    self.assertEqual(len(target.exp_times), target.num_exp)
-                    self.assertGreater(target.slewtime, 0.0)
+                self.models["observatory_model"].observe(target)
+                self.models["observatory_state"].set(
+                    self.models["observatory_model"].current_state
+                )
+                self.log.debug(f"Target[{n_targets}]: {target}")
                 n_targets += 1
-
-            self.models["observatory_model"].observe(target)
-            self.models["observatory_state"].set(
-                self.models["observatory_model"].current_state
-            )
 
         return n_targets
 

@@ -25,24 +25,20 @@ from lsst.ts.scheduler.utils.csc_utils import is_uri
 
 class TestCSCUtils(unittest.TestCase):
     def test_is_uri_with_valid_uris(self):
-
         for valid_uri in self.get_valid_uris():
             assert is_uri(valid_uri)
 
     def test_is_uri_with_invalid_uris(self):
-
         for invalid_uri in self.get_invalid_uris():
             assert not is_uri(invalid_uri)
 
     def get_valid_uris(self):
-
         return [
             "file:///home/saluser/rubin_sim_data/fbs_scheduler_2022-04-01T15:49:53.662.p",
             "https://s3.cp.lsst.org/rubinobs-lfa-cp/Scheduler:2/Scheduler:2/2022/02/17/Scheduler:2_Scheduler:2_2022-02-18T09:26:04.347.p",  # noqa
         ]
 
     def get_invalid_uris(self):
-
         return [
             "/home/saluser/rubin_sim_data/fbs_scheduler_2022-04-01T15:49:53.662.p",
             "",

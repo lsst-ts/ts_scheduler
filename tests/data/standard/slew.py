@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-__all__ = ["NonStandardVisit"]
+__all__ = ["Slew"]
 
 import asyncio
 
@@ -7,8 +7,8 @@ import yaml
 from lsst.ts.salobj import BaseScript
 
 
-class NonStandardVisit(BaseScript):
-    """A dummy non standard visit script to test the scheduler interaction with
+class Slew(BaseScript):
+    """A dummy standard visit script to test the scheduler interaction with
     the queue.
 
     Parameters
@@ -24,14 +24,13 @@ class NonStandardVisit(BaseScript):
     def __init__(self, index, descr=""):
         super().__init__(index=index, descr=descr)
 
-        self.targetid = 0
-        self.fieldid = 0
-        self.filter = None
+        self.name = ""
         self.ra = None
         self.dec = None
-        self.ang = None
-        self.num_exp = 0
-        self.exp_times = []
+        self.rot_sky = None
+        self.estimated_slew_time = 0.0
+        self.obs_time = 0.0
+        self.note = ""
 
     @classmethod
     def get_schema(cls):
@@ -42,42 +41,39 @@ title: StandardVisit v1
 description: Configuration for StandardVisit.
 type: object
 properties:
-    target_id:
-        description: A unique identifier for the given target.
-        type: integer
-        default: 0
-    fieldid:
-        description: The ID of the associated OpSim field for the target.
-        type: integer
-        default: 0
-    ra:
-        type: number
-        description: The right ascension (degrees) of the target.
-        default: 0.
-    dec:
-        type: number
-        description: The declination (degrees) of the target.
-        default: 0.
     name:
         type: string
         description: Target name.
-        default: non_standard_visit_target
-    program:
+    ra:
         type: string
-        description: Program.
-        default: ""
-    ang:
+        description: >-
+            The right ascension of the target in hexagesimal format,
+            e.g. HH:MM:SS.S.
+    dec:
+        type: string
+        description: >-
+            The declination of the target in hexagesimal format,
+            e.g. DD:MM:SS.S.
+    rot_sky:
         type: number
         description: The sky angle (degrees) of the target.
+    estimated_slew_time:
+        type: number
+        description: Estimated slew time (seconds).
         default: 0.
-    exp_times:
-        type: array
-        description: Exposure times.
-        items:
-            type: number
-    filter:
+    obs_time:
+        type: number
+        description: Estimated observing time.
+        default: 0.
+    note:
         type: string
-        description: Filter.
+        description: Survey note.
+        default: ""
+required:
+    - name
+    - ra
+    - dec
+    - rot_sky
 additionalProperties: false
         """
         return yaml.safe_load(schema_yaml)
@@ -87,12 +83,13 @@ additionalProperties: false
 
         self.log.info("Configure started")
 
-        self.target_id = config.target_id
-        self.fieldid = config.fieldid
+        self.name = config.name
         self.ra = config.ra
         self.dec = config.dec
-        self.ang = config.ang
-        self.exp_times = config.exp_times
+        self.rot_sky = config.rot_sky
+        self.estimated_slew_time = config.estimated_slew_time
+        self.obs_time = config.obs_time
+        self.note = config.note
 
         self.log.info("Configure succeeded")
 
@@ -102,9 +99,9 @@ additionalProperties: false
         Parameters
         ----------
         metadata
-
+            Script metadata.
         """
-        metadata.duration = sum(self.exp_times)
+        metadata.duration = self.estimated_slew_time + self.obs_time
 
     async def run(self):
         """Mock standard visit."""
@@ -113,13 +110,11 @@ additionalProperties: false
         await self.checkpoint("start")
 
         self.log.info("Mocking exposure")
-        for i, setup in enumerate(self.instrument_setup):
-            await self.checkpoint(f"exposure {i+1} of {len(self.instrument_setup)}")
-            await asyncio.sleep(setup["exptime"])
+        await asyncio.sleep(1.0)
 
         await self.checkpoint("end")
         self.log.info("Run succeeded")
 
 
 if __name__ == "__main__":
-    asyncio.run(NonStandardVisit.amain())
+    asyncio.run(Slew.amain())
