@@ -3,7 +3,7 @@ pipeline{
         docker {
             alwaysPull true
             image 'ts-dockerhub.lsst.org/conda_package_builder:latest'
-            args "-u root --entrypoint=''"
+            args "--entrypoint=''"
         }
     }
     environment {
@@ -15,9 +15,8 @@ pipeline{
         stage("Build and Upload Documentation"){
             steps{
                 sh """
-                    su - saluser
                     source /home/saluser/.setup.sh
-                    mamba install -y -c lsstts ts-idl ts-utils ts-salobj ts-scriptqueue ts-observatory-model ts-astrosky-model ts-dateloc rubin-sim
+                    mamba install -y -c lsstts ts-idl ts-utils ts-salobj ts-scriptqueue ts-observatory-model ts-astrosky-model ts-dateloc ts-observing rubin-sim
                     pip install -e .
                     pip install -r doc/requirements.txt
                     package-docs build
@@ -28,11 +27,6 @@ pipeline{
         }
     }
     post{
-       always {
-            withEnv(["HOME=${env.WORKSPACE}"]) {
-                sh 'chown -R 1003:1003 ${HOME}/'
-            }
-       }
        cleanup {
             deleteDir()
         }
