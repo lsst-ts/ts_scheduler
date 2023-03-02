@@ -1167,10 +1167,10 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             await self.run_target_loop.wait()
 
             try:
-                if self.need_to_generate_target_queue:
-                    await self.generate_target_queue()
-
                 async with self.target_loop_lock:
+                    if self.need_to_generate_target_queue:
+                        await self.generate_target_queue()
+
                     # If it is the first pass get the current queue, otherwise
                     # wait for the queue to change or get the latest if there's
                     # some
