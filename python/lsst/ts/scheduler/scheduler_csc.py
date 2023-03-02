@@ -401,6 +401,12 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         if self.run_target_loop.is_set():
             raise RuntimeError("Target production loop already running.")
 
+        await self.cmd_resume.ack_in_progress(
+            data,
+            timeout=self.default_command_timeout,
+            result="Resuming Scheduler operation.",
+        )
+
         await self._transition_idle_to_running()
 
         self.run_target_loop.set()
