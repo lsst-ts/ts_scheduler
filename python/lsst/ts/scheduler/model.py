@@ -414,7 +414,7 @@ class Model:
         """
         return self.raw_telemetry["scheduled_targets"]
 
-    def callback_script_info(self, data: BaseDdsDataType) -> None:
+    async def callback_script_info(self, data: BaseDdsDataType) -> None:
         """This callback function will store in a dictionary information about
         the scripts.
 
