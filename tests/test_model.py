@@ -132,7 +132,7 @@ class TestModel(unittest.IsolatedAsyncioTestCase):
         assert scheduled_target_info.unrecognized == []
 
         # Target 10000 in the queue
-        self.add_script(sal_index=10000)
+        await self.add_script(sal_index=10000)
 
         # 1 target in the queue
         scheduled_target_info = await self.model.check_scheduled_targets()
@@ -142,8 +142,8 @@ class TestModel(unittest.IsolatedAsyncioTestCase):
         assert scheduled_target_info.unrecognized == []
 
         # Targets 10001 and 10002 in the queue
-        self.add_script(sal_index=10001)
-        self.add_script(sal_index=10002)
+        await self.add_script(sal_index=10001)
+        await self.add_script(sal_index=10002)
 
         # all targets in the queue, all in unknown state
         scheduled_target_info = await self.model.check_scheduled_targets()
@@ -179,9 +179,9 @@ class TestModel(unittest.IsolatedAsyncioTestCase):
 
         self.model.add_scheduled_target(target=target)
 
-        self.add_script(sal_index=10003)
-        self.add_script(sal_index=10004)
-        self.add_script(sal_index=10005)
+        await self.add_script(sal_index=10003)
+        await self.add_script(sal_index=10004)
+        await self.add_script(sal_index=10005)
 
         # One target failed
         self.model.script_info[10003].scriptState = ScriptState.DONE
@@ -196,12 +196,12 @@ class TestModel(unittest.IsolatedAsyncioTestCase):
         assert len(self.model.script_info) == 0
         assert len(self.model.get_scheduled_targets()) == 0
 
-    def add_script(self, sal_index: int) -> None:
+    async def add_script(self, sal_index: int) -> None:
         script_info = types.SimpleNamespace(
             scriptSalIndex=sal_index,
             scriptState=ScriptState.UNKNOWN,
         )
-        self.model.callback_script_info(script_info)
+        await self.model.callback_script_info(script_info)
 
     def get_expected_observing_blocks(self) -> set[str]:
         return {"cwfs", "greedy", "Survey1", "Survey2"}
