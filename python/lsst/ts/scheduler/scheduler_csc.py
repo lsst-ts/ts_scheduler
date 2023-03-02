@@ -401,6 +401,12 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         if self.run_target_loop.is_set():
             raise RuntimeError("Target production loop already running.")
 
+        await self.cmd_resume.ack_in_progress(
+            data,
+            timeout=self.default_command_timeout,
+            result="Resuming Scheduler operation.",
+        )
+
         await self._transition_idle_to_running()
 
         self.run_target_loop.set()
@@ -428,14 +434,18 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         self.run_target_loop.clear()
 
-        if data.abort:
-            async with self.target_loop_lock:
+        self.log.info("Waiting for target loop execution.")
+
+        async with self.target_loop_lock:
+            self.log.info("Stopping scheduler.")
+
+            if data.abort:
                 await self.remove_from_queue(self.model.get_scheduled_targets())
                 self.model.reset_scheduled_targets()
 
-        await self.reset_handle_no_targets_on_queue()
+            await self.reset_handle_no_targets_on_queue()
 
-        await self._transition_running_to_idle()
+            await self._transition_running_to_idle()
 
     async def stop_next_target_timer_task(self):
         if not self.next_target_timer.done():
@@ -1161,10 +1171,10 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             await self.run_target_loop.wait()
 
             try:
-                if self.need_to_generate_target_queue:
-                    await self.generate_target_queue()
-
                 async with self.target_loop_lock:
+                    if self.need_to_generate_target_queue:
+                        await self.generate_target_queue()
+
                     # If it is the first pass get the current queue, otherwise
                     # wait for the queue to change or get the latest if there's
                     # some
