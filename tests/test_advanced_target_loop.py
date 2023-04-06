@@ -357,7 +357,7 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
         # ...and try again. This time the scheduler should stay in enabled and
         # publish targets to the queue.
 
-        def assert_enable(data):
+        async def assert_enable(data):
             """Callback function to make sure scheduler is enabled"""
             self.assertEqual(
                 data.summaryState,
@@ -366,11 +366,11 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
                 "ENABLED to %s" % salobj.State(data.summaryState),
             )
 
-        def count_targets(data):
+        async def count_targets(data):
             """Callback to count received targets"""
             self.received_targets += 1
 
-        def count_heartbeats(data):
+        async def count_heartbeats(data):
             """Callback to count heartbeats"""
             self.heartbeats += 1
 
