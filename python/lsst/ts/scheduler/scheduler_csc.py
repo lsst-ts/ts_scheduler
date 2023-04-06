@@ -33,6 +33,7 @@ import types
 import typing
 
 import numpy as np
+import yaml
 from lsst.ts.astrosky.model import version as astrosky_version
 from lsst.ts.dateloc import version as dateloc_version
 from lsst.ts.idl.enums import Scheduler, ScriptQueue
@@ -66,6 +67,7 @@ from .utils.exceptions import (
     UpdateTelemetryError,
 )
 from .utils.parameters import SchedulerCscParameters
+from .utils.types import ValidationRules
 
 
 class SchedulerCSC(salobj.ConfigurableCsc):
@@ -186,7 +188,10 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         # Communication channel with OCS queue.
         self.queue_remote = salobj.Remote(
-            self.domain, "ScriptQueue", index=index, include=["script", "queue"]
+            self.domain,
+            "ScriptQueue",
+            index=index,
+            include=["script", "queue", "configSchema"],
         )
 
         # Communication channel with pointing component to get observatory
@@ -789,6 +794,16 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         await self.evt_surveyTopology.set_write(**survey_topology.as_dict())
 
+        self.log.info("Validating observing blocks.")
+
+        try:
+            await self.validate_observing_blocks()
+        except Exception:
+            self.log.exception("Failed to validate observing blocks.")
+            raise RuntimeError(
+                "Failed to validate observing blocks. Check CSC traceback for more information."
+            )
+
         # Most configurations comes from this single commit hash. I think the
         # other modules could host the version for each one of them
         if hasattr(self, "evt_dependenciesVersions"):
@@ -807,6 +822,51 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             self.log.warning("No 'dependenciesVersions' event.")
 
         await self._publish_settings(settings)
+
+    async def validate_observing_blocks(self) -> None:
+        """Validate observing blocks.
+
+        Notes
+        -----
+        This method will walk through the observing blocks defined in the model
+        and validate their configuration. This includes validating the script
+        configuration.
+        """
+
+        observing_scripts_config_validator = (
+            await self.get_observing_scripts_config_validator()
+        )
+
+        await self.model.validate_observing_blocks(observing_scripts_config_validator)
+
+        await self._publish_block_info()
+
+    async def get_observing_scripts_config_validator(
+        self,
+    ) -> ValidationRules:
+        """Get observing scripts configuration validator.
+
+        Returns
+        -------
+        observing_scripts_config_validator : `ValidationRules`
+            Dictionary with the script name and a boolean indicating if the
+            script is standard or external as key and a configuration
+            validator as value.
+        """
+        observing_scripts_config_validator: ValidationRules = dict()
+
+        for block_id in self.model.observing_blocks:
+            for script in self.model.observing_blocks[block_id].scripts:
+                key = (script.name, script.standard)
+                if key not in observing_scripts_config_validator:
+                    observing_scripts_config_validator[key] = await asyncio.wait_for(
+                        self._get_script_config_validator(
+                            script_name=script.name, standard=script.standard
+                        ),
+                        timeout=self.parameters.cmd_timeout,
+                    )
+
+        return observing_scripts_config_validator
 
     async def get_queue(self, request: bool = True) -> salobj.type_hints.BaseMsgType:
         """Utility method to get the queue.
@@ -1649,6 +1709,59 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         # TODO: (DM-34905) Remove backward compatibility.
         if hasattr(self, "evt_generalInfo"):
             await self.evt_generalInfo.set_write(**general_info)
+
+    async def _publish_block_info(self) -> None:
+        """Publish block information."""
+
+        await self.evt_blockInventory.set_write(
+            ids=",".join(self.model.observing_blocks),
+            status=",".join(
+                [status.name for status in self.model.observing_blocks_status.values()]
+            ),
+        )
+
+    async def _get_script_config_validator(
+        self, script_name: str, standard: bool
+    ) -> salobj.DefaultingValidator:
+        """Get a script configuration validator.
+
+        This method will query the queue for the script configuration and
+        generate a configuration validator for the script.
+
+        Parameters
+        ----------
+        script_name : `str`
+            Name of the SAL Script.
+        standard : `bool`
+            Is the script standard?
+
+        Returns
+        -------
+        `salobj.DefaultingValidator`
+            Script configuration validator.
+        """
+
+        self.queue_remote.evt_configSchema.flush()
+
+        await self.queue_remote.cmd_showSchema.set_start(
+            isStandard=standard,
+            path=script_name,
+            timeout=self.default_command_timeout,
+        )
+
+        script_schema = await self.queue_remote.evt_configSchema.next(
+            flush=False, timeout=self.default_command_timeout
+        )
+        while not (
+            script_schema.path == script_name and script_schema.isStandard == standard
+        ):
+            script_schema = await self.queue_remote.evt_configSchema.next(
+                flush=False, timeout=self.default_command_timeout
+            )
+
+        return salobj.DefaultingValidator(
+            schema=yaml.safe_load(script_schema.configSchema)
+        )
 
     async def _transition_idle_to_running(self) -> None:
         """Transition detailed state from idle to running."""
