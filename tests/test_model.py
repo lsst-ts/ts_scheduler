@@ -24,10 +24,14 @@ import types
 import unittest
 from unittest.mock import AsyncMock, Mock, patch
 
+import yaml
 from lsst.ts.idl.enums.Script import ScriptState
+from lsst.ts.salobj import DefaultingValidator
 
 from lsst.ts.scheduler.driver.driver_target import DriverTarget
 from lsst.ts.scheduler.model import Model
+from lsst.ts.scheduler.utils.csc_utils import BlockStatus
+from lsst.ts.scheduler.utils.types import ValidationRules
 
 TEST_CONFIG_DIR = pathlib.Path(__file__).parents[1].joinpath("tests", "data", "config")
 
@@ -92,6 +96,13 @@ class TestModel(unittest.IsolatedAsyncioTestCase):
         observing_blocks_expected = self.get_expected_observing_blocks()
 
         assert self.model.observing_blocks.keys() == observing_blocks_expected
+
+    async def test_validate_observing_blocks(self) -> None:
+        await self.model.load_observing_blocks("../observing_blocks")
+        observing_scripts_config_validator = (
+            self.get_observing_scripts_config_validator()
+        )
+        await self.model.validate_observing_blocks(observing_scripts_config_validator)
 
     async def test_scheduled_targets(self) -> None:
         self.model.init_telemetry()
@@ -206,6 +217,14 @@ class TestModel(unittest.IsolatedAsyncioTestCase):
     def get_expected_observing_blocks(self) -> set[str]:
         return {"cwfs", "greedy", "Survey1", "Survey2"}
 
+    def get_expected_block_status(self) -> dict[str, BlockStatus]:
+        return {
+            "cwfs": BlockStatus.AVAILABLE,
+            "greedy": BlockStatus.AVAILABLE,
+            "Survey1": BlockStatus.AVAILABLE,
+            "Survey2": BlockStatus.INVALID,
+        }
+
     def get_sample_configuration(self):
         config = types.SimpleNamespace(
             max_scripts=100,
@@ -222,3 +241,15 @@ class TestModel(unittest.IsolatedAsyncioTestCase):
         )
 
         return config
+
+    def get_observing_scripts_config_validator(self) -> ValidationRules:
+        with open(TEST_CONFIG_DIR.parent / "schema" / "cwfs.yaml", "r") as fp:
+            cwfs_schema = yaml.safe_load(fp)
+
+        with open(TEST_CONFIG_DIR.parent / "schema" / "slew.yaml", "r") as fp:
+            slew_schema = yaml.safe_load(fp)
+
+        return {
+            ("cwfs.py", False): DefaultingValidator(cwfs_schema),
+            ("slew.py", True): DefaultingValidator(slew_schema),
+        }
