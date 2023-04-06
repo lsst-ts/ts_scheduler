@@ -271,6 +271,10 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         self.queue_remote.evt_script.callback = self.model.callback_script_info
 
     async def begin_start(self, data):
+        self.log.info("Starting Scheduler CSC...")
+
+        await asyncio.sleep(self.heartbeat_interval / 2.0)
+
         await self.cmd_start.ack_in_progress(
             data,
             timeout=self.default_command_timeout,
@@ -297,6 +301,10 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             Command data
 
         """
+
+        self.log.info("Enabling Scheduler CSC...")
+
+        await asyncio.sleep(self.heartbeat_interval / 2.0)
 
         await self.cmd_enable.ack_in_progress(
             data,
@@ -378,6 +386,9 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             Command data
 
         """
+
+        await asyncio.sleep(self.heartbeat_interval / 2)
+
         await self.cmd_disable.ack_in_progress(
             data,
             timeout=self.default_command_timeout,
@@ -403,18 +414,23 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         self.assert_enabled()
 
-        if self.run_target_loop.is_set():
-            raise RuntimeError("Target production loop already running.")
+        async with self.target_loop_lock:
+            if self.run_target_loop.is_set():
+                raise RuntimeError("Target production loop already running.")
 
-        await self.cmd_resume.ack_in_progress(
-            data,
-            timeout=self.default_command_timeout,
-            result="Resuming Scheduler operation.",
-        )
+            self.log.info("Resuming Scheduler operations...")
 
-        await self._transition_idle_to_running()
+            await asyncio.sleep(self.heartbeat_interval)
 
-        self.run_target_loop.set()
+            await self.cmd_resume.ack_in_progress(
+                data,
+                timeout=self.default_command_timeout,
+                result="Resuming Scheduler operation.",
+            )
+
+            await self._transition_idle_to_running()
+
+            self.run_target_loop.set()
 
     async def do_stop(self, data):
         """Stop target production loop.
@@ -430,6 +446,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         if not self.run_target_loop.is_set():
             raise RuntimeError("Target production loop is not running.")
+
+        await asyncio.sleep(self.heartbeat_interval / 2)
 
         await self.cmd_stop.ack_in_progress(
             data,
