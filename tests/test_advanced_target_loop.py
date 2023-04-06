@@ -134,6 +134,29 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
                 )
                 assert DetailedState(detailed_state.substate) == expected_detailed_state
 
+    async def test_fail_enable_if_no_queue(self):
+        """Test the simple target production loop.
+
+        This test makes sure the scheduler will go to a fault state if it is
+        enabled and the queue is not enabled.
+        """
+        # Send Queue to STANDBY
+        await salobj.set_summary_state(self.queue_remote, salobj.State.STANDBY)
+
+        # Enable Scheduler
+        with self.assertRaisesRegex(
+            RuntimeError,
+            expected_regex=(
+                "Failed to validate observing blocks. "
+                "Check CSC traceback for more information."
+            ),
+        ):
+            await salobj.set_summary_state(
+                self.scheduler_remote,
+                salobj.State.ENABLED,
+                override="advance_target_loop_sequential.yaml",
+            )
+
     async def test_no_queue(self):
         """Test the simple target production loop.
 
