@@ -4,7 +4,7 @@
     "constraints": [],
     "scripts": [
         {
-            "name": "slew",
+            "name": "slew.py",
             "standard": true,
             "parameters": {
                 "name": "$name",
@@ -17,7 +17,7 @@
             }
         },
         {
-            "name": "standard_visit",
+            "name": "standard_visit.py",
             "standard": true,
             "parameters": {
                 "exp_times": "$exp_times",

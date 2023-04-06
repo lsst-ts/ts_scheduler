@@ -4,12 +4,12 @@
     "constraints": [],
     "scripts": [
         {
-            "name": "cwfs",
+            "name": "cwfs.py",
             "standard": false,
             "parameters": {
                 "find_target": {
                     "az": "$az",
-                    "el": "$el",
+                    "el": "$alt",
                     "mag_limit": 8.0
                 },
                 "program": "$program"

@@ -149,8 +149,8 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
         # to ENABLE and then to FAULT. It may take some time for the scheduler
         # to go to FAULT state.
 
-        # Make sure Queue is in STANDBY
-        await salobj.set_summary_state(self.queue_remote, salobj.State.STANDBY)
+        # Make sure Queue needs to be in ENABLED before enabling the Scheduler.
+        await salobj.set_summary_state(self.queue_remote, salobj.State.ENABLED)
 
         # Enable Scheduler
         await salobj.set_summary_state(
@@ -158,6 +158,9 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
             salobj.State.ENABLED,
             override="advance_target_loop_sequential.yaml",
         )
+
+        # Send Queue to STANDBY
+        await salobj.set_summary_state(self.queue_remote, salobj.State.STANDBY)
 
         self.scheduler_remote.evt_detailedState.flush()
 

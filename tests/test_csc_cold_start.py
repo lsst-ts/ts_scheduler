@@ -129,6 +129,56 @@ class TestSchedulerCscColdStart(
             if self.csc.model.driver.observation_database_name.exists():
                 self.csc.model.driver.observation_database_name.unlink()
 
+    @contextlib.asynccontextmanager
+    async def make_script_queue(self, running: bool) -> None:
+        self.log.debug("Make queue.")
+        async with salobj.Controller("ScriptQueue", index=1) as queue:
+
+            async def show_schema(data) -> None:
+                self.log.debug(f"Show schema: {data}")
+                await queue.evt_configSchema.set_write(
+                    path=data.path,
+                    isStandard=data.isStandard,
+                    configSchema="""
+$schema: http://json-schema.org/draft-07/schema#
+type: object
+properties:
+    name:
+        type: string
+        description: Target name.
+    ra:
+        type: string
+        description: >-
+            The right ascension of the target in hexagesimal format,
+            e.g. HH:MM:SS.S.
+    dec:
+        type: string
+        description: >-
+            The declination of the target in hexagesimal format,
+            e.g. DD:MM:SS.S.
+    rot_sky:
+        type: number
+        description: The sky angle (degrees) of the target.
+    estimated_slew_time:
+        type: number
+        description: Estimated slew time (seconds).
+        default: 0.
+    obs_time:
+        type: number
+        description: Estimated observing time (seconds).
+        default: 0.
+    note:
+        type: string
+        description: Survey note.
+        default: ""
+additionalProperties: true
+                    """,
+                )
+
+            queue.cmd_showSchema.callback = show_schema
+            await queue.evt_queue.set_write(running=running)
+            yield
+
     def _get_configuration(
         self, startup_database: str, scheduler_config_path: str
     ) -> str:
@@ -173,7 +223,7 @@ maintel:
                 config_dir=TEST_CONFIG_DIR,
                 initial_state=salobj.State.STANDBY,
                 simulation_mode=SchedulerModes.MOCKS3,
-            ):
+            ), self.make_script_queue(running=True):
                 await self.wait_lifeness()
 
                 with self.assertLogs(self.csc.log, level=logging.DEBUG) as csc_logs:
@@ -201,7 +251,7 @@ maintel:
                 config_dir=TEST_CONFIG_DIR,
                 initial_state=salobj.State.STANDBY,
                 simulation_mode=SchedulerModes.MOCKS3,
-            ):
+            ), self.make_script_queue(running=True):
                 await self.wait_lifeness()
 
                 with self.assertLogs(self.csc.log, level=logging.DEBUG) as csc_logs:
@@ -232,7 +282,7 @@ maintel:
                 config_dir=TEST_CONFIG_DIR,
                 initial_state=salobj.State.STANDBY,
                 simulation_mode=SchedulerModes.MOCKS3,
-            ):
+            ), self.make_script_queue(running=True):
                 await self.wait_lifeness()
 
                 expected_error_msg = (
@@ -267,7 +317,7 @@ maintel:
                 config_dir=TEST_CONFIG_DIR,
                 initial_state=salobj.State.STANDBY,
                 simulation_mode=SchedulerModes.MOCKS3,
-            ):
+            ), self.make_script_queue(running=True):
                 await self.wait_lifeness()
 
                 with self.assertLogs(self.csc.log, level=logging.DEBUG) as csc_logs:
@@ -301,7 +351,7 @@ maintel:
                 config_dir=TEST_CONFIG_DIR,
                 initial_state=salobj.State.STANDBY,
                 simulation_mode=SchedulerModes.MOCKS3,
-            ):
+            ), self.make_script_queue(running=True):
                 await self.wait_lifeness()
 
                 with self.assertLogs(self.csc.log, level=logging.DEBUG) as csc_logs:

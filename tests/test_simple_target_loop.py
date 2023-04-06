@@ -122,12 +122,12 @@ class SimpleTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
         )
         assert data.errorCode == 0
 
-        # Test 1 - Enable scheduler, Queue is not enable. Scheduler should go
-        # to ENABLE and then to FAULT It may take some time for the scheduler
-        # to go to FAULT state.
+        # Test 1 - Enable scheduler, with Queue enabled, then put queue in
+        # standby. Scheduler should go to ENABLE and then to FAULT It may take
+        # some time for the scheduler to go to FAULT state.
 
-        # Make sure Queue is in STANDBY
-        await salobj.set_summary_state(self.queue_remote, salobj.State.STANDBY)
+        # Make sure Queue is in ENABLED so we can enable the scheduler
+        await salobj.set_summary_state(self.queue_remote, salobj.State.ENABLED)
 
         # Enable Scheduler
         await salobj.set_summary_state(
@@ -135,6 +135,9 @@ class SimpleTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
             salobj.State.ENABLED,
             override="simple_target_loop_sequential.yaml",
         )
+
+        # Make sure Queue is in STANDBY
+        await salobj.set_summary_state(self.queue_remote, salobj.State.STANDBY)
 
         # Resume scheduler operation
         await self.scheduler_remote.cmd_resume.start(timeout=STD_TIMEOUT)
