@@ -327,10 +327,9 @@ maintel:
                             state=salobj.State.DISABLED,
                             override=override_path.name,
                         )
-                    except Exception:
+                    finally:
                         for record, message in zip(csc_logs.records, csc_logs.output):
                             self.log.log(record.levelno, message)
-                        raise
 
                 assert (
                     f"INFO:Scheduler.Model:Loading driver {self.driver_type}"
