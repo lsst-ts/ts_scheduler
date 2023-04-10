@@ -273,19 +273,29 @@ class SchedulerCSC(salobj.ConfigurableCsc):
     async def begin_start(self, data):
         self.log.info("Starting Scheduler CSC...")
 
-        await asyncio.sleep(self.heartbeat_interval / 2.0)
-
-        await self.cmd_start.ack_in_progress(
-            data,
-            timeout=self.default_command_timeout,
-            result="Starting CSC.",
+        self._tasks["ack_in_progress_task"] = asyncio.create_task(
+            self._cmd_start_ack_in_progress(data)
         )
 
         try:
+            await asyncio.sleep(self.heartbeat_interval * 2.0)
             await super().begin_start(data)
         except Exception:
             self.log.exception("Error in begin start")
+            self._tasks["ack_in_progress_task"].cancel()
             raise
+
+    async def end_start(self, data):
+        self._tasks["ack_in_progress_task"].cancel()
+
+        try:
+            await self._tasks["ack_in_progress_task"]
+        except asyncio.CancelledError:
+            pass
+        except Exception:
+            self.log.exception("Error stopping ack in progress task.")
+        finally:
+            self._tasks.pop("ack_in_progress_task", None)
 
     async def begin_enable(self, data):
         """Begin do_enable.
@@ -1815,6 +1825,32 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 for task_name in self._tasks
             ]
         )
+
+    async def _cmd_start_ack_in_progress(
+        self, data: salobj.type_hints.BaseDdsDataType
+    ) -> None:
+        """Continuously send in progress acknowledgements.
+
+        This coroutine is supposed to run in the background while the start
+        command is running to make sure it is continuously informing the
+        requestor that the command is still active. This is required because
+        the start command may take a long time to execute as it performs
+        several tasks. Instead of providing a really long timeout, it is
+        more robust to simply continuously send in progress. If the CSC gets
+        stuck or crashes the ack's will stop and the command will timeout.
+
+        Parameters
+        ----------
+        data : `salobj.type_hints.BaseDdsDataType`
+            Command payload.
+        """
+        while True:
+            await self.cmd_start.ack_in_progress(
+                data,
+                timeout=self.default_command_timeout,
+                result="Start command still in progress.",
+            )
+            await asyncio.sleep(0.5)
 
     async def _stop_background_task(self, task_name) -> None:
         """Stop a background task.
