@@ -26,6 +26,7 @@ __all__ = [
     "support_command",
     "OBSERVATION_NAMED_PARAMETERS",
     "set_detailed_state",
+    "BlockStatus",
 ]
 
 import enum
@@ -106,6 +107,30 @@ class DetailedState(enum.IntEnum):
     COMPUTING_PREDICTED_SCHEDULE = enum.auto()
     # Scheduler is queueing targets.
     QUEUEING_TARGET = enum.auto()
+
+
+class BlockStatus(enum.IntEnum):
+    """Observing block status.
+
+    This enumeration is added here temporarily to support publishing this
+    information with the current version of ts-idl. Once the new version of
+    ts-idl package is released and deployed this can be removed.
+    """
+
+    # Block is invalid.
+    INVALID = enum.auto()
+    # Block is available.
+    AVAILABLE = enum.auto()
+    # Block started executing but did not completed yet.
+    STARTED = enum.auto()
+    # Block is currently executing.
+    EXECUTING = enum.auto()
+    # Block completed.
+    COMPLETED = enum.auto()
+    # Error while executing block.
+    ERROR = enum.auto()
+    # Block was interrupted.
+    INTERRUPTED = enum.auto()
 
 
 def is_uri(uri: str) -> bool:

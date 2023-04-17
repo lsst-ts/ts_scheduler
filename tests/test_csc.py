@@ -195,7 +195,7 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
             config_dir=TEST_CONFIG_DIR,
             initial_state=salobj.State.STANDBY,
             simulation_mode=SchedulerModes.SIMULATION,
-        ), ObservatoryStateMock():
+        ), ObservatoryStateMock(), self.make_script_queue(running=True):
             self.remote.evt_detailedState.flush()
 
             await self.check_standard_state_transitions(
@@ -218,7 +218,7 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
             config_dir=TEST_CONFIG_DIR,
             initial_state=salobj.State.STANDBY,
             simulation_mode=SchedulerModes.SIMULATION,
-        ), ObservatoryStateMock():
+        ), ObservatoryStateMock(), self.make_script_queue(running=True):
             try:
                 invalid_files = glob.glob(
                     os.path.join(TEST_CONFIG_DIR, "invalid_*.yaml")
@@ -253,7 +253,7 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
             config_dir=TEST_CONFIG_DIR,
             initial_state=salobj.State.STANDBY,
             simulation_mode=SchedulerModes.SIMULATION,
-        ), ObservatoryStateMock():
+        ), ObservatoryStateMock(), self.make_script_queue(running=True):
             try:
                 test_files = glob.glob(os.path.join(TEST_CONFIG_DIR, "valid_*.yaml"))
                 valid_config_names = [os.path.basename(name) for name in test_files]
@@ -279,7 +279,7 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
             config_dir=TEST_CONFIG_DIR,
             initial_state=salobj.State.STANDBY,
             simulation_mode=SchedulerModes.SIMULATION,
-        ), ObservatoryStateMock():
+        ), ObservatoryStateMock(), self.make_script_queue(running=True):
             config = (
                 pathlib.Path(__file__)
                 .parents[1]
@@ -316,7 +316,7 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
             config_dir=TEST_CONFIG_DIR,
             initial_state=salobj.State.STANDBY,
             simulation_mode=SchedulerModes.MOCKS3,
-        ), ObservatoryStateMock():
+        ), ObservatoryStateMock(), self.make_script_queue(running=True):
             try:
                 await salobj.set_summary_state(
                     self.remote,
@@ -379,7 +379,7 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
             config_dir=TEST_CONFIG_DIR,
             initial_state=salobj.State.STANDBY,
             simulation_mode=SchedulerModes.MOCKS3,
-        ), ObservatoryStateMock():
+        ), ObservatoryStateMock(), self.make_script_queue(running=True):
             try:
                 await salobj.set_summary_state(
                     self.remote,
@@ -423,6 +423,49 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
     async def make_script_queue(self, running: bool) -> None:
         self.log.debug("Make queue.")
         async with salobj.Controller("ScriptQueue", index=1) as queue:
+
+            async def show_schema(data) -> None:
+                self.log.debug(f"Show schema: {data}")
+                await queue.evt_configSchema.set_write(
+                    path=data.path,
+                    isStandard=data.isStandard,
+                    configSchema="""
+$schema: http://json-schema.org/draft-07/schema#
+type: object
+properties:
+    name:
+        type: string
+        description: Target name.
+    ra:
+        type: string
+        description: >-
+            The right ascension of the target in hexagesimal format,
+            e.g. HH:MM:SS.S.
+    dec:
+        type: string
+        description: >-
+            The declination of the target in hexagesimal format,
+            e.g. DD:MM:SS.S.
+    rot_sky:
+        type: number
+        description: The sky angle (degrees) of the target.
+    estimated_slew_time:
+        type: number
+        description: Estimated slew time (seconds).
+        default: 0.
+    obs_time:
+        type: number
+        description: Estimated observing time (seconds).
+        default: 0.
+    note:
+        type: string
+        description: Survey note.
+        default: ""
+additionalProperties: true
+                    """,
+                )
+
+            queue.cmd_showSchema.callback = show_schema
             await queue.evt_queue.set_write(running=running)
             yield
 

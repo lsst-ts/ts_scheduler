@@ -134,6 +134,29 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
                 )
                 assert DetailedState(detailed_state.substate) == expected_detailed_state
 
+    async def test_fail_enable_if_no_queue(self):
+        """Test the simple target production loop.
+
+        This test makes sure the scheduler will go to a fault state if it is
+        enabled and the queue is not enabled.
+        """
+        # Send Queue to STANDBY
+        await salobj.set_summary_state(self.queue_remote, salobj.State.STANDBY)
+
+        # Enable Scheduler
+        with self.assertRaisesRegex(
+            RuntimeError,
+            expected_regex=(
+                "Failed to validate observing blocks. "
+                "Check CSC traceback for more information."
+            ),
+        ):
+            await salobj.set_summary_state(
+                self.scheduler_remote,
+                salobj.State.ENABLED,
+                override="advance_target_loop_sequential.yaml",
+            )
+
     async def test_no_queue(self):
         """Test the simple target production loop.
 
@@ -149,8 +172,8 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
         # to ENABLE and then to FAULT. It may take some time for the scheduler
         # to go to FAULT state.
 
-        # Make sure Queue is in STANDBY
-        await salobj.set_summary_state(self.queue_remote, salobj.State.STANDBY)
+        # Make sure Queue needs to be in ENABLED before enabling the Scheduler.
+        await salobj.set_summary_state(self.queue_remote, salobj.State.ENABLED)
 
         # Enable Scheduler
         await salobj.set_summary_state(
@@ -158,6 +181,9 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
             salobj.State.ENABLED,
             override="advance_target_loop_sequential.yaml",
         )
+
+        # Send Queue to STANDBY
+        await salobj.set_summary_state(self.queue_remote, salobj.State.STANDBY)
 
         self.scheduler_remote.evt_detailedState.flush()
 
@@ -331,7 +357,7 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
         # ...and try again. This time the scheduler should stay in enabled and
         # publish targets to the queue.
 
-        def assert_enable(data):
+        async def assert_enable(data):
             """Callback function to make sure scheduler is enabled"""
             self.assertEqual(
                 data.summaryState,
@@ -340,11 +366,11 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
                 "ENABLED to %s" % salobj.State(data.summaryState),
             )
 
-        def count_targets(data):
+        async def count_targets(data):
             """Callback to count received targets"""
             self.received_targets += 1
 
-        def count_heartbeats(data):
+        async def count_heartbeats(data):
             """Callback to count heartbeats"""
             self.heartbeats += 1
 

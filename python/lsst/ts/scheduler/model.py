@@ -31,6 +31,7 @@ import typing
 import urllib.request
 
 import numpy as np
+from jsonschema import ValidationError
 from lsst.ts.astrosky.model import AstronomicalSkyModel
 from lsst.ts.dateloc import ObservatoryLocation
 from lsst.ts.idl.enums import Script
@@ -45,9 +46,16 @@ from .driver import Driver, DriverFactory, DriverType
 from .driver.driver_target import DriverTarget
 from .driver.survey_topology import SurveyTopology
 from .telemetry_stream_handler import TelemetryStreamHandler
-from .utils.csc_utils import FailedStates, NonFinalStates, is_uri, is_valid_efd_query
+from .utils.csc_utils import (
+    BlockStatus,
+    FailedStates,
+    NonFinalStates,
+    is_uri,
+    is_valid_efd_query,
+)
 from .utils.exceptions import UpdateTelemetryError
 from .utils.scheduled_targets_info import ScheduledTargetsInfo
+from .utils.types import ValidationRules
 
 
 class Model:
@@ -112,6 +120,7 @@ class Model:
 
         # Dictionary to store observing blocks
         self.observing_blocks: dict[str, observing.ObservingBlock] = dict()
+        self.observing_blocks_status: dict[str, BlockStatus] = dict()
 
         # Scheduler driver instance.
         self.driver: Driver | None = None
@@ -248,6 +257,45 @@ class Model:
         for observing_block_file in path_observing_blocks.glob("*.json"):
             observing_block = observing.ObservingBlock.parse_file(observing_block_file)
             self.observing_blocks[observing_block.program] = observing_block
+            self.observing_blocks_status[
+                observing_block.program
+            ] = BlockStatus.AVAILABLE
+
+    async def validate_observing_blocks(
+        self, observing_scripts_config_validator: ValidationRules
+    ) -> None:
+        """Validate observing blocks script configurations.
+
+        Parameters
+        ----------
+        observing_scripts_config_validator : `ValidationRules`
+            Dictionary with script configuration validator.
+        """
+
+        for block_id in self.observing_blocks:
+            target_validate = DriverTarget(
+                observing_block=self.observing_blocks[block_id]
+            )
+            observing_block = target_validate.get_observing_block()
+            for script in observing_block.scripts:
+                key = (script.name, script.standard)
+                try:
+                    observing_scripts_config_validator[key].validate(script.parameters)
+                except ValidationError as validation_error:
+                    self.log.error(
+                        f"Script {script.name} from observing block {block_id} failed validation: "
+                        f"{validation_error.message}."
+                    )
+                    self.observing_blocks_status[block_id] = BlockStatus.INVALID
+                    break
+                except Exception:
+                    self.log.exception(
+                        f"Failed to validate script {script.name} from observing block {block_id}."
+                    )
+                    self.observing_blocks_status[block_id] = BlockStatus.INVALID
+                    break
+                else:
+                    self.observing_blocks_status[block_id] = BlockStatus.AVAILABLE
 
     async def configure_driver(self, config: typing.Any) -> SurveyTopology:
         """Load driver for selected scheduler and configure its basic

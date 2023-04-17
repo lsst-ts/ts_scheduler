@@ -31,11 +31,19 @@ v2.0.0
   For now only implement the integration with the scheduling algorithm throught the ``Model`` class.
   Future updates will include the capability to execute user-defined observing blocks.
 
+    * Make some improvement in long running commands such that they wait a fraction of a heartbeat to send the in progress ack.
+
+    * Implement method to validate observing blocks and publish block info.
+
+    * Move code that publishes the settings events into a new method ``_publish_settings``.
+
 * In ``model.py``:
 
   * Major refactor of the ``Model`` class to implement the observing block feature.
 
   * Refactor ``Model.load_driver`` to use new ``DriverFactory`` class to load the driver instance.
+
+  * Add method to validate observing blocks when configuring the model.
 
 * Add new submodule ``driver/driver_factory.py``, defining a ``DriverFactory`` class.
 
@@ -56,7 +64,11 @@ v2.0.0
 
 * In ``utils/fbs_utils.py``, minor cosmetic update in ``SchemaConverter`` to extract the code that converts and opsim database into a pandas dataframe into its own method.
 
-* In ``utils/csc_utils.py``, add new ``FailedStates`` set to include all the possible failed states a script might have.
+* In ``utils/csc_utils.py``:
+
+  * Add new ``FailedStates`` set to include all the possible failed states a script might have.
+
+  * Add new ``BlockStatus`` enumeration.
 
 * In ``driver/survey_topology.py``, implement some minor cosmetic improvements to ``SurveyTopology`` class.
 
@@ -77,6 +89,8 @@ v2.0.0
   This package has the modules required to interface with the "observing blocks", which is the main change introduce in this branch.
 
 * Update pre commit config file.
+
+* Add new ``utils/types`` submodule to hold type aliases definitions.
 
 v1.20.0
 -------

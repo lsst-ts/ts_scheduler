@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-__all__ = ["StandardVisit"]
+__all__ = ["CWFS"]
 
 import asyncio
 
@@ -7,8 +7,8 @@ import yaml
 from lsst.ts.salobj import BaseScript
 
 
-class StandardVisit(BaseScript):
-    """A dummy standard visit script to test the scheduler interaction with
+class CWFS(BaseScript):
+    """A dummy non standard visit script to test the scheduler interaction with
     the queue.
 
     Parameters
@@ -24,10 +24,7 @@ class StandardVisit(BaseScript):
     def __init__(self, index, descr=""):
         super().__init__(index=index, descr=descr)
 
-        self.filter = None
-        self.exp_times = []
-        self.program = None
-        self.note = ""
+        self.config = None
 
     @classmethod
     def get_schema(cls):
@@ -38,26 +35,32 @@ title: StandardVisit v1
 description: Configuration for StandardVisit.
 type: object
 properties:
-    exp_times:
-        type: array
-        description: Exposure times.
-        items:
-            type: number
-    band_filter:
-        anyOf:
-            - type: string
-            - type: "null"
-        description: Filter.
+  find_target:
+    type: object
+    additionalProperties: false
+    required:
+      - az
+      - el
+      - mag_limit
+    description: >-
+        Optional configuration section. Find a target to perform CWFS in the given
+        position and magnitude range. If not specified, the step is ignored.
+    properties:
+      az:
+        type: number
+        description: Azimuth (in degrees) to find a target.
+      el:
+        type: number
+        description: Elevation (in degrees) to find a target.
+      mag_limit:
+        type: number
+        description: Minimum (brightest) V-magnitude limit.
     program:
         type: string
         description: Name of the program these observations are part of.
-    note:
-        type: string
-        description: Note to attribute to these observations.
 required:
-    - exp_times
-    - band_filter
-    - program
+  - find_target
+  - program
 additionalProperties: false
         """
         return yaml.safe_load(schema_yaml)
@@ -65,14 +68,7 @@ additionalProperties: false
     async def configure(self, config):
         """Configure the script."""
 
-        self.log.info("Configure started")
-
-        self.filter = config.band_filter
-        self.exp_times = config.exp_times
-        self.program = config.program
-        self.note = config.note
-
-        self.log.info("Configure succeeded")
+        self.config = config
 
     def set_metadata(self, metadata):
         """Fill in metadata information.
@@ -82,20 +78,12 @@ additionalProperties: false
         metadata
 
         """
-        metadata.duration = sum(self.exp_times)
+        pass
 
     async def run(self):
-        """Mock standard visit."""
-
-        self.log.info("Run started")
-        await self.checkpoint("start")
-
-        self.log.info("Mocking exposure")
+        """Mock cwfs."""
         await asyncio.sleep(1.0)
-
-        await self.checkpoint("end")
-        self.log.info("Run succeeded")
 
 
 if __name__ == "__main__":
-    asyncio.run(StandardVisit.amain())
+    asyncio.run(CWFS.amain())

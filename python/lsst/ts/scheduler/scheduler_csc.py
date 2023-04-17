@@ -33,6 +33,7 @@ import types
 import typing
 
 import numpy as np
+import yaml
 from lsst.ts.astrosky.model import version as astrosky_version
 from lsst.ts.dateloc import version as dateloc_version
 from lsst.ts.idl.enums import Scheduler, ScriptQueue
@@ -66,6 +67,7 @@ from .utils.exceptions import (
     UpdateTelemetryError,
 )
 from .utils.parameters import SchedulerCscParameters
+from .utils.types import ValidationRules
 
 
 class SchedulerCSC(salobj.ConfigurableCsc):
@@ -186,7 +188,10 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         # Communication channel with OCS queue.
         self.queue_remote = salobj.Remote(
-            self.domain, "ScriptQueue", index=index, include=["script", "queue"]
+            self.domain,
+            "ScriptQueue",
+            index=index,
+            include=["script", "queue", "configSchema"],
         )
 
         # Communication channel with pointing component to get observatory
@@ -266,17 +271,31 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         self.queue_remote.evt_script.callback = self.model.callback_script_info
 
     async def begin_start(self, data):
-        await self.cmd_start.ack_in_progress(
-            data,
-            timeout=self.default_command_timeout,
-            result="Starting CSC.",
+        self.log.info("Starting Scheduler CSC...")
+
+        self._tasks["ack_in_progress_task"] = asyncio.create_task(
+            self._cmd_start_ack_in_progress(data)
         )
 
         try:
+            await asyncio.sleep(self.heartbeat_interval * 2.0)
             await super().begin_start(data)
         except Exception:
             self.log.exception("Error in begin start")
+            self._tasks["ack_in_progress_task"].cancel()
             raise
+
+    async def end_start(self, data):
+        self._tasks["ack_in_progress_task"].cancel()
+
+        try:
+            await self._tasks["ack_in_progress_task"]
+        except asyncio.CancelledError:
+            pass
+        except Exception:
+            self.log.exception("Error stopping ack in progress task.")
+        finally:
+            self._tasks.pop("ack_in_progress_task", None)
 
     async def begin_enable(self, data):
         """Begin do_enable.
@@ -292,6 +311,10 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             Command data
 
         """
+
+        self.log.info("Enabling Scheduler CSC...")
+
+        await asyncio.sleep(self.heartbeat_interval / 2.0)
 
         await self.cmd_enable.ack_in_progress(
             data,
@@ -373,6 +396,9 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             Command data
 
         """
+
+        await asyncio.sleep(self.heartbeat_interval / 2)
+
         await self.cmd_disable.ack_in_progress(
             data,
             timeout=self.default_command_timeout,
@@ -398,18 +424,23 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         self.assert_enabled()
 
-        if self.run_target_loop.is_set():
-            raise RuntimeError("Target production loop already running.")
+        async with self.target_loop_lock:
+            if self.run_target_loop.is_set():
+                raise RuntimeError("Target production loop already running.")
 
-        await self.cmd_resume.ack_in_progress(
-            data,
-            timeout=self.default_command_timeout,
-            result="Resuming Scheduler operation.",
-        )
+            self.log.info("Resuming Scheduler operations...")
 
-        await self._transition_idle_to_running()
+            await asyncio.sleep(self.heartbeat_interval)
 
-        self.run_target_loop.set()
+            await self.cmd_resume.ack_in_progress(
+                data,
+                timeout=self.default_command_timeout,
+                result="Resuming Scheduler operation.",
+            )
+
+            await self._transition_idle_to_running()
+
+            self.run_target_loop.set()
 
     async def do_stop(self, data):
         """Stop target production loop.
@@ -425,6 +456,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         if not self.run_target_loop.is_set():
             raise RuntimeError("Target production loop is not running.")
+
+        await asyncio.sleep(self.heartbeat_interval / 2)
 
         await self.cmd_stop.ack_in_progress(
             data,
@@ -789,6 +822,16 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         await self.evt_surveyTopology.set_write(**survey_topology.as_dict())
 
+        self.log.info("Validating observing blocks.")
+
+        try:
+            await self.validate_observing_blocks()
+        except Exception:
+            self.log.exception("Failed to validate observing blocks.")
+            raise RuntimeError(
+                "Failed to validate observing blocks. Check CSC traceback for more information."
+            )
+
         # Most configurations comes from this single commit hash. I think the
         # other modules could host the version for each one of them
         if hasattr(self, "evt_dependenciesVersions"):
@@ -806,139 +849,52 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         else:
             self.log.warning("No 'dependenciesVersions' event.")
 
-        await self.evt_obsSiteConfig.set_write(
-            observatoryName=settings.models["location"]["obs_site"]["name"],
-            latitude=settings.models["location"]["obs_site"]["latitude"],
-            longitude=settings.models["location"]["obs_site"]["longitude"],
-            height=settings.models["location"]["obs_site"]["height"],
+        await self._publish_settings(settings)
+
+    async def validate_observing_blocks(self) -> None:
+        """Validate observing blocks.
+
+        Notes
+        -----
+        This method will walk through the observing blocks defined in the model
+        and validate their configuration. This includes validating the script
+        configuration.
+        """
+
+        observing_scripts_config_validator = (
+            await self.get_observing_scripts_config_validator()
         )
 
-        await self.evt_telescopeConfig.set_write(
-            altitudeMinpos=settings.models["observatory_model"]["telescope"][
-                "altitude_minpos"
-            ],
-            altitudeMaxpos=settings.models["observatory_model"]["telescope"][
-                "altitude_maxpos"
-            ],
-            azimuthMinpos=settings.models["observatory_model"]["telescope"][
-                "azimuth_minpos"
-            ],
-            azimuthMaxpos=settings.models["observatory_model"]["telescope"][
-                "azimuth_maxpos"
-            ],
-            altitudeMaxspeed=settings.models["observatory_model"]["telescope"][
-                "altitude_maxspeed"
-            ],
-            altitudeAccel=settings.models["observatory_model"]["telescope"][
-                "altitude_accel"
-            ],
-            altitudeDecel=settings.models["observatory_model"]["telescope"][
-                "altitude_decel"
-            ],
-            azimuthMaxspeed=settings.models["observatory_model"]["telescope"][
-                "azimuth_maxspeed"
-            ],
-            azimuthAccel=settings.models["observatory_model"]["telescope"][
-                "azimuth_accel"
-            ],
-            azimuthDecel=settings.models["observatory_model"]["telescope"][
-                "azimuth_decel"
-            ],
-            settleTime=settings.models["observatory_model"]["telescope"]["settle_time"],
-        )
+        await self.model.validate_observing_blocks(observing_scripts_config_validator)
 
-        await self.evt_rotatorConfig.set_write(
-            positionMin=settings.models["observatory_model"]["rotator"]["minpos"],
-            positionMax=settings.models["observatory_model"]["rotator"]["maxpos"],
-            positionFilterChange=settings.models["observatory_model"]["rotator"][
-                "filter_change_pos"
-            ],
-            speedMax=settings.models["observatory_model"]["rotator"]["maxspeed"],
-            accel=settings.models["observatory_model"]["rotator"]["accel"],
-            decel=settings.models["observatory_model"]["rotator"]["decel"],
-            followSky=settings.models["observatory_model"]["rotator"]["follow_sky"],
-            resumeAngle=settings.models["observatory_model"]["rotator"]["resume_angle"],
-        )
+        await self._publish_block_info()
 
-        await self.evt_domeConfig.set_write(
-            altitudeMaxspeed=settings.models["observatory_model"]["dome"][
-                "altitude_maxspeed"
-            ],
-            altitudeAccel=settings.models["observatory_model"]["dome"][
-                "altitude_accel"
-            ],
-            altitudeDecel=settings.models["observatory_model"]["dome"][
-                "altitude_decel"
-            ],
-            altitudeFreerange=settings.models["observatory_model"]["dome"][
-                "altitude_freerange"
-            ],
-            azimuthMaxspeed=settings.models["observatory_model"]["dome"][
-                "azimuth_maxspeed"
-            ],
-            azimuthAccel=settings.models["observatory_model"]["dome"]["azimuth_accel"],
-            azimuthDecel=settings.models["observatory_model"]["dome"]["azimuth_decel"],
-            azimuthFreerange=settings.models["observatory_model"]["dome"][
-                "azimuth_freerange"
-            ],
-            settleTime=settings.models["observatory_model"]["dome"]["settle_time"],
-        )
+    async def get_observing_scripts_config_validator(
+        self,
+    ) -> ValidationRules:
+        """Get observing scripts configuration validator.
 
-        await self.evt_slewConfig.set_write(
-            prereqDomalt=settings.models["observatory_model"]["slew"]["prereq_domalt"],
-            prereqDomaz=settings.models["observatory_model"]["slew"]["prereq_domaz"],
-            prereqDomazSettle=settings.models["observatory_model"]["slew"][
-                "prereq_domazsettle"
-            ],
-            prereqTelalt=settings.models["observatory_model"]["slew"]["prereq_telalt"],
-            prereqTelaz=settings.models["observatory_model"]["slew"]["prereq_telaz"],
-            prereqTelOpticsOpenLoop=settings.models["observatory_model"]["slew"][
-                "prereq_telopticsopenloop"
-            ],
-            prereqTelOpticsClosedLoop=settings.models["observatory_model"]["slew"][
-                "prereq_telopticsclosedloop"
-            ],
-            prereqTelSettle=settings.models["observatory_model"]["slew"][
-                "prereq_telsettle"
-            ],
-            prereqTelRot=settings.models["observatory_model"]["slew"]["prereq_telrot"],
-            prereqFilter=settings.models["observatory_model"]["slew"]["prereq_filter"],
-            prereqExposures=settings.models["observatory_model"]["slew"][
-                "prereq_exposures"
-            ],
-            prereqReadout=settings.models["observatory_model"]["slew"][
-                "prereq_readout"
-            ],
-        )
+        Returns
+        -------
+        observing_scripts_config_validator : `ValidationRules`
+            Dictionary with the script name and a boolean indicating if the
+            script is standard or external as key and a configuration
+            validator as value.
+        """
+        observing_scripts_config_validator: ValidationRules = dict()
 
-        await self.evt_opticsLoopCorrConfig.set_write(
-            telOpticsOlSlope=settings.models["observatory_model"]["optics_loop_corr"][
-                "tel_optics_ol_slope"
-            ],
-            telOpticsClAltLimit=settings.models["observatory_model"][
-                "optics_loop_corr"
-            ]["tel_optics_cl_alt_limit"],
-            telOpticsClDelay=settings.models["observatory_model"]["optics_loop_corr"][
-                "tel_optics_cl_delay"
-            ],
-        )
+        for block_id in self.model.observing_blocks:
+            for script in self.model.observing_blocks[block_id].scripts:
+                key = (script.name, script.standard)
+                if key not in observing_scripts_config_validator:
+                    observing_scripts_config_validator[key] = await asyncio.wait_for(
+                        self._get_script_config_validator(
+                            script_name=script.name, standard=script.standard
+                        ),
+                        timeout=self.parameters.cmd_timeout,
+                    )
 
-        await self.evt_parkConfig.set_write(
-            telescopeAltitude=settings.models["observatory_model"]["park"][
-                "telescope_altitude"
-            ],
-            telescopeAzimuth=settings.models["observatory_model"]["park"][
-                "telescope_azimuth"
-            ],
-            telescopeRotator=settings.models["observatory_model"]["park"][
-                "telescope_rotator"
-            ],
-            domeAltitude=settings.models["observatory_model"]["park"]["dome_altitude"],
-            domeAzimuth=settings.models["observatory_model"]["park"]["dome_azimuth"],
-            filterPosition=settings.models["observatory_model"]["park"][
-                "filter_position"
-            ],
-        )
+        return observing_scripts_config_validator
 
     async def get_queue(self, request: bool = True) -> salobj.type_hints.BaseMsgType:
         """Utility method to get the queue.
@@ -1602,6 +1558,143 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 **dataclasses.asdict(target.get_observation())
             )
 
+    async def _publish_settings(self, settings) -> None:
+        """Publish settings."""
+
+        await self.evt_obsSiteConfig.set_write(
+            observatoryName=settings.models["location"]["obs_site"]["name"],
+            latitude=settings.models["location"]["obs_site"]["latitude"],
+            longitude=settings.models["location"]["obs_site"]["longitude"],
+            height=settings.models["location"]["obs_site"]["height"],
+        )
+
+        await self.evt_telescopeConfig.set_write(
+            altitudeMinpos=settings.models["observatory_model"]["telescope"][
+                "altitude_minpos"
+            ],
+            altitudeMaxpos=settings.models["observatory_model"]["telescope"][
+                "altitude_maxpos"
+            ],
+            azimuthMinpos=settings.models["observatory_model"]["telescope"][
+                "azimuth_minpos"
+            ],
+            azimuthMaxpos=settings.models["observatory_model"]["telescope"][
+                "azimuth_maxpos"
+            ],
+            altitudeMaxspeed=settings.models["observatory_model"]["telescope"][
+                "altitude_maxspeed"
+            ],
+            altitudeAccel=settings.models["observatory_model"]["telescope"][
+                "altitude_accel"
+            ],
+            altitudeDecel=settings.models["observatory_model"]["telescope"][
+                "altitude_decel"
+            ],
+            azimuthMaxspeed=settings.models["observatory_model"]["telescope"][
+                "azimuth_maxspeed"
+            ],
+            azimuthAccel=settings.models["observatory_model"]["telescope"][
+                "azimuth_accel"
+            ],
+            azimuthDecel=settings.models["observatory_model"]["telescope"][
+                "azimuth_decel"
+            ],
+            settleTime=settings.models["observatory_model"]["telescope"]["settle_time"],
+        )
+
+        await self.evt_rotatorConfig.set_write(
+            positionMin=settings.models["observatory_model"]["rotator"]["minpos"],
+            positionMax=settings.models["observatory_model"]["rotator"]["maxpos"],
+            positionFilterChange=settings.models["observatory_model"]["rotator"][
+                "filter_change_pos"
+            ],
+            speedMax=settings.models["observatory_model"]["rotator"]["maxspeed"],
+            accel=settings.models["observatory_model"]["rotator"]["accel"],
+            decel=settings.models["observatory_model"]["rotator"]["decel"],
+            followSky=settings.models["observatory_model"]["rotator"]["follow_sky"],
+            resumeAngle=settings.models["observatory_model"]["rotator"]["resume_angle"],
+        )
+
+        await self.evt_domeConfig.set_write(
+            altitudeMaxspeed=settings.models["observatory_model"]["dome"][
+                "altitude_maxspeed"
+            ],
+            altitudeAccel=settings.models["observatory_model"]["dome"][
+                "altitude_accel"
+            ],
+            altitudeDecel=settings.models["observatory_model"]["dome"][
+                "altitude_decel"
+            ],
+            altitudeFreerange=settings.models["observatory_model"]["dome"][
+                "altitude_freerange"
+            ],
+            azimuthMaxspeed=settings.models["observatory_model"]["dome"][
+                "azimuth_maxspeed"
+            ],
+            azimuthAccel=settings.models["observatory_model"]["dome"]["azimuth_accel"],
+            azimuthDecel=settings.models["observatory_model"]["dome"]["azimuth_decel"],
+            azimuthFreerange=settings.models["observatory_model"]["dome"][
+                "azimuth_freerange"
+            ],
+            settleTime=settings.models["observatory_model"]["dome"]["settle_time"],
+        )
+
+        await self.evt_slewConfig.set_write(
+            prereqDomalt=settings.models["observatory_model"]["slew"]["prereq_domalt"],
+            prereqDomaz=settings.models["observatory_model"]["slew"]["prereq_domaz"],
+            prereqDomazSettle=settings.models["observatory_model"]["slew"][
+                "prereq_domazsettle"
+            ],
+            prereqTelalt=settings.models["observatory_model"]["slew"]["prereq_telalt"],
+            prereqTelaz=settings.models["observatory_model"]["slew"]["prereq_telaz"],
+            prereqTelOpticsOpenLoop=settings.models["observatory_model"]["slew"][
+                "prereq_telopticsopenloop"
+            ],
+            prereqTelOpticsClosedLoop=settings.models["observatory_model"]["slew"][
+                "prereq_telopticsclosedloop"
+            ],
+            prereqTelSettle=settings.models["observatory_model"]["slew"][
+                "prereq_telsettle"
+            ],
+            prereqTelRot=settings.models["observatory_model"]["slew"]["prereq_telrot"],
+            prereqFilter=settings.models["observatory_model"]["slew"]["prereq_filter"],
+            prereqExposures=settings.models["observatory_model"]["slew"][
+                "prereq_exposures"
+            ],
+            prereqReadout=settings.models["observatory_model"]["slew"][
+                "prereq_readout"
+            ],
+        )
+
+        await self.evt_opticsLoopCorrConfig.set_write(
+            telOpticsOlSlope=settings.models["observatory_model"]["optics_loop_corr"][
+                "tel_optics_ol_slope"
+            ],
+            telOpticsClAltLimit=settings.models["observatory_model"][
+                "optics_loop_corr"
+            ]["tel_optics_cl_alt_limit"],
+            telOpticsClDelay=settings.models["observatory_model"]["optics_loop_corr"][
+                "tel_optics_cl_delay"
+            ],
+        )
+
+        await self.evt_parkConfig.set_write(
+            telescopeAltitude=settings.models["observatory_model"]["park"][
+                "telescope_altitude"
+            ],
+            telescopeAzimuth=settings.models["observatory_model"]["park"][
+                "telescope_azimuth"
+            ],
+            telescopeRotator=settings.models["observatory_model"]["park"][
+                "telescope_rotator"
+            ],
+            domeAltitude=settings.models["observatory_model"]["park"]["dome_altitude"],
+            domeAzimuth=settings.models["observatory_model"]["park"]["dome_azimuth"],
+            filterPosition=settings.models["observatory_model"]["park"][
+                "filter_position"
+            ],
+        )
+
     async def _publish_time_to_next_target(
         self, current_time, wait_time, ra, dec, rot_sky_pos
     ):
@@ -1645,6 +1738,59 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         if hasattr(self, "evt_generalInfo"):
             await self.evt_generalInfo.set_write(**general_info)
 
+    async def _publish_block_info(self) -> None:
+        """Publish block information."""
+
+        await self.evt_blockInventory.set_write(
+            ids=",".join(self.model.observing_blocks),
+            status=",".join(
+                [status.name for status in self.model.observing_blocks_status.values()]
+            ),
+        )
+
+    async def _get_script_config_validator(
+        self, script_name: str, standard: bool
+    ) -> salobj.DefaultingValidator:
+        """Get a script configuration validator.
+
+        This method will query the queue for the script configuration and
+        generate a configuration validator for the script.
+
+        Parameters
+        ----------
+        script_name : `str`
+            Name of the SAL Script.
+        standard : `bool`
+            Is the script standard?
+
+        Returns
+        -------
+        `salobj.DefaultingValidator`
+            Script configuration validator.
+        """
+
+        self.queue_remote.evt_configSchema.flush()
+
+        await self.queue_remote.cmd_showSchema.set_start(
+            isStandard=standard,
+            path=script_name,
+            timeout=self.default_command_timeout,
+        )
+
+        script_schema = await self.queue_remote.evt_configSchema.next(
+            flush=False, timeout=self.default_command_timeout
+        )
+        while not (
+            script_schema.path == script_name and script_schema.isStandard == standard
+        ):
+            script_schema = await self.queue_remote.evt_configSchema.next(
+                flush=False, timeout=self.default_command_timeout
+            )
+
+        return salobj.DefaultingValidator(
+            schema=yaml.safe_load(script_schema.configSchema)
+        )
+
     async def _transition_idle_to_running(self) -> None:
         """Transition detailed state from idle to running."""
 
@@ -1679,6 +1825,32 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 for task_name in self._tasks
             ]
         )
+
+    async def _cmd_start_ack_in_progress(
+        self, data: salobj.type_hints.BaseDdsDataType
+    ) -> None:
+        """Continuously send in progress acknowledgements.
+
+        This coroutine is supposed to run in the background while the start
+        command is running to make sure it is continuously informing the
+        requestor that the command is still active. This is required because
+        the start command may take a long time to execute as it performs
+        several tasks. Instead of providing a really long timeout, it is
+        more robust to simply continuously send in progress. If the CSC gets
+        stuck or crashes the ack's will stop and the command will timeout.
+
+        Parameters
+        ----------
+        data : `salobj.type_hints.BaseDdsDataType`
+            Command payload.
+        """
+        while True:
+            await self.cmd_start.ack_in_progress(
+                data,
+                timeout=self.default_command_timeout,
+                result="Start command still in progress.",
+            )
+            await asyncio.sleep(0.5)
 
     async def _stop_background_task(self, task_name) -> None:
         """Stop a background task.

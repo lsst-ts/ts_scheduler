@@ -63,7 +63,7 @@ properties:
         default: 0.
     obs_time:
         type: number
-        description: Estimated observing time.
+        description: Estimated observing time (seconds).
         default: 0.
     note:
         type: string
