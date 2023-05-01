@@ -12,7 +12,7 @@ The primary classes in the Scheduler CSC are:
 
 * :py:class:`SchedulerCSC <lsst.ts.scheduler.scheduler_csc.SchedulerCSC>`; Commandable SAL Component that manages the interaction with the observatory control system and computes the observing queue.
 
-* :py:class:`Driver <lsst.ts.scheduler.driver.Driver>`; A base class that implements an API for integrating scheduling algoriths in the context of the Rubin Observatoy.
+* :py:class:`Driver <lsst.ts.scheduler.driver.Driver>`; A base class that implements an API for integrating scheduling algorithms in the context of the Rubin Observatory.
 
 These two main classes are intrinsically interconnected, with the :py:class:`SchedulerCSC <lsst.ts.scheduler.scheduler_csc.SchedulerCSC>` using the :py:class:`Driver <lsst.ts.scheduler.driver.Driver>` to generate a list of observations and interacting with the other parts of the observatory control software to execute them.
 While doing so, the SchedulerCSC makes some assumptions about the :py:class:`Driver <lsst.ts.scheduler.driver.Driver>` implementation and overall behavior.
@@ -25,7 +25,7 @@ In the following sections we will explore each one of these modules individually
 Scheduler CSC
 =============
 
-The SchedulerCSC follows the standard definition of CSCs in the context of the Rubin Observatoy Control System.
+The SchedulerCSC follows the standard definition of CSCs in the context of the Rubin Observatory Control System.
 In short the CSC works as follows;
 
 * While in STANDBY state, the CSC will not perform any work, and simply establishes itself as alive and ready.
@@ -39,7 +39,7 @@ In short the CSC works as follows;
 
 * When transitioning from STANDBY to DISABLED, the CSC will re-construct instances to all the objects it needs (:py:class:`Driver <lsst.ts.scheduler.driver.Driver>` and models alike).
 
-  In the default mode of operation this means the CSC will start with bare initilized objects.
+  In the default mode of operation this means the CSC will start with bare initialized objects.
 
   The CSC provides a mechanism to reconstruct state for the :py:class:`Driver <lsst.ts.scheduler.driver.Driver>` through the ``startup_type`` and ``startup_database`` configuration parameters.
 
@@ -59,7 +59,7 @@ In short the CSC works as follows;
   
   In most cases, this simply consists of waiting for the Script to finish executing before adding sending more targets for observations.
 
-  Nervertheless, the SchedulerCSC tries to do more than simply wait.
+  Nevertheless, the SchedulerCSC tries to do more than simply wait.
   If the Script has information about telescope position and duration, the Scheduler CSC will take that information into account when determining the observatory state for future observations.
   For more information see the :ref:`Developer_Guide_Operation_Modes`.
 
@@ -82,36 +82,64 @@ The SchedulerCSC supports three different types of startup modes, that controls 
 Cold Start
 ^^^^^^^^^^
 
-This is the simplest, and default, startup mode.
-In this mode the scheduler will only initialize the driver with the input configuration parameters and will make no additional attempt to reconstruct state.
+This mode of operation will reconstruct the state of the scheduling algorithm from scratch, reconstructing state by playing back observations read from the EFD or from a local sqlite database.
 
-.. _Developer_Guide_Startup_Modes_Warm_Start:
+After performing a fresh configuration (overriding any previous values) the Scheduler will perform the following actions:
 
-Warm Start
-^^^^^^^^^^
+- If startup_database_ is empty; finish startup as soon as the configuration is loaded.
 
-In this mode, the scheduler begins by doing a cold initialization of the driver with its initial settings.
-After initialization, the SchedulerCSC calls the :py:meth:`Driver <lsst.ts.scheduler.driver.Driver.parse_observation_database>`, passing the value of ``startup_database``.
-This method is responsible for reading the input file, in whatever format the specific driver understand and returning a list of :py:class:`Driver <lsst.ts.scheduler.driver_target.DriverTarget>` (or appropriate subclass thereof).
-The list is then fed back into the :py:class:`Driver <lsst.ts.scheduler.driver.Driver>` by sequentially calling :py:meth:`register_observation <lsst.ts.scheduler.driver.Driver.register_observation>`.
+- If startup_database_ points to an existing file path:
 
-Here the SchedulerCSC assumes that calling :py:meth:`register_observation <lsst.ts.scheduler.driver.Driver.register_observation>` is sufficient to reconstruct the state of a previous observation, without the need to call :py:meth:`select_next_target <lsst.ts.scheduler.driver.Driver.select_next_target>`.
+   1.  Assume it is an observations database that the ``Driver`` understands.
+   2.  Call :py:method:`Driver <lsst.ts.scheduler.driver.Driver.parse_observation_database>` to retrieve a list of observations.
+   3.  Call :py:method:`Driver <lsst.ts.scheduler.driver.Driver.cold_start>`, passing in the result of the previous call.
 
-Some implementations may not support this kind of operation.
-In these cases, users must make sure calling :py:meth:`parse_observation_database <lsst.ts.scheduler.driver.Driver.parse_observation_database>` raises an exception to interrupt the SchedulerCSC from attempting to complete the task.
+   If any of these steps fail, it will reject the ``start`` command and remain in STANDBY.
+
+- If neither of the above;
+
+   1.  Assume startup_database_ is an EFD query that retrieves a list of observations.
+   2.  If the result is empty, fail the startup process.
+   3.  Perform the query to the EFD and pass the results to :py:method:`Driver <lsst.ts.scheduler.driver.Driver.cold_start>`.
+
+   If any of these steps fails, it will reject the ``start`` command and remain in STANDBY.
 
 .. _Developer_Guide_Startup_Modes_Hot_Start:
 
 Hot Start
 ^^^^^^^^^
 
-In this mode the SchedulerCSC will also begin by doing a cold initialization of the driver with its initial settings.
-Nervertheless, after the initialization process, the SchedulerCSC calls :py:meth:`reset_from_state <lsst.ts.scheduler.driver.Driver.reset_from_state>`, passing the value of ``startup_database``.
-This method should be able to read a snapshot of the state of the scheduler algorithm that reconstruct a previously stored state.
+This is the most versatile startup mode and is designed to rapidly initialize the scheduler to an operational state.
 
-The snapshot must have a similar format to that generated by calling :py:meth:`Driver.save_state <lsst.ts.scheduler.driver.Driver.save_state>`.
+The scheduler will check if it was previously configured, then perform the following actions;
+   
+- If scheduler algorithm is not configured (first time after a shutdown): 
 
-This mechanism of saving a snapshot and reloading it afterwards is central to the :ref:`Developer_Guide_Operation_Modes_Advance` scheduler mode of operation.
+   1. Perform a fresh driver configuration.
+
+   2. If a startup_database_ is provided, the Scheduler assumes it is a snapshot uri, and overrides the scheduling algorithm with the one indicated by this parameter.
+      If it fails to load the startup database as a snapshot, the start command will be rejected and the Scheduler will remain in standby.
+
+- If yes (scheduler was already configured and is being re-enabled, e.g. after a fault):
+
+   1. Skip driver configuration and retain all previous state.
+      This also means it will ignore any startup_database_ provided.
+
+Note that, to make sure the Scheduler will load a new configuration, one should either use WARM or COLD start.
+When executing in HOT start the Scheduler will default to using an already existing configuration.
+
+.. _Developer_Guide_Startup_Modes_Warm_Start:
+
+Warm Start
+^^^^^^^^^^
+
+This mode of operation works similarly to HOT start except that it always reconfigures the scheduler.
+In this case the Scheduler will perform the following actions:
+
+1. Perform a fresh configuration.
+
+2. If a startup_database_ is provided, the Scheduler assumes it is a snapshot uri, and overrides the scheduling algorithm with the one indicated by this parameter.
+   If it fails to load the startup database as a snapshot, the start command will be rejected and the Scheduler will remain in standby.
 
 .. _Developer_Guide_Operation_Modes:
 
@@ -141,12 +169,12 @@ Advance
 ^^^^^^^
 
 The advanced mode is the one intended for actual operation of the observatory.
-In its current implementation it exercises most of the functional requirements of the SchedulerCSC, but still lacks some important feature, most notably, the capability to compute a predicted queue in a configurable window into the future.
+In its current implementation it exercises most of the functional requirements of the SchedulerCSC.
 
-Nervertheless, the current implementation does have some of the traits that we hope to use as a basis to develop these additional features.
+However, the current implementation does have some of the traits that we hope to use as a basis to develop these additional features.
 
 What this mode currently does is to compute a (configurable) number of targets ahead of time and commit to execute them.
-Furthermore, even though it is commited to execute those observations, it makes no assumption about the outcome of the observations.
+Furthermore, even though it is committed to execute those observations, it makes no assumption about the outcome of the observations.
 This means, it will still handle the cases when the observation is scheduled but fails to be taken.
 
 The Advance mode of operation works like this:
@@ -174,7 +202,7 @@ The Advance mode of operation works like this:
       * Simulate the observation in the observatory model.
       * Register the observation in the driver with :py:meth:`Driver.register_observation <lsst.ts.scheduler.driver.Driver.register_observation>`.
 
-   3. Repeat until ``n_targets`` are generated or if no target is returned in step 1.
+   3. Repeat until n_targets_ are generated or if no target is returned in step 1.
 
 5. Reset the state of the :py:class:`Driver <lsst.ts.scheduler.driver.Driver>` by calling :py:meth:`Driver.reset_from_state <lsst.ts.scheduler.driver.Driver.reset_from_state>` with the file generated in step 3.
 
@@ -211,13 +239,13 @@ This mode is only provided for unit testing purposes and should not be used in g
 Driver
 ======
 
-The Driver provides an interface for integrating different *scheduling algoriths* with the Scheduler CSC.
+The Driver provides an interface for integrating different *scheduling algorithms* with the Scheduler CSC.
 When implementing new *scheduling algorithms*, developers should first subclass :py:class:`Driver <lsst.ts.scheduler.driver.Driver>`.
-The default implementation provides most of the busines logic, leaving to the developer to implement a couple different methods to specify how the application is initialized, configured, consume telemetry and produce targets for observation.
+The default implementation provides most of the business logic, leaving to the developer to implement a couple different methods to specify how the application is initialized, configured, consume telemetry and produce targets for observation.
 
 The standard :py:class:`Driver <lsst.ts.scheduler.driver.Driver>` implementation is paired with a standard set or parameters and a standard target class; :py:class:`DriverParameters <lsst.ts.scheduler.driver.DriverParameters>` and :py:class:`DriverTarget <lsst.ts.scheduler.driver.DriverTarget>`, respectively.
 These only provide some basic parameters used by the Driver in it standard operations.
-Developers can further expand the parameters and the target class on their implementation by subclassing them.
+Developers can further expand the parameters and the target class on their implementation by sub-classing them.
 
 The following is the minimum set of methods that needs to be implemented by the driver:
 
@@ -227,7 +255,7 @@ The following is the minimum set of methods that needs to be implemented by the 
 * :py:meth:`Driver.register_observation <lsst.ts.scheduler.driver.Driver.register_observation>`
 
 With this minimum set of methods implemented it is possible to run some simple integration tests.
-Nervertheless, for real operations of the observatory, the following methods should also be implemented.
+Nevertheless, for real operations of the observatory, the following methods should also be implemented.
 
 * :py:meth:`Driver.save_state <lsst.ts.scheduler.driver.Driver.save_state>`
 * :py:meth:`Driver.parse_observation_database <lsst.ts.scheduler.driver.Driver.parse_observation_database>`
@@ -276,7 +304,7 @@ Code API
 Dependencies
 ============
 
-The Scheduler CSC is a Python salobj based CSC, as such it depends on the Observatoy Control System core packages;
+The Scheduler CSC is a Python salobj based CSC, as such it depends on the Observatory Control System core packages;
 
 * ts_xml
 * ts_sal
@@ -284,9 +312,9 @@ The Scheduler CSC is a Python salobj based CSC, as such it depends on the Observ
 * ts_salobj
 * ts_ddsconfig
 
-For development and testing we recommend using the ``ts-conda-build`` metapackage.
+For development and testing we recommend using the ``ts-conda-build`` meta-package.
 
-Furthermore, the Scheduler has additional test and run dependencies for the models, the supported scheduling algoriths and other observatory control packages (e.g. scriptqueue).
+Furthermore, the Scheduler has additional test and run dependencies for the models, the supported scheduling algorithms and other observatory control packages (e.g. scriptqueue).
 The list includes the following packages, which are available through conda;
 
 * ts-scriptqueue (development and testing only)

@@ -5,14 +5,21 @@ Scheduler Configuration
 #######################
 
 The Scheduler CSC has a set of rich configuration parameters and is organized into sections for the different modules.
+
+At a higher level the Scheduler configuration is separated into a configuration for each of the instances of the CSC; one for the Simonyi Survey Telescope (SST, with index 1) and another for the Auxiliary Telescope (AT, with index 2).
+This allows us to provide a single default file that provides separate parameters for each of its instances.
+
+The top level configurations are:
+
+* s3instance; The Large File Annex S3 instance, for example "tuc" (Tucson Test Stand), "ls" (Base Test Stand), "cp" (summit).
+* maintel; Configuration for the SST.
+* auxtel; Configuration for the AT.
+
 As all other Configurable CSCs in the Vera Rubin Observatory Control System, the primary configuration file consists of a standard yaml file which is validated against a `json schema <https://raw.githubusercontent.com/lsst-ts/ts_scheduler/develop/python/lsst/ts/scheduler/config_schema.py>`__.
 
 Most configuration parameters are defined with appropriate default values, which means users usually won't need to worry about filling most of them.
 
-Nervertheless, unlike most CSCs, the Scheduler CSC has a set of required fields for which appropriate defaults are not provided.
-This means users must always provide a minimum set of parameters.
-
-The Scheduler CSC is part of the "Observatoy Control System" (OCS) group and its configuration files are stored in the `ts_config_ocs <https://github.com/lsst-ts/ts_config_ocs>`__ package.
+The Scheduler CSC is part of the "Observatory Control System" (OCS) group and its configuration files are stored in the `ts_config_ocs <https://github.com/lsst-ts/ts_config_ocs>`__ package.
 
 .. _Configuration_details_required_parameters:
 
@@ -48,7 +55,7 @@ The basic scheduler driver configuration is composed of the following items:
   See default_observing_script_is_standard_ for more information.
 
 Furthermore, this section of the configuration is defined to accept additional parameters values not specified in the configuration schema.
-This allows especialized :py:class:`Driver <lsst.ts.scheduler.driver.Driver>` implementations to receive additional parameters.
+This allows specialized :py:class:`Driver <lsst.ts.scheduler.driver.Driver>` implementations to receive additional parameters.
 
 Even though all the parameters that are defined in the ``driver_configuration`` section have default values, the schema forces the user to provide some configuration.
 The main reason we force the user to provide some configuration is because the ``driver_configuration`` section accepts additional fields that are not specified in the schema.
@@ -87,18 +94,15 @@ These parameters are:
 
 * s3instance; The name of the s3 bucket instance.
 
-  Depending on the operational configuration, the scheduler will save the state of the underlying scheduling algorithm at particular points in time.
-  For logging purposes, the state is stored in the Large File Object Annex (LFOA), which allows observatory personnel to inspect, debug and audit the scheduler aftwerwards.
+  Depending on the operational configuration, the Scheduler CSC will save the state of the underlying scheduling algorithm at particular points in time.
+  For logging purposes, the state is stored in the Large File Object Annex (LFOA), which allows observatory personnel to inspect, debug and audit scheduler operations afterwards.
   To configure the LFOA we need to provide the name of s3 bucket instance through this parameter.
 
 * driver_type; Which driver to configure the Scheduler with.
 
   As we mention throughout this document, the Scheduler CSC can operate with different types of Scheduling Algorithms.
   These algorithms are implemented as subclasses to the base :py:class:`Driver <lsst.ts.scheduler.driver.Driver>` class.
-  This parameter allows the user to select which driver to load.
-  By default the Scheduler CSC implements a set of supported drivers, but this parameter can also point to externally provided options.
-
-  The input is in the format of the module path, e.g.; ``lsst.ts.scheduler.driver.feature_scheduler`` will search and import a subclass of :py:class:`Driver <lsst.ts.scheduler.driver.Driver>` in this module.
+  This parameter allows the user to select which driver to load from a pre-defined set of implemented drivers.
 
   For a list of supported drivers see :ref:`the module API <lsst.ts.scheduler.api>`.
 
@@ -106,112 +110,45 @@ These parameters are:
 
 * startup_type; The method used to startup the scheduler.
 
-  The Scheduler has a couple different startup types that defines how the intenal state of the scheduling algorithm is constructed/re-constructed.
+  The Scheduler has a couple different startup options that defines how the internal state of the scheduling algorithm is constructed/re-constructed.
 
   The available options are:
 
-  * HOT; hot start (default).
+  * COLD: Start from scratch.
+  * HOT: Use previous state.
+  * WARM: Start from an intermediary state.
 
-    This is the most versatile startup mode and is designed to rapidly initialize the scheduler to an operational state.
-
-    The scheduler will check if it was previously configured, then perform the following actions;
-        
-    - If no (first time after a shutdown): 
-    
-      1.  Perform a fresh driver configuration.
-
-      2.  If a startup_database_ is provided, the Scheduler assumes it is a snapshot uri, and overrides the scheduling algorithm with the one indicated by this parameter.
-          If it fails to load the startup database as a snapshot, the start command will be rejected and the Scheduler will remain in standby.
-      
-    - If yes (scheduler was already configured and is being re-enabled, e.g. after a fault):
-
-      1.  Skip driver configuration and retain all previous state.
-          This also means it will ignore any startup_database_ provided.
-
-    Note that, to make sure the Scheduler will load a new configuration, one should either use WARM or COLD start.
-    When executing in HOT start the Scheduler will default to using an already existing configuration.
-
-  * WARM; warm start.
-
-    This mode of operation works similarly to HOT start except that it always reconfigures the scheduler.
-    In this case the Scheduler will perform the following actions:
-
-    1.  Perform a fresh configuration.
-
-    2.  If a startup_database_ is provided, the Scheduler assumes it is a snapshot uri, and overrides the scheduling algorithm with the one indicated by this parameter.
-        If it fails to load the startup database as a snapshot, the start command will be rejected and the Scheduler will remain in standby.
-
-    
-  * COLD; cold start.
-
-    This mode of operation allows one to reconstruct the state of the scheduler by playing back observations read from the EFD or from a local sqlite database.
-
-    After performing a fresh configuration (overriding any previous values) the Scheduler will perform the following actions:
-    
-    - If startup_database_ is empty; finish startup as soon as the configuration is done.
-
-    - If startup_database_ points to an existing file path:
-    
-      1.  Assume it is an observations database that the ``Driver`` understands.
-      2.  Call :py:method:`Driver <lsst.ts.scheduler.driver.Driver.parse_observation_database>` to retrieve a list of observations.
-      3.  Call :py:method:`Driver <lsst.ts.scheduler.driver.Driver.cold_start>`, passing in the result of the previous call.
-
-      If any of these steps fail, it will reject the ``start`` command and remain in STANDBY.
- 
-    - If neither of the above;
-    
-      1.  Assume startup_database_ is an EFD query that retrieves a list of observations.
-      2.  If the result is empty, fail the startup process.
-      3.  Perform the query to the EFD and pass the results to :py:method:`Driver <lsst.ts.scheduler.driver.Driver.cold_start>`.
-
-      If any of these steps fails, it will reject the ``start`` command and remain in STANDBY.
+  For more detailed information on what each option do see :ref:`Developer_Guide_Startup_Modes`.
 
 .. _startup_database:
 
 * startup_database; Path to a file holding scheduler state or observation database to be used on HOT or WARM start.
 
-    The Scheduler CSC doesn't know how to load these databases.
-    The process is entirely handled by the selected driver and the Scheduler is only responsible for initializing the driver and call appropriate methods, passing on this information.
-
 * mode; The mode of operation of the scheduler.
 
-  The scheduler CSC has a couple different modes of operations that defines how it interacts with the ScriptQueue, the telemetry stream and the scheduling algorithm.
+  The Scheduler CSC has several different modes of operations that defines how it interacts with the ScriptQueue, the telemetry stream and the scheduling algorithm.
 
   The available options are:
 
-  * SIMPLE;
+  * SIMPLE,
+  * ADVANCE,
+  * DRY.
 
-    The simple mode of operation causes the scheduler to deal with one target at a time.
-    When operating in this mode the Scheduler will:
-    1. gather telemetry,
-    2. update the driver with the most recent telemetry,
-    3. request one target,
-    4. send the target to the ScriptQueue for execution,
-    5. wait for the script execution to complete,
-    6. if the observation executes successfully, register the observation in the driver.
+  For information about each mode see :ref:`Developer_Guide_Operation_Modes`.
 
-  * ADVANCE;
-
-    The advanced mode of operation is the one intended for real operation.
-    In this mode the Scheduler implements a rather complex look-ahead routine intended to satisfy the scheduler operational requirements.
-    Mode details about this mode can be found in the :ref:`Developer_Guide`.
-
-  * DRY;
-
-    This mode of operation is mostly used for unit testing.
-    In this case, the scheduler does not produce any targets.
+.. _n_targets:
 
 * n_targets; Number of targets to put in the queue ahead of time.
   
-  This parameter is only used when the scheduler is configured with the ADVANCE mode.
-  It specifies how many targets the Scheduler will send to the queue in advance.
+  This parameter is only used when the Scheduler CSC is configured with the ADVANCE mode.
+  It specifies how many targets the Scheduler CSC will send to the ScriptQueue CSC in advance.
 
 * predicted_scheduler_window; Size of predicted scheduler window, in hours.
 
-  This parameter is only used when the scheduler is configured with the ADVANCE mode.
-  It specifies how much futher into the future the Scheduler will predict and publish information about the observing plan.
+  This parameter is only used when the Scheduler CSC is configured with the ADVANCE mode.
+  It specifies how much further into the future the Scheduler CSC will predict and publish information about the observing plan.
 
-  Note that the Scheduler won't necessarily execute the targets it predicts.
+  Note that the Scheduler CSC won't necessarily execute the targets it predicts.
   If the conditions are changing the predicted observations and the actual observations may differ.
 
 * loop_sleep_time; How long should the target production loop wait when there is a wait event. Unit = seconds.
