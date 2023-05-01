@@ -39,15 +39,15 @@ class TestTelemetryStreamHandler(unittest.IsolatedAsyncioTestCase):
             efd_name=self.efd_name,
         )
 
-    async def test_retrive_telemetry_no_stream(self):
+    async def test_retrieve_telemetry_no_stream(self):
         """Test calling retrieve telemetry when no telemetry stream is
         defined.
         """
 
         with self.assertRaises(RuntimeError):
-            await self.telemetry_stream_handler.retrive_telemetry(stream_name="seeing")
+            await self.telemetry_stream_handler.retrieve_telemetry(stream_name="seeing")
 
-    async def test_retrive_telemetry(self):
+    async def test_retrieve_telemetry(self):
         """Test calling retrieve telemetry when no telemetry stream is
         defined.
         """
@@ -67,7 +67,7 @@ class TestTelemetryStreamHandler(unittest.IsolatedAsyncioTestCase):
         )
 
         seeing = (
-            await self.telemetry_stream_handler.retrive_telemetry(stream_name="seeing")
+            await self.telemetry_stream_handler.retrieve_telemetry(stream_name="seeing")
         )[0]
 
         assert np.isfinite(seeing)

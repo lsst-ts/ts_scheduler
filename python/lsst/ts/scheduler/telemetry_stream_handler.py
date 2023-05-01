@@ -190,7 +190,7 @@ class TelemetryStreamHandler:
                 err_msg += f" in {invalid_data[name]['topic']}."
             raise RuntimeError(err_msg)
 
-    async def retrive_telemetry(self, stream_name: str) -> List[float]:
+    async def retrieve_telemetry(self, stream_name: str) -> List[float]:
         """Retrieve telemetry for a given stream.
 
         Parameters

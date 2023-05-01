@@ -1108,7 +1108,9 @@ class Model:
 
                 for telemetry in self.telemetry_stream_handler.telemetry_streams:
                     telemetry_data = (
-                        await self.telemetry_stream_handler.retrive_telemetry(telemetry)
+                        await self.telemetry_stream_handler.retrieve_telemetry(
+                            telemetry
+                        )
                     )
 
                     self.raw_telemetry[telemetry] = (
