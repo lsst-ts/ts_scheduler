@@ -578,6 +578,12 @@ definitions:
                     Length of history to request from the EFD (in seconds).
                   type: number
                   exclusiveMinimum: 0
+                csc_index:
+                  description: Index of the CSC to query data from.
+                  anyOf:
+                    - type: "null"
+                    - type: integer
+                  default: null
                 fill_value:
                   description: >-
                     Which value to assign the telemetry when no data point is
