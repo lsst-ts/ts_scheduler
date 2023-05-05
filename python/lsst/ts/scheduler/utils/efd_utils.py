@@ -163,7 +163,7 @@ async def mock_select_time_series(
 
     number_of_data_points = 10
 
-    index = pandas.date_range(
+    table_index = pandas.date_range(
         start=start.datetime,
         end=end.datetime,
         periods=number_of_data_points,
@@ -173,7 +173,7 @@ async def mock_select_time_series(
 
     result = pandas.DataFrame(
         data=data,
-        index=index,
+        index=table_index,
         columns=fields,
     )
 
