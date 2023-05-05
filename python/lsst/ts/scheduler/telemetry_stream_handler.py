@@ -225,10 +225,11 @@ class TelemetryStreamHandler:
         )
 
         efd_data = await self.efd_client.select_time_series(
-            self.telemetry_streams[stream_name]["efd_table"],
-            self.telemetry_streams[stream_name]["efd_columns"],
-            time_query_start,
-            time_query_end,
+            topic_name=self.telemetry_streams[stream_name]["efd_table"],
+            fields=self.telemetry_streams[stream_name]["efd_columns"],
+            start=time_query_start,
+            end=time_query_end,
+            index=self.telemetry_streams[stream_name]["csc_index"],
         )
 
         telemetry_values = self.get_fill_values_for(stream_name)
