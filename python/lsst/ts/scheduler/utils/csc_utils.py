@@ -35,7 +35,16 @@ from urllib.parse import urlparse
 
 from lsst.ts.idl import get_idl_dir
 from lsst.ts.idl.enums import Script
-from lsst.ts.salobj import parse_idl
+
+DDS_VERSION = True
+try:
+    from lsst.ts.salobj import parse_idl
+except ImportError:
+    import warnings
+
+    warnings.warn("Running kafka version of CSC.", Warning)
+    DDS_VERSION = False
+    from lsst.ts.salobj import ComponentInfo
 
 NonFinalStates = frozenset(
     (
@@ -180,9 +189,17 @@ def support_command(command_name: str) -> bool:
         True if the CSC interface defines the command, False
         otherwise.
     """
-    idl_metadata = parse_idl("Scheduler", get_idl_dir() / "sal_revCoded_Scheduler.idl")
+    component_metadata = (
+        parse_idl("Scheduler", get_idl_dir() / "sal_revCoded_Scheduler.idl")
+        if DDS_VERSION
+        else ComponentInfo("Scheduler", "none")
+    )
 
-    return f"command_{command_name}" in idl_metadata.topic_info
+    return (
+        f"command_{command_name}" in component_metadata.topic_info
+        if DDS_VERSION
+        else f"cmd_{command_name}" in component_metadata.topics
+    )
 
 
 def set_detailed_state(detailed_state):
