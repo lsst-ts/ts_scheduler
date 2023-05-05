@@ -31,6 +31,7 @@ from rubin_sim.data.data_sets import get_data_dir
 from rubin_sim.data.rs_download_sky import MyHTMLParser
 
 from lsst.ts import utils
+from lsst.ts.scheduler.utils.csc_utils import DDS_VERSION
 
 
 def has_required_sky_file(path: pathlib.Path, mjd: float) -> bool:
@@ -172,6 +173,11 @@ def get_skybrightness_data() -> None:
 @pytest.fixture(scope="session", autouse=True)
 def start_ospl_daemon() -> None:
     """Start ospl daemon."""
+
+    if not DDS_VERSION:
+        print("Running non-dds version.")
+        yield
+        return
 
     # Check if a daemon is already running
     output = subprocess.run(["ospl", "status", "-e"])
