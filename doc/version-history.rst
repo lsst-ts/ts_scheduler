@@ -12,6 +12,10 @@ v2.0.0
 .. It will be spread over several PRs untill the feature is fully implemented.
 .. In the meantime use Release Candidate (in the develop branch) to deploy at the summit.
 
+* Update documentation.
+
+* Add support for running CSC with Kafka version of salobj.
+
 * Update unit tests to conform with the refactor done in the code to implement the obsrving block feature.
 
   * Add test observing blocks.
