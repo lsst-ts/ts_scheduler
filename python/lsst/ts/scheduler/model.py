@@ -284,17 +284,22 @@ class Model:
                 except ValidationError as validation_error:
                     self.log.error(
                         f"Script {script.name} from observing block {block_id} failed validation: "
-                        f"{validation_error.message}."
+                        f"{validation_error.message}.\n{script.parameters}"
                     )
                     self.observing_blocks_status[block_id] = BlockStatus.INVALID
                     break
                 except Exception:
                     self.log.exception(
-                        f"Failed to validate script {script.name} from observing block {block_id}."
+                        f"Failed to validate script {script.name} from observing block {block_id} "
+                        f"with:\n{script.parameters}"
                     )
                     self.observing_blocks_status[block_id] = BlockStatus.INVALID
                     break
                 else:
+                    self.log.debug(
+                        f"Successfully validated script {script.name} from {block_id} "
+                        f"with:\n{script.parameters}"
+                    )
                     self.observing_blocks_status[block_id] = BlockStatus.AVAILABLE
 
     async def configure_driver(self, config: typing.Any) -> SurveyTopology:
