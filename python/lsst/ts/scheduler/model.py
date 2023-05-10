@@ -561,7 +561,7 @@ class Model:
                 # one or more script failed
                 report += f"\n\t{target.note} failed. Not registering observation."
                 # Remove related script from the list
-                scheduled_targets_info.failed.extend(sal_indices)
+                scheduled_targets_info.failed.append(target)
                 for index in sal_indices:
                     self.script_info.pop(index)
             else:
