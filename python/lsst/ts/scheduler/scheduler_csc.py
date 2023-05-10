@@ -267,8 +267,9 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         self.s3bucket = None  # Set by `handle_summary_state`.
 
         self.model = Model(log=self.log, config_dir=self.config_dir)
+
         # Add callback to script info
-        self.queue_remote.evt_script.callback = self.model.callback_script_info
+        self.queue_remote.evt_script.callback = self.check_script_info
 
     async def begin_start(self, data):
         self.log.info("Starting Scheduler CSC...")
@@ -956,6 +957,24 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         return queue
 
+    async def check_script_info(self, data: salobj.BaseDdsDataType) -> None:
+        """A callback method to check script info.
+
+        This method will first update the model with the incoming script info
+        then check the scheduled targets. This should allow the Scheduler to
+        cleanup remaining scripts from the ScriptQueue when one Script of
+        a block fails.
+
+        Parameters
+        ----------
+        data : `BaseDdsDataType`
+            Script info topic data.
+        """
+        await self.model.callback_script_info(data=data)
+
+        async with self.target_loop_lock:
+            await self.check_scheduled_targets()
+
     async def check_scheduled_targets(self):
         """Loop through the scheduled targets list, check status and tell
         driver of completed observations.
@@ -975,6 +994,9 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         for target in scheduled_targets_info.observed:
             await self.register_observation(target)
+
+        if len(scheduled_targets_info.failed) > 0:
+            await self.remove_from_queue(scheduled_targets_info.failed)
 
         return (
             len(scheduled_targets_info.failed) == 0
