@@ -493,14 +493,14 @@ class Model:
 
         self.script_info[data.scriptSalIndex] = data
 
-        # Make sure the size of script info is smaller then the maximum allowed
         script_info_size = len(self.script_info)
         if script_info_size > self.max_scripts:
             # Removes old entries
-            for key in self.script_info:
+            items_to_remove = list(self.script_info.keys())[
+                : script_info_size - self.max_scripts
+            ]
+            for key in items_to_remove:
                 del self.script_info[key]
-                if len(self.script_info) < self.max_scripts:
-                    break
 
     async def check_scheduled_targets(self) -> ScheduledTargetsInfo:
         """Loop through the scheduled targets list, check status and tell
