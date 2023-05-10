@@ -532,6 +532,7 @@ class Model:
             ]
 
             if not script_info or len(script_info) != len(sal_indices):
+                report += f"No information on all scripts on queue, put it back and continue: {target}.\n"
                 # No information on all scripts on queue,
                 # put it back and continue
                 self.raw_telemetry["scheduled_targets"].append(target)
@@ -577,15 +578,9 @@ class Model:
                     self.script_info.pop(index)
 
         if report:
-            report_log_level = (
-                logging.DEBUG
-                if len(scheduled_targets_info.failed) == 0
-                and len(scheduled_targets_info.unrecognized) == 0
-                else logging.INFO
-            )
-            self.log.log(
-                level=report_log_level, msg=f"Check scheduled report: {report}"
-            )
+            self.log.info(f"Check scheduled report:\n\n{report}")
+        else:
+            self.log.debug("Nothing to report.")
 
         return scheduled_targets_info
 
