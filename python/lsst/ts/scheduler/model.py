@@ -554,10 +554,6 @@ class Model:
                     self.script_info.pop(index)
                 # target now simply disappears... Should I keep it in for
                 # future refs?
-            elif any([state in NonFinalStates for state in scripts_state]):
-                # one or more script in a non-final state, just put it back on
-                # the list.
-                self.raw_telemetry["scheduled_targets"].append(target)
             elif any([state in FailedStates for state in scripts_state]):
                 # one or more script failed
                 report += f"\n\t{target.note} failed. Not registering observation."
@@ -565,6 +561,10 @@ class Model:
                 scheduled_targets_info.failed.append(target)
                 for index in sal_indices:
                     self.script_info.pop(index)
+            elif any([state in NonFinalStates for state in scripts_state]):
+                # one or more script in a non-final state, just put it back on
+                # the list.
+                self.raw_telemetry["scheduled_targets"].append(target)
             else:
                 report += (
                     (
