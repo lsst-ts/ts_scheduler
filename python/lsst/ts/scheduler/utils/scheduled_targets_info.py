@@ -28,6 +28,6 @@ from ..driver.driver_target import DriverTarget
 
 @dataclass
 class ScheduledTargetsInfo:
-    failed: list[int] = field(default_factory=list)
+    failed: list[DriverTarget] = field(default_factory=list)
     unrecognized: list[int] = field(default_factory=list)
     observed: list[DriverTarget] = field(default_factory=list)
