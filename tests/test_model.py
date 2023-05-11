@@ -104,6 +104,11 @@ class TestModel(unittest.IsolatedAsyncioTestCase):
         )
         await self.model.validate_observing_blocks(observing_scripts_config_validator)
 
+        for block_name in self.model.observing_blocks:
+            for script in self.model.observing_blocks[block_name].scripts:
+                if "name" in script.parameters:
+                    assert script.parameters["name"] == "$name"
+
     async def test_scheduled_targets(self) -> None:
         self.model.init_telemetry()
 
@@ -201,7 +206,12 @@ class TestModel(unittest.IsolatedAsyncioTestCase):
 
         scheduled_target_info = await self.model.check_scheduled_targets()
 
-        assert scheduled_target_info.failed == [10003, 10004, 10005]
+        assert len(scheduled_target_info.failed) == 1
+        assert scheduled_target_info.failed[0].get_sal_indices() == [
+            10003,
+            10004,
+            10005,
+        ]
         assert scheduled_target_info.observed == []
         assert scheduled_target_info.unrecognized == []
         assert len(self.model.script_info) == 0

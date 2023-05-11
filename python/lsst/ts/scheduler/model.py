@@ -274,7 +274,7 @@ class Model:
 
         for block_id in self.observing_blocks:
             target_validate = DriverTarget(
-                observing_block=self.observing_blocks[block_id]
+                observing_block=self.observing_blocks[block_id].copy(deep=True)
             )
             observing_block = target_validate.get_observing_block()
             for script in observing_block.scripts:
@@ -284,17 +284,22 @@ class Model:
                 except ValidationError as validation_error:
                     self.log.error(
                         f"Script {script.name} from observing block {block_id} failed validation: "
-                        f"{validation_error.message}."
+                        f"{validation_error.message}.\n{script.parameters}"
                     )
                     self.observing_blocks_status[block_id] = BlockStatus.INVALID
                     break
                 except Exception:
                     self.log.exception(
-                        f"Failed to validate script {script.name} from observing block {block_id}."
+                        f"Failed to validate script {script.name} from observing block {block_id} "
+                        f"with:\n{script.parameters}"
                     )
                     self.observing_blocks_status[block_id] = BlockStatus.INVALID
                     break
                 else:
+                    self.log.debug(
+                        f"Successfully validated script {script.name} from {block_id} "
+                        f"with:\n{script.parameters}"
+                    )
                     self.observing_blocks_status[block_id] = BlockStatus.AVAILABLE
 
     async def configure_driver(self, config: typing.Any) -> SurveyTopology:
@@ -488,14 +493,14 @@ class Model:
 
         self.script_info[data.scriptSalIndex] = data
 
-        # Make sure the size of script info is smaller then the maximum allowed
         script_info_size = len(self.script_info)
         if script_info_size > self.max_scripts:
             # Removes old entries
-            for key in self.script_info:
+            items_to_remove = list(self.script_info.keys())[
+                : script_info_size - self.max_scripts
+            ]
+            for key in items_to_remove:
                 del self.script_info[key]
-                if len(self.script_info) < self.max_scripts:
-                    break
 
     async def check_scheduled_targets(self) -> ScheduledTargetsInfo:
         """Loop through the scheduled targets list, check status and tell
@@ -527,6 +532,7 @@ class Model:
             ]
 
             if not script_info or len(script_info) != len(sal_indices):
+                report += f"No information on all scripts on queue, put it back and continue: {target}.\n"
                 # No information on all scripts on queue,
                 # put it back and continue
                 self.raw_telemetry["scheduled_targets"].append(target)
@@ -548,17 +554,17 @@ class Model:
                     self.script_info.pop(index)
                 # target now simply disappears... Should I keep it in for
                 # future refs?
-            elif any([state in NonFinalStates for state in scripts_state]):
-                # one or more script in a non-final state, just put it back on
-                # the list.
-                self.raw_telemetry["scheduled_targets"].append(target)
             elif any([state in FailedStates for state in scripts_state]):
                 # one or more script failed
                 report += f"\n\t{target.note} failed. Not registering observation."
                 # Remove related script from the list
-                scheduled_targets_info.failed.extend(sal_indices)
+                scheduled_targets_info.failed.append(target)
                 for index in sal_indices:
                     self.script_info.pop(index)
+            elif any([state in NonFinalStates for state in scripts_state]):
+                # one or more script in a non-final state, just put it back on
+                # the list.
+                self.raw_telemetry["scheduled_targets"].append(target)
             else:
                 report += (
                     (
@@ -572,15 +578,9 @@ class Model:
                     self.script_info.pop(index)
 
         if report:
-            report_log_level = (
-                logging.DEBUG
-                if len(scheduled_targets_info.failed) == 0
-                and len(scheduled_targets_info.unrecognized) == 0
-                else logging.INFO
-            )
-            self.log.log(
-                level=report_log_level, msg=f"Check scheduled report: {report}"
-            )
+            self.log.info(f"Check scheduled report:\n\n{report}")
+        else:
+            self.log.debug("Nothing to report.")
 
         return scheduled_targets_info
 
@@ -1108,7 +1108,9 @@ class Model:
 
                 for telemetry in self.telemetry_stream_handler.telemetry_streams:
                     telemetry_data = (
-                        await self.telemetry_stream_handler.retrive_telemetry(telemetry)
+                        await self.telemetry_stream_handler.retrieve_telemetry(
+                            telemetry
+                        )
                     )
 
                     self.raw_telemetry[telemetry] = (
