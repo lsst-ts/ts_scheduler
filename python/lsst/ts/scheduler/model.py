@@ -213,24 +213,29 @@ class Model:
             Telemetry stream configuration.
         """
 
+        efd_name = config["efd_name"]
+
+        self.log.debug(
+            f"Configuring telemetry stream handler for {efd_name} efd instance."
+        )
+
+        self.telemetry_stream_handler = TelemetryStreamHandler(
+            log=self.log, efd_name=efd_name
+        )
+
         if "streams" not in config:
             self.log.warning(
                 "No telemetry stream defined in configuration. Skipping configuring telemetry streams."
             )
+            await self.telemetry_stream_handler.configure_telemetry_stream(
+                telemetry_stream=[]
+            )
             return
-
-        self.log.debug(
-            f"Configuring telemetry stream handler for {config['efd_name']} efd instance."
-        )
-
-        self.telemetry_stream_handler = TelemetryStreamHandler(
-            log=self.log, efd_name=config["efd_name"]
-        )
 
         self.log.debug("Configuring telemetry stream.")
 
         await self.telemetry_stream_handler.configure_telemetry_stream(
-            config["streams"]
+            telemetry_stream=config["streams"]
         )
 
         for telemetry in self.telemetry_stream_handler.telemetry_streams:
