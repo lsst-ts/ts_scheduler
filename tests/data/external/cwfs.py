@@ -35,6 +35,9 @@ title: StandardVisit v1
 description: Configuration for StandardVisit.
 type: object
 properties:
+  program:
+    type: string
+    description: Name of the program these observations are part of.
   find_target:
     type: object
     additionalProperties: false
@@ -55,9 +58,6 @@ properties:
       mag_limit:
         type: number
         description: Minimum (brightest) V-magnitude limit.
-    program:
-        type: string
-        description: Name of the program these observations are part of.
 required:
   - find_target
   - program
