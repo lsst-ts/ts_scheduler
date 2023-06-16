@@ -748,7 +748,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         for target in targets:
             observing_block = target.get_observing_block()
 
-            self.log.debug(f"Adding target {target.targetid} scripts on the queue.")
+            self.log.info(f"Adding {target=!s} scripts on the queue.")
 
             for script in observing_block.scripts:
                 add_task = await self.queue_remote.cmd_add.set_start(
