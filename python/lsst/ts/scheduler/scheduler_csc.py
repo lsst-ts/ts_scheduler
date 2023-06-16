@@ -1616,10 +1616,14 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         observation : Observation
             Observation to be registered.
         """
-        if hasattr(self, "evt_observation"):
-            await self.evt_observation.set_write(
-                **dataclasses.asdict(target.get_observation())
-            )
+        await self.evt_observation.set_write(
+            **dataclasses.asdict(target.get_observation())
+        )
+        await self._update_block_status(
+            block_id=target.observing_block.program,
+            block_status=BlockStatus.COMPLETED,
+            observing_block=target.get_observing_block(),
+        )
 
     async def _publish_settings(self, settings) -> None:
         """Publish settings."""
