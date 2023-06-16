@@ -61,10 +61,10 @@ class TestModel(unittest.IsolatedAsyncioTestCase):
         await self.model.configure(config)
 
         assert self.model.max_scripts == config.max_scripts
-        assert self.model.raw_telemetry.keys() == {
+        assert set(self.model.raw_telemetry.keys()) == {
             "scheduled_targets",
             "observing_queue",
-        }.union(config.telemetry.keys())
+        }
         assert self.model.models.keys() == {
             "location",
             "observatory_model",
@@ -91,6 +91,10 @@ class TestModel(unittest.IsolatedAsyncioTestCase):
         assert n_targets == 0
 
     async def test_load_observing_block(self) -> None:
+        config = self.get_sample_configuration()
+
+        await self.model.configure(config)
+
         await self.model.load_observing_blocks("../observing_blocks")
 
         observing_blocks_expected = self.get_expected_observing_blocks()
@@ -98,6 +102,10 @@ class TestModel(unittest.IsolatedAsyncioTestCase):
         assert self.model.observing_blocks.keys() == observing_blocks_expected
 
     async def test_validate_observing_blocks(self) -> None:
+        config = self.get_sample_configuration()
+
+        await self.model.configure(config)
+
         await self.model.load_observing_blocks("../observing_blocks")
         observing_scripts_config_validator = (
             self.get_observing_scripts_config_validator()
@@ -110,7 +118,9 @@ class TestModel(unittest.IsolatedAsyncioTestCase):
                     assert script.parameters["name"] == "$name"
 
     async def test_scheduled_targets(self) -> None:
-        self.model.init_telemetry()
+        config = self.get_sample_configuration()
+
+        await self.model.configure(config)
 
         assert len(self.model.get_scheduled_targets()) == 0
 
@@ -225,7 +235,7 @@ class TestModel(unittest.IsolatedAsyncioTestCase):
         await self.model.callback_script_info(script_info)
 
     def get_expected_observing_blocks(self) -> set[str]:
-        return {"cwfs", "greedy", "Survey1", "Survey2"}
+        return {"Survey1", "greedy", "valid-block", "Survey2", "cwfs", "invalid-block"}
 
     def get_expected_block_status(self) -> dict[str, BlockStatus]:
         return {
@@ -233,12 +243,15 @@ class TestModel(unittest.IsolatedAsyncioTestCase):
             "greedy": BlockStatus.AVAILABLE,
             "Survey1": BlockStatus.AVAILABLE,
             "Survey2": BlockStatus.INVALID,
+            "valid-block": BlockStatus.AVAILABLE,
         }
 
     def get_sample_configuration(self):
         config = types.SimpleNamespace(
             max_scripts=100,
-            telemetry=dict(),
+            telemetry=dict(
+                efd_name="unit_test",
+            ),
             models=dict(),
             path_observing_blocks="../observing_blocks",
             startup_type="COLD",
