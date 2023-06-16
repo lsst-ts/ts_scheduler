@@ -38,6 +38,7 @@ from lsst.ts.astrosky.model import version as astrosky_version
 from lsst.ts.dateloc import version as dateloc_version
 from lsst.ts.idl.enums import Scheduler, ScriptQueue
 from lsst.ts.observatory.model import version as obs_mod_version
+from lsst.ts.observing import ObservingBlock
 from rubin_sim.version import __version__ as rubin_sim_version
 
 from lsst.ts import salobj, utils
@@ -47,6 +48,7 @@ from .driver.driver_target import DriverTarget
 from .model import Model
 from .utils.csc_utils import (
     OBSERVATION_NAMED_PARAMETERS,
+    BlockStatus,
     DetailedState,
     SchedulerModes,
     set_detailed_state,
@@ -570,6 +572,31 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         """
         self.assert_enabled()
         raise NotImplementedError("Command not implemented yet.")
+
+    async def _update_block_status(
+        self,
+        block_id: str,
+        block_status: BlockStatus,
+        observing_block: ObservingBlock,
+    ) -> None:
+        self.model.observing_blocks_status[block_id].status = block_status
+        if block_status == BlockStatus.COMPLETED:
+            self.model.observing_blocks_status[block_id].executions_completed += 1
+
+        # publish block event
+        await self.evt_blockStatus.set_write(
+            id=block_id,
+            statusId=block_status.value,
+            status=block_status.name,
+            executionsCompleted=self.model.observing_blocks_status[
+                block_id
+            ].executions_completed,
+            executionsTotal=self.model.observing_blocks_status[
+                block_id
+            ].executions_total,
+            hash=str(observing_block.id),
+            definition=observing_block.json(),
+        )
 
     async def _do_getBlockStatus(self, data):
         """Implement get block status command.
