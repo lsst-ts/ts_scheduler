@@ -28,7 +28,6 @@ import typing
 import unittest
 
 import numpy as np
-
 from lsst.ts import salobj, utils
 from lsst.ts.scheduler import SchedulerCSC
 from lsst.ts.scheduler.mock import ObservatoryStateMock

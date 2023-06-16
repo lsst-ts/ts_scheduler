@@ -23,9 +23,8 @@ import pathlib
 import types
 import unittest
 
-from lsst.ts.observatory.model import Target
-
 from lsst.ts import observing
+from lsst.ts.observatory.model import Target
 from lsst.ts.scheduler.driver import Driver, SurveyTopology
 
 logging.basicConfig()

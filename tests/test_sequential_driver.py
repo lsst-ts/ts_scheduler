@@ -27,12 +27,11 @@ import unittest
 from lsst.ts.astrosky.model import AstronomicalSkyModel
 from lsst.ts.dateloc import ObservatoryLocation
 from lsst.ts.observatory.model import ObservatoryModel, ObservatoryState
+from lsst.ts.scheduler.driver import SequentialScheduler, SurveyTopology
+from lsst.ts.scheduler.utils.test import FeatureSchedulerSim
 from lsst.ts.utils import current_tai
 from rubin_sim.site_models.cloud_model import CloudModel
 from rubin_sim.site_models.seeing_model import SeeingModel
-
-from lsst.ts.scheduler.driver import SequentialScheduler, SurveyTopology
-from lsst.ts.scheduler.utils.test import FeatureSchedulerSim
 
 
 class TestSequentialScheduler(unittest.TestCase):

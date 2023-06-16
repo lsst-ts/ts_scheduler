@@ -26,7 +26,6 @@ import typing
 from dataclasses import dataclass
 
 import pandas
-
 from lsst.ts import observing
 
 from .driver_target import DriverTarget

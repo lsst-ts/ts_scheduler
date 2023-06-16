@@ -27,7 +27,6 @@ from unittest.mock import AsyncMock, Mock, patch
 import yaml
 from lsst.ts.idl.enums.Script import ScriptState
 from lsst.ts.salobj import DefaultingValidator
-
 from lsst.ts.scheduler.driver.driver_target import DriverTarget
 from lsst.ts.scheduler.model import Model
 from lsst.ts.scheduler.utils.csc_utils import BlockStatus

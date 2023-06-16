@@ -19,7 +19,6 @@
 # You should have received a copy of the GNU General Public License
 
 import numpy as np
-
 from lsst.ts import observing
 
 from .driver_target import DriverTarget

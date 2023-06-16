@@ -32,6 +32,7 @@ import urllib.request
 
 import numpy as np
 from jsonschema import ValidationError
+from lsst.ts import observing, utils
 from lsst.ts.astrosky.model import AstronomicalSkyModel
 from lsst.ts.dateloc import ObservatoryLocation
 from lsst.ts.idl.enums import Script
@@ -39,8 +40,6 @@ from lsst.ts.observatory.model import ObservatoryModel, ObservatoryState
 from lsst.ts.salobj.type_hints import BaseDdsDataType
 from rubin_sim.site_models.cloud_model import CloudModel
 from rubin_sim.site_models.seeing_model import SeeingModel
-
-from lsst.ts import observing, utils
 
 from .driver import Driver, DriverFactory, DriverType
 from .driver.driver_target import DriverTarget

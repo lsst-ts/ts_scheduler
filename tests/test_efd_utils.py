@@ -23,7 +23,6 @@ import unittest
 import pandas
 from astropy import units
 from astropy.time import Time, TimeDelta
-
 from lsst.ts.scheduler.utils import get_efd_client, get_mock_efd_client
 
 

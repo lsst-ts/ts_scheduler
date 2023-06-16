@@ -27,11 +27,10 @@ import typing
 import numpy as np
 import pytest
 import requests
-from rubin_sim.data.data_sets import get_data_dir
-from rubin_sim.data.rs_download_sky import MyHTMLParser
-
 from lsst.ts import utils
 from lsst.ts.scheduler.utils.csc_utils import DDS_VERSION
+from rubin_sim.data.data_sets import get_data_dir
+from rubin_sim.data.rs_download_sky import MyHTMLParser
 
 
 def has_required_sky_file(path: pathlib.Path, mjd: float) -> bool:
