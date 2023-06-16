@@ -765,6 +765,12 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             # publishes target event
             await self.evt_target.set_write(**target.as_dict())
 
+            await self._update_block_status(
+                block_id=observing_block.program,
+                block_status=BlockStatus.EXECUTING,
+                observing_block=observing_block,
+            )
+
     async def remove_from_queue(self, targets: list[DriverTarget]) -> None:
         """Given a list of targets, remove them from the queue.
 
