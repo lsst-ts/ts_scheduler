@@ -16,7 +16,7 @@ v2.0.0
 
 * Add support for running CSC with Kafka version of salobj.
 
-* Update unit tests to conform with the refactor done in the code to implement the obsrving block feature.
+* Update unit tests to conform with the refactor done in the code to implement the observing block feature.
 
   * Add test observing blocks.
 
@@ -32,7 +32,7 @@ v2.0.0
 
 * In ``scheduler_csc.py``, major refactor of the ``SchedulerCSC`` to implement the observing block feature.
 
-  For now only implement the integration with the scheduling algorithm throught the ``Model`` class.
+  For now only implement the integration with the scheduling algorithm through the ``Model`` class.
   Future updates will include the capability to execute user-defined observing blocks.
 
     * Make some improvement in long running commands such that they wait a fraction of a heartbeat to send the in progress ack.
@@ -41,6 +41,28 @@ v2.0.0
 
     * Move code that publishes the settings events into a new method ``_publish_settings``.
 
+    * Add new ``idle_to_running``  context manager to handle standalone operations when the scheduler is not running.
+
+    * Use the new ``idle_to_running`` context manager in ``do_computePredictedSchedule`` command.
+
+    * Implement ``addBlock`` command.
+
+    * ``_publish_block_info`` update formatting of ``evt_blockInventory`` ``status`` due to changes in the ``Model`` class.
+
+    * Update reformatting in ``_publish_settings`` method.
+
+    * ``register_observation``, remove backward compatibility check and update observing block status (by calling ``_update_block_status``).
+
+    * Update ``queue_targets`` to log the targets in the queue.
+
+    * Update ``advance_target_production_loop`` to improve handling check target and timer task execution.
+
+    * ``put_on_queue``  method, replace debug message by info message with more information about the targets.
+
+    * Update ``put_on_queue`` to update/publish block status (e.g. by calling ``_update_block_status``).
+
+    * Add new ``_update_block_status`` method to handle updating observing block status and publish the information.
+
 * In ``model.py``:
 
   * Major refactor of the ``Model`` class to implement the observing block feature.
@@ -48,6 +70,14 @@ v2.0.0
   * Refactor ``Model.load_driver`` to use new ``DriverFactory`` class to load the driver instance.
 
   * Add method to validate observing blocks when configuring the model.
+
+  * Update ``Model`` to store ``ObservingBlockStatus`` dataclass instead of the ``BlockStatus`` enumeration in ``observing_blocks_status`` dictionary.
+
+  * Update ``configure_telemetry_streams`` to setup ``telemetry_stream_handler`` even if there is no defined telemetry stream.
+
+    This is needed for the ``Model`` class to be able to query the status of the observing blocks at startup.
+  
+  * Add ``get_valid_observing_blocks`` method to retrieve a list of blocks that are valid.
 
 * Add new submodule ``driver/driver_factory.py``, defining a ``DriverFactory`` class.
 
@@ -95,6 +125,12 @@ v2.0.0
 * Update pre commit config file.
 
 * Add new ``utils/types`` submodule to hold type aliases definitions.
+
+* Add new ``observing_blocks`` submodule defining the ``ObservingBlockStatus`` dataclass.
+
+* Add github actions to do linting and ensure version history was updated.
+
+* Update ``pyproject.toml`` to stop running black and flake8 with pytest.
 
 v1.20.0
 -------
