@@ -1573,6 +1573,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         `FailedToQueueTargetsError`
             If fails to add target to the queue.
         """
+        targets_queue = "\n\t".join([f"{target!s}" for target in self.targets_queue])
+        self.log.debug(f"Current targets in the queue:\n\t{targets_queue}.")
         # Take a target from the queue
         target = self.targets_queue.pop(0)
 
