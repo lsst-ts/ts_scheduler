@@ -1825,7 +1825,10 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         await self.evt_blockInventory.set_write(
             ids=",".join(self.model.observing_blocks),
             status=",".join(
-                [status.name for status in self.model.observing_blocks_status.values()]
+                [
+                    observing_blocks.status.name
+                    for observing_blocks in self.model.observing_blocks_status.values()
+                ]
             ),
         )
 
