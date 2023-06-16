@@ -1963,6 +1963,18 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 self.model.reset_state(last_scheduler_state_filename)
                 shutil.os.remove(last_scheduler_state_filename)
 
+    @contextlib.asynccontextmanager
+    async def idle_to_running(self):
+        """Context manager to handle transitioning from idle to running then
+        back to idle.
+        """
+        try:
+            await self._transition_idle_to_running()
+            yield
+        finally:
+            # Going back to idle.
+            await self._transition_running_to_idle()
+
 
 def run_scheduler() -> None:
     """Run the Scheduler CSC."""
