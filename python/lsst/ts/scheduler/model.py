@@ -1107,8 +1107,10 @@ class Model:
         observations : `list`[`DriverTargets`]
             List of observations.
         """
-        efd_observations = await self.telemetry_stream_handler.efd_client.query(
-            efd_query
+        efd_observations = (
+            await self.telemetry_stream_handler.efd_client.influx_client.query(
+                efd_query
+            )
         )
 
         loop = asyncio.get_running_loop()
@@ -1144,7 +1146,9 @@ class Model:
         query = (
             f"SELECT * FROM {topic} WHERE id = '{program}' ORDER BY time DESC LIMIT 1"
         )
-        query_res = await self.telemetry_stream_handler.efd_client.query(query)
+        query_res = await self.telemetry_stream_handler.efd_client.influx_client.query(
+            query
+        )
 
         if len(query_res) == 0:
             return ObservingBlockStatus(
