@@ -549,17 +549,11 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             result="Computing predicted schedule.",
         )
 
-        try:
-            # Need to be running to compute predicted schedule
-            await self._transition_idle_to_running()
-
+        async with self.idle_to_running():
             self._tasks["compute_predicted_schedule"] = asyncio.create_task(
                 self.compute_predicted_schedule()
             )
             await self._tasks["compute_predicted_schedule"]
-        finally:
-            # Going back to idle.
-            await self._transition_running_to_idle()
 
     async def _do_addBlock(self, data):
         """Implement add block command.
