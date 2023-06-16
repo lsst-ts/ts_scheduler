@@ -571,7 +571,54 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             Command not implemented yet.
         """
         self.assert_enabled()
-        raise NotImplementedError("Command not implemented yet.")
+
+        await self.cmd_addBlock.ack_in_progress(
+            data,
+            timeout=self.default_command_timeout,
+            result=f"Adding block {data.id}.",
+        )
+
+        if data.id not in self.model.observing_blocks:
+            observing_blocks = ",".join(self.model.observing_blocks)
+            raise salobj.ExpectedError(
+                f"Block {data.id} is not in the list of observing blocks. "
+                f"Current observing blocks are: {observing_blocks}."
+            )
+        elif data.id not in (
+            valid_observing_blocks := self.model.get_valid_observing_blocks()
+        ):
+            valid_blocks = ",".join(valid_observing_blocks)
+            raise salobj.ExpectedError(
+                f"Block {data.id} is not in the list of valid blocks. "
+                f"Current valid blocks are: {valid_blocks}."
+            )
+
+        obs_block = self.model.observing_blocks[data.id].dict()
+        obs_block.pop("id")
+        block_target = DriverTarget(observing_block=ObservingBlock(**obs_block))
+
+        await self._update_block_status(
+            data.id, BlockStatus.STARTED, block_target.get_observing_block()
+        )
+
+        async with self.target_loop_lock:
+            self.log.debug(f"Queueing block target: {block_target!s}.")
+
+            if not self.run_target_loop.is_set():
+                self.log.warning(
+                    "Target production loop is not running. "
+                    "Inserting block at the top of the queue and executing."
+                )
+                task_name = f"block-{block_target.observing_block.id}"
+                if task_name in self._tasks and not self._tasks[task_name].done():
+                    RuntimeError(
+                        f"A Block with the same id is already executing: {task_name}."
+                    )
+                self.targets_queue.insert(0, block_target)
+                self._tasks[task_name] = asyncio.create_task(self.execute_block())
+            else:
+                self.log.info("Scheduler is running, appending target to the queue.")
+                self.targets_queue.append(block_target)
 
     async def _update_block_status(
         self,
@@ -1563,6 +1610,15 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             await self.evt_predictedSchedule.set_write(**predicted_schedule)
 
         self.log.debug("Finished computing predicted schedule.")
+
+    async def execute_block(self):
+        """Execute an individual block when the Scheduler is not running.
+
+        This method will transition the Scheduler from idle to running,
+        queue a single target and go back to idle.
+        """
+        async with self.idle_to_running():
+            await self.queue_targets()
 
     @set_detailed_state(detailed_state=DetailedState.QUEUEING_TARGET)
     async def queue_targets(self):
