@@ -1247,6 +1247,18 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                             timeout=self.parameters.loop_sleep_time,
                         )
 
+                        if not loop_sleep_task.done():
+                            self.log.debug(
+                                "Checking targets condition finished ahead of time. "
+                                "Waiting remaining sleep time."
+                            )
+                            await loop_sleep_task
+                        else:
+                            self.log.warning(
+                                "Checking targets condition took longer than expected. "
+                                "Continuing without waiting."
+                            )
+
             except asyncio.CancelledError:
                 break
             except UnableToFindTargetError:
