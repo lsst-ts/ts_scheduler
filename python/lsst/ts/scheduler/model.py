@@ -32,6 +32,7 @@ import urllib.request
 
 import numpy as np
 from jsonschema import ValidationError
+from lsst.ts import observing, utils
 from lsst.ts.astrosky.model import AstronomicalSkyModel
 from lsst.ts.dateloc import ObservatoryLocation
 from lsst.ts.idl.enums import Script
@@ -40,11 +41,10 @@ from lsst.ts.salobj.type_hints import BaseDdsDataType
 from rubin_sim.site_models.cloud_model import CloudModel
 from rubin_sim.site_models.seeing_model import SeeingModel
 
-from lsst.ts import observing, utils
-
 from .driver import Driver, DriverFactory, DriverType
 from .driver.driver_target import DriverTarget
 from .driver.survey_topology import SurveyTopology
+from .observing_blocks.observing_block_status import ObservingBlockStatus
 from .telemetry_stream_handler import TelemetryStreamHandler
 from .utils.csc_utils import (
     BlockStatus,
@@ -120,7 +120,7 @@ class Model:
 
         # Dictionary to store observing blocks
         self.observing_blocks: dict[str, observing.ObservingBlock] = dict()
-        self.observing_blocks_status: dict[str, BlockStatus] = dict()
+        self.observing_blocks_status: dict[str, ObservingBlockStatus] = dict()
 
         # Scheduler driver instance.
         self.driver: Driver | None = None
@@ -212,24 +212,29 @@ class Model:
             Telemetry stream configuration.
         """
 
+        efd_name = config["efd_name"]
+
+        self.log.debug(
+            f"Configuring telemetry stream handler for {efd_name} efd instance."
+        )
+
+        self.telemetry_stream_handler = TelemetryStreamHandler(
+            log=self.log, efd_name=efd_name
+        )
+
         if "streams" not in config:
             self.log.warning(
                 "No telemetry stream defined in configuration. Skipping configuring telemetry streams."
             )
+            await self.telemetry_stream_handler.configure_telemetry_stream(
+                telemetry_stream=[]
+            )
             return
-
-        self.log.debug(
-            f"Configuring telemetry stream handler for {config['efd_name']} efd instance."
-        )
-
-        self.telemetry_stream_handler = TelemetryStreamHandler(
-            log=self.log, efd_name=config["efd_name"]
-        )
 
         self.log.debug("Configuring telemetry stream.")
 
         await self.telemetry_stream_handler.configure_telemetry_stream(
-            config["streams"]
+            telemetry_stream=config["streams"]
         )
 
         for telemetry in self.telemetry_stream_handler.telemetry_streams:
@@ -259,7 +264,7 @@ class Model:
             self.observing_blocks[observing_block.program] = observing_block
             self.observing_blocks_status[
                 observing_block.program
-            ] = BlockStatus.AVAILABLE
+            ] = await self._get_block_status(program=observing_block.program)
 
     async def validate_observing_blocks(
         self, observing_scripts_config_validator: ValidationRules
@@ -286,21 +291,37 @@ class Model:
                         f"Script {script.name} from observing block {block_id} failed validation: "
                         f"{validation_error.message}.\n{script.parameters}"
                     )
-                    self.observing_blocks_status[block_id] = BlockStatus.INVALID
+                    self.observing_blocks_status[block_id].status = BlockStatus.INVALID
                     break
                 except Exception:
                     self.log.exception(
                         f"Failed to validate script {script.name} from observing block {block_id} "
                         f"with:\n{script.parameters}"
                     )
-                    self.observing_blocks_status[block_id] = BlockStatus.INVALID
+                    self.observing_blocks_status[block_id].status = BlockStatus.INVALID
                     break
                 else:
                     self.log.debug(
                         f"Successfully validated script {script.name} from {block_id} "
                         f"with:\n{script.parameters}"
                     )
-                    self.observing_blocks_status[block_id] = BlockStatus.AVAILABLE
+                    self.observing_blocks_status[
+                        block_id
+                    ].status = BlockStatus.AVAILABLE
+
+    def get_valid_observing_blocks(self) -> list[str]:
+        """Get list of valid observing blocks.
+
+        Returns
+        -------
+        `list`[ `str` ]
+            List of valid observing blocks.
+        """
+        return [
+            block_id
+            for block_id in self.observing_blocks_status
+            if self.observing_blocks_status[block_id].status != BlockStatus.INVALID
+        ]
 
     async def configure_driver(self, config: typing.Any) -> SurveyTopology:
         """Load driver for selected scheduler and configure its basic
@@ -1086,8 +1107,10 @@ class Model:
         observations : `list`[`DriverTargets`]
             List of observations.
         """
-        efd_observations = await self.telemetry_stream_handler.efd_client.query(
-            efd_query
+        efd_observations = (
+            await self.telemetry_stream_handler.efd_client.influx_client.query(
+                efd_query
+            )
         )
 
         loop = asyncio.get_running_loop()
@@ -1098,6 +1121,47 @@ class Model:
         )
 
         return await loop.run_in_executor(None, convert_efd_observations_to_targets)
+
+    async def _get_block_status(self, program: str) -> ObservingBlockStatus:
+        """Get block status.
+
+        Parameters
+        ----------
+        program : `str`
+            Name of the program.
+
+        Returns
+        -------
+        `ObservingBlockStatus`
+            Block status.
+
+        Notes
+        -----
+        This method will query the EFD for the latest status of the input
+        program and return an `ObservingBlockStatus` built with the
+        appropriate information. If no block is found return a new empty one.
+        """
+
+        topic = '"efd"."autogen"."lsst.sal.Scheduler.logevent_blockStatus"'
+        query = (
+            f"SELECT * FROM {topic} WHERE id = '{program}' ORDER BY time DESC LIMIT 1"
+        )
+        query_res = await self.telemetry_stream_handler.efd_client.influx_client.query(
+            query
+        )
+
+        if len(query_res) == 0:
+            return ObservingBlockStatus(
+                executions_completed=0,
+                executions_total=0,
+                status=BlockStatus.AVAILABLE,
+            )
+        else:
+            return ObservingBlockStatus(
+                executions_completed=query_res["executionsCompleted"][0],
+                executions_total=query_res["executionsTotal"][0],
+                status=BlockStatus(query_res["statusId"][0]),
+            )
 
     async def update_telemetry(self):
         """Update data on all the telemetry values."""

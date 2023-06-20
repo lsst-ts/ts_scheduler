@@ -26,9 +26,8 @@ import yaml
 from astropy import units
 from astropy.coordinates import Angle
 from astropy.time import Time
-from lsst.ts.observatory.model import ObservatoryModel
-
 from lsst.ts import observing
+from lsst.ts.observatory.model import ObservatoryModel
 from lsst.ts.scheduler.driver.driver_target import DriverTarget
 
 

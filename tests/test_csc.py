@@ -27,7 +27,6 @@ import pathlib
 import unittest
 
 import numpy as np
-
 from lsst.ts import salobj
 from lsst.ts.scheduler import SchedulerCSC
 from lsst.ts.scheduler.mock import ObservatoryStateMock

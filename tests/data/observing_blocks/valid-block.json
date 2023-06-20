@@ -1,0 +1,19 @@
+{
+    "name": "CurvatureWavefrontSensing",
+    "program": "valid-block",
+    "constraints": [],
+    "scripts": [
+        {
+            "name": "cwfs.py",
+            "standard": false,
+            "parameters": {
+                "find_target": {
+                    "az": 90.0,
+                    "el": 60.0,
+                    "mag_limit": 8.0
+                },
+                "program": "valid-block"
+            }
+        }
+    ]
+}

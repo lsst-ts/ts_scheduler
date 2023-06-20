@@ -29,9 +29,8 @@ import jsonschema
 import yaml
 from astropy.coordinates import Angle
 from astropy.time import Time
-from lsst.ts.utils import index_generator
-
 from lsst.ts import observing
+from lsst.ts.utils import index_generator
 
 from .driver import Driver, DriverParameters
 from .driver_target import DriverTarget

@@ -109,7 +109,7 @@ def get_mock_efd_client(efd_name: str) -> AsyncMock:
             "select_time_series.side_effect": mock_select_time_series,
             "get_topics.side_effect": mock_get_topics,
             "get_fields.side_effect": mock_get_fields,
-            "query.side_effect": mock_query,
+            "influx_client.query.side_effect": mock_query,
         },
     )
 

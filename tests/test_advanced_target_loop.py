@@ -28,12 +28,11 @@ import typing
 import unittest
 
 import numpy as np
-
 from lsst.ts import salobj, utils
 from lsst.ts.scheduler import SchedulerCSC
 from lsst.ts.scheduler.mock import ObservatoryStateMock
 from lsst.ts.scheduler.utils import SchedulerModes
-from lsst.ts.scheduler.utils.csc_utils import DetailedState
+from lsst.ts.scheduler.utils.csc_utils import BlockStatus, DetailedState
 from lsst.ts.scheduler.utils.error_codes import NO_QUEUE, UPDATE_TELEMETRY_ERROR
 
 try:
@@ -111,13 +110,16 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
         try:
             await salobj.set_summary_state(self.scheduler_remote, salobj.State.STANDBY)
         finally:
-            await asyncio.gather(
-                self.scheduler.close(),
-                self.queue.close(),
-                self.scheduler_remote.close(),
-                self.queue_remote.close(),
-                self.observatory_mock.close(),
-            )
+            try:
+                await asyncio.gather(
+                    self.scheduler.close(),
+                    self.queue.close(),
+                    self.scheduler_remote.close(),
+                    self.queue_remote.close(),
+                    self.observatory_mock.close(),
+                )
+            except Exception:
+                pass
 
     async def assert_detailed_state_sequence(self, expected_detailed_states):
         for expected_detailed_state in expected_detailed_states:
@@ -133,6 +135,23 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
                     f"{DetailedState(detailed_state.substate)!r} x {expected_detailed_state!r}"
                 )
                 assert DetailedState(detailed_state.substate) == expected_detailed_state
+
+    async def assert_next_block_id_status(
+        self, block_id: str, block_status_expected: BlockStatus
+    ) -> None:
+        while True:
+            block_status = await self.scheduler_remote.evt_blockStatus.next(
+                flush=False, timeout=SCRIPT_TIMEOUT
+            )
+
+            self.log.debug(
+                f"Got {block_status=}. Expecting {block_id}:{block_status_expected!r}"
+            )
+
+            if block_status.id == block_id:
+                assert block_status.statusId == block_status_expected
+                assert block_status.status == block_status_expected.name
+                break
 
     async def test_fail_enable_if_no_queue(self):
         """Test the simple target production loop.
@@ -500,6 +519,134 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
         observation = self.scheduler_remote.evt_observation.get()
 
         assert observation is not None, "Observation was not published."
+
+    async def test_add_block_inexistent_block(self) -> None:
+        # enable queue...
+        await salobj.set_summary_state(
+            self.queue_remote,
+            salobj.State.ENABLED,
+        )
+
+        # enable scheduler
+        await salobj.set_summary_state(
+            self.scheduler_remote,
+            salobj.State.ENABLED,
+            override="advance_target_loop_sequential_std_visit.yaml",
+        )
+
+        await self.scheduler_remote.cmd_resume.start(timeout=STD_TIMEOUT)
+
+        with self.assertRaisesRegex(
+            salobj.AckError,
+            expected_regex=(
+                "Block inexistent-block is not in the list of observing blocks. "
+                "Current observing blocks are: "
+            ),
+        ):
+            await self.scheduler_remote.cmd_addBlock.set_start(
+                id="inexistent-block",
+                timeout=STD_TIMEOUT,
+            )
+
+    async def test_add_block_invalid_block(self) -> None:
+        # enable queue...
+        await salobj.set_summary_state(
+            self.queue_remote,
+            salobj.State.ENABLED,
+        )
+
+        # enable scheduler
+        await salobj.set_summary_state(
+            self.scheduler_remote,
+            salobj.State.ENABLED,
+            override="advance_target_loop_sequential_std_visit.yaml",
+        )
+
+        await self.scheduler_remote.cmd_resume.start(timeout=STD_TIMEOUT)
+
+        with self.assertRaisesRegex(
+            salobj.AckError,
+            expected_regex=(
+                "Block invalid-block is not in the list of valid blocks. "
+                "Current valid blocks are: "
+            ),
+        ):
+            await self.scheduler_remote.cmd_addBlock.set_start(
+                id="invalid-block",
+                timeout=STD_TIMEOUT,
+            )
+
+    async def test_add_block_not_running(self) -> None:
+        # enable queue...
+        await salobj.set_summary_state(
+            self.queue_remote,
+            salobj.State.ENABLED,
+        )
+
+        # enable scheduler
+        await salobj.set_summary_state(
+            self.scheduler_remote,
+            salobj.State.ENABLED,
+            override="advance_target_loop_sequential_std_visit.yaml",
+        )
+
+        await self.scheduler_remote.cmd_addBlock.set_start(
+            id="valid-block",
+            timeout=STD_TIMEOUT,
+        )
+
+        await self.assert_next_block_id_status(
+            block_id="valid-block",
+            block_status_expected=BlockStatus.STARTED,
+        )
+
+        await self.assert_next_block_id_status(
+            block_id="valid-block",
+            block_status_expected=BlockStatus.EXECUTING,
+        )
+
+        await self.assert_next_block_id_status(
+            block_id="valid-block",
+            block_status_expected=BlockStatus.COMPLETED,
+        )
+
+    async def test_add_block_succeed(self) -> None:
+        # enable queue...
+        await salobj.set_summary_state(
+            self.queue_remote,
+            salobj.State.ENABLED,
+        )
+
+        # enable scheduler
+        await salobj.set_summary_state(
+            self.scheduler_remote,
+            salobj.State.ENABLED,
+            override="advance_target_loop_sequential_std_visit.yaml",
+        )
+
+        await self.scheduler_remote.cmd_resume.start(timeout=STD_TIMEOUT)
+
+        self.scheduler_remote.evt_blockStatus.flush()
+
+        await self.scheduler_remote.cmd_addBlock.set_start(
+            id="valid-block",
+            timeout=STD_TIMEOUT,
+        )
+
+        await self.assert_next_block_id_status(
+            block_id="valid-block",
+            block_status_expected=BlockStatus.STARTED,
+        )
+
+        await self.assert_next_block_id_status(
+            block_id="valid-block",
+            block_status_expected=BlockStatus.EXECUTING,
+        )
+
+        await self.assert_next_block_id_status(
+            block_id="valid-block",
+            block_status_expected=BlockStatus.COMPLETED,
+        )
 
     def tearDown(self):
         for filename in glob.glob("./sequential_*.p"):

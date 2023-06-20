@@ -1,12 +1,11 @@
 import numpy as np
 import rubin_sim.scheduler.basis_functions as bf
 import rubin_sim.scheduler.detailers as detailers
+from lsst.ts.scheduler.utils.test.feature_scheduler_sim import MJD_START
 from rubin_sim.scheduler.model_observatory import ModelObservatory
 from rubin_sim.scheduler.schedulers import CoreScheduler
 from rubin_sim.scheduler.surveys import GreedySurvey
 from rubin_sim.scheduler.utils import Footprint, standard_goals
-
-from lsst.ts.scheduler.utils.test.feature_scheduler_sim import MJD_START
 
 
 def gen_greedy_surveys(

@@ -34,19 +34,20 @@ import typing
 
 import numpy as np
 import yaml
+from lsst.ts import salobj, utils
 from lsst.ts.astrosky.model import version as astrosky_version
 from lsst.ts.dateloc import version as dateloc_version
 from lsst.ts.idl.enums import Scheduler, ScriptQueue
 from lsst.ts.observatory.model import version as obs_mod_version
+from lsst.ts.observing import ObservingBlock
 from rubin_sim.version import __version__ as rubin_sim_version
-
-from lsst.ts import salobj, utils
 
 from . import CONFIG_SCHEMA, __version__
 from .driver.driver_target import DriverTarget
 from .model import Model
 from .utils.csc_utils import (
     OBSERVATION_NAMED_PARAMETERS,
+    BlockStatus,
     DetailedState,
     SchedulerModes,
     set_detailed_state,
@@ -549,17 +550,11 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             result="Computing predicted schedule.",
         )
 
-        try:
-            # Need to be running to compute predicted schedule
-            await self._transition_idle_to_running()
-
+        async with self.idle_to_running():
             self._tasks["compute_predicted_schedule"] = asyncio.create_task(
                 self.compute_predicted_schedule()
             )
             await self._tasks["compute_predicted_schedule"]
-        finally:
-            # Going back to idle.
-            await self._transition_running_to_idle()
 
     async def _do_addBlock(self, data):
         """Implement add block command.
@@ -575,7 +570,79 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             Command not implemented yet.
         """
         self.assert_enabled()
-        raise NotImplementedError("Command not implemented yet.")
+
+        await self.cmd_addBlock.ack_in_progress(
+            data,
+            timeout=self.default_command_timeout,
+            result=f"Adding block {data.id}.",
+        )
+
+        if data.id not in self.model.observing_blocks:
+            observing_blocks = ",".join(self.model.observing_blocks)
+            raise salobj.ExpectedError(
+                f"Block {data.id} is not in the list of observing blocks. "
+                f"Current observing blocks are: {observing_blocks}."
+            )
+        elif data.id not in (
+            valid_observing_blocks := self.model.get_valid_observing_blocks()
+        ):
+            valid_blocks = ",".join(valid_observing_blocks)
+            raise salobj.ExpectedError(
+                f"Block {data.id} is not in the list of valid blocks. "
+                f"Current valid blocks are: {valid_blocks}."
+            )
+
+        obs_block = self.model.observing_blocks[data.id].dict()
+        obs_block.pop("id")
+        block_target = DriverTarget(observing_block=ObservingBlock(**obs_block))
+
+        await self._update_block_status(
+            data.id, BlockStatus.STARTED, block_target.get_observing_block()
+        )
+
+        async with self.target_loop_lock:
+            self.log.debug(f"Queueing block target: {block_target!s}.")
+
+            if not self.run_target_loop.is_set():
+                self.log.warning(
+                    "Target production loop is not running. "
+                    "Inserting block at the top of the queue and executing."
+                )
+                task_name = f"block-{block_target.observing_block.id}"
+                if task_name in self._tasks and not self._tasks[task_name].done():
+                    RuntimeError(
+                        f"A Block with the same id is already executing: {task_name}."
+                    )
+                self.targets_queue.insert(0, block_target)
+                self._tasks[task_name] = asyncio.create_task(self.execute_block())
+            else:
+                self.log.info("Scheduler is running, appending target to the queue.")
+                self.targets_queue.append(block_target)
+
+    async def _update_block_status(
+        self,
+        block_id: str,
+        block_status: BlockStatus,
+        observing_block: ObservingBlock,
+    ) -> None:
+        self.model.observing_blocks_status[block_id].status = block_status
+        if block_status == BlockStatus.COMPLETED:
+            self.model.observing_blocks_status[block_id].executions_completed += 1
+
+        # publish block event
+        await self.evt_blockStatus.set_write(
+            id=block_id,
+            statusId=block_status.value,
+            status=block_status.name,
+            executionsCompleted=self.model.observing_blocks_status[
+                block_id
+            ].executions_completed,
+            executionsTotal=self.model.observing_blocks_status[
+                block_id
+            ].executions_total,
+            hash=str(observing_block.id),
+            definition=observing_block.json(),
+        )
 
     async def _do_getBlockStatus(self, data):
         """Implement get block status command.
@@ -727,7 +794,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         for target in targets:
             observing_block = target.get_observing_block()
 
-            self.log.debug(f"Adding target {target.targetid} scripts on the queue.")
+            self.log.info(f"Adding {target=!s} scripts on the queue.")
 
             for script in observing_block.scripts:
                 add_task = await self.queue_remote.cmd_add.set_start(
@@ -743,6 +810,12 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
             # publishes target event
             await self.evt_target.set_write(**target.as_dict())
+
+            await self._update_block_status(
+                block_id=observing_block.program,
+                block_status=BlockStatus.EXECUTING,
+                observing_block=observing_block,
+            )
 
     async def remove_from_queue(self, targets: list[DriverTarget]) -> None:
         """Given a list of targets, remove them from the queue.
@@ -1220,6 +1293,18 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                             timeout=self.parameters.loop_sleep_time,
                         )
 
+                        if not loop_sleep_task.done():
+                            self.log.debug(
+                                "Checking targets condition finished ahead of time. "
+                                "Waiting remaining sleep time."
+                            )
+                            await loop_sleep_task
+                        else:
+                            self.log.warning(
+                                "Checking targets condition took longer than expected. "
+                                "Continuing without waiting."
+                            )
+
             except asyncio.CancelledError:
                 break
             except UnableToFindTargetError:
@@ -1525,6 +1610,15 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         self.log.debug("Finished computing predicted schedule.")
 
+    async def execute_block(self):
+        """Execute an individual block when the Scheduler is not running.
+
+        This method will transition the Scheduler from idle to running,
+        queue a single target and go back to idle.
+        """
+        async with self.idle_to_running():
+            await self.queue_targets()
+
     @set_detailed_state(detailed_state=DetailedState.QUEUEING_TARGET)
     async def queue_targets(self):
         """Send targets to the script queue.
@@ -1534,6 +1628,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         `FailedToQueueTargetsError`
             If fails to add target to the queue.
         """
+        targets_queue = "\n\t".join([f"{target!s}" for target in self.targets_queue])
+        self.log.debug(f"Current targets in the queue:\n\t{targets_queue}.")
         # Take a target from the queue
         target = self.targets_queue.pop(0)
 
@@ -1575,10 +1671,14 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         observation : Observation
             Observation to be registered.
         """
-        if hasattr(self, "evt_observation"):
-            await self.evt_observation.set_write(
-                **dataclasses.asdict(target.get_observation())
-            )
+        await self.evt_observation.set_write(
+            **dataclasses.asdict(target.get_observation())
+        )
+        await self._update_block_status(
+            block_id=target.observing_block.program,
+            block_status=BlockStatus.COMPLETED,
+            observing_block=target.get_observing_block(),
+        )
 
     async def _publish_settings(self, settings) -> None:
         """Publish settings."""
@@ -1662,30 +1762,44 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         )
 
         await self.evt_slewConfig.set_write(
-            prereqDomalt=settings.models["observatory_model"]["slew"]["prereq_domalt"],
-            prereqDomaz=settings.models["observatory_model"]["slew"]["prereq_domaz"],
-            prereqDomazSettle=settings.models["observatory_model"]["slew"][
-                "prereq_domazsettle"
-            ],
-            prereqTelalt=settings.models["observatory_model"]["slew"]["prereq_telalt"],
-            prereqTelaz=settings.models["observatory_model"]["slew"]["prereq_telaz"],
-            prereqTelOpticsOpenLoop=settings.models["observatory_model"]["slew"][
-                "prereq_telopticsopenloop"
-            ],
-            prereqTelOpticsClosedLoop=settings.models["observatory_model"]["slew"][
-                "prereq_telopticsclosedloop"
-            ],
-            prereqTelSettle=settings.models["observatory_model"]["slew"][
-                "prereq_telsettle"
-            ],
-            prereqTelRot=settings.models["observatory_model"]["slew"]["prereq_telrot"],
-            prereqFilter=settings.models["observatory_model"]["slew"]["prereq_filter"],
-            prereqExposures=settings.models["observatory_model"]["slew"][
-                "prereq_exposures"
-            ],
-            prereqReadout=settings.models["observatory_model"]["slew"][
-                "prereq_readout"
-            ],
+            prereqDomalt=",".join(
+                settings.models["observatory_model"]["slew"]["prereq_domalt"]
+            ),
+            prereqDomaz=",".join(
+                settings.models["observatory_model"]["slew"]["prereq_domaz"]
+            ),
+            prereqDomazSettle=",".join(
+                settings.models["observatory_model"]["slew"]["prereq_domazsettle"]
+            ),
+            prereqTelalt=",".join(
+                settings.models["observatory_model"]["slew"]["prereq_telalt"]
+            ),
+            prereqTelaz=",".join(
+                settings.models["observatory_model"]["slew"]["prereq_telaz"]
+            ),
+            prereqTelOpticsOpenLoop=",".join(
+                settings.models["observatory_model"]["slew"]["prereq_telopticsopenloop"]
+            ),
+            prereqTelOpticsClosedLoop=",".join(
+                settings.models["observatory_model"]["slew"][
+                    "prereq_telopticsclosedloop"
+                ]
+            ),
+            prereqTelSettle=",".join(
+                settings.models["observatory_model"]["slew"]["prereq_telsettle"]
+            ),
+            prereqTelRot=",".join(
+                settings.models["observatory_model"]["slew"]["prereq_telrot"]
+            ),
+            prereqFilter=",".join(
+                settings.models["observatory_model"]["slew"]["prereq_filter"]
+            ),
+            prereqExposures=",".join(
+                settings.models["observatory_model"]["slew"]["prereq_exposures"]
+            ),
+            prereqReadout=",".join(
+                settings.models["observatory_model"]["slew"]["prereq_readout"]
+            ),
         )
 
         await self.evt_opticsLoopCorrConfig.set_write(
@@ -1766,7 +1880,10 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         await self.evt_blockInventory.set_write(
             ids=",".join(self.model.observing_blocks),
             status=",".join(
-                [status.name for status in self.model.observing_blocks_status.values()]
+                [
+                    observing_blocks.status.name
+                    for observing_blocks in self.model.observing_blocks_status.values()
+                ]
             ),
         )
 
@@ -1962,6 +2079,18 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             finally:
                 self.model.reset_state(last_scheduler_state_filename)
                 shutil.os.remove(last_scheduler_state_filename)
+
+    @contextlib.asynccontextmanager
+    async def idle_to_running(self):
+        """Context manager to handle transitioning from idle to running then
+        back to idle.
+        """
+        try:
+            await self._transition_idle_to_running()
+            yield
+        finally:
+            # Going back to idle.
+            await self._transition_running_to_idle()
 
 
 def run_scheduler() -> None:

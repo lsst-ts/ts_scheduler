@@ -26,7 +26,6 @@ from typing import Any, Dict, List
 import numpy
 from astropy import units
 from astropy.time import Time, TimeDelta
-
 from lsst.ts import salobj
 
 from . import CONFIG_SCHEMA

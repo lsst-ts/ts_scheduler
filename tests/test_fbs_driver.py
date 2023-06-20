@@ -24,10 +24,9 @@ import pathlib
 import unittest
 
 import pytest
-from numpy import isscalar
-
 from lsst.ts.scheduler.driver import NoNsideError, NoSchedulerError, SurveyTopology
 from lsst.ts.scheduler.utils.test.feature_scheduler_sim import FeatureSchedulerSim
+from numpy import isscalar
 
 
 class TestFeatureSchedulerDriver(unittest.TestCase):
