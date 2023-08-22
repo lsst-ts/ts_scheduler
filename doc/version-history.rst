@@ -32,9 +32,6 @@ v2.0.0
 
 * In ``scheduler_csc.py``, major refactor of the ``SchedulerCSC`` to implement the observing block feature.
 
-  For now only implement the integration with the scheduling algorithm through the ``Model`` class.
-  Future updates will include the capability to execute user-defined observing blocks.
-
     * Make some improvement in long running commands such that they wait a fraction of a heartbeat to send the in progress ack.
 
     * Implement method to validate observing blocks and publish block info.
@@ -62,6 +59,8 @@ v2.0.0
     * Update ``put_on_queue`` to update/publish block status (e.g. by calling ``_update_block_status``).
 
     * Add new ``_update_block_status`` method to handle updating observing block status and publish the information.
+
+    * Limit the number of SAL Scripts the Scheduler adds to the queue at any given time.
 
 * In ``model.py``:
 
@@ -106,11 +105,11 @@ v2.0.0
 
 * In ``driver/survey_topology.py``, implement some minor cosmetic improvements to ``SurveyTopology`` class.
 
-* In ``driver/feature_scheduler.py``, refactor ``FeatureScheduler`` to accomodate changes done in the ``Driver`` class and implement the observing block feature.
+* In ``driver/feature_scheduler.py``, refactor ``FeatureScheduler`` to accommodate changes done in the ``Driver`` class and implement the observing block feature.
 
 * In ``driver/sequential.py``, refactor the ``Sequential`` class to account for the changes done in ``Driver`` and implement the new observing block feature.
 
-* In ``driver/driver.py``, refactor the ``Driver`` class to accomodate the changes done in ``DriverTarget`` and integrate with the observing block feature.
+* In ``driver/driver.py``, refactor the ``Driver`` class to accommodate the changes done in ``DriverTarget`` and integrate with the observing block feature.
 
 * In ``driver/feature_scheduler_target.py``, refactor ``FeatureSchedulerTarget`` to conform with the new ``DriverTarget`` interface and integrate it with the observing block feature.
 
