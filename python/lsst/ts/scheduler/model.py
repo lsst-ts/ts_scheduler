@@ -44,6 +44,7 @@ from rubin_sim.site_models.seeing_model import SeeingModel
 from .driver import Driver, DriverFactory, DriverType
 from .driver.driver_target import DriverTarget
 from .driver.survey_topology import SurveyTopology
+from .exceptions.exceptions import UpdateTelemetryError
 from .observing_blocks.observing_block_status import ObservingBlockStatus
 from .telemetry_stream_handler import TelemetryStreamHandler
 from .utils.csc_utils import (
@@ -53,7 +54,6 @@ from .utils.csc_utils import (
     is_uri,
     is_valid_efd_query,
 )
-from .utils.exceptions import UpdateTelemetryError
 from .utils.scheduled_targets_info import ScheduledTargetsInfo
 from .utils.types import ValidationRules
 

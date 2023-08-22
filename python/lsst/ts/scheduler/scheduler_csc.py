@@ -44,6 +44,11 @@ from rubin_sim.version import __version__ as rubin_sim_version
 
 from . import CONFIG_SCHEMA, __version__
 from .driver.driver_target import DriverTarget
+from .exceptions.exceptions import (
+    FailedToQueueTargetsError,
+    UnableToFindTargetError,
+    UpdateTelemetryError,
+)
 from .model import Model
 from .utils.csc_utils import (
     OBSERVATION_NAMED_PARAMETERS,
@@ -61,11 +66,6 @@ from .utils.error_codes import (
     SIMPLE_LOOP_ERROR,
     UNABLE_TO_FIND_TARGET,
     UPDATE_TELEMETRY_ERROR,
-)
-from .utils.exceptions import (
-    FailedToQueueTargetsError,
-    UnableToFindTargetError,
-    UpdateTelemetryError,
 )
 from .utils.parameters import SchedulerCscParameters
 from .utils.types import ValidationRules
