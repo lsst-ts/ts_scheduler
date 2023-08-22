@@ -37,8 +37,8 @@ from rubin_sim.scheduler.utils import empty_observation
 from rubin_sim.site_models import Almanac
 from rubin_sim.utils import _ra_dec2_hpid
 
-from ..utils import SchemaConverter
-from .driver import Driver, DriverParameters
+from ..utils.fbs_utils import SchemaConverter
+from . import Driver, DriverParameters
 from .driver_target import DriverTarget
 from .feature_scheduler_target import FeatureSchedulerTarget
 from .observation import Observation
