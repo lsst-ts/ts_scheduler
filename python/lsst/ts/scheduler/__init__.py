@@ -24,6 +24,5 @@ except ModuleNotFoundError:
     __version__ = "?"
 
 from .config_schema import *
-from .driver.driver import *
 from .scheduler_csc import *
 from .telemetry_stream_handler import *
