@@ -31,6 +31,7 @@ import time
 import traceback
 import types
 import typing
+import uuid
 
 import numpy as np
 import yaml
@@ -39,13 +40,15 @@ from lsst.ts.astrosky.model import version as astrosky_version
 from lsst.ts.dateloc import version as dateloc_version
 from lsst.ts.idl.enums import Scheduler, ScriptQueue
 from lsst.ts.observatory.model import version as obs_mod_version
-from lsst.ts.observing import ObservingBlock
+from lsst.ts.observing import ObservingBlock, ObservingScript
 from rubin_sim.version import __version__ as rubin_sim_version
 
 from . import CONFIG_SCHEMA, __version__
 from .driver.driver_target import DriverTarget
 from .exceptions.exceptions import (
     FailedToQueueTargetsError,
+    NonConsecutiveIndexError,
+    TargetScriptFailedError,
     UnableToFindTargetError,
     UpdateTelemetryError,
 )
@@ -236,6 +239,10 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         self._detailed_state_lock = asyncio.Lock()
 
+        # Semaphore to limit the number of scripts added to the ScriptQueue.
+        self._max_queue_capacity = 10
+        self._queue_capacity = asyncio.Semaphore(self._max_queue_capacity)
+
         # dictionary to store background tasks
         self._tasks = dict()
 
@@ -324,6 +331,16 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             result="Enabling CSC.",
         )
 
+        await self._start_target_production_task()
+
+    async def _start_target_production_task(self):
+        """Start target production task.
+
+        Raises
+        ------
+        RuntimeError
+            If scheduler mode is not recognized.
+        """
         # Make sure event is not set so loops won't start once the CSC is
         # enabled.
         self.run_target_loop.clear()
@@ -370,6 +387,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
             if self.s3bucket is None:
                 mock_s3 = self.simulation_mode == SchedulerModes.MOCKS3
+                self.log.debug(f"Creating s3bucket with mock = {mock_s3}.")
                 self.s3bucket = salobj.AsyncS3Bucket(
                     name=self.s3bucket_name, domock=mock_s3, create=mock_s3
                 )
@@ -463,7 +481,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         await self.cmd_stop.ack_in_progress(
             data,
-            timeout=self.default_command_timeout,
+            timeout=self.default_command_timeout * 2.0,
             result="Stopping Scheduler execution.",
         )
 
@@ -471,16 +489,41 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         self.log.info("Waiting for target loop execution.")
 
+        try:
+            await asyncio.wait_for(
+                self.stop_target_loop_execution(data),
+                timeout=self.loop_die_timeout,
+            )
+        except asyncio.TimeoutError:
+            self.log.info("Timeout waiting for the target loop to stop. Cancelling it.")
+            await self.cmd_stop.ack_in_progress(
+                data,
+                timeout=self.default_command_timeout + self.heartbeat_interval,
+                result="Stopping target production task.",
+            )
+            await self._stop_background_task("target_production_task")
+            await self._cleanup_queue_targets()
+            await self._start_target_production_task()
+
+    async def stop_target_loop_execution(self, data):
         async with self.target_loop_lock:
             self.log.info("Stopping scheduler.")
 
             if data.abort:
-                await self.remove_from_queue(self.model.get_scheduled_targets())
-                self.model.reset_scheduled_targets()
+                await self._cleanup_queue_targets()
 
             await self.reset_handle_no_targets_on_queue()
 
             await self._transition_running_to_idle()
+
+    async def _cleanup_queue_targets(self) -> None:
+        """Cleanup queued targets."""
+        scheduled_targets = self.model.get_scheduled_targets()
+        for target in scheduled_targets:
+            await self.model.mark_block_done(target.get_observing_block().id)
+            await self.model.remove_block_done_scripts(target.get_observing_block().id)
+        self.model.reset_scheduled_targets()
+        await self.remove_from_queue(scheduled_targets)
 
     async def stop_next_target_timer_task(self):
         if not self.next_target_timer.done():
@@ -625,6 +668,11 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         block_status: BlockStatus,
         observing_block: ObservingBlock,
     ) -> None:
+        if block_id not in self.model.observing_blocks_status:
+            self.log.warning(
+                f"Block {block_id} not in list of observing blocks. Ignoring."
+            )
+            return
         self.model.observing_blocks_status[block_id].status = block_status
         if block_status == BlockStatus.COMPLETED:
             self.model.observing_blocks_status[block_id].executions_completed += 1
@@ -704,10 +752,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         while self.run_loop:
             # Update observatory state and sleep at the same time.
             try:
-                await asyncio.gather(
-                    self.handle_observatory_state(),
-                    asyncio.sleep(self.heartbeat_interval),
-                )
+                await self.handle_observatory_state()
                 failed_observatory_state_logged = False
             except Exception:
                 queue = await self.get_queue(request=False)
@@ -770,11 +815,29 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             except Exception:
                 self.log.exception("Error computing general info. Ignoring...")
 
+            await self._cleanup_script_tasks()
+
+    async def _cleanup_script_tasks(self) -> None:
+        """Cleanup completed script tasks."""
+        script_tasks_done = [
+            task_name
+            for task_name in self._tasks
+            if "script_task" in task_name
+            and self._tasks[task_name] is not None
+            and self._tasks[task_name].done()
+        ]
+        if len(script_tasks_done) > self.parameters.max_scripts:
+            self.log.debug(
+                f"Cleaning up {self.parameters.max_scripts} done script tasks."
+            )
+            for script_task in script_tasks_done[: self.parameters.max_scripts]:
+                del self._tasks[script_task]
+
     async def handle_observatory_state(self):
         """Handle observatory state."""
 
         current_target_state = await self.ptg.tel_currentTargetStatus.next(
-            flush=True, timeout=self.heartbeat_interval
+            flush=True, timeout=self.loop_die_timeout
         )
 
         self.model.set_observatory_state(current_target_state=current_target_state)
@@ -796,17 +859,25 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
             self.log.info(f"Adding {target=!s} scripts on the queue.")
 
-            for script in observing_block.scripts:
-                add_task = await self.queue_remote.cmd_add.set_start(
-                    path=script.name,
-                    config=script.get_script_configuration(),
-                    isStandard=script.standard,
-                    location=ScriptQueue.Location.LAST,
-                    logLevel=self.log.getEffectiveLevel(),
-                    timeout=self.parameters.cmd_timeout,
-                )
-
-                target.add_sal_index(int(add_task.result))
+            self.model.register_new_block(id=observing_block.id)
+            async for sal_index in self._queue_block_scripts(observing_block):
+                self.log.info(f"{observing_block.name}::{sal_index=}.")
+                try:
+                    target.add_sal_index(sal_index)
+                except NonConsecutiveIndexError:
+                    self.log.exception(
+                        f"Non consecutive salindex for block {observing_block.name}::{observing_block.id}. "
+                        "Marking block as failed."
+                    )
+                    await self.remove_from_queue(targets=[target])
+                    await self._update_block_status(
+                        block_id=observing_block.program,
+                        block_status=BlockStatus.ERROR,
+                        observing_block=observing_block,
+                    )
+                    return
+                finally:
+                    await asyncio.sleep(self.heartbeat_interval)
 
             # publishes target event
             await self.evt_target.set_write(**target.as_dict())
@@ -816,6 +887,103 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 block_status=BlockStatus.EXECUTING,
                 observing_block=observing_block,
             )
+
+    async def _queue_block_scripts(
+        self, observing_block: ObservingBlock
+    ) -> typing.Generator[int, None, None]:
+        """Queue block scripts in the ScriptQueue.
+
+        Parameters
+        ----------
+        observing_block : `ObservingBlock`
+            Observing block to queue scripts from.
+
+        Yields
+        ------
+        sal_index : `int`
+            A sequence of SAL indices of Scripts.
+
+        Notes
+        -----
+        This method will use `_queue_one_script` to queue the scripts by
+        creating a list of background tasks and waiting for them to finish.
+        The background tasks will acquire a semaphore that will limit the
+        number of consecutive scripts running in the ScriptQueue. If the limit
+        is not met, the method will return soon after all scripts are
+        scheduled. If the limit is reached, the method will block and only
+        make progress once the scripts finish executing.
+        """
+        for script in observing_block.scripts:
+            sal_index = await self._queue_one_script(
+                block_uid=observing_block.id, script=script
+            )
+            yield sal_index
+
+    async def _queue_one_script(
+        self, block_uid: uuid.UUID, script: ObservingScript
+    ) -> int:
+        """Queue one script to the script queue.
+
+        Parameters
+        ----------
+        block_uid : `uuid.UUID`
+            The uid of the block.
+        script : `ObservingScript`
+            Observing script to queue.
+
+        Returns
+        -------
+        sal_index : `int`
+            SAL index of the script.
+
+        Notes
+        -----
+        This method will acquire the semaphore that limits the number of
+        scripts that can be queued, add a script to the script queue and
+        schedule a background task that will also acquire the semaphore and
+        wait for the script to finish.
+
+        If a script execution fails, this raises an exception that is then
+        propagated to this method call, and will interrupt adding further
+        scripts.
+        """
+        async with self._queue_capacity:
+            # Make sure previous scripts added haven't failed, if one
+            # failed this will raise an exception and stop adding more
+            # scripts
+            await self.model.check_block_scripts(id=block_uid)
+            add_task = await self.queue_remote.cmd_add.set_start(
+                path=script.name,
+                config=script.get_script_configuration(),
+                isStandard=script.standard,
+                location=ScriptQueue.Location.LAST,
+                logLevel=self.log.getEffectiveLevel(),
+                timeout=self.parameters.cmd_timeout,
+            )
+            sal_index = int(add_task.result)
+            script_final_state_future = await self.model.add_scheduled_script(
+                id=block_uid, sal_index=sal_index
+            )
+            self._tasks[f"script_task::{block_uid}::{sal_index}"] = asyncio.create_task(
+                self._wait_script_final_state(script_final_state_future)
+            )
+        return sal_index
+
+    async def _wait_script_final_state(
+        self, script_final_state: asyncio.Future
+    ) -> None:
+        """Coroutine to acquire the queue semaphore and wait for a script to
+        finish executing.
+
+        Parameters
+        ----------
+        script_final_state : `asyncio.Future`
+            Future with the script final state.
+        """
+        async with self._queue_capacity:
+            self.log.debug("Waiting Script final state.")
+            await script_final_state
+            self.log.debug(f"Script final state: {script_final_state.result()!r}")
 
     async def remove_from_queue(self, targets: list[DriverTarget]) -> None:
         """Given a list of targets, remove them from the queue.
@@ -828,10 +996,19 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         """
 
         sal_indices_to_remove = [target.get_sal_indices() for target in targets]
+
+        # exclude the script that is currently running.
+        queue = await self.queue_remote.evt_queue.aget(
+            timeout=self.parameters.cmd_timeout
+        )
+
+        current_sal_index = queue.currentSalIndex
+
         scripts_to_stop = [
             sal_index
             for sal_indices in sal_indices_to_remove
             for sal_index in sal_indices
+            if sal_index != current_sal_index
         ]
 
         stop_scripts = self.queue_remote.cmd_stopScripts.DataType()
@@ -842,9 +1019,13 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         for i, sal_index in enumerate(scripts_to_stop):
             stop_scripts.salIndices[i] = sal_index
 
-        await self.queue_remote.cmd_stopScripts.start(
-            stop_scripts, timeout=self.parameters.cmd_timeout
-        )
+        if stop_scripts.length > 0:
+            await self.queue_remote.cmd_stopScripts.start(
+                stop_scripts, timeout=self.parameters.cmd_timeout
+            )
+
+        for target in targets:
+            await self.model.mark_block_done(target.get_observing_block().id)
 
     @staticmethod
     def get_config_pkg():
@@ -1045,6 +1226,14 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         """
         await self.model.callback_script_info(data=data)
 
+        task_name = "lock_target_loop_and_check_targets"
+
+        if task_name not in self._tasks or self._tasks[task_name].done():
+            self._tasks[task_name] = asyncio.create_task(
+                self.lock_target_loop_and_check_targets()
+            )
+
+    async def lock_target_loop_and_check_targets(self):
         async with self.target_loop_lock:
             await self.check_scheduled_targets()
 
@@ -1061,7 +1250,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         """
 
         if self.model.get_number_of_scheduled_targets() == 0:
-            self.log.debug("No scheduled targets to check.")
+            self.log.info("No scheduled targets to check.")
             return False
         scheduled_targets_info = await self.model.check_scheduled_targets()
 
@@ -1640,14 +1829,22 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             self.log.debug(f"Target observing time in the future. Waiting {delta_t}s")
             await asyncio.sleep(delta_t)
 
-        await self.put_on_queue([target])
-
-        if target.get_sal_indices():
-            self.model.add_scheduled_target(target)
-        else:
-            raise FailedToQueueTargetsError(
-                f"Could not add target to the queue: {target}"
+        try:
+            await self.put_on_queue([target])
+        except TargetScriptFailedError:
+            self.log.warning(
+                "One or more scripts for this target failed to execute while still "
+                "adding targets to the queue. Cleaning block scripts and continuing."
             )
+            await self.remove_from_queue(targets=[target])
+            await self.model.remove_block_done_scripts(target.get_observing_block().id)
+        else:
+            if target.get_sal_indices():
+                self.model.add_scheduled_target(target)
+            else:
+                raise FailedToQueueTargetsError(
+                    f"Could not add target to the queue: {target}"
+                )
 
     def assert_idle(self):
         """Assert detailed state is idle."""
@@ -1674,11 +1871,13 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         await self.evt_observation.set_write(
             **dataclasses.asdict(target.get_observation())
         )
+        observing_block = target.get_observing_block()
         await self._update_block_status(
             block_id=target.observing_block.program,
             block_status=BlockStatus.COMPLETED,
-            observing_block=target.get_observing_block(),
+            observing_block=observing_block,
         )
+        await self.model.remove_block_done_scripts(observing_block.id)
 
     async def _publish_settings(self, settings) -> None:
         """Publish settings."""
@@ -2030,7 +2229,10 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 f"Error while stopping background task {task_name}. Ignoring..."
             )
         finally:
-            self._tasks[task_name] = None
+            if "script_task" in task_name:
+                del self._tasks[task_name]
+            else:
+                self._tasks[task_name] = None
 
     @contextlib.asynccontextmanager
     async def detailed_state(self, detailed_state):
@@ -2091,6 +2293,33 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         finally:
             # Going back to idle.
             await self._transition_running_to_idle()
+
+    async def fault(self, code: int | None, report: str, traceback: str = "") -> None:
+        """Override default fault state method.
+
+        Before transitioning to FAULT, try to cleanup the queue.
+
+        Parameters
+        ----------
+        code : `int`
+            Error code for the ``errorCode`` event.
+            If `None` then ``errorCode`` is not output and you should
+            output it yourself. Specifying `None` is deprecated;
+            please always specify an integer error code.
+        report : `str`
+            Description of the error.
+        traceback : `str`, optional
+            Description of the traceback, if any.
+        """
+
+        try:
+            await self._cleanup_queue_targets()
+        except Exception:
+            self.log.exception(
+                "Error trying to cleanup queue targets while going to FAULT. Ignoring."
+            )
+
+        await super().fault(code=code, report=report, traceback=traceback)
 
 
 def run_scheduler() -> None:
