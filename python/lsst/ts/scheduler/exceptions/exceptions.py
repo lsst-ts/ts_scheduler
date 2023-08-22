@@ -23,6 +23,8 @@ __all__ = [
     "UnableToFindTargetError",
     "UpdateTelemetryError",
     "FailedToQueueTargetsError",
+    "TargetScriptFailedError",
+    "NonConsecutiveIndexError",
 ]
 
 
@@ -35,4 +37,12 @@ class UpdateTelemetryError(Exception):
 
 
 class FailedToQueueTargetsError(Exception):
+    pass
+
+
+class TargetScriptFailedError(Exception):
+    pass
+
+
+class NonConsecutiveIndexError(Exception):
     pass
