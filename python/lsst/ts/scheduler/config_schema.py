@@ -719,8 +719,8 @@ properties:
       "ls" (Base Test Stand), "cp" (summit).
     type: string
   auxtel:
-    $ref: "#definitions/instance_specific_config"
+    $ref: "#/definitions/instance_specific_config"
   maintel:
-    $ref: "#definitions/instance_specific_config"
+    $ref: "#/definitions/instance_specific_config"
 """
 )
