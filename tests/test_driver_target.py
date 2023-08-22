@@ -29,6 +29,7 @@ from astropy.time import Time
 from lsst.ts import observing
 from lsst.ts.observatory.model import ObservatoryModel
 from lsst.ts.scheduler.driver.driver_target import DriverTarget
+from lsst.ts.scheduler.exceptions import NonConsecutiveIndexError
 
 
 class TestDriverTarget(unittest.TestCase):
@@ -137,7 +138,8 @@ class TestDriverTarget(unittest.TestCase):
         assert sal_indices[1] == 2001
 
         with pytest.raises(
-            RuntimeError, match="Non-consecutive SAL index for target observations. "
+            NonConsecutiveIndexError,
+            match="Non-consecutive SAL index for target observations. ",
         ):
             target.add_sal_index(2003)
 

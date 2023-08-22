@@ -1,4 +1,4 @@
-s3instance: cp
+s3instance: unittest
 auxtel:
   path_observing_blocks: ../observing_blocks
   cmd_timeout: 60.0

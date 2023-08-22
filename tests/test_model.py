@@ -234,7 +234,15 @@ class TestModel(unittest.IsolatedAsyncioTestCase):
         await self.model.callback_script_info(script_info)
 
     def get_expected_observing_blocks(self) -> set[str]:
-        return {"Survey1", "greedy", "valid-block", "Survey2", "cwfs", "invalid-block"}
+        return {
+            "Survey1",
+            "greedy",
+            "valid-block",
+            "Survey2",
+            "cwfs",
+            "invalid-block",
+            "huge-block",
+        }
 
     def get_expected_block_status(self) -> dict[str, BlockStatus]:
         return {

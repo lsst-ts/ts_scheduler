@@ -387,7 +387,7 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                 )
 
                 # Reduce CSC loop_die_timeout so test will run faster
-                self.csc.loop_die_timeout = 2.0
+                self.csc.loop_die_timeout = 1.0
 
                 self.remote.evt_detailedState.flush()
 
@@ -406,6 +406,7 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                         detailed_state.substate
                         == DetailedState.COMPUTING_PREDICTED_SCHEDULE
                     ):
+                        self.log.info("Disabling scheduler.")
                         await self.remote.cmd_disable.start(timeout=SHORT_TIMEOUT)
                         break
 
