@@ -29,7 +29,7 @@ from astropy.time import Time, TimeDelta
 from lsst.ts import salobj
 
 from . import CONFIG_SCHEMA
-from .utils import get_efd_client
+from .utils.efd_utils import get_efd_client
 
 
 class TelemetryStreamHandler:
