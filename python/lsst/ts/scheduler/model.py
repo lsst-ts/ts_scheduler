@@ -1,4 +1,4 @@
-# This file is part of ts_scheduler
+# This file is part of ts_scheduler.
 #
 # Developed for the Rubin Observatory Telescope and Site Systems.
 # This product includes software developed by the LSST Project
@@ -29,6 +29,7 @@ import pathlib
 import types
 import typing
 import urllib.request
+import uuid
 
 import numpy as np
 from jsonschema import ValidationError
@@ -44,6 +45,7 @@ from rubin_sim.site_models.seeing_model import SeeingModel
 from .driver import Driver, DriverFactory, DriverType
 from .driver.driver_target import DriverTarget
 from .driver.survey_topology import SurveyTopology
+from .exceptions.exceptions import TargetScriptFailedError, UpdateTelemetryError
 from .observing_blocks.observing_block_status import ObservingBlockStatus
 from .telemetry_stream_handler import TelemetryStreamHandler
 from .utils.csc_utils import (
@@ -53,7 +55,6 @@ from .utils.csc_utils import (
     is_uri,
     is_valid_efd_query,
 )
-from .utils.exceptions import UpdateTelemetryError
 from .utils.scheduled_targets_info import ScheduledTargetsInfo
 from .utils.types import ValidationRules
 
@@ -117,6 +118,9 @@ class Model:
 
         # Dictionary to store information about the scripts put on the queue
         self.script_info: dict[int, BaseDdsDataType] = dict()
+        self._block_scripts_final_state: dict[
+            uuid.UUID, dict[int, asyncio.Future]
+        ] = dict()
 
         # Dictionary to store observing blocks
         self.observing_blocks: dict[str, observing.ObservingBlock] = dict()
@@ -512,7 +516,43 @@ class Model:
         # a named tuple so it is possible to access the data the same way if
         # the topic itself was stored.
 
+        sal_index = data.scriptSalIndex
+        script_state = Script.ScriptState(data.scriptState)
+
         self.script_info[data.scriptSalIndex] = data
+
+        block_all_done: list[uuid.UUID] = []
+
+        self.log.debug(f"Script[{sal_index}]::{script_state!r}")
+
+        for block_uid in self._block_scripts_final_state:
+            self.log.debug(
+                f"Checking {block_uid=}::{self._block_scripts_final_state[block_uid]}"
+            )
+            if (
+                sal_index in self._block_scripts_final_state[block_uid]
+                and script_state not in NonFinalStates
+            ):
+                self.log.debug(f"{block_uid=}::{sal_index=}::{script_state!r}")
+                # Script in a final state set value of the future.
+                if script_state in FailedStates:
+                    self._block_scripts_final_state[block_uid][sal_index].set_exception(
+                        TargetScriptFailedError(
+                            f"Script {sal_index} failed, state is " f"{script_state!r}."
+                        )
+                    )
+                elif not self._block_scripts_final_state[block_uid][sal_index].done():
+                    self._block_scripts_final_state[block_uid][sal_index].set_result(
+                        script_state
+                    )
+            all_done = all(
+                [
+                    task.done()
+                    for task in self._block_scripts_final_state[block_uid].values()
+                ]
+            )
+            if all_done:
+                block_all_done.append(block_uid)
 
         script_info_size = len(self.script_info)
         if script_info_size > self.max_scripts:
@@ -522,6 +562,99 @@ class Model:
             ]
             for key in items_to_remove:
                 del self.script_info[key]
+
+        if len(block_all_done) > self.max_scripts:
+            blocks_to_remove = block_all_done[: self.max_scripts - 1]
+            self.log.debug(f"Removing done blocks: {blocks_to_remove}")
+            for block_uid_done in blocks_to_remove:
+                del self._block_scripts_final_state[block_uid_done]
+
+    def register_new_block(self, id: uuid.UUID) -> None:
+        """Register new block.
+
+        Parameters
+        ----------
+        id : `uuid.UUID`
+            Block id.
+        """
+        if id not in self._block_scripts_final_state:
+            self._block_scripts_final_state[id] = dict()
+
+    async def add_scheduled_script(
+        self, id: uuid.UUID, sal_index: int
+    ) -> asyncio.Future:
+        """Add scheduled script to list of scripts to account for.
+
+        Parameters
+        ----------
+        sal_index : `int`
+            Index of the SAL Script.
+
+        Return
+        ------
+        `asyncio.Future`
+            A Future that will have its result set to the final state of the
+            script, or an exception, in case the script final state is a
+            `FailedStates`.
+        """
+        self._block_scripts_final_state[id][sal_index] = asyncio.Future()
+        return self._block_scripts_final_state[id][sal_index]
+
+    async def check_block_scripts(self, id: uuid.UUID) -> None:
+        """Check the input script states.
+
+        If one of the scripts failed, raise its exception.
+
+        Parameters
+        ----------
+        id : `uuid.UUID`
+            Unique id of the block to check scripts.
+        """
+
+        for sal_index in self._block_scripts_final_state[id]:
+            if self._block_scripts_final_state[id][sal_index].done():
+                try:
+                    await self._block_scripts_final_state[id][sal_index]
+                except Exception:
+                    message = f"Target script {id=}::{sal_index} failed."
+                    self.log.exception(message)
+                    raise TargetScriptFailedError(message)
+
+    async def remove_block_done_scripts(self, id: uuid.UUID) -> None:
+        """Remove all done scripts for a particular block.
+
+        If all scripts are done, leave an empty dict.
+
+        Parameters
+        ----------
+        id : uuid.UUID
+            Unique id of the block to cleanup.
+        """
+        done_scripts = [
+            sal_index
+            for sal_index in self._block_scripts_final_state[id]
+            if self._block_scripts_final_state[id][sal_index].done()
+        ]
+
+        if done_scripts:
+            self.log.info(f"Removing {done_scripts} done scripts from block {id}.")
+
+            for sal_index in done_scripts:
+                del self._block_scripts_final_state[id][sal_index]
+
+    async def mark_block_done(self, id: uuid.UUID) -> None:
+        """Mark all scripts from a block as done.
+
+        Parameters
+        ----------
+        id : uuid.UUID
+            Unique id of the block.
+        """
+        for sal_index in self._block_scripts_final_state[id]:
+            if not self._block_scripts_final_state[id][sal_index].done():
+                self._block_scripts_final_state[id][sal_index].set_exception(
+                    RuntimeError(f"Marking script {sal_index} as done.")
+                )
 
     async def check_scheduled_targets(self) -> ScheduledTargetsInfo:
         """Loop through the scheduled targets list, check status and tell

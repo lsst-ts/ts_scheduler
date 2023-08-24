@@ -6,6 +6,7 @@
         {
             "name": "cwfs.py",
             "standard": false,
+            "program": "$program",
             "parameters": {
                 "find_target": {
                     "az": "$az",

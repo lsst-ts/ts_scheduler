@@ -137,11 +137,14 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
                 assert DetailedState(detailed_state.substate) == expected_detailed_state
 
     async def assert_next_block_id_status(
-        self, block_id: str, block_status_expected: BlockStatus
+        self,
+        block_id: str,
+        block_status_expected: BlockStatus,
+        timeout: float | None = None,
     ) -> None:
         while True:
             block_status = await self.scheduler_remote.evt_blockStatus.next(
-                flush=False, timeout=SCRIPT_TIMEOUT
+                flush=False, timeout=SCRIPT_TIMEOUT if timeout is None else timeout
             )
 
             self.log.debug(
@@ -516,7 +519,12 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
 
             assert general_info is not None, "General info was not published"
 
-        observation = self.scheduler_remote.evt_observation.get()
+        try:
+            observation = await self.scheduler_remote.evt_observation.aget(
+                timeout=STD_TIMEOUT
+            )
+        except asyncio.TimeoutError:
+            observation = None
 
         assert observation is not None, "Observation was not published."
 
@@ -609,6 +617,53 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
             block_id="valid-block",
             block_status_expected=BlockStatus.COMPLETED,
         )
+
+    async def test_add_block_huge_block(self) -> None:
+        # enable queue...
+        await salobj.set_summary_state(
+            self.queue_remote,
+            salobj.State.ENABLED,
+        )
+
+        # enable scheduler
+        await salobj.set_summary_state(
+            self.scheduler_remote,
+            salobj.State.ENABLED,
+            override="advance_target_loop_sequential_std_visit.yaml",
+        )
+
+        await self.scheduler_remote.cmd_addBlock.set_start(
+            id="huge-block",
+            timeout=STD_TIMEOUT,
+        )
+
+        await self.assert_next_block_id_status(
+            block_id="huge-block",
+            block_status_expected=BlockStatus.STARTED,
+        )
+
+        await self.assert_next_block_id_status(
+            block_id="huge-block",
+            block_status_expected=BlockStatus.EXECUTING,
+            timeout=SCRIPT_TIMEOUT * 5,
+        )
+
+        await self.assert_next_block_id_status(
+            block_id="huge-block",
+            block_status_expected=BlockStatus.COMPLETED,
+        )
+
+        while True:
+            try:
+                queue_state = await self.queue_remote.evt_queue.next(
+                    flush=False, timeout=STD_TIMEOUT
+                )
+                self.log.debug(
+                    f"[{queue_state.length}]::{queue_state.salIndices[:queue_state.length]}"
+                )
+                assert queue_state.length <= self.scheduler._max_queue_capacity + 1
+            except asyncio.TimeoutError:
+                break
 
     async def test_add_block_succeed(self) -> None:
         # enable queue...

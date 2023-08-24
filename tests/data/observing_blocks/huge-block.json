@@ -1,0 +1,220 @@
+{
+    "name": "UnitTest",
+    "program": "huge-block",
+    "constraints": [],
+    "scripts": [
+        {
+            "name": "slew.py",
+            "standard": true,
+            "parameters": {
+                "name": "$name",
+                "ra": "$ra",
+                "dec": "$dec",
+                "rot_sky": "$rot_sky",
+                "estimated_slew_time": "$estimated_slew_time",
+                "obs_time": "$obs_time",
+                "note": "Static note will be preserved."
+            }
+        },
+        {
+            "name": "standard_visit.py",
+            "standard": true,
+            "parameters": {
+                "exp_times": "$exp_times",
+                "band_filter": "$band_filter",
+                "program": "$program",
+                "note": "Static note will be preserved."
+            }
+        },
+        {
+            "name": "standard_visit.py",
+            "standard": true,
+            "parameters": {
+                "exp_times": "$exp_times",
+                "band_filter": "$band_filter",
+                "program": "$program",
+                "note": "Static note will be preserved."
+            }
+        },
+        {
+            "name": "standard_visit.py",
+            "standard": true,
+            "parameters": {
+                "exp_times": "$exp_times",
+                "band_filter": "$band_filter",
+                "program": "$program",
+                "note": "Static note will be preserved."
+            }
+        },
+        {
+            "name": "standard_visit.py",
+            "standard": true,
+            "parameters": {
+                "exp_times": "$exp_times",
+                "band_filter": "$band_filter",
+                "program": "$program",
+                "note": "Static note will be preserved."
+            }
+        },
+        {
+            "name": "standard_visit.py",
+            "standard": true,
+            "parameters": {
+                "exp_times": "$exp_times",
+                "band_filter": "$band_filter",
+                "program": "$program",
+                "note": "Static note will be preserved."
+            }
+        },
+        {
+            "name": "standard_visit.py",
+            "standard": true,
+            "parameters": {
+                "exp_times": "$exp_times",
+                "band_filter": "$band_filter",
+                "program": "$program",
+                "note": "Static note will be preserved."
+            }
+        },
+        {
+            "name": "standard_visit.py",
+            "standard": true,
+            "parameters": {
+                "exp_times": "$exp_times",
+                "band_filter": "$band_filter",
+                "program": "$program",
+                "note": "Static note will be preserved."
+            }
+        },
+        {
+            "name": "standard_visit.py",
+            "standard": true,
+            "parameters": {
+                "exp_times": "$exp_times",
+                "band_filter": "$band_filter",
+                "program": "$program",
+                "note": "Static note will be preserved."
+            }
+        },
+        {
+            "name": "standard_visit.py",
+            "standard": true,
+            "parameters": {
+                "exp_times": "$exp_times",
+                "band_filter": "$band_filter",
+                "program": "$program",
+                "note": "Static note will be preserved."
+            }
+        },
+        {
+            "name": "standard_visit.py",
+            "standard": true,
+            "parameters": {
+                "exp_times": "$exp_times",
+                "band_filter": "$band_filter",
+                "program": "$program",
+                "note": "Static note will be preserved."
+            }
+        },
+        {
+            "name": "standard_visit.py",
+            "standard": true,
+            "parameters": {
+                "exp_times": "$exp_times",
+                "band_filter": "$band_filter",
+                "program": "$program",
+                "note": "Static note will be preserved."
+            }
+        },
+        {
+            "name": "standard_visit.py",
+            "standard": true,
+            "parameters": {
+                "exp_times": "$exp_times",
+                "band_filter": "$band_filter",
+                "program": "$program",
+                "note": "Static note will be preserved."
+            }
+        },
+        {
+            "name": "standard_visit.py",
+            "standard": true,
+            "parameters": {
+                "exp_times": "$exp_times",
+                "band_filter": "$band_filter",
+                "program": "$program",
+                "note": "Static note will be preserved."
+            }
+        },
+        {
+            "name": "standard_visit.py",
+            "standard": true,
+            "parameters": {
+                "exp_times": "$exp_times",
+                "band_filter": "$band_filter",
+                "program": "$program",
+                "note": "Static note will be preserved."
+            }
+        },
+        {
+            "name": "standard_visit.py",
+            "standard": true,
+            "parameters": {
+                "exp_times": "$exp_times",
+                "band_filter": "$band_filter",
+                "program": "$program",
+                "note": "Static note will be preserved."
+            }
+        },
+        {
+            "name": "standard_visit.py",
+            "standard": true,
+            "parameters": {
+                "exp_times": "$exp_times",
+                "band_filter": "$band_filter",
+                "program": "$program",
+                "note": "Static note will be preserved."
+            }
+        },
+        {
+            "name": "standard_visit.py",
+            "standard": true,
+            "parameters": {
+                "exp_times": "$exp_times",
+                "band_filter": "$band_filter",
+                "program": "$program",
+                "note": "Static note will be preserved."
+            }
+        },
+        {
+            "name": "standard_visit.py",
+            "standard": true,
+            "parameters": {
+                "exp_times": "$exp_times",
+                "band_filter": "$band_filter",
+                "program": "$program",
+                "note": "Static note will be preserved."
+            }
+        },
+        {
+            "name": "standard_visit.py",
+            "standard": true,
+            "parameters": {
+                "exp_times": "$exp_times",
+                "band_filter": "$band_filter",
+                "program": "$program",
+                "note": "Static note will be preserved."
+            }
+        },
+        {
+            "name": "standard_visit.py",
+            "standard": true,
+            "parameters": {
+                "exp_times": "$exp_times",
+                "band_filter": "$band_filter",
+                "program": "$program",
+                "note": "Static note will be preserved."
+            }
+        }
+    ]
+}

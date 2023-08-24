@@ -19,4 +19,30 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from .observatory_state_mock import *
+__all__ = [
+    "UnableToFindTargetError",
+    "UpdateTelemetryError",
+    "FailedToQueueTargetsError",
+    "TargetScriptFailedError",
+    "NonConsecutiveIndexError",
+]
+
+
+class UnableToFindTargetError(Exception):
+    pass
+
+
+class UpdateTelemetryError(Exception):
+    pass
+
+
+class FailedToQueueTargetsError(Exception):
+    pass
+
+
+class TargetScriptFailedError(Exception):
+    pass
+
+
+class NonConsecutiveIndexError(Exception):
+    pass

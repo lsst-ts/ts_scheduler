@@ -1,6 +1,6 @@
-# This file is part of ts_scheduler
+# This file is part of ts_scheduler.
 #
-# Developed for the LSST Telescope and Site Systems.
+# Developed for the Rubin Observatory Telescope and Site Systems.
 # This product includes software developed by the LSST Project
 # (https://www.lsst.org).
 # See the COPYRIGHT file at the top-level directory of this distribution
@@ -17,6 +17,7 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import importlib
 import io
@@ -37,8 +38,8 @@ from rubin_sim.scheduler.utils import empty_observation
 from rubin_sim.site_models import Almanac
 from rubin_sim.utils import _ra_dec2_hpid
 
-from ..utils import SchemaConverter
-from .driver import Driver, DriverParameters
+from ..utils.fbs_utils import SchemaConverter
+from . import Driver, DriverParameters
 from .driver_target import DriverTarget
 from .feature_scheduler_target import FeatureSchedulerTarget
 from .observation import Observation

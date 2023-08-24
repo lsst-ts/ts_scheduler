@@ -1,6 +1,6 @@
-# This file is part of ts_scheduler
+# This file is part of ts_scheduler.
 #
-# Developed for the Vera C. Rubin Observatory.
+# Developed for the Rubin Observatory Telescope and Site Systems.
 # This product includes software developed by the LSST Project
 # (https://www.lsst.org).
 # See the COPYRIGHT file at the top-level directory of this distribution
@@ -17,6 +17,7 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 __all__ = ["TelemetryStreamHandler"]
 
@@ -29,7 +30,7 @@ from astropy.time import Time, TimeDelta
 from lsst.ts import salobj
 
 from . import CONFIG_SCHEMA
-from .utils import get_efd_client
+from .utils.efd_utils import get_efd_client
 
 
 class TelemetryStreamHandler:

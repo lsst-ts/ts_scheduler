@@ -1,6 +1,6 @@
-# This file is part of ts_scheduler
+# This file is part of ts_scheduler.
 #
-# Developed for the LSST Telescope and Site Systems.
+# Developed for the Rubin Observatory Telescope and Site Systems.
 # This product includes software developed by the LSST Project
 # (https://www.lsst.org).
 # See the COPYRIGHT file at the top-level directory of this distribution
@@ -17,6 +17,8 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 import logging
 import typing
 from string import Template
@@ -28,6 +30,7 @@ from astropy.coordinates import Angle
 from lsst.ts.observatory.model import Target
 from lsst.ts.observing import ObservingBlock
 
+from ..exceptions.exceptions import NonConsecutiveIndexError
 from .observation import Observation
 
 
@@ -124,13 +127,14 @@ class DriverTarget(Target):
         if sal_index in self._sal_indices:
             self.log.warning(f"Index {sal_index} already included.")
             return
-        elif len(self._sal_indices) > 0 and sal_index != self._sal_indices[-1] + 1:
-            raise RuntimeError(
+
+        self._sal_indices.append(sal_index)
+
+        if len(self._sal_indices) > 1 and sal_index != self._sal_indices[-2] + 1:
+            raise NonConsecutiveIndexError(
                 "Non-consecutive SAL index for target observations. "
                 f"Got {sal_index}, currently with {self._sal_indices}."
             )
-
-        self._sal_indices.append(sal_index)
 
     def format_config(self) -> None:
         """Format the observing scripts configuration using the information

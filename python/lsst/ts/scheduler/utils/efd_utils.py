@@ -1,6 +1,6 @@
-# This file is part of ts_scheduler
+# This file is part of ts_scheduler.
 #
-# Developed for the Vera C. Rubin Observatory..
+# Developed for the Rubin Observatory Telescope and Site Systems.
 # This product includes software developed by the LSST Project
 # (https://www.lsst.org).
 # See the COPYRIGHT file at the top-level directory of this distribution
@@ -17,6 +17,7 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 __all__ = ["get_efd_client", "get_mock_efd_client"]
 
@@ -29,7 +30,7 @@ import numpy as np
 import pandas
 import yaml
 
-from ..driver import feature_scheduler
+from ..driver.feature_scheduler import FeatureScheduler
 from .csc_utils import efd_query_re
 from .fbs_utils import SchemaConverter
 
@@ -259,9 +260,7 @@ def get_observation_table() -> pandas.DataFrame:
 
     schema_converter = SchemaConverter()
 
-    opsim_database = (
-        feature_scheduler.FeatureScheduler.default_observation_database_name
-    )
+    opsim_database = FeatureScheduler.default_observation_database_name
 
     if not opsim_database.exists():
         raise RuntimeError(f"No opsim database in {opsim_database!r}")
@@ -269,7 +268,7 @@ def get_observation_table() -> pandas.DataFrame:
     observations = schema_converter.opsim2obs(opsim_database.as_posix())
 
     fbs_observation_keyword = list(
-        feature_scheduler.FeatureScheduler.fbs_observation_named_parameter_map()
+        FeatureScheduler.fbs_observation_named_parameter_map()
     )
 
     additional_keywords = [
@@ -290,7 +289,7 @@ def get_observation_table() -> pandas.DataFrame:
         properties.append(yaml.safe_dump(additional_properties))
         data.append(properties)
     columns = [
-        feature_scheduler.FeatureScheduler.fbs_observation_named_parameter_map()[key]
+        FeatureScheduler.fbs_observation_named_parameter_map()[key]
         for key in fbs_observation_keyword
     ] + ["additionalInformation"]
 
