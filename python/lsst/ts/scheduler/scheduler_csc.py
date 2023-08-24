@@ -1,4 +1,4 @@
-# This file is part of ts_scheduler
+# This file is part of ts_scheduler.
 #
 # Developed for the Rubin Observatory Telescope and Site Systems.
 # This product includes software developed by the LSST Project
@@ -17,6 +17,7 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 __all__ = [
     "SchedulerCSC",

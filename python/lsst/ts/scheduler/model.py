@@ -1,4 +1,4 @@
-# This file is part of ts_scheduler
+# This file is part of ts_scheduler.
 #
 # Developed for the Rubin Observatory Telescope and Site Systems.
 # This product includes software developed by the LSST Project
