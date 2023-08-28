@@ -38,7 +38,7 @@ from rubin_sim.scheduler.utils import empty_observation
 from rubin_sim.site_models import Almanac
 from rubin_sim.utils import _ra_dec2_hpid
 
-from ..utils.fbs_utils import SchemaConverter
+from ..utils.fbs_utils import SchemaConverter, make_fbs_observation_from_target
 from . import Driver, DriverParameters
 from .driver_target import DriverTarget
 from .feature_scheduler_target import FeatureSchedulerTarget
@@ -530,7 +530,13 @@ class FeatureScheduler(Driver):
         Observation
         """
 
-        self.scheduler.add_observation(target.observation[0])
+        observation = (
+            target.observation[0]
+            if hasattr(target, "observation")
+            else make_fbs_observation_from_target(target)
+        )
+
+        self.scheduler.add_observation(observation)
 
         return super().register_observed_target(target)
 
