@@ -459,6 +459,14 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 result="Resuming Scheduler operation.",
             )
 
+            target_production_task = self._tasks.get(
+                "target_production_task", utils.make_done_future()
+            )
+
+            if target_production_task is not None and target_production_task.done():
+                self.log.warning("Target production task not running. Starting it.")
+                await self._start_target_production_task()
+
             await self._transition_idle_to_running()
 
             self.run_target_loop.set()
