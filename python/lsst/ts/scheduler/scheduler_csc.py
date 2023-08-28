@@ -500,7 +500,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         try:
             await asyncio.wait_for(
-                self.stop_target_loop_execution(data),
+                self.stop_target_loop_execution(),
                 timeout=self.loop_die_timeout,
             )
         except asyncio.TimeoutError:
@@ -514,12 +514,12 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             await self._cleanup_queue_targets()
             await self._start_target_production_task()
 
-    async def stop_target_loop_execution(self, data):
+    async def stop_target_loop_execution(self) -> None:
+        """Stop target production loop execution."""
         async with self.target_loop_lock:
             self.log.info("Stopping scheduler.")
 
-            if data.abort:
-                await self._cleanup_queue_targets()
+            await self._cleanup_queue_targets()
 
             await self.reset_handle_no_targets_on_queue()
 
