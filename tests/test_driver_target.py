@@ -26,10 +26,10 @@ import yaml
 from astropy import units
 from astropy.coordinates import Angle
 from astropy.time import Time
-from lsst.ts import observing
 from lsst.ts.observatory.model import ObservatoryModel
 from lsst.ts.scheduler.driver.driver_target import DriverTarget
 from lsst.ts.scheduler.exceptions import NonConsecutiveIndexError
+from lsst.ts.scheduler.utils.test.block_utils import get_test_obs_block
 
 
 class TestDriverTarget(unittest.TestCase):
@@ -44,7 +44,7 @@ class TestDriverTarget(unittest.TestCase):
         return super().setUp()
 
     def test_constructor(self) -> None:
-        observing_block = self.get_test_obs_block()
+        observing_block = get_test_obs_block()
 
         target = DriverTarget(
             observing_block=observing_block,
@@ -57,7 +57,7 @@ class TestDriverTarget(unittest.TestCase):
         self.assertGreater(slew_time, 0.0)
 
     def test_get_script_config(self) -> None:
-        observing_block = self.get_test_obs_block()
+        observing_block = get_test_obs_block()
 
         target = DriverTarget(
             observing_block=observing_block,
@@ -71,7 +71,7 @@ class TestDriverTarget(unittest.TestCase):
         self.assertEqual(script_config_expected, script_config)
 
     def test_get_observing_block(self) -> None:
-        observing_block = self.get_test_obs_block()
+        observing_block = get_test_obs_block()
 
         target = DriverTarget(
             observing_block=observing_block,
@@ -121,7 +121,7 @@ class TestDriverTarget(unittest.TestCase):
         assert script2_config == script2_expected_parameters
 
     def test_sal_index(self) -> None:
-        observing_block = self.get_test_obs_block()
+        observing_block = get_test_obs_block()
 
         target = DriverTarget(
             observing_block=observing_block,
@@ -162,35 +162,3 @@ class TestDriverTarget(unittest.TestCase):
         }
 
         return script_config_expected
-
-    def get_test_obs_block(self) -> observing.ObservingBlock:
-        script1 = observing.ObservingScript(
-            name="slew",
-            standard=True,
-            parameters={
-                "name": "$name",
-                "ra": "$ra",
-                "dec": "$dec",
-                "rot_sky": "$rot_sky",
-                "estimated_slew_time": "$estimated_slew_time",
-                "obs_time": "$obs_time",
-                "note": "Static note will be preserved.",
-            },
-        )
-        script2 = observing.ObservingScript(
-            name="standard_visit",
-            standard=False,
-            parameters={
-                "exp_times": "$exp_times",
-                "band_filter": "$band_filter",
-                "program": "$program",
-                "note": "Static note will be preserved.",
-            },
-        )
-
-        return observing.ObservingBlock(
-            name="OBS-123",
-            program="SITCOM-456",
-            scripts=[script1, script2],
-            constraints=[observing.AirmassConstraint(max=1.5)],
-        )

@@ -62,6 +62,8 @@ v2.0.0
 
     * Limit the number of SAL Scripts the Scheduler adds to the queue at any given time.
 
+    * Implement feature that allows blocks to run alongside the running scheduler.
+
 * In ``model.py``:
 
   * Major refactor of the ``Model`` class to implement the observing block feature.

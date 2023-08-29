@@ -21,6 +21,7 @@
 
 __all__ = [
     "SchemaConverter",
+    "make_fbs_observation_from_target",
 ]
 
 import sqlite3
@@ -28,6 +29,8 @@ import sqlite3
 import numpy as np
 import pandas as pd
 from rubin_sim.scheduler.utils import empty_observation
+
+from ..driver.driver_target import DriverTarget
 
 
 class SchemaConverter:
@@ -187,3 +190,31 @@ class SchemaConverter:
 
         df = df.rename(index=str, columns=self.convert_dict)
         return df
+
+
+def make_fbs_observation_from_target(target: DriverTarget) -> np.ndarray:
+    """Make an fbs observation from a driver target.
+
+    Parameters
+    ----------
+    target : `DriverTarget`
+        Target to generate observation from.
+
+    Returns
+    -------
+    `np.ndarray`
+        Feature based scheduler observation.
+    """
+    observation = empty_observation()
+
+    observation["ID"][0] = target.targetid
+    observation["filter"][0] = target.filter
+    observation["RA"][0] = target.ra_rad
+    observation["dec"][0] = target.dec_rad
+    observation["rotSkyPos"][0] = target.ang_rad
+    observation["nexp"][0] = target.num_exp
+    observation["exptime"][0] = sum(target.exp_times)
+    observation["note"][0] = target.note
+    observation["slewtime"][0] = target.slewtime
+
+    return observation

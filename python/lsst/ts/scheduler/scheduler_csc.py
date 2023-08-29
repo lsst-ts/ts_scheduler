@@ -459,6 +459,14 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 result="Resuming Scheduler operation.",
             )
 
+            target_production_task = self._tasks.get(
+                "target_production_task", utils.make_done_future()
+            )
+
+            if target_production_task is not None and target_production_task.done():
+                self.log.warning("Target production task not running. Starting it.")
+                await self._start_target_production_task()
+
             await self._transition_idle_to_running()
 
             self.run_target_loop.set()
@@ -492,7 +500,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         try:
             await asyncio.wait_for(
-                self.stop_target_loop_execution(data),
+                self.stop_target_loop_execution(),
                 timeout=self.loop_die_timeout,
             )
         except asyncio.TimeoutError:
@@ -506,12 +514,12 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             await self._cleanup_queue_targets()
             await self._start_target_production_task()
 
-    async def stop_target_loop_execution(self, data):
+    async def stop_target_loop_execution(self) -> None:
+        """Stop target production loop execution."""
         async with self.target_loop_lock:
             self.log.info("Stopping scheduler.")
 
-            if data.abort:
-                await self._cleanup_queue_targets()
+            await self._cleanup_queue_targets()
 
             await self.reset_handle_no_targets_on_queue()
 
@@ -1369,7 +1377,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             except Exception:
                 # If there is an exception and not in FAULT, go to FAULT state
                 # and log the exception...
-                if self.summary_state != salobj.State.FAULT:
+                if self.run_loop and self.summary_state != salobj.State.FAULT:
                     await self.fault(
                         code=SIMPLE_LOOP_ERROR,
                         report="Error on simple target production loop.",
@@ -1500,7 +1508,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             except UnableToFindTargetError:
                 # If there is an exception and not in FAULT, go to FAULT state
                 # and log the exception...
-                if self.summary_state != salobj.State.FAULT:
+                if self.run_loop and self.summary_state != salobj.State.FAULT:
                     await self.fault(
                         code=UNABLE_TO_FIND_TARGET,
                         report=f"Unable to find target in the next {self.max_time_no_target/60./60.} hours.",
@@ -1508,7 +1516,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     )
                 break
             except UpdateTelemetryError:
-                if self.summary_state != salobj.State.FAULT:
+                if self.run_loop and self.summary_state != salobj.State.FAULT:
                     self.log.exception("Failed to update telemetry.")
                     await self.fault(
                         code=UPDATE_TELEMETRY_ERROR,
@@ -1517,7 +1525,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     )
                 break
             except FailedToQueueTargetsError:
-                if self.summary_state != salobj.State.FAULT:
+                if self.run_loop and self.summary_state != salobj.State.FAULT:
                     await self.fault(
                         code=PUT_ON_QUEUE,
                         report="Could not add target to the queue",
@@ -1527,7 +1535,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             except Exception:
                 # If there is an exception and not in FAULT, go to FAULT state
                 # and log the exception...
-                if self.summary_state != salobj.State.FAULT:
+                if self.run_loop and self.summary_state != salobj.State.FAULT:
                     await self.fault(
                         code=ADVANCE_LOOP_ERROR,
                         report="Error on advance target production loop.",
