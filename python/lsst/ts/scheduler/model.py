@@ -39,8 +39,8 @@ from lsst.ts.dateloc import ObservatoryLocation
 from lsst.ts.idl.enums import Script
 from lsst.ts.observatory.model import ObservatoryModel, ObservatoryState
 from lsst.ts.salobj.type_hints import BaseDdsDataType
-from rubin_sim.site_models.cloud_model import CloudModel
-from rubin_sim.site_models.seeing_model import SeeingModel
+from rubin_scheduler.site_models.cloud_model import CloudModel
+from rubin_scheduler.site_models.seeing_model import SeeingModel
 
 from .driver import Driver, DriverFactory, DriverType
 from .driver.driver_target import DriverTarget

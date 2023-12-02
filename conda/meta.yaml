@@ -23,7 +23,7 @@ test:
     - ts-astrosky-model >=1.4
     - ts-dateloc
     - ts-observing
-    - rubin-sim =1
+    - rubin-scheduler
     - rsync
   source_files:
     - python
@@ -31,7 +31,7 @@ test:
     - setup.cfg
     - pyproject.toml
   commands:
-    - rs_download_data -d skybrightness,skybrightness_pre,throughputs,site_models
+    - scheduler_download_data --update
     - pytest -vsx
 
 requirements:
@@ -56,4 +56,4 @@ requirements:
     - ts-astrosky-model >=1.4
     - ts-dateloc
     - ts-observing
-    - rubin-sim =1
+    - rubin-scheduler

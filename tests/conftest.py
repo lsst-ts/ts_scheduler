@@ -29,8 +29,8 @@ import pytest
 import requests
 from lsst.ts import utils
 from lsst.ts.scheduler.utils.csc_utils import DDS_VERSION
-from rubin_sim.data.data_sets import get_data_dir
-from rubin_sim.data.rs_download_sky import MyHTMLParser
+from rubin_scheduler.data.data_sets import get_data_dir
+from rubin_scheduler.data.rs_download_sky import MyHTMLParser
 
 
 def has_required_sky_file(path: pathlib.Path, mjd: float) -> bool:
@@ -128,7 +128,7 @@ def find_sky_file(source: str, mjd: float) -> str:
 
 def download_sky_file(path: pathlib.Path, mjd: float) -> None:
     """Download sky file for the specified mjd into the provided path from the
-    rubin_sim server.
+    rubin_sim_data server.
 
     Parameters
     ----------
@@ -137,7 +137,8 @@ def download_sky_file(path: pathlib.Path, mjd: float) -> None:
     mjd : `float`
         MJD of the test.
     """
-    source = "https://s3df.slac.stanford.edu/groups/rubin/static/sim-data/sims_skybrightness_pre/h5/"
+    source = "https://s3df.slac.stanford.edu/groups/rubin/static/sim-data/"
+    source += "sims_skybrightness_pre/h5_2023_09_12/"
 
     if not path.exists():
         path.mkdir(parents=True)

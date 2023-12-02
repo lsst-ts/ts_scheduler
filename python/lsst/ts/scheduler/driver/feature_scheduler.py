@@ -33,10 +33,10 @@ import pandas
 import yaml
 from astropy.time import Time
 from lsst.ts.utils import index_generator
-from rubin_sim.scheduler.features import Conditions
-from rubin_sim.scheduler.utils import empty_observation
-from rubin_sim.site_models import Almanac
-from rubin_sim.utils import _ra_dec2_hpid
+from rubin_scheduler.scheduler.features import Conditions
+from rubin_scheduler.scheduler.utils import empty_observation
+from rubin_scheduler.site_models import Almanac
+from rubin_scheduler.utils import _ra_dec2_hpid
 
 from ..utils.fbs_utils import SchemaConverter, make_fbs_observation_from_target
 from . import Driver, DriverParameters

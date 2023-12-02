@@ -1,11 +1,11 @@
 import numpy as np
-import rubin_sim.scheduler.basis_functions as bf
-import rubin_sim.scheduler.detailers as detailers
+import rubin_scheduler.scheduler.basis_functions as bf
+import rubin_scheduler.scheduler.detailers as detailers
 from lsst.ts.scheduler.utils.test.feature_scheduler_sim import MJD_START
-from rubin_sim.scheduler.model_observatory import ModelObservatory
-from rubin_sim.scheduler.schedulers import CoreScheduler
-from rubin_sim.scheduler.surveys import GreedySurvey
-from rubin_sim.scheduler.utils import Footprint, standard_goals
+from rubin_scheduler.scheduler.model_observatory import ModelObservatory
+from rubin_scheduler.scheduler.schedulers import CoreScheduler
+from rubin_scheduler.scheduler.surveys import GreedySurvey
+from rubin_scheduler.scheduler.utils import Footprint, SkyAreaGenerator
 
 
 def gen_greedy_surveys(
@@ -28,9 +28,9 @@ def gen_greedy_surveys(
     """
     Make a quick set of greedy surveys
 
-    This is a convienence function to generate a list of survey objects that
-    can be used with lsst.sims.featureScheduler.schedulers.CoreScheduler.
-    To ensure we are robust against changes in the sims_featureScheduler
+    This is a convenience function to generate a list of survey objects that
+    can be used with rubin_scheduler.schedulers.CoreScheduler.
+    To ensure we are robust against changes in the rubin_scheduler
     codebase, all kwargs are explicitly set.
 
     Parameters
@@ -48,7 +48,7 @@ def gen_greedy_surveys(
     shadow_minutes : float (60.)
         Used to mask regions around zenith (minutes).
     max_alt : float (76.)
-        The maximium altitude to use when masking zenith (degrees).
+        The maximum altitude to use when masking zenith (degrees).
     moon_distance : float (30.)
         The mask radius to apply around the moon (degrees).
     ignore_obs : str or list of str ('DD')
@@ -154,7 +154,8 @@ if __name__ == "config":
     observatory.sky_model.load_length = 3
     conditions = observatory.return_conditions()
 
-    footprints_hp = standard_goals(nside=nside)
+    sky = SkyAreaGenerator(nside=nside)
+    footprints_hp, labels = sky.return_maps()
 
     footprints = Footprint(
         conditions.mjd_start, sun_ra_start=conditions.sun_ra_start, nside=nside
