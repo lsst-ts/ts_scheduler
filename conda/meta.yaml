@@ -15,6 +15,11 @@ build:
 test:
   requires:
     - ts-conda-build =0.3
+    - astropy
+    - jsonschema
+    - numpy
+    - pandas
+    - yaml
     - ts-idl {{ idl_version }}
     - ts-utils
     - ts-salobj {{ salobj_version }}
@@ -49,6 +54,11 @@ requirements:
     - python {{ python }}
     - setuptools {{ setuptools }}
     - setuptools_scm {{ setuptools_scm }}
+    - astropy
+    - jsonschema
+    - numpy
+    - pandas
+    - yaml
     - ts-idl
     - ts-utils
     - ts-salobj
