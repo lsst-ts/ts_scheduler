@@ -28,6 +28,7 @@ import numpy as np
 import pytest
 import requests
 from lsst.ts import utils
+from lsst.ts.scheduler.utils import efd_utils
 from lsst.ts.scheduler.utils.csc_utils import DDS_VERSION
 from rubin_scheduler.data.data_sets import get_data_dir
 from rubin_scheduler.data.rs_download_sky import MyHTMLParser
@@ -204,3 +205,8 @@ def start_ospl_daemon() -> None:
         print(f"ospl status {output.returncode}... Nothing to do.")
 
         yield
+
+
+@pytest.fixture(scope="session", autouse=True)
+def mock_efd_client() -> None:
+    efd_utils.__with_lsst_efd_client__ = False
