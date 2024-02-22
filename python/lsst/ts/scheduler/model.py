@@ -118,9 +118,9 @@ class Model:
 
         # Dictionary to store information about the scripts put on the queue
         self.script_info: dict[int, BaseDdsDataType] = dict()
-        self._block_scripts_final_state: dict[
-            uuid.UUID, dict[int, asyncio.Future]
-        ] = dict()
+        self._block_scripts_final_state: dict[uuid.UUID, dict[int, asyncio.Future]] = (
+            dict()
+        )
 
         # Dictionary to store observing blocks
         self.observing_blocks: dict[str, observing.ObservingBlock] = dict()
@@ -266,9 +266,9 @@ class Model:
         for observing_block_file in path_observing_blocks.glob("*.json"):
             observing_block = observing.ObservingBlock.parse_file(observing_block_file)
             self.observing_blocks[observing_block.program] = observing_block
-            self.observing_blocks_status[
-                observing_block.program
-            ] = await self._get_block_status(program=observing_block.program)
+            self.observing_blocks_status[observing_block.program] = (
+                await self._get_block_status(program=observing_block.program)
+            )
 
     async def validate_observing_blocks(
         self, observing_scripts_config_validator: ValidationRules
@@ -309,9 +309,9 @@ class Model:
                         f"Successfully validated script {script.name} from {block_id} "
                         f"with:\n{script.parameters}"
                     )
-                    self.observing_blocks_status[
-                        block_id
-                    ].status = BlockStatus.AVAILABLE
+                    self.observing_blocks_status[block_id].status = (
+                        BlockStatus.AVAILABLE
+                    )
 
     def get_valid_observing_blocks(self) -> list[str]:
         """Get list of valid observing blocks.

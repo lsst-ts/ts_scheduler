@@ -63,9 +63,9 @@ class TestFeatureSchedulerDriver(unittest.TestCase):
         return self.feature_scheduler_sim.config
 
     def test_configure_scheduler(self):
-        self.config.feature_scheduler_driver_configuration[
-            "scheduler_config"
-        ] = "no_file.py"
+        self.config.feature_scheduler_driver_configuration["scheduler_config"] = (
+            "no_file.py"
+        )
 
         with self.assertRaises(RuntimeError):
             survey_topology = self.driver.configure_scheduler(self.config)

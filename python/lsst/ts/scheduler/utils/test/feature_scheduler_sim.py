@@ -206,9 +206,9 @@ class FeatureSchedulerSim:
         observation_database_name : `str`, optional
             Name ot the observation database.
         """
-        self.config.feature_scheduler_driver_configuration[
-            "scheduler_config"
-        ] = test_config_dir.parents[1].joinpath("data", "config", scheduler_config_name)
+        self.config.feature_scheduler_driver_configuration["scheduler_config"] = (
+            test_config_dir.parents[1].joinpath("data", "config", scheduler_config_name)
+        )
 
         if observation_database_name is not None:
             self.config.feature_scheduler_driver_configuration[

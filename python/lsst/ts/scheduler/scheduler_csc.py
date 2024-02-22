@@ -1581,7 +1581,11 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         async with self.current_scheduler_state(publish_lfoa=True):
             self.log.debug(f"Target queue contains {len(self.targets_queue)} targets.")
 
-            async for observatory_time, wait_time, target in self.model.generate_target_queue(
+            async for (
+                observatory_time,
+                wait_time,
+                target,
+            ) in self.model.generate_target_queue(
                 targets_queue=self.targets_queue,
                 max_targets=self.parameters.n_targets + 1,
             ):
