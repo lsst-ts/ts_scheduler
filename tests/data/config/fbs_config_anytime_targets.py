@@ -138,7 +138,7 @@ if __name__ == "config":
     footprints = Footprint(
         conditions.mjd_start, sun_ra_start=conditions.sun_ra_start, nside=nside
     )
-    for i, key in enumerate(footprints_hp):
+    for i, key in enumerate(footprints_hp.dtype.names):
         footprints.footprints[i, :] = footprints_hp[key]
 
     greedy = gen_greedy_surveys(nside, nexp=1, footprints=footprints, seed=seed)
