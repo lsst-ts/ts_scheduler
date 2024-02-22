@@ -24,6 +24,7 @@ __all__ = [
     "make_fbs_observation_from_target",
 ]
 
+import os
 import sqlite3
 
 import numpy as np
@@ -41,6 +42,55 @@ class SchemaConverter(rs_sched_utils.SchemaConverter):
     a method to read an opsim database and return a dataframe instead
     of an observation array.
     """
+
+    def obs2opsim(
+        self, obs_array, filename=None, info=None, delete_past=False, if_exists="append"
+    ):
+        """Convert an array of observations into a pandas dataframe
+        with Opsim schema.
+
+        Parameters
+        ----------
+        obs_array : `np.array`
+            Numpy array with OpSim observations.
+        filename : `str`, optional
+            Name of the database file to write to.
+        info : `np.array`, optional
+            Numpy array with database info.
+        delete_past : `bool`
+            Delete past observations (default=False)?
+        if_exists : `str`
+            Flag to pass to `to_sql` when writting to the
+            database to control strategy when the database
+            already exists.
+
+        Returns
+        -------
+        `pd.DataFrame` or `None`
+            Either the converted dataframe or `None`, if
+            filename is provided.
+        """
+        if delete_past:
+            try:
+                os.remove(filename)
+            except OSError:
+                pass
+
+        df = pd.DataFrame(obs_array)
+        df = df.rename(index=str, columns=self.inv_map)
+        for colname in self.angles_rad2deg:
+            df[colname] = np.degrees(df[colname])
+        for colname in self.angles_hours2deg:
+            df[colname] = df[colname] * 360.0 / 24.0
+
+        if filename is not None:
+            con = sqlite3.connect(filename)
+            df.to_sql("observations", con, index=False, if_exists=if_exists)
+            if info is not None:
+                df = pd.DataFrame(info)
+                df.to_sql("info", con, if_exists=if_exists)
+        else:
+            return df
 
     def opsim2df(self, filename: str) -> pd.DataFrame:
         """Read an opsim database and return a pandas data frame.
