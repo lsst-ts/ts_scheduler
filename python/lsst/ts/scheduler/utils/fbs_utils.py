@@ -24,107 +24,57 @@ __all__ = [
     "make_fbs_observation_from_target",
 ]
 
+import os
 import sqlite3
 
 import numpy as np
 import pandas as pd
-from rubin_sim.scheduler.utils import empty_observation
+import rubin_scheduler.scheduler.utils as rs_sched_utils
 
 from ..driver.driver_target import DriverTarget
 
 
-class SchemaConverter:
+class SchemaConverter(rs_sched_utils.SchemaConverter):
     """Record how to convert an observation array to the standard
     opsim schema.
+
+    Extends rubin_scheduler.scheduler.utils.SchemaConverter with
+    a method to read an opsim database and return a dataframe instead
+    of an observation array.
     """
 
-    def __init__(self) -> None:
-        # Conversion dictionary, keys are opsim schema, values are
-        # observation dtype names
-        self.convert_dict = {
-            "observationId": "ID",
-            "night": "night",
-            "observationStartMJD": "mjd",
-            "observationStartLST": "lmst",
-            "numExposures": "nexp",
-            "visitTime": "visittime",
-            "visitExposureTime": "exptime",
-            "proposalId": "survey_id",
-            "fieldId": "field_id",
-            "fieldRA": "RA",
-            "fieldDec": "dec",
-            "altitude": "alt",
-            "azimuth": "az",
-            "filter": "filter",
-            "airmass": "airmass",
-            "skyBrightness": "skybrightness",
-            "cloud": "clouds",
-            "seeingFwhm500": "FWHM_500",
-            "seeingFwhmGeom": "FWHM_geometric",
-            "seeingFwhmEff": "FWHMeff",
-            "fiveSigmaDepth": "fivesigmadepth",
-            "slewTime": "slewtime",
-            "slewDistance": "slewdist",
-            "paraAngle": "pa",
-            "rotTelPos": "rotTelPos",
-            "rotTelPos_backup": "rotTelPos_backup",
-            "rotSkyPos": "rotSkyPos",
-            "rotSkyPos_desired": "rotSkyPos_desired",
-            "moonRA": "moonRA",
-            "moonDec": "moonDec",
-            "moonAlt": "moonAlt",
-            "moonAz": "moonAz",
-            "moonDistance": "moonDist",
-            "moonPhase": "moonPhase",
-            "sunAlt": "sunAlt",
-            "sunAz": "sunAz",
-            "solarElong": "solarElong",
-            "note": "note",
-        }
-        # Column(s) not bothering to remap:  'observationStartTime': None,
-        self.inv_map = {v: k for k, v in self.convert_dict.items()}
-        # angles to convert
-        self.angles_rad2deg = [
-            "fieldRA",
-            "fieldDec",
-            "altitude",
-            "azimuth",
-            "slewDistance",
-            "paraAngle",
-            "rotTelPos",
-            "rotSkyPos",
-            "rotSkyPos_desired",
-            "rotTelPos_backup",
-            "moonRA",
-            "moonDec",
-            "moonAlt",
-            "moonAz",
-            "moonDistance",
-            "sunAlt",
-            "sunAz",
-            "sunRA",
-            "sunDec",
-            "solarElong",
-            "cummTelAz",
-        ]
-        # Put LMST into degrees too
-        self.angles_hours2deg = ["observationStartLST"]
-
     def obs2opsim(
-        self,
-        obs_array: np.ndarray,
-        filename: str,
-    ) -> None:
+        self, obs_array, filename=None, info=None, delete_past=False, if_exists="append"
+    ):
         """Convert an array of observations into a pandas dataframe
-        with Opsim schema and store it in a sqlite database.
+        with Opsim schema.
 
         Parameters
         ----------
-        obs_array : `np.ndarray`
-            Array of observations.
-        filename : `str`
-            Name of the database file.
+        obs_array : `np.array`
+            Numpy array with OpSim observations.
+        filename : `str`, optional
+            Name of the database file to write to.
+        info : `np.array`, optional
+            Numpy array with database info.
+        delete_past : `bool`
+            Delete past observations (default=False)?
+        if_exists : `str`
+            Flag to pass to `to_sql` when writting to the
+            database to control strategy when the database
+            already exists.
+
+        Returns
+        -------
+        `pd.DataFrame` or `None`
+            Either the converted dataframe or `None`, if
+            filename is provided.
         """
+        if delete_past:
+            try:
+                os.remove(filename)
+            except OSError:
+                pass
 
         df = pd.DataFrame(obs_array)
         df = df.rename(index=str, columns=self.inv_map)
@@ -135,38 +85,12 @@ class SchemaConverter:
 
         if filename is not None:
             con = sqlite3.connect(filename)
-            df.to_sql(
-                "observations",
-                con,
-                if_exists="append",
-                index=False,
-            )
-
-    def opsim2obs(self, filename: str) -> np.ndarray:
-        """Read an opsim database and return an observation array.
-
-        Parameters
-        ----------
-        filename : `str`
-            Path to the observation database.
-
-        Returns
-        -------
-        `np.ndarray`
-            A numpy named array with observations. The format is defined by
-            the feature scheduler observation.
-        """
-
-        df = self.opsim2df(filename)
-
-        blank = empty_observation()
-        final_result = np.empty(df.shape[0], dtype=blank.dtype)
-
-        for i, key in enumerate(df.columns):
-            if key in self.inv_map.keys():
-                final_result[key] = df[key].values
-
-        return final_result
+            df.to_sql("observations", con, index=False, if_exists=if_exists)
+            if info is not None:
+                df = pd.DataFrame(info)
+                df.to_sql("info", con, if_exists=if_exists)
+        else:
+            return df
 
     def opsim2df(self, filename: str) -> pd.DataFrame:
         """Read an opsim database and return a pandas data frame.
@@ -205,7 +129,7 @@ def make_fbs_observation_from_target(target: DriverTarget) -> np.ndarray:
     `np.ndarray`
         Feature based scheduler observation.
     """
-    observation = empty_observation()
+    observation = rs_sched_utils.empty_observation()
 
     observation["ID"][0] = target.targetid
     observation["filter"][0] = target.filter

@@ -31,7 +31,7 @@ from lsst.ts import observing
 from lsst.ts.observatory.model import ObservatoryModel
 from lsst.ts.scheduler.driver.feature_scheduler_target import FeatureSchedulerTarget
 from lsst.ts.scheduler.utils.test.feature_scheduler_sim import MJD_START
-from rubin_sim.scheduler.utils import empty_observation
+from rubin_scheduler.scheduler.utils import empty_observation
 
 
 class TestFeatureSchedulerTarget(unittest.TestCase):

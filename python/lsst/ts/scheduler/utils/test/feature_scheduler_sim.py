@@ -30,13 +30,14 @@ from lsst.ts import observing
 from lsst.ts.astrosky.model import AstronomicalSkyModel
 from lsst.ts.dateloc import ObservatoryLocation
 from lsst.ts.observatory.model import ObservatoryModel, ObservatoryState
-from rubin_sim.site_models.cloud_model import CloudModel
-from rubin_sim.site_models.seeing_model import SeeingModel
+from rubin_scheduler.site_models.cloud_model import CloudModel
+from rubin_scheduler.site_models.seeing_model import SeeingModel
+from rubin_scheduler.utils import survey_start_mjd
 
 from ...driver import FeatureScheduler
 from ...driver.feature_scheduler_target import FeatureSchedulerTarget
 
-MJD_START = 60110.983
+MJD_START = survey_start_mjd()
 
 
 class FeatureSchedulerSim:
@@ -205,9 +206,9 @@ class FeatureSchedulerSim:
         observation_database_name : `str`, optional
             Name ot the observation database.
         """
-        self.config.feature_scheduler_driver_configuration[
-            "scheduler_config"
-        ] = test_config_dir.parents[1].joinpath("data", "config", scheduler_config_name)
+        self.config.feature_scheduler_driver_configuration["scheduler_config"] = (
+            test_config_dir.parents[1].joinpath("data", "config", scheduler_config_name)
+        )
 
         if observation_database_name is not None:
             self.config.feature_scheduler_driver_configuration[

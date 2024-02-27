@@ -42,7 +42,7 @@ from lsst.ts.dateloc import version as dateloc_version
 from lsst.ts.idl.enums import Scheduler, ScriptQueue
 from lsst.ts.observatory.model import version as obs_mod_version
 from lsst.ts.observing import ObservingBlock, ObservingScript
-from rubin_sim.version import __version__ as rubin_sim_version
+from rubin_scheduler.version import __version__ as rubin_scheduler_version
 
 from . import CONFIG_SCHEMA, __version__
 from .driver.driver_target import DriverTarget
@@ -119,9 +119,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         - `observatory_model` : lsst.ts.observatory.model.ObservatoryModel
         - `observatory_state` : lsst.ts.observatory.model.ObservatoryState
         - `sky` : lsst.ts.astrosky.model.AstronomicalSkyModel
-        - `seeing` : lsst.sims.seeingModel.SeeingModel
-        - `scheduled_downtime` : lsst.sims.downtimeModel.ScheduleDowntime
-        - `unscheduled_downtime` : lsst.sims.downtimeModel.UnschedulerDowntime
+        - `seeing` : rubin_scheduler.site_models.SeeingModel
+        - `downtime` : rubin_scheduler.site_models.DowntimeModel
     raw_telemetry: {`str`: :object:}
         Raw, as in unparsed data that is recieved over SAL. The SchedulerCSC
         parses self.raw_telemtry and formats the data into self.models.
@@ -1104,10 +1103,10 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 scheduler=self.parameters.driver_type,
                 observatoryModel=obs_mod_version.__version__,
                 observatoryLocation=dateloc_version.__version__,
-                seeingModel=rubin_sim_version,
-                cloudModel=rubin_sim_version,
+                seeingModel=rubin_scheduler_version,
+                cloudModel=rubin_scheduler_version,
                 skybrightnessModel=astrosky_version.__version__,
-                downtimeModel=rubin_sim_version,
+                downtimeModel=rubin_scheduler_version,
                 force_output=True,
             )
         else:
@@ -1237,7 +1236,11 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         task_name = "lock_target_loop_and_check_targets"
 
-        if task_name not in self._tasks or self._tasks[task_name].done():
+        task = self._tasks.get(task_name, None)
+        if task is None:
+            task = utils.make_done_future()
+
+        if task.done():
             self._tasks[task_name] = asyncio.create_task(
                 self.lock_target_loop_and_check_targets()
             )
@@ -1578,7 +1581,11 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         async with self.current_scheduler_state(publish_lfoa=True):
             self.log.debug(f"Target queue contains {len(self.targets_queue)} targets.")
 
-            async for observatory_time, wait_time, target in self.model.generate_target_queue(
+            async for (
+                observatory_time,
+                wait_time,
+                target,
+            ) in self.model.generate_target_queue(
                 targets_queue=self.targets_queue,
                 max_targets=self.parameters.n_targets + 1,
             ):

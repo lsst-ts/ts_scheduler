@@ -16,7 +16,8 @@ pipeline{
             steps{
                 sh """
                     source /home/saluser/.setup.sh
-                    mamba install -y -c lsstts ts-idl ts-utils ts-salobj ts-scriptqueue ts-observatory-model ts-astrosky-model ts-dateloc ts-observing rubin-sim
+                    mamba install -y -c lsstts ts-idl ts-utils ts-salobj ts-scriptqueue ts-observatory-model
+                    mamba install -y -c lsstts ts-astrosky-model ts-dateloc ts-observing rubin-scheduler
                     pip install -e .
                     pip install -r doc/requirements.txt
                     package-docs build

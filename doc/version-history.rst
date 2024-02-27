@@ -12,6 +12,8 @@ v2.0.0
 .. It will be spread over several PRs untill the feature is fully implemented.
 .. In the meantime use Release Candidate (in the develop branch) to deploy at the summit.
 
+* Moves from rubin-sim package to rubin-scheduler. The rubin-scheduler package contains all of the scheduling-related code from rubin-sim, but without MAF. This reduces the dependencies typically installed with rubin-sim, as well as reduces the default data download to only that required to run the scheduler.
+
 * Update documentation.
 
 * Add support for running CSC with Kafka version of salobj.
@@ -97,7 +99,8 @@ v2.0.0
   * Use conditional schema to match the selected driver to its configuration, making the appropriate session required according to the selected driver.
   * Make all sub-schemas fixed, do not accept additional properties.
 
-* In ``utils/fbs_utils.py``, minor cosmetic update in ``SchemaConverter`` to extract the code that converts and opsim database into a pandas dataframe into its own method.
+* In ``utils/fbs_utils.py``, moves to inheriting from rubin_scheduler.scheduler.SchemaConverter, while extending the class to add a method to convert from an opsim database into a pandas dataframe (only).
+
 
 * In ``utils/csc_utils.py``:
 

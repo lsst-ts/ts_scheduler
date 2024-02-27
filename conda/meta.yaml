@@ -15,6 +15,11 @@ build:
 test:
   requires:
     - ts-conda-build =0.3
+    - astropy
+    - jsonschema
+    - numpy
+    - pandas
+    - yaml
     - ts-idl {{ idl_version }}
     - ts-utils
     - ts-salobj {{ salobj_version }}
@@ -23,7 +28,7 @@ test:
     - ts-astrosky-model >=1.4
     - ts-dateloc
     - ts-observing
-    - rubin-sim =1
+    - rubin-scheduler
     - rsync
   source_files:
     - python
@@ -31,7 +36,7 @@ test:
     - setup.cfg
     - pyproject.toml
   commands:
-    - rs_download_data -d skybrightness,skybrightness_pre,throughputs,site_models
+    - scheduler_download_data --update
     - pytest -vsx
 
 requirements:
@@ -49,6 +54,11 @@ requirements:
     - python {{ python }}
     - setuptools {{ setuptools }}
     - setuptools_scm {{ setuptools_scm }}
+    - astropy
+    - jsonschema
+    - numpy
+    - pandas
+    - yaml
     - ts-idl
     - ts-utils
     - ts-salobj
@@ -56,4 +66,4 @@ requirements:
     - ts-astrosky-model >=1.4
     - ts-dateloc
     - ts-observing
-    - rubin-sim =1
+    - rubin-scheduler
