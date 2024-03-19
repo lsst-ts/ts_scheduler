@@ -1061,13 +1061,22 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         instance = Scheduler.SalIndex(self.salinfo.index)
 
-        settings = types.SimpleNamespace(
-            **(
-                config.maintel
-                if instance == Scheduler.SalIndex.MAIN_TEL
-                else config.auxtel
+        if instance == Scheduler.SalIndex.MAIN_TEL:
+            settings = types.SimpleNamespace(**config.maintel)
+        elif instance == Scheduler.SalIndex.AUX_TEL:
+            settings = types.SimpleNamespace(**config.auxtel)
+        elif hasattr(config, instance.name.lower()):
+            settings = types.SimpleNamespace(**getattr(config, instance.name.lower()))
+        else:
+            available_instances = [i for i in dir(config) if not i.startswith("__")]
+            raise RuntimeError(
+                "Could not find configuration for current instance of the Scheduler. "
+                f"This instance has index {self.salinfo.index}, "
+                f"which is labeled {instance.name}. Expected to find a configuration"
+                f"session named {instance.name.lower()} but only found "
+                f"{available_instances}. Make sure the configuration is updated to include "
+                "a session for this instance of the Scheduler."
             )
-        )
 
         self.log.debug(f"Settings for {instance!r}: {settings}")
 
