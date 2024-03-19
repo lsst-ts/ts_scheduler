@@ -1,0 +1,9 @@
+
+[project]
+title = "Scheduler CSC."
+copyright = "2015-2024 Association of Universities for Research in Astronomy, Inc. (AURA)"
+github_url = "https://github.com/lsst-ts/ts_scheduler"
+
+[project.python]
+package = "ts_scheduler"
+

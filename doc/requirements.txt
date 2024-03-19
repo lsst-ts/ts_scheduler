@@ -1,1 +1,3 @@
 documenteer[pipelines]
+sphinxext-rediraffe
+
