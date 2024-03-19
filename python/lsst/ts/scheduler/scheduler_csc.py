@@ -2349,4 +2349,4 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
 def run_scheduler() -> None:
     """Run the Scheduler CSC."""
-    asyncio.run(SchedulerCSC.amain(index=True))
+    asyncio.run(SchedulerCSC.amain(index=Scheduler.SalIndex))
