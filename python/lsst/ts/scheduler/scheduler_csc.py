@@ -202,7 +202,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         # state
         self.ptg = salobj.Remote(
             self.domain,
-            "MTPtg" if index == 1 else "ATPtg",
+            "MTPtg" if index % 2 == 1 else "ATPtg",
             include=["currentTargetStatus"],
         )
 
