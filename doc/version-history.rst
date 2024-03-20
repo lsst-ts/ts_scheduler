@@ -535,16 +535,19 @@ v1.8.0
 * Adds two new invalid configurations to check the CSC configuration schema.
 * Reformat `all_fields` test configuration.
 * Changes in the CSC configuration schema:
+
   * Make the top level CSC configuration reject `additionalProperties`.
     This was used to pass in configurations for the driver, but had the drawback that it did not check the top level against mistakes.
+
   * Add a new required configuration section for the driver; driver_configuration.
     This new section is basically an dictionary that users can rely on to pass in configurations for the drivers.
     The driver themselves will be in charge of verifying the configuration.
+
 * Fix issue in test_simple_target_loop, where it was not configuring the scheduler with the correct configuration.
 * Rename `DriverTarget.as_evt_topic` -> `DriverTarget.as_dict`.
 * Fix issue in `advance_target_production_loop` when there are no target in the `target_queue`.
 * Fix `test_advance_target_loop` unit test.
-* Move `DriverTarget` into its own sub-module in `driver.
+* Move `DriverTarget` into its own sub-module in `driver`.
 
 
 
