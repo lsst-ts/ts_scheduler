@@ -719,9 +719,11 @@ properties:
       Large File Annex S3 instance, for example "tuc" (Tucson Test Stand),
       "ls" (Base Test Stand), "cp" (summit).
     type: string
+  maintel:
+    $ref: "#/definitions/instance_specific_config"
   auxtel:
     $ref: "#/definitions/instance_specific_config"
-  maintel:
+  ocs:
     $ref: "#/definitions/instance_specific_config"
 """
 )
