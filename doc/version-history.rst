@@ -66,6 +66,8 @@ v2.0.0
 
     * Implement feature that allows blocks to run alongside the running scheduler.
 
+    * Add support for a 3rd instance of the Scheduler to run alongside a 3rd instance of the queue.
+
 * In ``model.py``:
 
   * Major refactor of the ``Model`` class to implement the observing block feature.
@@ -81,6 +83,8 @@ v2.0.0
     This is needed for the ``Model`` class to be able to query the status of the observing blocks at startup.
   
   * Add ``get_valid_observing_blocks`` method to retrieve a list of blocks that are valid.
+
+  * Search blocks in subdirectories inside the block directory.
 
 * Add new submodule ``driver/driver_factory.py``, defining a ``DriverFactory`` class.
 
