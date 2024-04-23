@@ -37,6 +37,7 @@ v2.0.0
     * Make some improvement in long running commands such that they wait a fraction of a heartbeat to send the in progress ack.
 
     * Implement method to validate observing blocks and publish block info.
+      Add support for either querying the ScriptQueue or reading script configuration from path.
 
     * Move code that publishes the settings events into a new method ``_publish_settings``.
 

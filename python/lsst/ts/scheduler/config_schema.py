@@ -719,6 +719,22 @@ properties:
       Large File Annex S3 instance, for example "tuc" (Tucson Test Stand),
       "ls" (Base Test Stand), "cp" (summit).
     type: string
+  script_paths:
+    description: >-
+      Path to the standard and external scripts. This is used to validate blocks.
+      If not provided, will fallback to requestig from the ScriptQueue.
+    type: object
+    additionalProperties: false
+    properties:
+      standard:
+        description: Path to the standard scripts.
+        type: string
+      external:
+        description: Path to the external scripts.
+        type: string
+    required:
+      - standard
+      - external
   maintel:
     $ref: "#/definitions/instance_specific_config"
   auxtel:

@@ -27,7 +27,9 @@ __all__ = [
 import asyncio
 import contextlib
 import dataclasses
+import os
 import shutil
+import subprocess
 import time
 import traceback
 import types
@@ -273,6 +275,11 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         # Large file object available
         self.s3bucket_name = None  # Set by `configure`.
         self.s3bucket = None  # Set by `handle_summary_state`.
+
+        # Path to the standard and external scripts. This is used
+        # to validate blocks. If not defined it will fallback to
+        # request from the ScriptQueue.
+        self.script_paths = None
 
         self.model = Model(log=self.log, config_dir=self.config_dir)
 
@@ -1058,6 +1065,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         self.s3bucket_name = salobj.AsyncS3Bucket.make_bucket_name(
             s3instance=config.s3instance,
         )
+
+        self.script_paths = getattr(config, "script_paths", None)
 
         instance = Scheduler.SalIndex(self.salinfo.index)
 
@@ -2116,8 +2125,74 @@ class SchedulerCSC(salobj.ConfigurableCsc):
     ) -> salobj.DefaultingValidator:
         """Get a script configuration validator.
 
-        This method will query the queue for the script configuration and
-        generate a configuration validator for the script.
+        Parameters
+        ----------
+        script_name : `str`
+            Name of the SAL Script.
+        standard : `bool`
+            Is the script standard?
+
+        Returns
+        -------
+        `salobj.DefaultingValidator`
+            Script configuration validator.
+        """
+        if self.script_paths is not None:
+            return await self._get_script_config_validator_from_path(
+                script_name=script_name, standard=standard
+            )
+        else:
+            return await self._get_script_config_validator_from_script_queue(
+                script_name=script_name, standard=standard
+            )
+
+    async def _get_script_config_validator_from_path(
+        self, script_name: str, standard: bool
+    ) -> salobj.DefaultingValidator:
+        """Get a script configuration validator by getting the schema
+        directly from the script executable.
+
+        Parameters
+        ----------
+        script_name : `str`
+            Name of the SAL Script.
+        standard : `bool`
+            Is the script standard?
+
+        Returns
+        -------
+        `salobj.DefaultingValidator`
+            Script configuration validator.
+        """
+
+        script_path = os.path.join(
+            (
+                self.script_paths["standard"]
+                if standard
+                else self.script_paths["external"]
+            ),
+            script_name,
+        )
+        process = await asyncio.create_subprocess_exec(
+            script_path, "0", "--schema", stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        )
+        try:
+            stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=20)
+
+            return salobj.DefaultingValidator(schema=yaml.safe_load(stdout.decode()))
+        except Exception:
+            if process.returncode is None:
+                process.terminate()
+                self.log.warning(
+                    "showSchema killed a process that was not properly terminated"
+                )
+            raise
+
+    async def _get_script_config_validator_from_script_queue(
+        self, script_name: str, standard: bool
+    ) -> salobj.DefaultingValidator:
+        """Get a script configuration validator by requesting the script
+        schema from the ScriptQueue.
 
         Parameters
         ----------

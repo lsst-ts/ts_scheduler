@@ -1,0 +1,4 @@
+script_paths:
+  standard: tests/data/standard
+  external: tests/data/external
+
