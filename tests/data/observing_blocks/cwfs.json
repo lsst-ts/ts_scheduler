@@ -15,6 +15,11 @@
                 },
                 "program": "$program"
             }
+        },
+        {
+            "name": "stop_tracking.py",
+            "standard": true,
+            "parameters": {}
         }
     ]
 }
