@@ -2122,7 +2122,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
     async def _get_script_config_validator(
         self, script_name: str, standard: bool
-    ) -> salobj.DefaultingValidator:
+    ) -> salobj.DefaultingValidator | None:
         """Get a script configuration validator.
 
         Parameters
@@ -2148,7 +2148,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
     async def _get_script_config_validator_from_path(
         self, script_name: str, standard: bool
-    ) -> salobj.DefaultingValidator:
+    ) -> salobj.DefaultingValidator | None:
         """Get a script configuration validator by getting the schema
         directly from the script executable.
 
@@ -2179,7 +2179,13 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         try:
             stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=20)
 
-            return salobj.DefaultingValidator(schema=yaml.safe_load(stdout.decode()))
+            script_schema_str = stdout.decode()
+
+            return (
+                salobj.DefaultingValidator(schema=yaml.safe_load(script_schema_str))
+                if script_schema_str
+                else None
+            )
         except Exception:
             if process.returncode is None:
                 process.terminate()

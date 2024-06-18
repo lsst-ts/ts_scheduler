@@ -289,7 +289,12 @@ class Model:
             for script in observing_block.scripts:
                 key = (script.name, script.standard)
                 try:
-                    observing_scripts_config_validator[key].validate(script.parameters)
+                    if observing_scripts_config_validator[key] is not None:
+                        observing_scripts_config_validator[key].validate(
+                            script.parameters
+                        )
+                    else:
+                        self.log.debug(f"Script {script} does not have configuration.")
                 except ValidationError as validation_error:
                     self.log.error(
                         f"Script {script.name} from observing block {block_id} failed validation: "
