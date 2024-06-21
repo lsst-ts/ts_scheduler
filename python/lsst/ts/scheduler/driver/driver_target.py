@@ -29,6 +29,7 @@ from astropy import units
 from astropy.coordinates import Angle
 from lsst.ts.observatory.model import Target
 from lsst.ts.observing import ObservingBlock
+from lsst.ts.salobj import DefaultingValidator
 
 from ..exceptions.exceptions import NonConsecutiveIndexError
 from .observation import Observation
@@ -69,6 +70,7 @@ class DriverTarget(Target):
     def __init__(
         self,
         observing_block: ObservingBlock,
+        block_configuration: dict = dict(),
         targetid: int = 0,
         fieldid: int = 0,
         band_filter: str = "",
@@ -100,6 +102,17 @@ class DriverTarget(Target):
         )
         self.note = note
         self._sal_indices = []
+
+        self.block_configuration = dict()
+
+        if observing_block.configuration_schema:
+
+            block_configuration_validator = DefaultingValidator(
+                schema=yaml.safe_load(observing_block.configuration_schema)
+            )
+            self.block_configuration = block_configuration_validator.validate(
+                block_configuration
+            )
 
     def get_sal_indices(self) -> list[int]:
         """Get the list of SAL indices for the target scripts.
@@ -173,7 +186,7 @@ class DriverTarget(Target):
         script_config : `dict`
             Script configuration.
         """
-        return {
+        script_config = {
             "targetid": int(self.targetid),
             "band_filter": str(self.filter),
             "name": self.get_target_name(),
@@ -189,6 +202,9 @@ class DriverTarget(Target):
             "estimated_slew_time": float(self.slewtime),
             "program": self.observing_block.program,
         }
+        script_config.update(self.block_configuration)
+
+        return script_config
 
     def get_dec(self) -> str:
         """Get declination formatted as a colon-separated hexagesimal string.
