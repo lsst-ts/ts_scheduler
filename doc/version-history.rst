@@ -68,6 +68,8 @@ v2.0.0
     * Implement feature that allows blocks to run alongside the running scheduler.
 
     * Add support for a 3rd instance of the Scheduler to run alongside a 3rd instance of the queue.
+    
+    * Make blocks configurable.
 
 * In ``model.py``:
 
