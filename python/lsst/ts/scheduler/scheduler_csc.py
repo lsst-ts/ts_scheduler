@@ -652,7 +652,13 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         obs_block = self.model.observing_blocks[data.id].dict()
         obs_block.pop("id")
-        block_target = DriverTarget(observing_block=ObservingBlock(**obs_block))
+        block_target = DriverTarget(
+            observing_block=ObservingBlock(
+                **obs_block,
+            ),
+            block_configuration=yaml.safe_load(data.override),
+            log=self.log,
+        )
 
         await self._update_block_status(
             data.id, BlockStatus.STARTED, block_target.get_observing_block()
@@ -2231,8 +2237,12 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 flush=False, timeout=self.default_command_timeout
             )
 
-        return salobj.DefaultingValidator(
-            schema=yaml.safe_load(script_schema.configSchema)
+        return (
+            salobj.DefaultingValidator(
+                schema=yaml.safe_load(script_schema.configSchema)
+            )
+            if script_schema.configSchema
+            else None
         )
 
     async def _transition_idle_to_running(self) -> None:
