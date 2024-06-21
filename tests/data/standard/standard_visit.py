@@ -54,6 +54,16 @@ properties:
     note:
         type: string
         description: Note to attribute to these observations.
+    optional_field_string:
+        anyOf:
+            - type: string
+            - type: "null"
+        description:
+            An optional string that can be passed to the script.
+    optional_field_number:
+        type: number
+        description:
+            An optional number that can be passed to the script.
 required:
     - exp_times
     - band_filter
@@ -71,6 +81,12 @@ additionalProperties: false
         self.exp_times = config.exp_times
         self.program = config.program
         self.note = config.note
+
+        if hasattr(config, "optional_field_string"):
+            self.log.info(f"Received optional string: {config.optional_field_string}.")
+
+        if hasattr(config, "optional_field_number"):
+            self.log.info(f"Received optional number: {config.optional_field_number}.")
 
         self.log.info("Configure succeeded")
 
