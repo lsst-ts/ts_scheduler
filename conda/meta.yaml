@@ -66,4 +66,4 @@ requirements:
     - ts-astrosky-model >=1.4
     - ts-dateloc
     - ts-observing >=0.2
-    - rubin-scheduler
+    - rubin-scheduler =1.1
