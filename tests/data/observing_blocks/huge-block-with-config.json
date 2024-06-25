@@ -1,0 +1,261 @@
+{
+    "name": "UnitTest",
+    "program": "huge-block-with-config",
+    "constraints": [],
+    "configuration_schema": "$schema: http://json-schema.org/draft-07/schema#\ntitle: BLOCK-123 configuration\ndescription: Configuration for BLOCK-123.\ntype: object\nproperties:\n  optional_field_string:\n    description: An optional string that can be passed to the script.\n    type: string\n    default: \"\"\n  optional_field_number:\n    description: An optional number that can be passed to the script.\n    type: number\n    default: 0\n",
+    "scripts": [
+        {
+            "name": "slew.py",
+            "standard": true,
+            "parameters": {
+                "name": "$name",
+                "ra": "$ra",
+                "dec": "$dec",
+                "rot_sky": "$rot_sky",
+                "estimated_slew_time": "$estimated_slew_time",
+                "obs_time": "$obs_time",
+                "note": "Static note will be preserved."
+            }
+        },
+        {
+            "name": "standard_visit.py",
+            "standard": true,
+            "parameters": {
+                "exp_times": "$exp_times",
+                "band_filter": "$band_filter",
+                "program": "$program",
+                "optional_field_string": "$optional_field_string",
+                "optional_field_number": "$optional_field_number",
+                "note": "Static note will be preserved."
+            }
+        },
+        {
+            "name": "standard_visit.py",
+            "standard": true,
+            "parameters": {
+                "exp_times": "$exp_times",
+                "band_filter": "$band_filter",
+                "program": "$program",
+                "optional_field_string": "$optional_field_string",
+                "optional_field_number": "$optional_field_number",
+                "note": "Static note will be preserved."
+            }
+        },
+        {
+            "name": "standard_visit.py",
+            "standard": true,
+            "parameters": {
+                "exp_times": "$exp_times",
+                "band_filter": "$band_filter",
+                "program": "$program",
+                "optional_field_string": "$optional_field_string",
+                "optional_field_number": "$optional_field_number",
+                "note": "Static note will be preserved."
+            }
+        },
+        {
+            "name": "standard_visit.py",
+            "standard": true,
+            "parameters": {
+                "exp_times": "$exp_times",
+                "band_filter": "$band_filter",
+                "program": "$program",
+                "optional_field_string": "$optional_field_string",
+                "optional_field_number": "$optional_field_number",
+                "note": "Static note will be preserved."
+            }
+        },
+        {
+            "name": "standard_visit.py",
+            "standard": true,
+            "parameters": {
+                "exp_times": "$exp_times",
+                "band_filter": "$band_filter",
+                "program": "$program",
+                "optional_field_string": "$optional_field_string",
+                "optional_field_number": "$optional_field_number",
+                "note": "Static note will be preserved."
+            }
+        },
+        {
+            "name": "standard_visit.py",
+            "standard": true,
+            "parameters": {
+                "exp_times": "$exp_times",
+                "band_filter": "$band_filter",
+                "program": "$program",
+                "optional_field_string": "$optional_field_string",
+                "optional_field_number": "$optional_field_number",
+                "note": "Static note will be preserved."
+            }
+        },
+        {
+            "name": "standard_visit.py",
+            "standard": true,
+            "parameters": {
+                "exp_times": "$exp_times",
+                "band_filter": "$band_filter",
+                "program": "$program",
+                "optional_field_string": "$optional_field_string",
+                "optional_field_number": "$optional_field_number",
+                "note": "Static note will be preserved."
+            }
+        },
+        {
+            "name": "standard_visit.py",
+            "standard": true,
+            "parameters": {
+                "exp_times": "$exp_times",
+                "band_filter": "$band_filter",
+                "program": "$program",
+                "optional_field_string": "$optional_field_string",
+                "optional_field_number": "$optional_field_number",
+                "note": "Static note will be preserved."
+            }
+        },
+        {
+            "name": "standard_visit.py",
+            "standard": true,
+            "parameters": {
+                "exp_times": "$exp_times",
+                "band_filter": "$band_filter",
+                "program": "$program",
+                "optional_field_string": "$optional_field_string",
+                "optional_field_number": "$optional_field_number",
+                "note": "Static note will be preserved."
+            }
+        },
+        {
+            "name": "standard_visit.py",
+            "standard": true,
+            "parameters": {
+                "exp_times": "$exp_times",
+                "band_filter": "$band_filter",
+                "program": "$program",
+                "optional_field_string": "$optional_field_string",
+                "optional_field_number": "$optional_field_number",
+                "note": "Static note will be preserved."
+            }
+        },
+        {
+            "name": "standard_visit.py",
+            "standard": true,
+            "parameters": {
+                "exp_times": "$exp_times",
+                "band_filter": "$band_filter",
+                "program": "$program",
+                "optional_field_string": "$optional_field_string",
+                "optional_field_number": "$optional_field_number",
+                "note": "Static note will be preserved."
+            }
+        },
+        {
+            "name": "standard_visit.py",
+            "standard": true,
+            "parameters": {
+                "exp_times": "$exp_times",
+                "band_filter": "$band_filter",
+                "program": "$program",
+                "optional_field_string": "$optional_field_string",
+                "optional_field_number": "$optional_field_number",
+                "note": "Static note will be preserved."
+            }
+        },
+        {
+            "name": "standard_visit.py",
+            "standard": true,
+            "parameters": {
+                "exp_times": "$exp_times",
+                "band_filter": "$band_filter",
+                "program": "$program",
+                "optional_field_string": "$optional_field_string",
+                "optional_field_number": "$optional_field_number",
+                "note": "Static note will be preserved."
+            }
+        },
+        {
+            "name": "standard_visit.py",
+            "standard": true,
+            "parameters": {
+                "exp_times": "$exp_times",
+                "band_filter": "$band_filter",
+                "program": "$program",
+                "optional_field_string": "$optional_field_string",
+                "optional_field_number": "$optional_field_number",
+                "note": "Static note will be preserved."
+            }
+        },
+        {
+            "name": "standard_visit.py",
+            "standard": true,
+            "parameters": {
+                "exp_times": "$exp_times",
+                "band_filter": "$band_filter",
+                "program": "$program",
+                "optional_field_string": "$optional_field_string",
+                "optional_field_number": "$optional_field_number",
+                "note": "Static note will be preserved."
+            }
+        },
+        {
+            "name": "standard_visit.py",
+            "standard": true,
+            "parameters": {
+                "exp_times": "$exp_times",
+                "band_filter": "$band_filter",
+                "program": "$program",
+                "optional_field_string": "$optional_field_string",
+                "optional_field_number": "$optional_field_number",
+                "note": "Static note will be preserved."
+            }
+        },
+        {
+            "name": "standard_visit.py",
+            "standard": true,
+            "parameters": {
+                "exp_times": "$exp_times",
+                "band_filter": "$band_filter",
+                "program": "$program",
+                "optional_field_string": "$optional_field_string",
+                "optional_field_number": "$optional_field_number",
+                "note": "Static note will be preserved."
+            }
+        },
+        {
+            "name": "standard_visit.py",
+            "standard": true,
+            "parameters": {
+                "exp_times": "$exp_times",
+                "band_filter": "$band_filter",
+                "program": "$program",
+                "optional_field_string": "$optional_field_string",
+                "optional_field_number": "$optional_field_number",
+                "note": "Static note will be preserved."
+            }
+        },
+        {
+            "name": "standard_visit.py",
+            "standard": true,
+            "parameters": {
+                "exp_times": "$exp_times",
+                "band_filter": "$band_filter",
+                "program": "$program",
+                "optional_field_string": "$optional_field_string",
+                "optional_field_number": "$optional_field_number",
+                "note": "Static note will be preserved."
+            }
+        },
+        {
+            "name": "standard_visit.py",
+            "standard": true,
+            "parameters": {
+                "exp_times": "$exp_times",
+                "band_filter": "$band_filter",
+                "program": "$program",
+                "optional_field_string": "$optional_field_string",
+                "optional_field_number": "$optional_field_number",
+                "note": "Static note will be preserved."
+            }
+        }
+    ]
+}

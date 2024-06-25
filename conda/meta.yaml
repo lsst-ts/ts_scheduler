@@ -27,7 +27,7 @@ test:
     - ts-observatory-model
     - ts-astrosky-model >=1.4
     - ts-dateloc
-    - ts-observing
+    - ts-observing >=0.2
     - rubin-scheduler
     - rsync
   source_files:
@@ -65,5 +65,5 @@ requirements:
     - ts-observatory-model
     - ts-astrosky-model >=1.4
     - ts-dateloc
-    - ts-observing
-    - rubin-scheduler
+    - ts-observing >=0.2
+    - rubin-scheduler =1.1

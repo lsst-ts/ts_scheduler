@@ -28,6 +28,7 @@ import typing
 import unittest
 
 import numpy as np
+import yaml
 from lsst.ts import salobj, utils
 from lsst.ts.scheduler import SchedulerCSC
 from lsst.ts.scheduler.mock import ObservatoryStateMock
@@ -664,6 +665,62 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
                 assert queue_state.length <= self.scheduler._max_queue_capacity + 1
             except asyncio.TimeoutError:
                 break
+
+    async def test_add_block_huge_block_with_configuration(self) -> None:
+        # enable queue...
+        await salobj.set_summary_state(
+            self.queue_remote,
+            salobj.State.ENABLED,
+        )
+
+        # enable scheduler
+        await salobj.set_summary_state(
+            self.scheduler_remote,
+            salobj.State.ENABLED,
+            override="advance_target_loop_sequential_std_visit.yaml",
+        )
+
+        script_remote = salobj.Remote(self.queue.domain, "Script")
+        await script_remote.start_task
+
+        script_logs = []
+
+        async def store_script_logs(data):
+            if "Received optional" in data.message:
+                script_logs.append(data.message)
+
+        script_remote.evt_logMessage.callback = store_script_logs
+
+        await self.scheduler_remote.cmd_addBlock.set_start(
+            id="huge-block-with-config",
+            override=yaml.safe_dump(
+                dict(
+                    optional_field_string="This is a test string.",
+                    optional_field_number=1234.5,
+                )
+            ),
+            timeout=STD_TIMEOUT,
+        )
+
+        await self.assert_next_block_id_status(
+            block_id="huge-block-with-config",
+            block_status_expected=BlockStatus.STARTED,
+        )
+
+        await self.assert_next_block_id_status(
+            block_id="huge-block-with-config",
+            block_status_expected=BlockStatus.EXECUTING,
+            timeout=SCRIPT_TIMEOUT * 5,
+        )
+
+        await self.assert_next_block_id_status(
+            block_id="huge-block-with-config",
+            block_status_expected=BlockStatus.COMPLETED,
+        )
+
+        assert len(script_logs) > 0
+        for message in script_logs:
+            assert "This is a test string" in message or "1234.5" in message
 
     async def test_add_block_succeed(self) -> None:
         # enable queue...

@@ -26,7 +26,7 @@ class StopTracking(BaseScript):
 
     @classmethod
     def get_schema(cls):
-        return dict()
+        return None
 
     async def configure(self, config):
         """Configure the script."""

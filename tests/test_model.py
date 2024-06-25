@@ -74,7 +74,8 @@ class TestModel(unittest.IsolatedAsyncioTestCase):
             "cloud",
         }
         assert (
-            self.model.observing_blocks.keys() == self.get_expected_observing_blocks()
+            set(self.model.observing_blocks.keys())
+            == self.get_expected_observing_blocks()
         )
         assert self.model.driver is not None
 
@@ -242,6 +243,7 @@ class TestModel(unittest.IsolatedAsyncioTestCase):
             "cwfs",
             "invalid-block",
             "huge-block",
+            "huge-block-with-config",
         }
 
     def get_expected_block_status(self) -> dict[str, BlockStatus]:
