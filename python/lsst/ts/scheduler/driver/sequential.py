@@ -1,6 +1,6 @@
-# This file is part of ts_scheduler
+# This file is part of ts_scheduler.
 #
-# Developed for the LSST Telescope and Site Systems.
+# Developed for the Rubin Observatory Telescope and Site Systems.
 # This product includes software developed by the LSST Project
 # (https://www.lsst.org).
 # See the COPYRIGHT file at the top-level directory of this distribution
@@ -17,62 +17,27 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import io
+import logging
 import os
 import pickle
+import typing
 
 import astropy.units as u
 import jsonschema
 import yaml
 from astropy.coordinates import Angle
 from astropy.time import Time
+from lsst.ts import observing
 from lsst.ts.utils import index_generator
 
 from .driver import Driver, DriverParameters
 from .driver_target import DriverTarget
+from .observation import Observation
 
 __all__ = ["SequentialParameters", "SequentialScheduler"]
-
-
-class SequentialTarget(DriverTarget):
-    def __init__(
-        self, observing_script_name, observing_script_is_standard, config, targetid=0
-    ):
-        super().__init__(
-            observing_script_name=observing_script_name,
-            observing_script_is_standard=observing_script_is_standard,
-            targetid=targetid,
-            num_exp=1,
-            exp_times=[0.0],
-        )
-        self.config = config
-        # config = self.get_script_config()
-
-        self.ra_rad = Angle(self.config["ra"], unit=u.hourangle).to(u.rad).value
-        self.dec_rad = Angle(self.config["dec"], unit=u.deg).to(u.rad).value
-        self.num_exp = len(self.config["instrument_setup"])
-        self.filter = self.config["instrument_setup"][0]["filter"]
-        self.exp_times = [
-            self.config["instrument_setup"][i]["exptime"] for i in range(self.num_exp)
-        ]
-
-        self.rot_rad = Angle(self.config.get("rot", 0.0), unit=u.deg).to(u.rad).value
-
-    def get_script_config(self):
-        """Returns a yaml string representation of a dictionary with the
-        configuration to be used for the observing script.
-
-        Returns
-        -------
-        config_str: str
-        """
-
-        return yaml.safe_dump(
-            self.config["script_config"]
-            if "script_config" in self.config
-            else self.config
-        )
 
 
 class SequentialParameters(DriverParameters):
@@ -119,17 +84,41 @@ class SequentialScheduler(Driver):
     The driver reads from an input file of targets provided by the user and
     send one target at a time.
 
+    Parameters
+    ----------
+    models : `dict`[`str`, `typing.Any`]
+        Models.
+    raw_telemetry : `dict`[`str`, `typing.Any`]
+        Raw telemetry
+    observing_blocks : `dict`[`str`, `observing.ObservingBlock`]
+        Observing blocks.
+    parameters : `typing.Any`, optional
+        Driver parameters, by default None
+    log : `logging.Logger` | None, optional
+        Logger, by default None
     """
 
-    def __init__(self, models, raw_telemetry, parameters=None, log=None):
-
+    def __init__(
+        self,
+        models: dict[str, typing.Any],
+        raw_telemetry: dict[str, typing.Any],
+        observing_blocks: dict[str, observing.ObservingBlock],
+        parameters: typing.Any = None,
+        log: logging.Logger | None = None,
+    ):
         self.observing_list_dict = dict()
 
         self.index_gen = index_generator()
 
         self.validator = jsonschema.Draft7Validator(self.schema())
 
-        super().__init__(models, raw_telemetry, parameters, log=log)
+        super().__init__(
+            models=models,
+            raw_telemetry=raw_telemetry,
+            observing_blocks=observing_blocks,
+            parameters=parameters,
+            log=log,
+        )
 
     def configure_scheduler(self, config=None):
         """This method is responsible for running the scheduler configuration
@@ -152,13 +141,15 @@ class SequentialScheduler(Driver):
         if not hasattr(config, "driver_configuration"):
             raise RuntimeError("No driver configuration section defined.")
 
-        elif "observing_list" not in config.driver_configuration:
+        elif "observing_list" not in config.sequential_driver_configuration:
             raise RuntimeError("No observing list provided in configuration.")
 
         elif not os.path.exists(
-            observing_list := config.driver_configuration["observing_list"]
+            observing_list := config.sequential_driver_configuration["observing_list"]
         ):
             raise RuntimeError(f"Observing list {observing_list} not found.")
+
+        self.log.debug(f"{config=}")
 
         with open(observing_list, "r") as f:
             config_yaml = f.read()
@@ -174,24 +165,24 @@ class SequentialScheduler(Driver):
 
         return super().configure_scheduler(config)
 
-    def cold_start(self, observations):
+    def cold_start(self, observations: list[Observation]) -> None:
         """Rebuilds the internal state of the scheduler from a list of
         observations.
 
         Parameters
         ----------
-        observations : list of Observation objects
-
+        observations : `list`[`Observation`]
+            List of observations.
         """
         raise RuntimeError("Cold start not supported by SequentialScheduler.")
 
-    def select_next_target(self):
+    def select_next_target(self) -> DriverTarget:
         """Picks a target and returns it as a target object.
 
         Returns
         -------
-        Target
-
+        `DriverTarget`
+            Target to observe.
         """
         if len(self.observing_list_dict) == 0:
             self.log.info(
@@ -202,12 +193,23 @@ class SequentialScheduler(Driver):
         self.targetid += 1
 
         for tid in self.observing_list_dict:
+            program = self.observing_list_dict[tid]["program"]
+            observing_block = self.get_survey_observing_block(survey_name=program)
 
-            target = SequentialTarget(
-                observing_script_name=self.default_observing_script_name,
-                observing_script_is_standard=self.default_observing_script_is_standard,
-                config=self.observing_list_dict[tid],
+            config = self.observing_list_dict[tid]
+            num_exp = len(config["instrument_setup"])
+
+            target = DriverTarget(
+                observing_block=observing_block,
                 targetid=self.targetid,
+                ra_rad=Angle(config["ra"], unit=u.hourangle).to(u.rad).value,
+                dec_rad=Angle(config["dec"], unit=u.deg).to(u.rad).value,
+                band_filter=config["instrument_setup"][0]["filter"],
+                exp_times=[
+                    config["instrument_setup"][i]["exptime"] for i in range(num_exp)
+                ],
+                ang_rad=Angle(config.get("rot", 0.0), unit=u.deg).to(u.rad).value,
+                note=config["name"],
             )
 
             slew_time, error = self.models["observatory_model"].get_slew_delay(target)
@@ -226,13 +228,21 @@ class SequentialScheduler(Driver):
 
                 return target
 
-        self.log.info(
+        self.log.debug(
             f"No observable target available. Current target list size: {len(self.observing_list_dict)}."
         )
 
         return None
 
-    def schema(self):
+    def schema(self) -> dict[str, typing.Any]:
+        """Get schema for the sequential scheduler algorithm configuration
+        files.
+
+        Returns
+        -------
+        `dict`[str, `typing.Any`]
+            Schema.
+        """
         schema = """$schema: http://json-schema.org/draft-07/schema#
 $id: https://github.com/lsst-ts/ts_scheduler/blob/master/python/lsst/ts/scheduler/driver/sequential.yaml
 title: SequentialScheduler v1
@@ -245,6 +255,7 @@ properties:
     items:
       type: object
       additionalProperties: false
+      required: ["ra", "dec", "instrument_setup", "name", "program"]
       properties:
         ra:
           description: ICRS right ascension (hour).
@@ -287,7 +298,10 @@ properties:
           type: string
           enum: ["Sky", "SkyAuto", "Parallactic", "PhysicalSky", "Physical"]
         name:
-          description: Target name
+          description: Target name.
+          type: string
+        program:
+          description: Program name.
           type: string
         instrument_setup:
           description: Instrument setup.
@@ -303,20 +317,6 @@ properties:
               filter:
                 description: Filters for this exposure.
                 type: string
-        script_config:
-          type: object
-          description: Script configuration.
-          additionalProperties: true
-      # Disable support for providing name only. Need to check how to support it.
-      # if:
-      #   properties:
-      #     ra:
-      #       const: null
-      #     dec:
-      #       const: null
-      #   required: ["name", "instrument_setup"]
-      # else:
-        required: ["ra", "dec", "instrument_setup"]
         """
         return yaml.safe_load(schema)
 

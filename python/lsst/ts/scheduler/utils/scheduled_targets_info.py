@@ -1,4 +1,4 @@
-# This file is part of ts_scheduler
+# This file is part of ts_scheduler.
 #
 # Developed for the Rubin Observatory Telescope and Site Systems.
 # This product includes software developed by the LSST Project
@@ -28,6 +28,6 @@ from ..driver.driver_target import DriverTarget
 
 @dataclass
 class ScheduledTargetsInfo:
-    failed: list[int] = field(default_factory=list)
+    failed: list[DriverTarget] = field(default_factory=list)
     unrecognized: list[int] = field(default_factory=list)
     observed: list[DriverTarget] = field(default_factory=list)

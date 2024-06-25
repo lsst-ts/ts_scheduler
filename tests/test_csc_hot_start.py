@@ -44,12 +44,11 @@ class TestSchedulerCscHotStart(
         cls.log = logging.getLogger("TestSchedulerCSC")
 
     def setUp(self) -> None:
-
         self.scheduler_config_path = TEST_CONFIG_DIR / "fbs_config_good.py"
         self.scheduler_config_path_cwfs = (
             TEST_CONFIG_DIR / "fbs_config_good_with_cwfs.py"
         )
-        self.driver_type = "lsst.ts.scheduler.driver.feature_scheduler"
+        self.driver_type = "feature_scheduler"
 
         return super().setUp()
 
@@ -63,7 +62,6 @@ class TestSchedulerCscHotStart(
 
     @contextlib.contextmanager
     def generate_scheduler_snapshot(self) -> pathlib.Path:
-
         snapshot_file_path = TEST_CONFIG_DIR / "fbs_test_snapshot.p"
 
         try:
@@ -97,7 +95,6 @@ class TestSchedulerCscHotStart(
         startup_database: str,
         scheduler_config_path: str,
     ) -> pathlib.Path:
-
         configuration_override = TEST_CONFIG_DIR / "fbs_test_hot_start.yaml"
 
         try:
@@ -117,14 +114,13 @@ class TestSchedulerCscHotStart(
     def _get_configuration(
         self, startup_database: str, scheduler_config_path: str
     ) -> str:
-
         return f"""
 maintel:
   mode: ADVANCE
   startup_type: HOT
   startup_database: "{startup_database}"
   driver_type: {self.driver_type}
-  driver_configuration:
+  {self.driver_type}_driver_configuration:
     scheduler_config: {scheduler_config_path}
   telemetry:
     efd_name: summit_efd
@@ -149,19 +145,66 @@ maintel:
         fill_value: null
 """
 
-    async def test_no_startup_db(self):
+    @contextlib.asynccontextmanager
+    async def make_script_queue(self, running: bool) -> None:
+        self.log.debug("Make queue.")
+        async with salobj.Controller("ScriptQueue", index=1) as queue:
 
+            async def show_schema(data) -> None:
+                self.log.debug(f"Show schema: {data}")
+                await queue.evt_configSchema.set_write(
+                    path=data.path,
+                    isStandard=data.isStandard,
+                    configSchema="""
+$schema: http://json-schema.org/draft-07/schema#
+type: object
+properties:
+    name:
+        type: string
+        description: Target name.
+    ra:
+        type: string
+        description: >-
+            The right ascension of the target in hexagesimal format,
+            e.g. HH:MM:SS.S.
+    dec:
+        type: string
+        description: >-
+            The declination of the target in hexagesimal format,
+            e.g. DD:MM:SS.S.
+    rot_sky:
+        type: number
+        description: The sky angle (degrees) of the target.
+    estimated_slew_time:
+        type: number
+        description: Estimated slew time (seconds).
+        default: 0.
+    obs_time:
+        type: number
+        description: Estimated observing time (seconds).
+        default: 0.
+    note:
+        type: string
+        description: Survey note.
+        default: ""
+additionalProperties: true
+                    """,
+                )
+
+            queue.cmd_showSchema.callback = show_schema
+            await queue.evt_queue.set_write(running=running)
+            yield
+
+    async def test_no_startup_db(self):
         with self.generate_configuration_override(
             startup_database="",
             scheduler_config_path=self.scheduler_config_path.as_posix(),
         ) as override_path:
-
             async with self.make_csc(
                 config_dir=TEST_CONFIG_DIR,
                 initial_state=salobj.State.STANDBY,
                 simulation_mode=SchedulerModes.MOCKS3,
-            ):
-
+            ), self.make_script_queue(running=True):
                 with self.assertLogs(self.csc.log, level=logging.DEBUG) as csc_logs:
                     await salobj.set_summary_state(
                         remote=self.remote,
@@ -170,7 +213,7 @@ maintel:
                     )
 
                 assert (
-                    f"INFO:Scheduler.Model:Loading driver from {self.driver_type}"
+                    f"INFO:Scheduler.Model:Loading driver {self.driver_type}"
                     in csc_logs.output
                 )
                 assert (
@@ -179,18 +222,15 @@ maintel:
                 )
 
     async def test_with_startup_db(self):
-
         with self.generate_scheduler_snapshot() as startup_database, self.generate_configuration_override(
             startup_database=startup_database.as_uri(),
             scheduler_config_path=self.scheduler_config_path.as_posix(),
         ) as override_path:
-
             async with self.make_csc(
                 config_dir=TEST_CONFIG_DIR,
                 initial_state=salobj.State.STANDBY,
                 simulation_mode=SchedulerModes.MOCKS3,
-            ):
-
+            ), self.make_script_queue(running=True):
                 with self.assertLogs(self.csc.log, level=logging.DEBUG) as csc_logs:
                     await salobj.set_summary_state(
                         remote=self.remote,
@@ -199,7 +239,7 @@ maintel:
                     )
 
                 assert (
-                    f"INFO:Scheduler.Model:Loading driver from {self.driver_type}"
+                    f"INFO:Scheduler.Model:Loading driver {self.driver_type}"
                     in csc_logs.output
                 )
                 assert (
@@ -208,20 +248,17 @@ maintel:
                 )
 
     async def test_with_nonexistent_startup_db(self):
-
         with self.generate_scheduler_snapshot() as startup_database, self.generate_configuration_override(
             startup_database=startup_database.as_uri(),
             scheduler_config_path=self.scheduler_config_path.as_posix(),
         ) as override_path:
-
             startup_database.unlink()
 
             async with self.make_csc(
                 config_dir=TEST_CONFIG_DIR,
                 initial_state=salobj.State.STANDBY,
                 simulation_mode=SchedulerModes.MOCKS3,
-            ):
-
+            ), self.make_script_queue(running=True):
                 expected_exception_text = (
                     f"Could not retrieve {startup_database.as_uri()}. "
                     "Make sure it is a valid and accessible URI."
@@ -237,20 +274,17 @@ maintel:
                     )
 
     async def test_with_malformed_startup_db(self):
-
         startup_database = "malformed/filename.p"
 
         with self.generate_configuration_override(
             startup_database=startup_database,
             scheduler_config_path=self.scheduler_config_path.as_posix(),
         ) as override_path:
-
             async with self.make_csc(
                 config_dir=TEST_CONFIG_DIR,
                 initial_state=salobj.State.STANDBY,
                 simulation_mode=SchedulerModes.MOCKS3,
-            ):
-
+            ), self.make_script_queue(running=True):
                 expected_exception_text = (
                     f"Invalid startup_database: {startup_database}. "
                     "Make sure it is a valid and accessible URI."
@@ -270,13 +304,11 @@ maintel:
             startup_database="",
             scheduler_config_path=self.scheduler_config_path.as_posix(),
         ) as override_path:
-
             async with self.make_csc(
                 config_dir=TEST_CONFIG_DIR,
                 initial_state=salobj.State.STANDBY,
                 simulation_mode=SchedulerModes.MOCKS3,
-            ):
-
+            ), self.make_script_queue(running=True):
                 with self.assertLogs(self.csc.log, level=logging.DEBUG) as csc_logs:
                     await salobj.set_summary_state(
                         remote=self.remote,
@@ -300,7 +332,7 @@ maintel:
                     self.log.debug(log)
 
                 assert (
-                    f"INFO:Scheduler.Model:Loading driver from {self.driver_type}"
+                    f"INFO:Scheduler.Model:Loading driver {self.driver_type}"
                     in csc_logs.output
                 )
                 assert (
@@ -309,7 +341,7 @@ maintel:
                             log
                             for log in csc_logs.output
                             if log
-                            == f"INFO:Scheduler.Model:Loading driver from {self.driver_type}"
+                            == f"INFO:Scheduler.Model:Loading driver {self.driver_type}"
                         ]
                     )
                     == 1

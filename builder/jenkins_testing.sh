@@ -25,24 +25,14 @@ source_eups="source eups-setups.sh"
 find_eups=$(${source_eups} 2>&1)
 if [ $? != 0 ]; then
 	echo "Installing necessary packages"
-	need_install=1
-	conda install -y lsst-sims-skybrightness enum34 mock pytest
+	conda install -y rubin-scheduler enum34 mock pytest
 	conda update astropy
-	git clone https://github.com/lsst/sims_skybrightness.git
+	scheduler-download-data --update
 else
 	echo "Updating packages"
-	cd ${WORKSPACE}/sims_skybrightness
-	git rebase -v
-	git fetch -p -t
-	cd ${WORKSPACE}
+	conda install rubin-scheduler
+	scheduler-download-data --update
 fi
 ${source_eups}
-if [ ${need_install} -eq 1 ]; then
-	eups declare sims_skybrightness git -r ${WORKSPACE}/sims_skybrightness -c
-fi
-setup sims_skybrightness
-cd ${WORKSPACE}/sims_skybrightness
-scons
-cd ${WORKSPACE}
 
 py.test

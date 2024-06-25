@@ -27,7 +27,6 @@ import pathlib
 import unittest
 
 import numpy as np
-
 from lsst.ts import salobj
 from lsst.ts.scheduler import SchedulerCSC
 from lsst.ts.scheduler.mock import ObservatoryStateMock
@@ -35,7 +34,7 @@ from lsst.ts.scheduler.utils import SchedulerModes
 from lsst.ts.scheduler.utils.csc_utils import DetailedState, support_command
 from lsst.ts.scheduler.utils.error_codes import OBSERVATORY_STATE_UPDATE
 
-SHORT_TIMEOUT = 5.0
+SHORT_TIMEOUT = 10.0
 LONG_TIMEOUT = 30.0
 LONG_LONG_TIMEOUT = 120.0
 TEST_CONFIG_DIR = pathlib.Path(__file__).parents[1].joinpath("tests", "data", "config")
@@ -69,9 +68,7 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                 self.remote.evt_summaryState.flush()
 
                 with self.assertLogs(self.csc.log) as csc_logs:
-                    await self.remote.cmd_start.set_start(
-                        timeout=LONG_TIMEOUT, configurationOverride="simple.yaml"
-                    )
+                    await self.remote.cmd_start.set_start(timeout=LONG_TIMEOUT)
 
                     await self.remote.tel_observatoryState.next(
                         flush=True, timeout=SHORT_TIMEOUT
@@ -105,10 +102,7 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                 self.remote.evt_summaryState.flush()
 
                 with self.assertLogs(self.csc.log) as csc_logs:
-
-                    await salobj.set_summary_state(
-                        self.remote, salobj.State.ENABLED, override="simple.yaml"
-                    )
+                    await salobj.set_summary_state(self.remote, salobj.State.ENABLED)
 
                     await self.remote.tel_observatoryState.next(flush=True)
 
@@ -140,9 +134,7 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
             try:
                 self.remote.evt_summaryState.flush()
 
-                await salobj.set_summary_state(
-                    self.remote, salobj.State.ENABLED, override="simple.yaml"
-                )
+                await salobj.set_summary_state(self.remote, salobj.State.ENABLED)
 
                 await self.remote.cmd_resume.start(timeout=SHORT_TIMEOUT)
 
@@ -169,9 +161,7 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
             try:
                 self.remote.evt_summaryState.flush()
 
-                await salobj.set_summary_state(
-                    self.remote, salobj.State.ENABLED, override="simple.yaml"
-                )
+                await salobj.set_summary_state(self.remote, salobj.State.ENABLED)
 
                 await self.remote.cmd_resume.start(timeout=SHORT_TIMEOUT)
 
@@ -204,8 +194,7 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
             config_dir=TEST_CONFIG_DIR,
             initial_state=salobj.State.STANDBY,
             simulation_mode=SchedulerModes.SIMULATION,
-        ), ObservatoryStateMock():
-
+        ), ObservatoryStateMock(), self.make_script_queue(running=True):
             self.remote.evt_detailedState.flush()
 
             await self.check_standard_state_transitions(
@@ -215,7 +204,6 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                     if support_command("computePredictedSchedule")
                     else []
                 ),
-                override="simple.yaml",
             )
             await self.assert_next_sample(
                 self.remote.evt_detailedState,
@@ -223,42 +211,64 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                 substate=DetailedState.IDLE,
             )
 
-    async def test_configuration(self):
+    async def test_configuration_invalid(self):
         """Test basic configuration."""
         async with self.make_csc(
             config_dir=TEST_CONFIG_DIR,
             initial_state=salobj.State.STANDBY,
             simulation_mode=SchedulerModes.SIMULATION,
-        ), ObservatoryStateMock():
+        ), ObservatoryStateMock(), self.make_script_queue(running=True):
             try:
-                self.assertEqual(self.csc.summary_state, salobj.State.STANDBY)
-                state = await self.remote.evt_summaryState.next(
-                    flush=False, timeout=LONG_TIMEOUT
-                )
-                self.assertEqual(state.summaryState, salobj.State.STANDBY)
-
                 invalid_files = glob.glob(
                     os.path.join(TEST_CONFIG_DIR, "invalid_*.yaml")
                 )
                 bad_config_names = [os.path.basename(name) for name in invalid_files]
                 bad_config_names.append("no_such_file.yaml")
                 for bad_config_name in bad_config_names:
-                    self.log.info(f"Testing bad configuration: {bad_config_name}.")
-                    with self.subTest(bad_config_name=bad_config_name):
+                    with self.subTest(
+                        bad_config_name=bad_config_name,
+                        msg=f"Testing bad configuration: {bad_config_name}.",
+                    ):
                         with salobj.testutils.assertRaisesAckError():
                             await self.remote.cmd_start.set_start(
                                 configurationOverride=bad_config_name,
                                 timeout=SHORT_TIMEOUT,
                             )
-
+                self.remote.evt_summaryState.flush()
                 await self.remote.cmd_start.set_start(
                     configurationOverride="", timeout=SHORT_TIMEOUT
                 )
-                self.assertEqual(self.csc.summary_state, salobj.State.DISABLED)
+                assert salobj.State(self.csc.summary_state) == salobj.State.DISABLED
                 state = await self.remote.evt_summaryState.next(
                     flush=False, timeout=SHORT_TIMEOUT
                 )
-                self.assertEqual(state.summaryState, salobj.State.DISABLED)
+                assert salobj.State(state.summaryState) == salobj.State.DISABLED
+            finally:
+                await salobj.set_summary_state(self.remote, salobj.State.STANDBY)
+
+    async def test_configuration_valid(self):
+        """Test basic configuration."""
+        async with self.make_csc(
+            config_dir=TEST_CONFIG_DIR,
+            initial_state=salobj.State.STANDBY,
+            simulation_mode=SchedulerModes.SIMULATION,
+        ), ObservatoryStateMock(), self.make_script_queue(running=True):
+            try:
+                test_files = glob.glob(os.path.join(TEST_CONFIG_DIR, "valid_*.yaml"))
+                valid_config_names = [os.path.basename(name) for name in test_files]
+                for valid_config in valid_config_names:
+                    await salobj.set_summary_state(self.remote, salobj.State.STANDBY)
+                    self.log.info(f"Testing good configuration: {valid_config}.")
+                    with self.subTest(good_config_name=valid_config):
+                        self.remote.evt_summaryState.flush()
+                        await self.remote.cmd_start.set_start(
+                            configurationOverride=valid_config,
+                            timeout=SHORT_TIMEOUT,
+                        )
+                        assert (
+                            salobj.State(self.csc.summary_state)
+                            == salobj.State.DISABLED
+                        )
             finally:
                 await salobj.set_summary_state(self.remote, salobj.State.STANDBY)
 
@@ -268,7 +278,7 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
             config_dir=TEST_CONFIG_DIR,
             initial_state=salobj.State.STANDBY,
             simulation_mode=SchedulerModes.SIMULATION,
-        ), ObservatoryStateMock():
+        ), ObservatoryStateMock(), self.make_script_queue(running=True):
             config = (
                 pathlib.Path(__file__)
                 .parents[1]
@@ -282,9 +292,7 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
             )
 
             try:
-                await salobj.set_summary_state(
-                    self.remote, salobj.State.ENABLED, override="simple.yaml"
-                )
+                await salobj.set_summary_state(self.remote, salobj.State.ENABLED)
 
                 await self.remote.cmd_load.set_start(
                     uri=config.as_uri(), timeout=SHORT_TIMEOUT
@@ -307,8 +315,7 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
             config_dir=TEST_CONFIG_DIR,
             initial_state=salobj.State.STANDBY,
             simulation_mode=SchedulerModes.MOCKS3,
-        ), ObservatoryStateMock():
-
+        ), ObservatoryStateMock(), self.make_script_queue(running=True):
             try:
                 await salobj.set_summary_state(
                     self.remote,
@@ -371,8 +378,7 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
             config_dir=TEST_CONFIG_DIR,
             initial_state=salobj.State.STANDBY,
             simulation_mode=SchedulerModes.MOCKS3,
-        ), ObservatoryStateMock():
-
+        ), ObservatoryStateMock(), self.make_script_queue(running=True):
             try:
                 await salobj.set_summary_state(
                     self.remote,
@@ -381,7 +387,7 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                 )
 
                 # Reduce CSC loop_die_timeout so test will run faster
-                self.csc.loop_die_timeout = 2.0
+                self.csc.loop_die_timeout = 1.0
 
                 self.remote.evt_detailedState.flush()
 
@@ -400,6 +406,7 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                         detailed_state.substate
                         == DetailedState.COMPUTING_PREDICTED_SCHEDULE
                     ):
+                        self.log.info("Disabling scheduler.")
                         await self.remote.cmd_disable.start(timeout=SHORT_TIMEOUT)
                         break
 
@@ -414,9 +421,51 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
 
     @contextlib.asynccontextmanager
     async def make_script_queue(self, running: bool) -> None:
-
         self.log.debug("Make queue.")
         async with salobj.Controller("ScriptQueue", index=1) as queue:
+
+            async def show_schema(data) -> None:
+                self.log.debug(f"Show schema: {data}")
+                await queue.evt_configSchema.set_write(
+                    path=data.path,
+                    isStandard=data.isStandard,
+                    configSchema="""
+$schema: http://json-schema.org/draft-07/schema#
+type: object
+properties:
+    name:
+        type: string
+        description: Target name.
+    ra:
+        type: string
+        description: >-
+            The right ascension of the target in hexagesimal format,
+            e.g. HH:MM:SS.S.
+    dec:
+        type: string
+        description: >-
+            The declination of the target in hexagesimal format,
+            e.g. DD:MM:SS.S.
+    rot_sky:
+        type: number
+        description: The sky angle (degrees) of the target.
+    estimated_slew_time:
+        type: number
+        description: Estimated slew time (seconds).
+        default: 0.
+    obs_time:
+        type: number
+        description: Estimated observing time (seconds).
+        default: 0.
+    note:
+        type: string
+        description: Survey note.
+        default: ""
+additionalProperties: true
+                    """,
+                )
+
+            queue.cmd_showSchema.callback = show_schema
             await queue.evt_queue.set_write(running=running)
             yield
 

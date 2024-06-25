@@ -1,6 +1,6 @@
-# This file is part of ts_scheduler
+# This file is part of ts_scheduler.
 #
-# Developed for the LSST Telescope and Site Systems.
+# Developed for the Rubin Observatory Telescope and Site Systems.
 # This product includes software developed by the LSST Project
 # (https://www.lsst.org).
 # See the COPYRIGHT file at the top-level directory of this distribution
@@ -17,14 +17,17 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 __all__ = [
     "NonFinalStates",
+    "FailedStates",
     "SchedulerModes",
     "is_uri",
     "support_command",
     "OBSERVATION_NAMED_PARAMETERS",
     "set_detailed_state",
+    "BlockStatus",
 ]
 
 import enum
@@ -33,7 +36,16 @@ from urllib.parse import urlparse
 
 from lsst.ts.idl import get_idl_dir
 from lsst.ts.idl.enums import Script
-from lsst.ts.salobj import parse_idl
+
+DDS_VERSION = True
+try:
+    from lsst.ts.salobj import parse_idl
+except ImportError:
+    import warnings
+
+    warnings.warn("Running kafka version of CSC.", Warning)
+    DDS_VERSION = False
+    from lsst.ts.salobj import ComponentInfo
 
 NonFinalStates = frozenset(
     (
@@ -45,11 +57,18 @@ NonFinalStates = frozenset(
         Script.ScriptState.ENDING,
         Script.ScriptState.STOPPING,
         Script.ScriptState.FAILING,
-        Script.ScriptState.STOPPED,
     )
 )
 """Stores all non final state for scripts submitted to the queue.
 """
+
+FailedStates = frozenset(
+    (
+        Script.ScriptState.STOPPED,
+        Script.ScriptState.FAILED,
+        Script.ScriptState.CONFIGURE_FAILED,
+    )
+)
 
 efd_query_re = re.compile(r"SELECT (.*) FROM (.*) WHERE (.*)")
 
@@ -100,6 +119,30 @@ class DetailedState(enum.IntEnum):
     QUEUEING_TARGET = enum.auto()
 
 
+class BlockStatus(enum.IntEnum):
+    """Observing block status.
+
+    This enumeration is added here temporarily to support publishing this
+    information with the current version of ts-idl. Once the new version of
+    ts-idl package is released and deployed this can be removed.
+    """
+
+    # Block is invalid.
+    INVALID = enum.auto()
+    # Block is available.
+    AVAILABLE = enum.auto()
+    # Block started executing but did not completed yet.
+    STARTED = enum.auto()
+    # Block is currently executing.
+    EXECUTING = enum.auto()
+    # Block completed.
+    COMPLETED = enum.auto()
+    # Error while executing block.
+    ERROR = enum.auto()
+    # Block was interrupted.
+    INTERRUPTED = enum.auto()
+
+
 def is_uri(uri: str) -> bool:
     """Check if input is a valid uri.
 
@@ -147,9 +190,17 @@ def support_command(command_name: str) -> bool:
         True if the CSC interface defines the command, False
         otherwise.
     """
-    idl_metadata = parse_idl("Scheduler", get_idl_dir() / "sal_revCoded_Scheduler.idl")
+    component_metadata = (
+        parse_idl("Scheduler", get_idl_dir() / "sal_revCoded_Scheduler.idl")
+        if DDS_VERSION
+        else ComponentInfo("Scheduler", "none")
+    )
 
-    return f"command_{command_name}" in idl_metadata.topic_info
+    return (
+        f"command_{command_name}" in component_metadata.topic_info
+        if DDS_VERSION
+        else f"cmd_{command_name}" in component_metadata.topics
+    )
 
 
 def set_detailed_state(detailed_state):

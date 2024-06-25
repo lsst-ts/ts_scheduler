@@ -45,3 +45,10 @@ ups/*.cfgc
 # documentation builds
 doc/_build
 doc/py-api
+.pre-commit-config.yaml
+.flake8
+.isort.cfg
+.mypy.ini
+.clang-format
+.ruff.toml
+towncrier.toml

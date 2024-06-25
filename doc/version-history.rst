@@ -4,6 +4,145 @@
 Version History
 ===============
 
+v2.0.0
+------
+
+.. Unreleased! Remove this comment before releasing it!
+.. This is part of a major refactor of the Scheduler to include the observing block feature.
+.. It will be spread over several PRs untill the feature is fully implemented.
+.. In the meantime use Release Candidate (in the develop branch) to deploy at the summit.
+
+* Moves from rubin-sim package to rubin-scheduler. The rubin-scheduler package contains all of the scheduling-related code from rubin-sim, but without MAF. This reduces the dependencies typically installed with rubin-sim, as well as reduces the default data download to only that required to run the scheduler.
+
+* Update documentation.
+
+* Add support for running CSC with Kafka version of salobj.
+
+* Update unit tests to conform with the refactor done in the code to implement the observing block feature.
+
+  * Add test observing blocks.
+
+  * Update test observing list for the ``Sequence`` driver.
+
+  * Update test SAL Scripts (both standard and external).
+
+  * Update all tests data configuration files to be compatible with new configuration schema.
+
+  * Add ``tests/test_driver_target.py`` with unit test for the ``DriverTarget`` class.
+
+* In ``utils/test/feature_scheduler_sim.py``, refactor of the ``FeatureSchedulerSim`` to support the observing block feature.
+
+* In ``scheduler_csc.py``, major refactor of the ``SchedulerCSC`` to implement the observing block feature.
+
+    * Make some improvement in long running commands such that they wait a fraction of a heartbeat to send the in progress ack.
+
+    * Implement method to validate observing blocks and publish block info.
+      Add support for either querying the ScriptQueue or reading script configuration from path.
+
+    * Move code that publishes the settings events into a new method ``_publish_settings``.
+
+    * Add new ``idle_to_running``  context manager to handle standalone operations when the scheduler is not running.
+
+    * Use the new ``idle_to_running`` context manager in ``do_computePredictedSchedule`` command.
+
+    * Implement ``addBlock`` command.
+
+    * ``_publish_block_info`` update formatting of ``evt_blockInventory`` ``status`` due to changes in the ``Model`` class.
+
+    * Update reformatting in ``_publish_settings`` method.
+
+    * ``register_observation``, remove backward compatibility check and update observing block status (by calling ``_update_block_status``).
+
+    * Update ``queue_targets`` to log the targets in the queue.
+
+    * Update ``advance_target_production_loop`` to improve handling check target and timer task execution.
+
+    * ``put_on_queue``  method, replace debug message by info message with more information about the targets.
+
+    * Update ``put_on_queue`` to update/publish block status (e.g. by calling ``_update_block_status``).
+
+    * Add new ``_update_block_status`` method to handle updating observing block status and publish the information.
+
+    * Limit the number of SAL Scripts the Scheduler adds to the queue at any given time.
+
+    * Implement feature that allows blocks to run alongside the running scheduler.
+
+    * Add support for a 3rd instance of the Scheduler to run alongside a 3rd instance of the queue.
+    
+    * Make blocks configurable.
+
+* In ``model.py``:
+
+  * Major refactor of the ``Model`` class to implement the observing block feature.
+
+  * Refactor ``Model.load_driver`` to use new ``DriverFactory`` class to load the driver instance.
+
+  * Add method to validate observing blocks when configuring the model.
+
+  * Update ``Model`` to store ``ObservingBlockStatus`` dataclass instead of the ``BlockStatus`` enumeration in ``observing_blocks_status`` dictionary.
+
+  * Update ``configure_telemetry_streams`` to setup ``telemetry_stream_handler`` even if there is no defined telemetry stream.
+
+    This is needed for the ``Model`` class to be able to query the status of the observing blocks at startup.
+  
+  * Add ``get_valid_observing_blocks`` method to retrieve a list of blocks that are valid.
+
+  * Search blocks in subdirectories inside the block directory.
+
+* Add new submodule ``driver/driver_factory.py``, defining a ``DriverFactory`` class.
+
+  This provides a better way to generate the driver class from an input option.
+
+* In ``utils/parameters.py``, update default value for ``SchedulerCscParameters.driver_type`` to account for changes in the schema.
+
+* In ``telemetry_stream_handler.py``, update ``TelemetryStreamHandler.telemetry_stream_schema`` to account for updates done in the schema.
+
+* In ``config_schema.py``, major refactor of the CSC configuration schema to support observing block and improve schema validation.
+
+  Improvements include:
+
+  * Make driver selection a fixed enumeration.
+  * Have separate session for the different types of drivers.
+  * Use conditional schema to match the selected driver to its configuration, making the appropriate session required according to the selected driver.
+  * Make all sub-schemas fixed, do not accept additional properties.
+
+* In ``utils/fbs_utils.py``, moves to inheriting from rubin_scheduler.scheduler.SchemaConverter, while extending the class to add a method to convert from an opsim database into a pandas dataframe (only).
+
+
+* In ``utils/csc_utils.py``:
+
+  * Add new ``FailedStates`` set to include all the possible failed states a script might have.
+
+  * Add new ``BlockStatus`` enumeration.
+
+* In ``driver/survey_topology.py``, implement some minor cosmetic improvements to ``SurveyTopology`` class.
+
+* In ``driver/feature_scheduler.py``, refactor ``FeatureScheduler`` to accommodate changes done in the ``Driver`` class and implement the observing block feature.
+
+* In ``driver/sequential.py``, refactor the ``Sequential`` class to account for the changes done in ``Driver`` and implement the new observing block feature.
+
+* In ``driver/driver.py``, refactor the ``Driver`` class to accommodate the changes done in ``DriverTarget`` and integrate with the observing block feature.
+
+* In ``driver/feature_scheduler_target.py``, refactor ``FeatureSchedulerTarget`` to conform with the new ``DriverTarget`` interface and integrate it with the observing block feature.
+
+* In ``driver/driver_target.py``, refactor ``DriverTarget`` class to integrate it with the observing block system.
+
+  This class contains the main integration of the scheduler with the observing block system since this is the one in charge of converting an observing target into an observing script, which now becomes an observing block which can be multiple scripts.
+
+* Update conda recipe to include new ``ts_observing`` dependency.
+
+  This package has the modules required to interface with the "observing blocks", which is the main change introduce in this branch.
+
+* Update pre commit config file.
+
+* Add new ``utils/types`` submodule to hold type aliases definitions.
+
+* Add new ``observing_blocks`` submodule defining the ``ObservingBlockStatus`` dataclass.
+
+* Add github actions to do linting and ensure version history was updated.
+
+* Update ``pyproject.toml`` to stop running black and flake8 with pytest.
+
 v1.20.0
 -------
 
@@ -403,16 +542,19 @@ v1.8.0
 * Adds two new invalid configurations to check the CSC configuration schema.
 * Reformat `all_fields` test configuration.
 * Changes in the CSC configuration schema:
+
   * Make the top level CSC configuration reject `additionalProperties`.
     This was used to pass in configurations for the driver, but had the drawback that it did not check the top level against mistakes.
+
   * Add a new required configuration section for the driver; driver_configuration.
     This new section is basically an dictionary that users can rely on to pass in configurations for the drivers.
     The driver themselves will be in charge of verifying the configuration.
+
 * Fix issue in test_simple_target_loop, where it was not configuring the scheduler with the correct configuration.
 * Rename `DriverTarget.as_evt_topic` -> `DriverTarget.as_dict`.
 * Fix issue in `advance_target_production_loop` when there are no target in the `target_queue`.
 * Fix `test_advance_target_loop` unit test.
-* Move `DriverTarget` into its own sub-module in `driver.
+* Move `DriverTarget` into its own sub-module in `driver`.
 
 
 

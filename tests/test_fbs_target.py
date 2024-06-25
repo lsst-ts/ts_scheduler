@@ -19,6 +19,7 @@
 # You should have received a copy of the GNU General Public License
 
 import math
+import typing
 import unittest
 
 import numpy as np
@@ -26,16 +27,15 @@ import yaml
 from astropy import units
 from astropy.coordinates import Angle
 from astropy.time import Time
+from lsst.ts import observing
 from lsst.ts.observatory.model import ObservatoryModel
-from rubin_sim.scheduler.utils import empty_observation
-
 from lsst.ts.scheduler.driver.feature_scheduler_target import FeatureSchedulerTarget
 from lsst.ts.scheduler.utils.test.feature_scheduler_sim import MJD_START
+from rubin_scheduler.scheduler.utils import empty_observation
 
 
 class TestFeatureSchedulerTarget(unittest.TestCase):
     def setUp(self) -> None:
-
         self.observatory_model = ObservatoryModel()
         self.observatory_model.configure_from_module()
 
@@ -46,12 +46,11 @@ class TestFeatureSchedulerTarget(unittest.TestCase):
         return super().setUp()
 
     def test_constructor(self):
-
+        observing_block = self.make_observing_block()
         observation = self.make_fbs_observation(note="std")
 
         target = FeatureSchedulerTarget(
-            observing_script_name="observing_script",
-            observing_script_is_standard=True,
+            observing_block=observing_block,
             observation=observation,
         )
 
@@ -61,46 +60,41 @@ class TestFeatureSchedulerTarget(unittest.TestCase):
         self.assertGreater(slew_time, 0.0)
 
     def test_get_script_config(self):
-
+        observing_block = self.make_observing_block()
         observation = self.make_fbs_observation(note="std")
 
         target = FeatureSchedulerTarget(
-            observing_script_name="observing_script",
-            observing_script_is_standard=True,
+            observing_block=observing_block,
             observation=observation,
         )
 
         script_config_expected = {
             "targetid": target.targetid,
             "band_filter": target.filter,
-            "ra": Angle(float(observation["RA"][0]), unit=units.rad).to_string(
-                unit=units.hourangle, sep=":"
-            ),
-            "dec": Angle(float(observation["dec"][0]), unit=units.rad).to_string(
-                unit=units.degree, sep=":"
-            ),
             "name": observation["note"][0],
-            "program": observation["note"][0].rsplit("_", maxsplit=1)[0],
+            "ra": target.get_ra(),
+            "dec": target.get_dec(),
+            "alt": target.alt,
+            "az": target.az,
+            "rot": target.rot,
             "rot_sky": target.ang,
             "obs_time": target.obs_time,
             "num_exp": target.num_exp,
             "exp_times": target.exp_times,
             "estimated_slew_time": target.slewtime,
+            "program": observing_block.program,
         }
 
-        script_config_yaml = target.get_script_config()
+        script_config = target.get_script_config()
 
-        script_config_unpacked = yaml.safe_load(script_config_yaml)
-
-        self.assertEqual(script_config_expected, script_config_unpacked)
+        assert script_config == script_config_expected
 
     def test_get_script_config_cwfs(self):
-
+        observing_block = self.make_observing_block_cwfs()
         observation = self.make_fbs_observation(note="cwfs")
 
         target = FeatureSchedulerTarget(
-            observing_script_name="observing_script",
-            observing_script_is_standard=True,
+            observing_block=observing_block,
             observation=observation,
         )
 
@@ -108,129 +102,122 @@ class TestFeatureSchedulerTarget(unittest.TestCase):
             find_target=dict(
                 az=math.degrees(float(observation["az"][0])),
                 el=math.degrees(float(observation["alt"][0])),
-            )
+                mag_limit=8.0,
+            ),
+            program="cwfs",
         )
 
-        script_config_yaml = target.get_script_config()
+        script_config = yaml.safe_load(
+            target.get_observing_block().scripts[0].get_script_configuration()
+        )
 
-        script_config_unpacked = yaml.safe_load(script_config_yaml)
-
-        self.assertEqual(script_config_expected, script_config_unpacked)
+        assert script_config == script_config_expected
 
     def test_get_script_config_cwfs_with_additional_config(self):
-
+        observing_block = self.make_observing_block_cwfs(
+            additional_config=dict(filter="SDSSg", grating="empty_1")
+        )
         observation = self.make_fbs_observation(note="cwfs")
 
         target = FeatureSchedulerTarget(
-            observing_script_name="observing_script",
-            observing_script_is_standard=True,
+            observing_block=observing_block,
             observation=observation,
-            script_configuration_cwfs=dict(filter="SDSSg", grating="empty_1"),
         )
 
         script_config_expected = dict(
             find_target=dict(
                 az=math.degrees(float(observation["az"][0])),
                 el=math.degrees(float(observation["alt"][0])),
+                mag_limit=8.0,
             ),
+            program="cwfs",
             filter="SDSSg",
             grating="empty_1",
         )
 
-        script_config_yaml = target.get_script_config()
+        script_config = yaml.safe_load(
+            target.get_observing_block().scripts[0].get_script_configuration()
+        )
 
-        script_config_unpacked = yaml.safe_load(script_config_yaml)
-
-        self.assertEqual(script_config_expected, script_config_unpacked)
+        assert script_config == script_config_expected
 
     def test_get_script_config_spec(self):
-
+        observing_block = self.make_observing_block_spec()
         observation = self.make_fbs_observation(note="spec:HD12345")
 
         target = FeatureSchedulerTarget(
-            observing_script_name="observing_script",
-            observing_script_is_standard=True,
+            observing_block=observing_block,
             observation=observation,
         )
 
         script_config_expected = {
             "object_name": observation["note"][0].split(":", maxsplit=1)[-1],
             "object_dec": Angle(float(observation["dec"][0]), unit=units.rad).to_string(
-                unit=units.degree, sep=":"
+                unit=units.degree, sep=":", alwayssign=True
             ),
             "object_ra": Angle(float(observation["RA"][0]), unit=units.rad).to_string(
-                unit=units.hourangle, sep=":"
+                unit=units.hourangle, sep=":", alwayssign=True
             ),
+            "program": observing_block.program,
         }
 
-        script_config_yaml = target.get_script_config()
+        script_config = yaml.safe_load(
+            target.get_observing_block().scripts[0].get_script_configuration()
+        )
 
-        script_config_unpacked = yaml.safe_load(script_config_yaml)
-
-        self.assertEqual(script_config_expected, script_config_unpacked)
+        assert script_config == script_config_expected
 
     def test_get_script_config_spec_with_additional_config(self):
+        additional_config = dict(
+            do_acquire=True,
+            acq_filter="empty_1",
+            acq_grating="holo4_003",
+            acq_exposure_time=5.0,
+            do_blind_offset=False,
+            do_take_sequence=True,
+            exposure_time_sequence=[30.0, 30.0],
+            filter_sequence=["empty_1", "empty_1"],
+            grating_sequence=["holo4_003", "holo4_003"],
+        )
 
+        observing_block = self.make_observing_block_spec(
+            additional_config=additional_config
+        )
         observation = self.make_fbs_observation(note="spec:HD12345")
 
         target = FeatureSchedulerTarget(
-            observing_script_name="observing_script",
-            observing_script_is_standard=True,
+            observing_block=observing_block,
             observation=observation,
-            script_configuration_spec=dict(
-                filter_sequence=["SDSSg", "SDSSg"],
-                grating_sequence=["empty_1", "empty_1"],
-            ),
         )
 
-        script_config_expected = {
-            "object_name": observation["note"][0].split(":", maxsplit=1)[-1],
-            "object_dec": Angle(float(observation["dec"][0]), unit=units.rad).to_string(
-                unit=units.degree, sep=":"
-            ),
-            "object_ra": Angle(float(observation["RA"][0]), unit=units.rad).to_string(
-                unit=units.hourangle, sep=":"
-            ),
-            "filter_sequence": ["SDSSg", "SDSSg"],
-            "grating_sequence": ["empty_1", "empty_1"],
-        }
+        script_config_expected = additional_config.copy()
 
-        script_config_yaml = target.get_script_config()
+        script_config_expected["object_name"] = observation["note"][0].split(
+            ":", maxsplit=1
+        )[-1]
+        script_config_expected["object_dec"] = Angle(
+            float(observation["dec"][0]), unit=units.rad
+        ).to_string(unit=units.degree, sep=":", alwayssign=True)
+        script_config_expected["object_ra"] = Angle(
+            float(observation["RA"][0]), unit=units.rad
+        ).to_string(unit=units.hourangle, sep=":", alwayssign=True)
+        script_config_expected["filter_sequence"] = ["empty_1", "empty_1"]
+        script_config_expected["grating_sequence"] = ["holo4_003", "holo4_003"]
+        script_config_expected["program"] = observing_block.program
 
-        script_config_unpacked = yaml.safe_load(script_config_yaml)
-
-        self.assertEqual(script_config_expected, script_config_unpacked)
-
-    def test_get_script_config_multiple_observations(self):
-
-        filter_obs = "gri"
-        observations = self.make_fbs_observation("std", filter_obs=filter_obs)
-
-        target = FeatureSchedulerTarget(
-            observing_script_name="observing_script",
-            observing_script_is_standard=True,
-            observation=observations,
+        script_config = yaml.safe_load(
+            target.get_observing_block().scripts[0].get_script_configuration()
         )
 
-        slew_time, error = self.observatory_model.get_slew_delay(target)
-
-        script_config = yaml.safe_load(target.get_script_config())
-
-        self.assertEqual(len(script_config["exp_times"]), len(filter_obs) * 2)
-        for filter_name in filter_obs:
-            self.assertIn(filter_name, script_config["band_filter"])
-
-        self.assertEqual(error, 0)
-        self.assertGreater(slew_time, 0.0)
+        assert script_config == script_config_expected
 
     def make_fbs_observation(self, note, filter_obs="r"):
-
         observations = np.concatenate(
             [empty_observation() for _ in range(len(filter_obs))]
         )
 
         ra, dec, _ = self.observatory_model.altaz2radecpa(
-            self.observatory_model.dateprofile, 65.0, 180.0
+            self.observatory_model.dateprofile, np.deg2rad(65.0), np.deg2rad(180.0)
         )
         for obs_filter, observation in zip(filter_obs, observations):
             observation["RA"] = ra
@@ -242,3 +229,80 @@ class TestFeatureSchedulerTarget(unittest.TestCase):
             observation["note"] = note
 
         return observations
+
+    def make_observing_block(self) -> observing.ObservingBlock:
+        script1 = observing.ObservingScript(
+            name="slew",
+            standard=True,
+            parameters={
+                "name": "$name",
+                "ra": "$ra",
+                "dec": "$dec",
+                "rot_sky": "$rot_sky",
+                "estimated_slew_time": "$estimated_slew_time",
+                "obs_time": "$obs_time",
+                "note": "Static note will be preserved.",
+            },
+        )
+        script2 = observing.ObservingScript(
+            name="standard_visit",
+            standard=False,
+            parameters={
+                "exp_times": "$exp_times",
+                "band_filter": "$band_filter",
+                "program": "$program",
+                "note": "Static note will be preserved.",
+            },
+        )
+
+        return observing.ObservingBlock(
+            name="OBS-123",
+            program="SITCOM-456",
+            scripts=[script1, script2],
+            constraints=[observing.AirmassConstraint(max=1.5)],
+        )
+
+    def make_observing_block_cwfs(
+        self, additional_config: dict[str, typing.Any] = None
+    ) -> observing.ObservingBlock:
+        parameters = additional_config if additional_config is not None else dict()
+        parameters["find_target"] = dict(
+            az="$az",
+            el="$alt",
+            mag_limit=8.0,  # This won't be overwritten.
+        )
+        parameters["program"] = "$program"
+        script = observing.ObservingScript(
+            name="cwfs",
+            standard=True,
+            parameters=parameters,
+        )
+        return observing.ObservingBlock(
+            name="cwfs",
+            program="cwfs",
+            scripts=[script],
+            constraints=[],
+        )
+
+    def make_observing_block_spec(
+        self, additional_config: dict[str, typing.Any] = None
+    ) -> observing.ObservingBlock:
+        parameters = (
+            additional_config.copy() if additional_config is not None else dict()
+        )
+        parameters["object_name"] = "$name"
+        parameters["object_ra"] = "$ra"
+        parameters["object_dec"] = "$dec"
+        parameters["program"] = "$program"
+
+        script = observing.ObservingScript(
+            name="spec",
+            standard=True,
+            parameters=parameters,
+        )
+        return observing.ObservingBlock(
+            name="MainSpectroscopicSurvey",
+            program="SITCOM-123",
+            scripts=[script],
+            constraints=[],
+        )

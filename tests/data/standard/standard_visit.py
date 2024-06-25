@@ -24,14 +24,10 @@ class StandardVisit(BaseScript):
     def __init__(self, index, descr=""):
         super().__init__(index=index, descr=descr)
 
-        self.targetid = 0
-        self.fieldid = 0
         self.filter = None
-        self.ra = None
-        self.dec = None
-        self.ang = None
-        self.num_exp = 0
         self.exp_times = []
+        self.program = None
+        self.note = ""
 
     @classmethod
     def get_schema(cls):
@@ -42,47 +38,36 @@ title: StandardVisit v1
 description: Configuration for StandardVisit.
 type: object
 properties:
-    target_id:
-        description: A unique identifier for the given target.
-        type: integer
-        default: 0
-    fieldid:
-        description: The ID of the associated OpSim field for the target.
-        type: integer
-        default: 0
-    ra:
-        type: number
-        description: The right ascension (degrees) of the target.
-        default: 0.
-    dec:
-        type: number
-        description: The declination (degrees) of the target.
-        default: 0.
-    name:
-        type: string
-        description: Target name.
-        default: non_standard_visit_target
+    exp_times:
+        type: array
+        description: Exposure times.
+        items:
+            type: number
+    band_filter:
+        anyOf:
+            - type: string
+            - type: "null"
+        description: Filter.
     program:
         type: string
-        description: Program.
-        default: ""
-    ang:
+        description: Name of the program these observations are part of.
+    note:
+        type: string
+        description: Note to attribute to these observations.
+    optional_field_string:
+        anyOf:
+            - type: string
+            - type: "null"
+        description:
+            An optional string that can be passed to the script.
+    optional_field_number:
         type: number
-        description: The sky angle (degrees) of the target.
-        default: 0.
-    instrument_setup:
-        type: array
-        items:
-            type: object
-            additionalProperties: false
-            required:
-                - exptime
-                - filter
-            properties:
-                exptime:
-                    type: number
-                filter:
-                    type: string
+        description:
+            An optional number that can be passed to the script.
+required:
+    - exp_times
+    - band_filter
+    - program
 additionalProperties: false
         """
         return yaml.safe_load(schema_yaml)
@@ -92,12 +77,16 @@ additionalProperties: false
 
         self.log.info("Configure started")
 
-        self.target_id = config.target_id
-        self.fieldid = config.fieldid
-        self.ra = config.ra
-        self.dec = config.dec
-        self.ang = config.ang
-        self.instrument_setup = config.instrument_setup
+        self.filter = config.band_filter
+        self.exp_times = config.exp_times
+        self.program = config.program
+        self.note = config.note
+
+        if hasattr(config, "optional_field_string"):
+            self.log.info(f"Received optional string: {config.optional_field_string}.")
+
+        if hasattr(config, "optional_field_number"):
+            self.log.info(f"Received optional number: {config.optional_field_number}.")
 
         self.log.info("Configure succeeded")
 
@@ -109,7 +98,7 @@ additionalProperties: false
         metadata
 
         """
-        metadata.duration = sum([setup["exptime"] for setup in self.instrument_setup])
+        metadata.duration = sum(self.exp_times)
 
     async def run(self):
         """Mock standard visit."""

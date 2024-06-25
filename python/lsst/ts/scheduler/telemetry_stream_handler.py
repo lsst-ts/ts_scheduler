@@ -1,6 +1,6 @@
-# This file is part of ts_scheduler
+# This file is part of ts_scheduler.
 #
-# Developed for the Vera C. Rubin Observatory.
+# Developed for the Rubin Observatory Telescope and Site Systems.
 # This product includes software developed by the LSST Project
 # (https://www.lsst.org).
 # See the COPYRIGHT file at the top-level directory of this distribution
@@ -17,6 +17,7 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 __all__ = ["TelemetryStreamHandler"]
 
@@ -26,11 +27,10 @@ from typing import Any, Dict, List
 import numpy
 from astropy import units
 from astropy.time import Time, TimeDelta
-
 from lsst.ts import salobj
 
 from . import CONFIG_SCHEMA
-from .utils import get_efd_client
+from .utils.efd_utils import get_efd_client
 
 
 class TelemetryStreamHandler:
@@ -49,7 +49,6 @@ class TelemetryStreamHandler:
         log: logging.Logger,
         efd_name: str,
     ) -> None:
-
         self.log = log.getChild(type(self).__name__)
 
         self.efd_name: str = efd_name
@@ -191,7 +190,7 @@ class TelemetryStreamHandler:
                 err_msg += f" in {invalid_data[name]['topic']}."
             raise RuntimeError(err_msg)
 
-    async def retrive_telemetry(self, stream_name: str) -> List[float]:
+    async def retrieve_telemetry(self, stream_name: str) -> List[float]:
         """Retrieve telemetry for a given stream.
 
         Parameters
@@ -226,10 +225,11 @@ class TelemetryStreamHandler:
         )
 
         efd_data = await self.efd_client.select_time_series(
-            self.telemetry_streams[stream_name]["efd_table"],
-            self.telemetry_streams[stream_name]["efd_columns"],
-            time_query_start,
-            time_query_end,
+            topic_name=self.telemetry_streams[stream_name]["efd_table"],
+            fields=self.telemetry_streams[stream_name]["efd_columns"],
+            start=time_query_start,
+            end=time_query_end,
+            index=self.telemetry_streams[stream_name]["csc_index"],
         )
 
         telemetry_values = self.get_fill_values_for(stream_name)
@@ -263,6 +263,6 @@ class TelemetryStreamHandler:
 
     @property
     def telemetry_stream_schema(self) -> Dict:
-        return CONFIG_SCHEMA["definitions"]["instance_specific_config"]["telemetry"][
-            "properties"
-        ]["streams"]["items"]
+        return CONFIG_SCHEMA["definitions"]["instance_specific_config"]["properties"][
+            "telemetry"
+        ]["properties"]["streams"]["items"]

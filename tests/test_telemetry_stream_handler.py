@@ -23,7 +23,6 @@ import unittest
 
 import numpy as np
 from jsonschema.exceptions import ValidationError
-
 from lsst.ts.scheduler import TelemetryStreamHandler
 
 
@@ -34,21 +33,20 @@ class TestTelemetryStreamHandler(unittest.IsolatedAsyncioTestCase):
         cls.efd_name = "unit_test_efd"
 
     def setUp(self) -> None:
-
         self.telemetry_stream_handler = TelemetryStreamHandler(
             log=self.log,
             efd_name=self.efd_name,
         )
 
-    async def test_retrive_telemetry_no_stream(self):
+    async def test_retrieve_telemetry_no_stream(self):
         """Test calling retrieve telemetry when no telemetry stream is
         defined.
         """
 
         with self.assertRaises(RuntimeError):
-            await self.telemetry_stream_handler.retrive_telemetry(stream_name="seeing")
+            await self.telemetry_stream_handler.retrieve_telemetry(stream_name="seeing")
 
-    async def test_retrive_telemetry(self):
+    async def test_retrieve_telemetry(self):
         """Test calling retrieve telemetry when no telemetry stream is
         defined.
         """
@@ -68,13 +66,12 @@ class TestTelemetryStreamHandler(unittest.IsolatedAsyncioTestCase):
         )
 
         seeing = (
-            await self.telemetry_stream_handler.retrive_telemetry(stream_name="seeing")
+            await self.telemetry_stream_handler.retrieve_telemetry(stream_name="seeing")
         )[0]
 
         assert np.isfinite(seeing)
 
     async def test_configure_telemetry_stream(self):
-
         valid_telemetry_stream = [
             dict(
                 name="seeing",
@@ -107,7 +104,6 @@ class TestTelemetryStreamHandler(unittest.IsolatedAsyncioTestCase):
             assert name in self.telemetry_stream_handler.telemetry_streams
 
     async def test_configure_telemetry_stream_bad_efd_table(self):
-
         bad_efd_columns = [
             dict(
                 name="seeing",
@@ -126,7 +122,6 @@ class TestTelemetryStreamHandler(unittest.IsolatedAsyncioTestCase):
         assert bad_efd_columns[0]["efd_table"] in str(runtime_error.exception)
 
     async def test_configure_telemetry_stream_bad_efd_columns(self):
-
         bad_efd_columns = [
             dict(
                 name="seeing",
@@ -147,7 +142,6 @@ class TestTelemetryStreamHandler(unittest.IsolatedAsyncioTestCase):
         assert bad_efd_columns[0]["efd_columns"][0] in str(runtime_error.exception)
 
     async def test_configure_telemetry_stream_bad_efd_delta_time(self):
-
         bad_efd_columns = [
             dict(
                 name="seeing",
@@ -171,7 +165,6 @@ class TestTelemetryStreamHandler(unittest.IsolatedAsyncioTestCase):
             )
 
     async def test_configure_telemetry_stream_invalid_stream_schema(self):
-
         invalid_stream_schema_typo = [
             dict(
                 namx="seeing",

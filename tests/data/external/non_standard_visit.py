@@ -70,19 +70,14 @@ properties:
         type: number
         description: The sky angle (degrees) of the target.
         default: 0.
-    instrument_setup:
+    exp_times:
         type: array
+        description: Exposure times.
         items:
-            type: object
-            additionalProperties: false
-            required:
-                - exptime
-                - filter
-            properties:
-                exptime:
-                    type: number
-                filter:
-                    type: string
+            type: number
+    filter:
+        type: string
+        description: Filter.
 additionalProperties: false
         """
         return yaml.safe_load(schema_yaml)
@@ -97,7 +92,7 @@ additionalProperties: false
         self.ra = config.ra
         self.dec = config.dec
         self.ang = config.ang
-        self.instrument_setup = config.instrument_setup
+        self.exp_times = config.exp_times
 
         self.log.info("Configure succeeded")
 
@@ -109,7 +104,7 @@ additionalProperties: false
         metadata
 
         """
-        metadata.duration = sum([setup["exptime"] for setup in self.instrument_setup])
+        metadata.duration = sum(self.exp_times)
 
     async def run(self):
         """Mock standard visit."""

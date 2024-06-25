@@ -1,4 +1,4 @@
-# This file is part of ts_scheduler
+# This file is part of ts_scheduler.
 #
 # Developed for the Rubin Observatory Telescope and Site Systems.
 # This product includes software developed by the LSST Project
@@ -17,6 +17,7 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 __all__ = [
     "SchedulerCSC",
@@ -26,26 +27,38 @@ __all__ = [
 import asyncio
 import contextlib
 import dataclasses
+import os
 import shutil
+import subprocess
 import time
 import traceback
 import types
 import typing
+import uuid
 
 import numpy as np
+import yaml
+from lsst.ts import salobj, utils
 from lsst.ts.astrosky.model import version as astrosky_version
 from lsst.ts.dateloc import version as dateloc_version
 from lsst.ts.idl.enums import Scheduler, ScriptQueue
 from lsst.ts.observatory.model import version as obs_mod_version
-from rubin_sim.version import __version__ as rubin_sim_version
-
-from lsst.ts import salobj, utils
+from lsst.ts.observing import ObservingBlock, ObservingScript
+from rubin_scheduler.version import __version__ as rubin_scheduler_version
 
 from . import CONFIG_SCHEMA, __version__
 from .driver.driver_target import DriverTarget
+from .exceptions.exceptions import (
+    FailedToQueueTargetsError,
+    NonConsecutiveIndexError,
+    TargetScriptFailedError,
+    UnableToFindTargetError,
+    UpdateTelemetryError,
+)
 from .model import Model
 from .utils.csc_utils import (
     OBSERVATION_NAMED_PARAMETERS,
+    BlockStatus,
     DetailedState,
     SchedulerModes,
     set_detailed_state,
@@ -60,12 +73,8 @@ from .utils.error_codes import (
     UNABLE_TO_FIND_TARGET,
     UPDATE_TELEMETRY_ERROR,
 )
-from .utils.exceptions import (
-    FailedToQueueTargetsError,
-    UnableToFindTargetError,
-    UpdateTelemetryError,
-)
 from .utils.parameters import SchedulerCscParameters
+from .utils.types import ValidationRules
 
 
 class SchedulerCSC(salobj.ConfigurableCsc):
@@ -112,9 +121,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         - `observatory_model` : lsst.ts.observatory.model.ObservatoryModel
         - `observatory_state` : lsst.ts.observatory.model.ObservatoryState
         - `sky` : lsst.ts.astrosky.model.AstronomicalSkyModel
-        - `seeing` : lsst.sims.seeingModel.SeeingModel
-        - `scheduled_downtime` : lsst.sims.downtimeModel.ScheduleDowntime
-        - `unscheduled_downtime` : lsst.sims.downtimeModel.UnschedulerDowntime
+        - `seeing` : rubin_scheduler.site_models.SeeingModel
+        - `downtime` : rubin_scheduler.site_models.DowntimeModel
     raw_telemetry: {`str`: :object:}
         Raw, as in unparsed data that is recieved over SAL. The SchedulerCSC
         parses self.raw_telemtry and formats the data into self.models.
@@ -163,7 +171,6 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         initial_state=salobj.base_csc.State.STANDBY,
         simulation_mode=0,
     ):
-
         compatibility_commands = dict(
             computePredictedSchedule=self._do_computePredictedSchedule,
             addBlock=self._do_addBlock,
@@ -187,14 +194,17 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         # Communication channel with OCS queue.
         self.queue_remote = salobj.Remote(
-            self.domain, "ScriptQueue", index=index, include=["script", "queue"]
+            self.domain,
+            "ScriptQueue",
+            index=index,
+            include=["script", "queue", "configSchema"],
         )
 
         # Communication channel with pointing component to get observatory
         # state
         self.ptg = salobj.Remote(
             self.domain,
-            "MTPtg" if index == 1 else "ATPtg",
+            "MTPtg" if index % 2 == 1 else "ATPtg",
             include=["currentTargetStatus"],
         )
 
@@ -231,6 +241,10 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         self._detailed_state_lock = asyncio.Lock()
 
+        # Semaphore to limit the number of scripts added to the ScriptQueue.
+        self._max_queue_capacity = 10
+        self._queue_capacity = asyncio.Semaphore(self._max_queue_capacity)
+
         # dictionary to store background tasks
         self._tasks = dict()
 
@@ -244,7 +258,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         self._tasks["telemetry_loop_task"] = None
 
         # List of targets used in the ADVANCE target loop
-        self.targets_queue = []
+        self.targets_queue: list[DriverTarget] = []
 
         # keep track whether a "no new target" condition was handled by the
         # scheduler.
@@ -262,23 +276,42 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         self.s3bucket_name = None  # Set by `configure`.
         self.s3bucket = None  # Set by `handle_summary_state`.
 
-        self.model = Model(self.log)
+        # Path to the standard and external scripts. This is used
+        # to validate blocks. If not defined it will fallback to
+        # request from the ScriptQueue.
+        self.script_paths = None
+
+        self.model = Model(log=self.log, config_dir=self.config_dir)
+
         # Add callback to script info
-        self.queue_remote.evt_script.callback = self.model.callback_script_info
+        self.queue_remote.evt_script.callback = self.check_script_info
 
     async def begin_start(self, data):
+        self.log.info("Starting Scheduler CSC...")
 
-        await self.cmd_start.ack_in_progress(
-            data,
-            timeout=self.default_command_timeout,
-            result="Starting CSC.",
+        self._tasks["ack_in_progress_task"] = asyncio.create_task(
+            self._cmd_start_ack_in_progress(data)
         )
 
         try:
+            await asyncio.sleep(self.heartbeat_interval * 2.0)
             await super().begin_start(data)
         except Exception:
             self.log.exception("Error in begin start")
+            self._tasks["ack_in_progress_task"].cancel()
             raise
+
+    async def end_start(self, data):
+        self._tasks["ack_in_progress_task"].cancel()
+
+        try:
+            await self._tasks["ack_in_progress_task"]
+        except asyncio.CancelledError:
+            pass
+        except Exception:
+            self.log.exception("Error stopping ack in progress task.")
+        finally:
+            self._tasks.pop("ack_in_progress_task", None)
 
     async def begin_enable(self, data):
         """Begin do_enable.
@@ -295,12 +328,26 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         """
 
+        self.log.info("Enabling Scheduler CSC...")
+
+        await asyncio.sleep(self.heartbeat_interval / 2.0)
+
         await self.cmd_enable.ack_in_progress(
             data,
             timeout=self.default_command_timeout,
             result="Enabling CSC.",
         )
 
+        await self._start_target_production_task()
+
+    async def _start_target_production_task(self):
+        """Start target production task.
+
+        Raises
+        ------
+        RuntimeError
+            If scheduler mode is not recognized.
+        """
         # Make sure event is not set so loops won't start once the CSC is
         # enabled.
         self.run_target_loop.clear()
@@ -309,7 +356,6 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             self.simulation_mode == SchedulerModes.SIMULATION
             or self.parameters.mode == "DRY"
         ):
-
             self.log.info(
                 "Running with no target production loop. "
                 f"Operation mode: {self.parameters.mode}. "
@@ -318,13 +364,11 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             self._tasks["target_production_task"] = None
 
         elif self.parameters.mode == "SIMPLE":
-
             self._tasks["target_production_task"] = asyncio.create_task(
                 self.simple_target_production_loop()
             )
 
         elif self.parameters.mode == "ADVANCE":
-
             self._tasks["target_production_task"] = asyncio.create_task(
                 self.advance_target_production_loop()
             )
@@ -350,12 +394,12 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
             if self.s3bucket is None:
                 mock_s3 = self.simulation_mode == SchedulerModes.MOCKS3
+                self.log.debug(f"Creating s3bucket with mock = {mock_s3}.")
                 self.s3bucket = salobj.AsyncS3Bucket(
                     name=self.s3bucket_name, domock=mock_s3, create=mock_s3
                 )
 
         elif self.summary_state == salobj.State.STANDBY:
-
             await self._stop_all_background_tasks()
 
             if self.s3bucket is not None:
@@ -379,6 +423,9 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             Command data
 
         """
+
+        await asyncio.sleep(self.heartbeat_interval / 2)
+
         await self.cmd_disable.ack_in_progress(
             data,
             timeout=self.default_command_timeout,
@@ -404,12 +451,31 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         self.assert_enabled()
 
-        if self.run_target_loop.is_set():
-            raise RuntimeError("Target production loop already running.")
+        async with self.target_loop_lock:
+            if self.run_target_loop.is_set():
+                raise RuntimeError("Target production loop already running.")
 
-        await self._transition_idle_to_running()
+            self.log.info("Resuming Scheduler operations...")
 
-        self.run_target_loop.set()
+            await asyncio.sleep(self.heartbeat_interval)
+
+            await self.cmd_resume.ack_in_progress(
+                data,
+                timeout=self.default_command_timeout,
+                result="Resuming Scheduler operation.",
+            )
+
+            target_production_task = self._tasks.get(
+                "target_production_task", utils.make_done_future()
+            )
+
+            if target_production_task is not None and target_production_task.done():
+                self.log.warning("Target production task not running. Starting it.")
+                await self._start_target_production_task()
+
+            await self._transition_idle_to_running()
+
+            self.run_target_loop.set()
 
     async def do_stop(self, data):
         """Stop target production loop.
@@ -426,25 +492,55 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         if not self.run_target_loop.is_set():
             raise RuntimeError("Target production loop is not running.")
 
+        await asyncio.sleep(self.heartbeat_interval / 2)
+
         await self.cmd_stop.ack_in_progress(
             data,
-            timeout=self.default_command_timeout,
+            timeout=self.default_command_timeout * 2.0,
             result="Stopping Scheduler execution.",
         )
 
         self.run_target_loop.clear()
 
-        if data.abort:
-            async with self.target_loop_lock:
-                await self.remove_from_queue(self.model.get_scheduled_targets())
-                self.model.reset_scheduled_targets()
+        self.log.info("Waiting for target loop execution.")
 
-        await self.reset_handle_no_targets_on_queue()
+        try:
+            await asyncio.wait_for(
+                self.stop_target_loop_execution(),
+                timeout=self.loop_die_timeout,
+            )
+        except asyncio.TimeoutError:
+            self.log.info("Timeout waiting for the target loop to stop. Cancelling it.")
+            await self.cmd_stop.ack_in_progress(
+                data,
+                timeout=self.default_command_timeout + self.heartbeat_interval,
+                result="Stopping target production task.",
+            )
+            await self._stop_background_task("target_production_task")
+            await self._cleanup_queue_targets()
+            await self._start_target_production_task()
 
-        await self._transition_running_to_idle()
+    async def stop_target_loop_execution(self) -> None:
+        """Stop target production loop execution."""
+        async with self.target_loop_lock:
+            self.log.info("Stopping scheduler.")
+
+            await self._cleanup_queue_targets()
+
+            await self.reset_handle_no_targets_on_queue()
+
+            await self._transition_running_to_idle()
+
+    async def _cleanup_queue_targets(self) -> None:
+        """Cleanup queued targets."""
+        scheduled_targets = self.model.get_scheduled_targets()
+        for target in scheduled_targets:
+            await self.model.mark_block_done(target.get_observing_block().id)
+            await self.model.remove_block_done_scripts(target.get_observing_block().id)
+        self.model.reset_scheduled_targets()
+        await self.remove_from_queue(scheduled_targets)
 
     async def stop_next_target_timer_task(self):
-
         if not self.next_target_timer.done():
             self.log.debug("Cancelling next target timer.")
             self.next_target_timer.cancel()
@@ -512,17 +608,11 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             result="Computing predicted schedule.",
         )
 
-        try:
-            # Need to be running to compute predicted schedule
-            await self._transition_idle_to_running()
-
+        async with self.idle_to_running():
             self._tasks["compute_predicted_schedule"] = asyncio.create_task(
                 self.compute_predicted_schedule()
             )
             await self._tasks["compute_predicted_schedule"]
-        finally:
-            # Going back to idle.
-            await self._transition_running_to_idle()
 
     async def _do_addBlock(self, data):
         """Implement add block command.
@@ -538,7 +628,90 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             Command not implemented yet.
         """
         self.assert_enabled()
-        raise NotImplementedError("Command not implemented yet.")
+
+        await self.cmd_addBlock.ack_in_progress(
+            data,
+            timeout=self.default_command_timeout,
+            result=f"Adding block {data.id}.",
+        )
+
+        if data.id not in self.model.observing_blocks:
+            observing_blocks = ",".join(self.model.observing_blocks)
+            raise salobj.ExpectedError(
+                f"Block {data.id} is not in the list of observing blocks. "
+                f"Current observing blocks are: {observing_blocks}."
+            )
+        elif data.id not in (
+            valid_observing_blocks := self.model.get_valid_observing_blocks()
+        ):
+            valid_blocks = ",".join(valid_observing_blocks)
+            raise salobj.ExpectedError(
+                f"Block {data.id} is not in the list of valid blocks. "
+                f"Current valid blocks are: {valid_blocks}."
+            )
+
+        obs_block = self.model.observing_blocks[data.id].dict()
+        obs_block.pop("id")
+        block_target = DriverTarget(
+            observing_block=ObservingBlock(
+                **obs_block,
+            ),
+            block_configuration=yaml.safe_load(data.override),
+            log=self.log,
+        )
+
+        await self._update_block_status(
+            data.id, BlockStatus.STARTED, block_target.get_observing_block()
+        )
+
+        async with self.target_loop_lock:
+            self.log.debug(f"Queueing block target: {block_target!s}.")
+
+            if not self.run_target_loop.is_set():
+                self.log.warning(
+                    "Target production loop is not running. "
+                    "Inserting block at the top of the queue and executing."
+                )
+                task_name = f"block-{block_target.observing_block.id}"
+                if task_name in self._tasks and not self._tasks[task_name].done():
+                    RuntimeError(
+                        f"A Block with the same id is already executing: {task_name}."
+                    )
+                self.targets_queue.insert(0, block_target)
+                self._tasks[task_name] = asyncio.create_task(self.execute_block())
+            else:
+                self.log.info("Scheduler is running, appending target to the queue.")
+                self.targets_queue.append(block_target)
+
+    async def _update_block_status(
+        self,
+        block_id: str,
+        block_status: BlockStatus,
+        observing_block: ObservingBlock,
+    ) -> None:
+        if block_id not in self.model.observing_blocks_status:
+            self.log.warning(
+                f"Block {block_id} not in list of observing blocks. Ignoring."
+            )
+            return
+        self.model.observing_blocks_status[block_id].status = block_status
+        if block_status == BlockStatus.COMPLETED:
+            self.model.observing_blocks_status[block_id].executions_completed += 1
+
+        # publish block event
+        await self.evt_blockStatus.set_write(
+            id=block_id,
+            statusId=block_status.value,
+            status=block_status.name,
+            executionsCompleted=self.model.observing_blocks_status[
+                block_id
+            ].executions_completed,
+            executionsTotal=self.model.observing_blocks_status[
+                block_id
+            ].executions_total,
+            hash=str(observing_block.id),
+            definition=observing_block.json(),
+        )
 
     async def _do_getBlockStatus(self, data):
         """Implement get block status command.
@@ -598,13 +771,9 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         failed_observatory_state_logged = False
         while self.run_loop:
-
             # Update observatory state and sleep at the same time.
             try:
-                await asyncio.gather(
-                    self.handle_observatory_state(),
-                    asyncio.sleep(self.heartbeat_interval),
-                )
+                await self.handle_observatory_state()
                 failed_observatory_state_logged = False
             except Exception:
                 queue = await self.get_queue(request=False)
@@ -667,16 +836,34 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             except Exception:
                 self.log.exception("Error computing general info. Ignoring...")
 
+            await self._cleanup_script_tasks()
+
+    async def _cleanup_script_tasks(self) -> None:
+        """Cleanup completed script tasks."""
+        script_tasks_done = [
+            task_name
+            for task_name in self._tasks
+            if "script_task" in task_name
+            and self._tasks[task_name] is not None
+            and self._tasks[task_name].done()
+        ]
+        if len(script_tasks_done) > self.parameters.max_scripts:
+            self.log.debug(
+                f"Cleaning up {self.parameters.max_scripts} done script tasks."
+            )
+            for script_task in script_tasks_done[: self.parameters.max_scripts]:
+                del self._tasks[script_task]
+
     async def handle_observatory_state(self):
         """Handle observatory state."""
 
         current_target_state = await self.ptg.tel_currentTargetStatus.next(
-            flush=True, timeout=self.heartbeat_interval
+            flush=True, timeout=self.loop_die_timeout
         )
 
         self.model.set_observatory_state(current_target_state=current_target_state)
 
-    async def put_on_queue(self, targets):
+    async def put_on_queue(self, targets: list[DriverTarget]) -> None:
         """Given a list of targets, append them on the queue to be observed.
         Each target sal_index attribute is updated with the unique identifier
         value (salIndex) returned by the queue.
@@ -684,36 +871,142 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         Parameters
         ----------
-        targets : `list`
+        targets : `list` [`DriverTarget`]
             A list of targets to put on the queue.
-
         """
 
         for target in targets:
-            (
-                observing_script,
-                observing_script_is_standard,
-            ) = target.get_observing_script()
+            observing_block = target.get_observing_block()
 
-            self.queue_remote.cmd_add.set(
-                path=observing_script,
-                config=target.get_script_config(),
-                isStandard=observing_script_is_standard,
-                location=ScriptQueue.Location.LAST,
-                logLevel=self.log.getEffectiveLevel(),
-            )
+            self.log.info(f"Adding {target=!s} scripts on the queue.")
 
-            self.log.debug(f"Putting target {target.targetid} on the queue.")
-            add_task = await self.queue_remote.cmd_add.start(
-                timeout=self.parameters.cmd_timeout
-            )
+            self.model.register_new_block(id=observing_block.id)
+            async for sal_index in self._queue_block_scripts(observing_block):
+                self.log.info(f"{observing_block.name}::{sal_index=}.")
+                try:
+                    target.add_sal_index(sal_index)
+                except NonConsecutiveIndexError:
+                    self.log.exception(
+                        f"Non consecutive salindex for block {observing_block.name}::{observing_block.id}. "
+                        "Marking block as failed."
+                    )
+                    await self.remove_from_queue(targets=[target])
+                    await self._update_block_status(
+                        block_id=observing_block.program,
+                        block_status=BlockStatus.ERROR,
+                        observing_block=observing_block,
+                    )
+                    return
+                finally:
+                    await asyncio.sleep(self.heartbeat_interval)
 
             # publishes target event
             await self.evt_target.set_write(**target.as_dict())
 
-            target.sal_index = int(add_task.result)
+            await self._update_block_status(
+                block_id=observing_block.program,
+                block_status=BlockStatus.EXECUTING,
+                observing_block=observing_block,
+            )
 
-    async def remove_from_queue(self, targets):
+    async def _queue_block_scripts(
+        self, observing_block: ObservingBlock
+    ) -> typing.Generator[int, None, None]:
+        """Queue block scripts in the ScriptQueue.
+
+        Parameters
+        ----------
+        observing_block : `ObservingBlock`
+            Observing block to queue scripts from.
+
+        Yields
+        ------
+        sal_index : `int`
+            A sequence of SAL indices of Scripts.
+
+        Notes
+        -----
+        This method will use `_queue_one_script` to queue the scripts by
+        creating a list of background tasks and waiting for them to finish.
+        The background tasks will acquire a semaphore that will limit the
+        number of consecutive scripts running in the ScriptQueue. If the limit
+        is not met, the method will return soon after all scripts are
+        scheduled. If the limit is reached, the method will block and only
+        make progress once the scripts finish executing.
+        """
+        for script in observing_block.scripts:
+            sal_index = await self._queue_one_script(
+                block_uid=observing_block.id, script=script
+            )
+            yield sal_index
+
+    async def _queue_one_script(
+        self, block_uid: uuid.UUID, script: ObservingScript
+    ) -> int:
+        """Queue one script to the script queue.
+
+        Parameters
+        ----------
+        block_uid : `uuid.UUID`
+            The uid of the block.
+        script : `ObservingScript`
+            Observing script to queue.
+
+        Returns
+        -------
+        sal_index : `int`
+            SAL index of the script.
+
+        Notes
+        -----
+        This method will acquire the semaphore that limits the number of
+        scripts that can be queued, add a script to the script queue and
+        schedule a background task that will also acquire the semaphore and
+        wait for the script to finish.
+
+        If a script execution fails, this raises an exception that is then
+        propagated to this method call, and will interrupt adding further
+        scripts.
+        """
+        async with self._queue_capacity:
+            # Make sure previous scripts added haven't failed, if one
+            # failed this will raise an exception and stop adding more
+            # scripts
+            await self.model.check_block_scripts(id=block_uid)
+            add_task = await self.queue_remote.cmd_add.set_start(
+                path=script.name,
+                config=script.get_script_configuration(),
+                isStandard=script.standard,
+                location=ScriptQueue.Location.LAST,
+                logLevel=self.log.getEffectiveLevel(),
+                timeout=self.parameters.cmd_timeout,
+            )
+            sal_index = int(add_task.result)
+            script_final_state_future = await self.model.add_scheduled_script(
+                id=block_uid, sal_index=sal_index
+            )
+            self._tasks[f"script_task::{block_uid}::{sal_index}"] = asyncio.create_task(
+                self._wait_script_final_state(script_final_state_future)
+            )
+        return sal_index
+
+    async def _wait_script_final_state(
+        self, script_final_state: asyncio.Future
+    ) -> None:
+        """Coroutine to acquire the queue semaphore and wait for a script to
+        finish executing.
+
+        Parameters
+        ----------
+        script_final_state : `asyncio.Future`
+            Future with the script final state.
+        """
+        async with self._queue_capacity:
+            self.log.debug("Waiting Script final state.")
+            await script_final_state
+            self.log.debug(f"Script final state: {script_final_state.result()!r}")
+
+    async def remove_from_queue(self, targets: list[DriverTarget]) -> None:
         """Given a list of targets, remove them from the queue.
 
         Parameters
@@ -723,17 +1016,37 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         """
 
+        sal_indices_to_remove = [target.get_sal_indices() for target in targets]
+
+        # exclude the script that is currently running.
+        queue = await self.queue_remote.evt_queue.aget(
+            timeout=self.parameters.cmd_timeout
+        )
+
+        current_sal_index = queue.currentSalIndex
+
+        scripts_to_stop = [
+            sal_index
+            for sal_indices in sal_indices_to_remove
+            for sal_index in sal_indices
+            if sal_index != current_sal_index
+        ]
+
         stop_scripts = self.queue_remote.cmd_stopScripts.DataType()
 
-        stop_scripts.length = len(targets)
+        stop_scripts.length = len(scripts_to_stop)
         stop_scripts.terminate = False
 
-        for i in range(stop_scripts.length):
-            stop_scripts.salIndices[i] = targets[i].sal_index
+        for i, sal_index in enumerate(scripts_to_stop):
+            stop_scripts.salIndices[i] = sal_index
 
-        await self.queue_remote.cmd_stopScripts.start(
-            stop_scripts, timeout=self.parameters.cmd_timeout
-        )
+        if stop_scripts.length > 0:
+            await self.queue_remote.cmd_stopScripts.start(
+                stop_scripts, timeout=self.parameters.cmd_timeout
+            )
+
+        for target in targets:
+            await self.model.mark_block_done(target.get_observing_block().id)
 
     @staticmethod
     def get_config_pkg():
@@ -759,15 +1072,26 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             s3instance=config.s3instance,
         )
 
+        self.script_paths = getattr(config, "script_paths", None)
+
         instance = Scheduler.SalIndex(self.salinfo.index)
 
-        settings = types.SimpleNamespace(
-            **(
-                config.maintel
-                if instance == Scheduler.SalIndex.MAIN_TEL
-                else config.auxtel
+        if instance == Scheduler.SalIndex.MAIN_TEL:
+            settings = types.SimpleNamespace(**config.maintel)
+        elif instance == Scheduler.SalIndex.AUX_TEL:
+            settings = types.SimpleNamespace(**config.auxtel)
+        elif hasattr(config, instance.name.lower()):
+            settings = types.SimpleNamespace(**getattr(config, instance.name.lower()))
+        else:
+            available_instances = [i for i in dir(config) if not i.startswith("__")]
+            raise RuntimeError(
+                "Could not find configuration for current instance of the Scheduler. "
+                f"This instance has index {self.salinfo.index}, "
+                f"which is labeled {instance.name}. Expected to find a configuration"
+                f"session named {instance.name.lower()} but only found "
+                f"{available_instances}. Make sure the configuration is updated to include "
+                "a session for this instance of the Scheduler."
             )
-        )
 
         self.log.debug(f"Settings for {instance!r}: {settings}")
 
@@ -779,15 +1103,21 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         self.parameters.predicted_scheduler_window = settings.predicted_scheduler_window
         self.parameters.loop_sleep_time = settings.loop_sleep_time
         self.parameters.cmd_timeout = settings.cmd_timeout
-        self.parameters.observing_script = settings.observing_script
-        self.parameters.observing_script_is_standard = (
-            settings.observing_script_is_standard
-        )
         self.parameters.max_scripts = settings.max_scripts
 
         survey_topology = await self.model.configure(settings)
 
         await self.evt_surveyTopology.set_write(**survey_topology.as_dict())
+
+        self.log.info("Validating observing blocks.")
+
+        try:
+            await self.validate_observing_blocks()
+        except Exception:
+            self.log.exception("Failed to validate observing blocks.")
+            raise RuntimeError(
+                "Failed to validate observing blocks. Check CSC traceback for more information."
+            )
 
         # Most configurations comes from this single commit hash. I think the
         # other modules could host the version for each one of them
@@ -797,148 +1127,61 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 scheduler=self.parameters.driver_type,
                 observatoryModel=obs_mod_version.__version__,
                 observatoryLocation=dateloc_version.__version__,
-                seeingModel=rubin_sim_version,
-                cloudModel=rubin_sim_version,
+                seeingModel=rubin_scheduler_version,
+                cloudModel=rubin_scheduler_version,
                 skybrightnessModel=astrosky_version.__version__,
-                downtimeModel=rubin_sim_version,
+                downtimeModel=rubin_scheduler_version,
                 force_output=True,
             )
         else:
             self.log.warning("No 'dependenciesVersions' event.")
 
-        await self.evt_obsSiteConfig.set_write(
-            observatoryName=settings.models["location"]["obs_site"]["name"],
-            latitude=settings.models["location"]["obs_site"]["latitude"],
-            longitude=settings.models["location"]["obs_site"]["longitude"],
-            height=settings.models["location"]["obs_site"]["height"],
+        await self._publish_settings(settings)
+
+    async def validate_observing_blocks(self) -> None:
+        """Validate observing blocks.
+
+        Notes
+        -----
+        This method will walk through the observing blocks defined in the model
+        and validate their configuration. This includes validating the script
+        configuration.
+        """
+
+        observing_scripts_config_validator = (
+            await self.get_observing_scripts_config_validator()
         )
 
-        await self.evt_telescopeConfig.set_write(
-            altitudeMinpos=settings.models["observatory_model"]["telescope"][
-                "altitude_minpos"
-            ],
-            altitudeMaxpos=settings.models["observatory_model"]["telescope"][
-                "altitude_maxpos"
-            ],
-            azimuthMinpos=settings.models["observatory_model"]["telescope"][
-                "azimuth_minpos"
-            ],
-            azimuthMaxpos=settings.models["observatory_model"]["telescope"][
-                "azimuth_maxpos"
-            ],
-            altitudeMaxspeed=settings.models["observatory_model"]["telescope"][
-                "altitude_maxspeed"
-            ],
-            altitudeAccel=settings.models["observatory_model"]["telescope"][
-                "altitude_accel"
-            ],
-            altitudeDecel=settings.models["observatory_model"]["telescope"][
-                "altitude_decel"
-            ],
-            azimuthMaxspeed=settings.models["observatory_model"]["telescope"][
-                "azimuth_maxspeed"
-            ],
-            azimuthAccel=settings.models["observatory_model"]["telescope"][
-                "azimuth_accel"
-            ],
-            azimuthDecel=settings.models["observatory_model"]["telescope"][
-                "azimuth_decel"
-            ],
-            settleTime=settings.models["observatory_model"]["telescope"]["settle_time"],
-        )
+        await self.model.validate_observing_blocks(observing_scripts_config_validator)
 
-        await self.evt_rotatorConfig.set_write(
-            positionMin=settings.models["observatory_model"]["rotator"]["minpos"],
-            positionMax=settings.models["observatory_model"]["rotator"]["maxpos"],
-            positionFilterChange=settings.models["observatory_model"]["rotator"][
-                "filter_change_pos"
-            ],
-            speedMax=settings.models["observatory_model"]["rotator"]["maxspeed"],
-            accel=settings.models["observatory_model"]["rotator"]["accel"],
-            decel=settings.models["observatory_model"]["rotator"]["decel"],
-            followSky=settings.models["observatory_model"]["rotator"]["follow_sky"],
-            resumeAngle=settings.models["observatory_model"]["rotator"]["resume_angle"],
-        )
+        await self._publish_block_info()
 
-        await self.evt_domeConfig.set_write(
-            altitudeMaxspeed=settings.models["observatory_model"]["dome"][
-                "altitude_maxspeed"
-            ],
-            altitudeAccel=settings.models["observatory_model"]["dome"][
-                "altitude_accel"
-            ],
-            altitudeDecel=settings.models["observatory_model"]["dome"][
-                "altitude_decel"
-            ],
-            altitudeFreerange=settings.models["observatory_model"]["dome"][
-                "altitude_freerange"
-            ],
-            azimuthMaxspeed=settings.models["observatory_model"]["dome"][
-                "azimuth_maxspeed"
-            ],
-            azimuthAccel=settings.models["observatory_model"]["dome"]["azimuth_accel"],
-            azimuthDecel=settings.models["observatory_model"]["dome"]["azimuth_decel"],
-            azimuthFreerange=settings.models["observatory_model"]["dome"][
-                "azimuth_freerange"
-            ],
-            settleTime=settings.models["observatory_model"]["dome"]["settle_time"],
-        )
+    async def get_observing_scripts_config_validator(
+        self,
+    ) -> ValidationRules:
+        """Get observing scripts configuration validator.
 
-        await self.evt_slewConfig.set_write(
-            prereqDomalt=settings.models["observatory_model"]["slew"]["prereq_domalt"],
-            prereqDomaz=settings.models["observatory_model"]["slew"]["prereq_domaz"],
-            prereqDomazSettle=settings.models["observatory_model"]["slew"][
-                "prereq_domazsettle"
-            ],
-            prereqTelalt=settings.models["observatory_model"]["slew"]["prereq_telalt"],
-            prereqTelaz=settings.models["observatory_model"]["slew"]["prereq_telaz"],
-            prereqTelOpticsOpenLoop=settings.models["observatory_model"]["slew"][
-                "prereq_telopticsopenloop"
-            ],
-            prereqTelOpticsClosedLoop=settings.models["observatory_model"]["slew"][
-                "prereq_telopticsclosedloop"
-            ],
-            prereqTelSettle=settings.models["observatory_model"]["slew"][
-                "prereq_telsettle"
-            ],
-            prereqTelRot=settings.models["observatory_model"]["slew"]["prereq_telrot"],
-            prereqFilter=settings.models["observatory_model"]["slew"]["prereq_filter"],
-            prereqExposures=settings.models["observatory_model"]["slew"][
-                "prereq_exposures"
-            ],
-            prereqReadout=settings.models["observatory_model"]["slew"][
-                "prereq_readout"
-            ],
-        )
+        Returns
+        -------
+        observing_scripts_config_validator : `ValidationRules`
+            Dictionary with the script name and a boolean indicating if the
+            script is standard or external as key and a configuration
+            validator as value.
+        """
+        observing_scripts_config_validator: ValidationRules = dict()
 
-        await self.evt_opticsLoopCorrConfig.set_write(
-            telOpticsOlSlope=settings.models["observatory_model"]["optics_loop_corr"][
-                "tel_optics_ol_slope"
-            ],
-            telOpticsClAltLimit=settings.models["observatory_model"][
-                "optics_loop_corr"
-            ]["tel_optics_cl_alt_limit"],
-            telOpticsClDelay=settings.models["observatory_model"]["optics_loop_corr"][
-                "tel_optics_cl_delay"
-            ],
-        )
+        for block_id in self.model.observing_blocks:
+            for script in self.model.observing_blocks[block_id].scripts:
+                key = (script.name, script.standard)
+                if key not in observing_scripts_config_validator:
+                    observing_scripts_config_validator[key] = await asyncio.wait_for(
+                        self._get_script_config_validator(
+                            script_name=script.name, standard=script.standard
+                        ),
+                        timeout=self.parameters.cmd_timeout,
+                    )
 
-        await self.evt_parkConfig.set_write(
-            telescopeAltitude=settings.models["observatory_model"]["park"][
-                "telescope_altitude"
-            ],
-            telescopeAzimuth=settings.models["observatory_model"]["park"][
-                "telescope_azimuth"
-            ],
-            telescopeRotator=settings.models["observatory_model"]["park"][
-                "telescope_rotator"
-            ],
-            domeAltitude=settings.models["observatory_model"]["park"]["dome_altitude"],
-            domeAzimuth=settings.models["observatory_model"]["park"]["dome_azimuth"],
-            filterPosition=settings.models["observatory_model"]["park"][
-                "filter_position"
-            ],
-        )
+        return observing_scripts_config_validator
 
     async def get_queue(self, request: bool = True) -> salobj.type_hints.BaseMsgType:
         """Utility method to get the queue.
@@ -1000,6 +1243,36 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         return queue
 
+    async def check_script_info(self, data: salobj.BaseDdsDataType) -> None:
+        """A callback method to check script info.
+
+        This method will first update the model with the incoming script info
+        then check the scheduled targets. This should allow the Scheduler to
+        cleanup remaining scripts from the ScriptQueue when one Script of
+        a block fails.
+
+        Parameters
+        ----------
+        data : `BaseDdsDataType`
+            Script info topic data.
+        """
+        await self.model.callback_script_info(data=data)
+
+        task_name = "lock_target_loop_and_check_targets"
+
+        task = self._tasks.get(task_name, None)
+        if task is None:
+            task = utils.make_done_future()
+
+        if task.done():
+            self._tasks[task_name] = asyncio.create_task(
+                self.lock_target_loop_and_check_targets()
+            )
+
+    async def lock_target_loop_and_check_targets(self):
+        async with self.target_loop_lock:
+            await self.check_scheduled_targets()
+
     async def check_scheduled_targets(self):
         """Loop through the scheduled targets list, check status and tell
         driver of completed observations.
@@ -1013,12 +1286,15 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         """
 
         if self.model.get_number_of_scheduled_targets() == 0:
-            self.log.debug("No scheduled targets to check.")
+            self.log.info("No scheduled targets to check.")
             return False
         scheduled_targets_info = await self.model.check_scheduled_targets()
 
         for target in scheduled_targets_info.observed:
             await self.register_observation(target)
+
+        if len(scheduled_targets_info.failed) > 0:
+            await self.remove_from_queue(scheduled_targets_info.failed)
 
         return (
             len(scheduled_targets_info.failed) == 0
@@ -1057,12 +1333,10 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         first_pass = True
 
         while self.summary_state == salobj.State.ENABLED and self.run_loop:
-
             await self.run_target_loop.wait()
 
             try:
                 async with self.target_loop_lock:
-
                     # If it is the first pass get the current queue, otherwise
                     # wait for the queue to change or get the latest if there's
                     # some
@@ -1101,7 +1375,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                         # list of script ids
                         await self.put_on_queue([target])
 
-                        if target.sal_index > 0:
+                        if target.get_sal_indices():
                             self.model.add_scheduled_target(target)
                         else:
                             self.log.error(
@@ -1130,7 +1404,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             except Exception:
                 # If there is an exception and not in FAULT, go to FAULT state
                 # and log the exception...
-                if self.summary_state != salobj.State.FAULT:
+                if self.run_loop and self.summary_state != salobj.State.FAULT:
                     await self.fault(
                         code=SIMPLE_LOOP_ERROR,
                         report="Error on simple target production loop.",
@@ -1156,14 +1430,13 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         first_pass = True
         targets_queue_condition_task = utils.make_done_future()
 
-        self.targets_queue = []
+        self.targets_queue: list[DriverTarget] = []
         self.targets_queue_condition = utils.make_done_future()
         self._should_compute_predicted_schedule = False
 
         self.log.info("Starting target production loop.")
 
         while self.summary_state == salobj.State.ENABLED and self.run_loop:
-
             if not self.next_target_timer.done():
                 self.log.debug("Waiting next target timer task...")
                 async with self.detailed_state(
@@ -1174,11 +1447,9 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             await self.run_target_loop.wait()
 
             try:
-                if self.need_to_generate_target_queue:
-
-                    await self.generate_target_queue()
-
                 async with self.target_loop_lock:
+                    if self.need_to_generate_target_queue:
+                        await self.generate_target_queue()
 
                     # If it is the first pass get the current queue, otherwise
                     # wait for the queue to change or get the latest if there's
@@ -1197,7 +1468,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     # next will be waiting.
                     if (
                         queue.running
-                        and queue.length < self.parameters.n_targets + 1
+                        and self.model.get_number_of_scheduled_targets()
+                        < self.parameters.n_targets + 1
                         and len(self.targets_queue) > 0
                     ):
                         await self.queue_targets()
@@ -1246,12 +1518,24 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                             timeout=self.parameters.loop_sleep_time,
                         )
 
+                        if not loop_sleep_task.done():
+                            self.log.debug(
+                                "Checking targets condition finished ahead of time. "
+                                "Waiting remaining sleep time."
+                            )
+                            await loop_sleep_task
+                        else:
+                            self.log.warning(
+                                "Checking targets condition took longer than expected. "
+                                "Continuing without waiting."
+                            )
+
             except asyncio.CancelledError:
                 break
             except UnableToFindTargetError:
                 # If there is an exception and not in FAULT, go to FAULT state
                 # and log the exception...
-                if self.summary_state != salobj.State.FAULT:
+                if self.run_loop and self.summary_state != salobj.State.FAULT:
                     await self.fault(
                         code=UNABLE_TO_FIND_TARGET,
                         report=f"Unable to find target in the next {self.max_time_no_target/60./60.} hours.",
@@ -1259,7 +1543,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     )
                 break
             except UpdateTelemetryError:
-                if self.summary_state != salobj.State.FAULT:
+                if self.run_loop and self.summary_state != salobj.State.FAULT:
                     self.log.exception("Failed to update telemetry.")
                     await self.fault(
                         code=UPDATE_TELEMETRY_ERROR,
@@ -1268,7 +1552,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     )
                 break
             except FailedToQueueTargetsError:
-                if self.summary_state != salobj.State.FAULT:
+                if self.run_loop and self.summary_state != salobj.State.FAULT:
                     await self.fault(
                         code=PUT_ON_QUEUE,
                         report="Could not add target to the queue",
@@ -1278,7 +1562,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             except Exception:
                 # If there is an exception and not in FAULT, go to FAULT state
                 # and log the exception...
-                if self.summary_state != salobj.State.FAULT:
+                if self.run_loop and self.summary_state != salobj.State.FAULT:
                     await self.fault(
                         code=ADVANCE_LOOP_ERROR,
                         report="Error on advance target production loop.",
@@ -1319,10 +1603,13 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         """
 
         async with self.current_scheduler_state(publish_lfoa=True):
-
             self.log.debug(f"Target queue contains {len(self.targets_queue)} targets.")
 
-            async for observatory_time, wait_time, target in self.model.generate_target_queue(
+            async for (
+                observatory_time,
+                wait_time,
+                target,
+            ) in self.model.generate_target_queue(
                 targets_queue=self.targets_queue,
                 max_targets=self.parameters.n_targets + 1,
             ):
@@ -1507,11 +1794,14 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         self._should_compute_predicted_schedule = False
 
         async with self.current_scheduler_state(publish_lfoa=False):
-
             self.model.synchronize_observatory_model()
             self.model.register_scheduled_targets(targets_queue=self.targets_queue)
 
-            (_, _, targets,) = await self.model.generate_targets_in_time_window(
+            (
+                _,
+                _,
+                targets,
+            ) = await self.model.generate_targets_in_time_window(
                 max_targets=self.max_predicted_targets,
                 time_window=self.parameters.predicted_scheduler_window * 60.0 * 60.0,
             )
@@ -1549,6 +1839,15 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         self.log.debug("Finished computing predicted schedule.")
 
+    async def execute_block(self):
+        """Execute an individual block when the Scheduler is not running.
+
+        This method will transition the Scheduler from idle to running,
+        queue a single target and go back to idle.
+        """
+        async with self.idle_to_running():
+            await self.queue_targets()
+
     @set_detailed_state(detailed_state=DetailedState.QUEUEING_TARGET)
     async def queue_targets(self):
         """Send targets to the script queue.
@@ -1558,6 +1857,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         `FailedToQueueTargetsError`
             If fails to add target to the queue.
         """
+        targets_queue = "\n\t".join([f"{target!s}" for target in self.targets_queue])
+        self.log.debug(f"Current targets in the queue:\n\t{targets_queue}.")
         # Take a target from the queue
         target = self.targets_queue.pop(0)
 
@@ -1568,14 +1869,22 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             self.log.debug(f"Target observing time in the future. Waiting {delta_t}s")
             await asyncio.sleep(delta_t)
 
-        await self.put_on_queue([target])
-
-        if target.sal_index > 0:
-            self.model.add_scheduled_target(target)
-        else:
-            raise FailedToQueueTargetsError(
-                f"Could not add target to the queue: {target}"
+        try:
+            await self.put_on_queue([target])
+        except TargetScriptFailedError:
+            self.log.warning(
+                "One or more scripts for this target failed to execute while still "
+                "adding targets to the queue. Cleaning block scripts and continuing."
             )
+            await self.remove_from_queue(targets=[target])
+            await self.model.remove_block_done_scripts(target.get_observing_block().id)
+        else:
+            if target.get_sal_indices():
+                self.model.add_scheduled_target(target)
+            else:
+                raise FailedToQueueTargetsError(
+                    f"Could not add target to the queue: {target}"
+                )
 
     def assert_idle(self):
         """Assert detailed state is idle."""
@@ -1599,10 +1908,167 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         observation : Observation
             Observation to be registered.
         """
-        if hasattr(self, "evt_observation"):
-            await self.evt_observation.set_write(
-                **dataclasses.asdict(target.get_observation())
-            )
+        await self.evt_observation.set_write(
+            **dataclasses.asdict(target.get_observation())
+        )
+        observing_block = target.get_observing_block()
+        await self._update_block_status(
+            block_id=target.observing_block.program,
+            block_status=BlockStatus.COMPLETED,
+            observing_block=observing_block,
+        )
+        await self.model.remove_block_done_scripts(observing_block.id)
+
+    async def _publish_settings(self, settings) -> None:
+        """Publish settings."""
+
+        await self.evt_obsSiteConfig.set_write(
+            observatoryName=settings.models["location"]["obs_site"]["name"],
+            latitude=settings.models["location"]["obs_site"]["latitude"],
+            longitude=settings.models["location"]["obs_site"]["longitude"],
+            height=settings.models["location"]["obs_site"]["height"],
+        )
+
+        await self.evt_telescopeConfig.set_write(
+            altitudeMinpos=settings.models["observatory_model"]["telescope"][
+                "altitude_minpos"
+            ],
+            altitudeMaxpos=settings.models["observatory_model"]["telescope"][
+                "altitude_maxpos"
+            ],
+            azimuthMinpos=settings.models["observatory_model"]["telescope"][
+                "azimuth_minpos"
+            ],
+            azimuthMaxpos=settings.models["observatory_model"]["telescope"][
+                "azimuth_maxpos"
+            ],
+            altitudeMaxspeed=settings.models["observatory_model"]["telescope"][
+                "altitude_maxspeed"
+            ],
+            altitudeAccel=settings.models["observatory_model"]["telescope"][
+                "altitude_accel"
+            ],
+            altitudeDecel=settings.models["observatory_model"]["telescope"][
+                "altitude_decel"
+            ],
+            azimuthMaxspeed=settings.models["observatory_model"]["telescope"][
+                "azimuth_maxspeed"
+            ],
+            azimuthAccel=settings.models["observatory_model"]["telescope"][
+                "azimuth_accel"
+            ],
+            azimuthDecel=settings.models["observatory_model"]["telescope"][
+                "azimuth_decel"
+            ],
+            settleTime=settings.models["observatory_model"]["telescope"]["settle_time"],
+        )
+
+        await self.evt_rotatorConfig.set_write(
+            positionMin=settings.models["observatory_model"]["rotator"]["minpos"],
+            positionMax=settings.models["observatory_model"]["rotator"]["maxpos"],
+            positionFilterChange=settings.models["observatory_model"]["rotator"][
+                "filter_change_pos"
+            ],
+            speedMax=settings.models["observatory_model"]["rotator"]["maxspeed"],
+            accel=settings.models["observatory_model"]["rotator"]["accel"],
+            decel=settings.models["observatory_model"]["rotator"]["decel"],
+            followSky=settings.models["observatory_model"]["rotator"]["follow_sky"],
+            resumeAngle=settings.models["observatory_model"]["rotator"]["resume_angle"],
+        )
+
+        await self.evt_domeConfig.set_write(
+            altitudeMaxspeed=settings.models["observatory_model"]["dome"][
+                "altitude_maxspeed"
+            ],
+            altitudeAccel=settings.models["observatory_model"]["dome"][
+                "altitude_accel"
+            ],
+            altitudeDecel=settings.models["observatory_model"]["dome"][
+                "altitude_decel"
+            ],
+            altitudeFreerange=settings.models["observatory_model"]["dome"][
+                "altitude_freerange"
+            ],
+            azimuthMaxspeed=settings.models["observatory_model"]["dome"][
+                "azimuth_maxspeed"
+            ],
+            azimuthAccel=settings.models["observatory_model"]["dome"]["azimuth_accel"],
+            azimuthDecel=settings.models["observatory_model"]["dome"]["azimuth_decel"],
+            azimuthFreerange=settings.models["observatory_model"]["dome"][
+                "azimuth_freerange"
+            ],
+            settleTime=settings.models["observatory_model"]["dome"]["settle_time"],
+        )
+
+        await self.evt_slewConfig.set_write(
+            prereqDomalt=",".join(
+                settings.models["observatory_model"]["slew"]["prereq_domalt"]
+            ),
+            prereqDomaz=",".join(
+                settings.models["observatory_model"]["slew"]["prereq_domaz"]
+            ),
+            prereqDomazSettle=",".join(
+                settings.models["observatory_model"]["slew"]["prereq_domazsettle"]
+            ),
+            prereqTelalt=",".join(
+                settings.models["observatory_model"]["slew"]["prereq_telalt"]
+            ),
+            prereqTelaz=",".join(
+                settings.models["observatory_model"]["slew"]["prereq_telaz"]
+            ),
+            prereqTelOpticsOpenLoop=",".join(
+                settings.models["observatory_model"]["slew"]["prereq_telopticsopenloop"]
+            ),
+            prereqTelOpticsClosedLoop=",".join(
+                settings.models["observatory_model"]["slew"][
+                    "prereq_telopticsclosedloop"
+                ]
+            ),
+            prereqTelSettle=",".join(
+                settings.models["observatory_model"]["slew"]["prereq_telsettle"]
+            ),
+            prereqTelRot=",".join(
+                settings.models["observatory_model"]["slew"]["prereq_telrot"]
+            ),
+            prereqFilter=",".join(
+                settings.models["observatory_model"]["slew"]["prereq_filter"]
+            ),
+            prereqExposures=",".join(
+                settings.models["observatory_model"]["slew"]["prereq_exposures"]
+            ),
+            prereqReadout=",".join(
+                settings.models["observatory_model"]["slew"]["prereq_readout"]
+            ),
+        )
+
+        await self.evt_opticsLoopCorrConfig.set_write(
+            telOpticsOlSlope=settings.models["observatory_model"]["optics_loop_corr"][
+                "tel_optics_ol_slope"
+            ],
+            telOpticsClAltLimit=settings.models["observatory_model"][
+                "optics_loop_corr"
+            ]["tel_optics_cl_alt_limit"],
+            telOpticsClDelay=settings.models["observatory_model"]["optics_loop_corr"][
+                "tel_optics_cl_delay"
+            ],
+        )
+
+        await self.evt_parkConfig.set_write(
+            telescopeAltitude=settings.models["observatory_model"]["park"][
+                "telescope_altitude"
+            ],
+            telescopeAzimuth=settings.models["observatory_model"]["park"][
+                "telescope_azimuth"
+            ],
+            telescopeRotator=settings.models["observatory_model"]["park"][
+                "telescope_rotator"
+            ],
+            domeAltitude=settings.models["observatory_model"]["park"]["dome_altitude"],
+            domeAzimuth=settings.models["observatory_model"]["park"]["dome_azimuth"],
+            filterPosition=settings.models["observatory_model"]["park"][
+                "filter_position"
+            ],
+        )
 
     async def _publish_time_to_next_target(
         self, current_time, wait_time, ra, dec, rot_sky_pos
@@ -1647,11 +2113,142 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         if hasattr(self, "evt_generalInfo"):
             await self.evt_generalInfo.set_write(**general_info)
 
+    async def _publish_block_info(self) -> None:
+        """Publish block information."""
+
+        await self.evt_blockInventory.set_write(
+            ids=",".join(self.model.observing_blocks),
+            status=",".join(
+                [
+                    observing_blocks.status.name
+                    for observing_blocks in self.model.observing_blocks_status.values()
+                ]
+            ),
+        )
+
+    async def _get_script_config_validator(
+        self, script_name: str, standard: bool
+    ) -> salobj.DefaultingValidator | None:
+        """Get a script configuration validator.
+
+        Parameters
+        ----------
+        script_name : `str`
+            Name of the SAL Script.
+        standard : `bool`
+            Is the script standard?
+
+        Returns
+        -------
+        `salobj.DefaultingValidator`
+            Script configuration validator.
+        """
+        if self.script_paths is not None:
+            return await self._get_script_config_validator_from_path(
+                script_name=script_name, standard=standard
+            )
+        else:
+            return await self._get_script_config_validator_from_script_queue(
+                script_name=script_name, standard=standard
+            )
+
+    async def _get_script_config_validator_from_path(
+        self, script_name: str, standard: bool
+    ) -> salobj.DefaultingValidator | None:
+        """Get a script configuration validator by getting the schema
+        directly from the script executable.
+
+        Parameters
+        ----------
+        script_name : `str`
+            Name of the SAL Script.
+        standard : `bool`
+            Is the script standard?
+
+        Returns
+        -------
+        `salobj.DefaultingValidator`
+            Script configuration validator.
+        """
+
+        script_path = os.path.join(
+            (
+                self.script_paths["standard"]
+                if standard
+                else self.script_paths["external"]
+            ),
+            script_name,
+        )
+        process = await asyncio.create_subprocess_exec(
+            script_path, "0", "--schema", stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        )
+        try:
+            stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=20)
+
+            script_schema_str = stdout.decode()
+
+            return (
+                salobj.DefaultingValidator(schema=yaml.safe_load(script_schema_str))
+                if script_schema_str
+                else None
+            )
+        except Exception:
+            if process.returncode is None:
+                process.terminate()
+                self.log.warning(
+                    "showSchema killed a process that was not properly terminated"
+                )
+            raise
+
+    async def _get_script_config_validator_from_script_queue(
+        self, script_name: str, standard: bool
+    ) -> salobj.DefaultingValidator:
+        """Get a script configuration validator by requesting the script
+        schema from the ScriptQueue.
+
+        Parameters
+        ----------
+        script_name : `str`
+            Name of the SAL Script.
+        standard : `bool`
+            Is the script standard?
+
+        Returns
+        -------
+        `salobj.DefaultingValidator`
+            Script configuration validator.
+        """
+
+        self.queue_remote.evt_configSchema.flush()
+
+        await self.queue_remote.cmd_showSchema.set_start(
+            isStandard=standard,
+            path=script_name,
+            timeout=self.default_command_timeout,
+        )
+
+        script_schema = await self.queue_remote.evt_configSchema.next(
+            flush=False, timeout=self.default_command_timeout
+        )
+        while not (
+            script_schema.path == script_name and script_schema.isStandard == standard
+        ):
+            script_schema = await self.queue_remote.evt_configSchema.next(
+                flush=False, timeout=self.default_command_timeout
+            )
+
+        return (
+            salobj.DefaultingValidator(
+                schema=yaml.safe_load(script_schema.configSchema)
+            )
+            if script_schema.configSchema
+            else None
+        )
+
     async def _transition_idle_to_running(self) -> None:
         """Transition detailed state from idle to running."""
 
         async with self._detailed_state_lock:
-
             self.assert_idle()
 
             await self.evt_detailedState.set_write(substate=DetailedState.RUNNING)
@@ -1660,7 +2257,6 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         """Transition detailed state from idle to running."""
 
         async with self._detailed_state_lock:
-
             self.assert_running()
 
             await self.evt_detailedState.set_write(substate=DetailedState.IDLE)
@@ -1683,6 +2279,32 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 for task_name in self._tasks
             ]
         )
+
+    async def _cmd_start_ack_in_progress(
+        self, data: salobj.type_hints.BaseDdsDataType
+    ) -> None:
+        """Continuously send in progress acknowledgements.
+
+        This coroutine is supposed to run in the background while the start
+        command is running to make sure it is continuously informing the
+        requestor that the command is still active. This is required because
+        the start command may take a long time to execute as it performs
+        several tasks. Instead of providing a really long timeout, it is
+        more robust to simply continuously send in progress. If the CSC gets
+        stuck or crashes the ack's will stop and the command will timeout.
+
+        Parameters
+        ----------
+        data : `salobj.type_hints.BaseDdsDataType`
+            Command payload.
+        """
+        while True:
+            await self.cmd_start.ack_in_progress(
+                data,
+                timeout=self.default_command_timeout,
+                result="Start command still in progress.",
+            )
+            await asyncio.sleep(0.5)
 
     async def _stop_background_task(self, task_name) -> None:
         """Stop a background task.
@@ -1723,7 +2345,10 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 f"Error while stopping background task {task_name}. Ignoring..."
             )
         finally:
-            self._tasks[task_name] = None
+            if "script_task" in task_name:
+                del self._tasks[task_name]
+            else:
+                self._tasks[task_name] = None
 
     @contextlib.asynccontextmanager
     async def detailed_state(self, detailed_state):
@@ -1739,7 +2364,6 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             Detailed state value.
         """
         async with self._detailed_state_lock:
-
             initial_detailed_state = self.evt_detailedState.data.substate
 
             self.assert_running()
@@ -1764,7 +2388,6 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         """
 
         async with self.scheduler_state_lock:
-
             last_scheduler_state_filename = await self.save_scheduler_state(
                 publish_lfoa=publish_lfoa
             )
@@ -1775,7 +2398,46 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 self.model.reset_state(last_scheduler_state_filename)
                 shutil.os.remove(last_scheduler_state_filename)
 
+    @contextlib.asynccontextmanager
+    async def idle_to_running(self):
+        """Context manager to handle transitioning from idle to running then
+        back to idle.
+        """
+        try:
+            await self._transition_idle_to_running()
+            yield
+        finally:
+            # Going back to idle.
+            await self._transition_running_to_idle()
+
+    async def fault(self, code: int | None, report: str, traceback: str = "") -> None:
+        """Override default fault state method.
+
+        Before transitioning to FAULT, try to cleanup the queue.
+
+        Parameters
+        ----------
+        code : `int`
+            Error code for the ``errorCode`` event.
+            If `None` then ``errorCode`` is not output and you should
+            output it yourself. Specifying `None` is deprecated;
+            please always specify an integer error code.
+        report : `str`
+            Description of the error.
+        traceback : `str`, optional
+            Description of the traceback, if any.
+        """
+
+        try:
+            await self._cleanup_queue_targets()
+        except Exception:
+            self.log.exception(
+                "Error trying to cleanup queue targets while going to FAULT. Ignoring."
+            )
+
+        await super().fault(code=code, report=report, traceback=traceback)
+
 
 def run_scheduler() -> None:
     """Run the Scheduler CSC."""
-    asyncio.run(SchedulerCSC.amain(index=True))
+    asyncio.run(SchedulerCSC.amain(index=Scheduler.SalIndex))

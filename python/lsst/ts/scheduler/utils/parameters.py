@@ -1,6 +1,6 @@
-# This file is part of ts_scheduler
+# This file is part of ts_scheduler.
 #
-# Developed for the LSST Telescope and Site Systems.
+# Developed for the Rubin Observatory Telescope and Site Systems.
 # This product includes software developed by the LSST Project
 # (https://www.lsst.org).
 # See the COPYRIGHT file at the top-level directory of this distribution
@@ -17,6 +17,7 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 __all__ = ["SchedulerCscParameters"]
 
@@ -27,7 +28,7 @@ from dataclasses import dataclass
 class SchedulerCscParameters:
     """Configuration of the LSST Scheduler's Model."""
 
-    driver_type: str = "lsst.ts.scheduler.driver.driver"
+    driver_type: str = "driver"
     # Choose a driver to use. This should be an import string that
     # is passed to `importlib.import_module()`. Model will look for
     # a subclass of Driver class inside the module.
@@ -89,7 +90,7 @@ class SchedulerCscParameters:
 
     def set_defaults(self):
         """Set defaults for the LSST Scheduler's Driver."""
-        self.driver_type = "lsst.ts.scheduler.driver.driver"
+        self.driver_type = "driver"
         self.startup_type = "HOT"
         self.startup_database = ""
         self.mode = "SIMPLE"

@@ -24,12 +24,9 @@ import pathlib
 import unittest
 
 import pytest
-from numpy import isscalar
-
 from lsst.ts.scheduler.driver import NoNsideError, NoSchedulerError, SurveyTopology
 from lsst.ts.scheduler.utils.test.feature_scheduler_sim import FeatureSchedulerSim
-
-logging.basicConfig()
+from numpy import isscalar
 
 
 class TestFeatureSchedulerDriver(unittest.TestCase):
@@ -39,7 +36,9 @@ class TestFeatureSchedulerDriver(unittest.TestCase):
         return super().setUpClass()
 
     def setUp(self) -> None:
-        self.feature_scheduler_sim = FeatureSchedulerSim(self.log)
+        self.feature_scheduler_sim = FeatureSchedulerSim(
+            log=self.log,
+        )
 
         self.files_to_delete = []
 
@@ -64,13 +63,14 @@ class TestFeatureSchedulerDriver(unittest.TestCase):
         return self.feature_scheduler_sim.config
 
     def test_configure_scheduler(self):
-
-        self.config.driver_configuration["scheduler_config"] = "no_file.py"
+        self.config.feature_scheduler_driver_configuration["scheduler_config"] = (
+            "no_file.py"
+        )
 
         with self.assertRaises(RuntimeError):
             survey_topology = self.driver.configure_scheduler(self.config)
 
-        self.config.driver_configuration["scheduler_config"] = (
+        self.config.feature_scheduler_driver_configuration["scheduler_config"] = (
             pathlib.Path(__file__)
             .parents[1]
             .joinpath("tests", "data", "config", "fbs_config_no_nside.py")
@@ -79,7 +79,7 @@ class TestFeatureSchedulerDriver(unittest.TestCase):
         with self.assertRaises(NoNsideError):
             survey_topology = self.driver.configure_scheduler(self.config)
 
-        self.config.driver_configuration["scheduler_config"] = (
+        self.config.feature_scheduler_driver_configuration["scheduler_config"] = (
             pathlib.Path(__file__)
             .parents[1]
             .joinpath("tests", "data", "config", "fbs_config_no_scheduler.py")
@@ -88,7 +88,7 @@ class TestFeatureSchedulerDriver(unittest.TestCase):
         with self.assertRaises(NoSchedulerError):
             survey_topology = self.driver.configure_scheduler(self.config)
 
-        self.config.driver_configuration["scheduler_config"] = (
+        self.config.feature_scheduler_driver_configuration["scheduler_config"] = (
             pathlib.Path(__file__)
             .parents[1]
             .joinpath("tests", "data", "config", "fbs_config_good.py")
@@ -108,7 +108,6 @@ class TestFeatureSchedulerDriver(unittest.TestCase):
         assert len(survey_topology.sequence_propos) == survey_topology.num_seq_props
 
     def test_select_next_target(self):
-
         self.configure_scheduler_for_test()
 
         # Calling select_next_target without calling update_conditions first
@@ -141,7 +140,6 @@ class TestFeatureSchedulerDriver(unittest.TestCase):
             self.assertEqual(observed_note, target_note)
 
     def test_select_next_target_with_cwfs(self):
-
         self.configure_scheduler_for_test_with_cwfs()
 
         self.driver.assert_survey_observing_script("cwfs")
@@ -177,7 +175,6 @@ class TestFeatureSchedulerDriver(unittest.TestCase):
             self.assertEqual(observed_note, target_note)
 
     def test_save_and_reset_from_file(self):
-
         self.configure_scheduler_for_test()
 
         # Save state of the scheduler
@@ -206,7 +203,6 @@ class TestFeatureSchedulerDriver(unittest.TestCase):
                 self.assertEqual(f"{target_1}", f"{target_2}")
 
     def test_parse_observation_database(self):
-
         self.configure_scheduler_for_test()
         # self.files_to_delete.append(self.driver.observation_database_name)
 
@@ -240,52 +236,51 @@ class TestFeatureSchedulerDriver(unittest.TestCase):
                     )
 
     def configure_scheduler_for_test(self):
-
-        self.config.driver_configuration["scheduler_config"] = (
+        self.config.feature_scheduler_driver_configuration["scheduler_config"] = (
             pathlib.Path(__file__)
             .parents[1]
             .joinpath("tests", "data", "config", "fbs_config_good.py")
         )
 
-        self.config.driver_configuration["observation_database_name"] = (
+        self.config.feature_scheduler_driver_configuration[
+            "observation_database_name"
+        ] = (
             pathlib.Path(__file__)
             .parents[1]
             .joinpath("tests", "data", "fbs_test_observation_database")
         )
 
         self.files_to_delete.append(
-            self.config.driver_configuration["observation_database_name"]
+            self.config.feature_scheduler_driver_configuration[
+                "observation_database_name"
+            ]
         )
         self.driver.configure_scheduler(self.config)
 
     def configure_scheduler_for_test_with_cwfs(self):
-
-        self.config.driver_configuration["scheduler_config"] = (
+        self.config.feature_scheduler_driver_configuration["scheduler_config"] = (
             pathlib.Path(__file__)
             .parents[1]
             .joinpath("tests", "data", "config", "fbs_config_good_with_cwfs.py")
         )
-        self.config.driver_configuration["survey_observing_script"] = dict(
-            cwfs=dict(
-                observing_script_name="cwfs_script",
-                observing_script_is_standard=False,
-            ),
-        )
 
-        self.config.driver_configuration["observation_database_name"] = (
+        self.config.feature_scheduler_driver_configuration[
+            "observation_database_name"
+        ] = (
             pathlib.Path(__file__)
             .parents[1]
             .joinpath("tests", "data", "fbs_test_observation_database_with_cwfs")
         )
 
         self.files_to_delete.append(
-            self.config.driver_configuration["observation_database_name"]
+            self.config.feature_scheduler_driver_configuration[
+                "observation_database_name"
+            ]
         )
 
         self.driver.configure_scheduler(self.config)
 
     def run_observations(self, register_observations):
-
         return self.feature_scheduler_sim.run_observations(
             register_observations=register_observations
         )

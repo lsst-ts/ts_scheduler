@@ -1,12 +1,11 @@
 import numpy as np
-import rubin_sim.scheduler.basis_functions as bf
-import rubin_sim.scheduler.detailers as detailers
-from rubin_sim.scheduler.model_observatory import ModelObservatory
-from rubin_sim.scheduler.schedulers import CoreScheduler
-from rubin_sim.scheduler.surveys import GreedySurvey
-from rubin_sim.scheduler.utils import Footprint, standard_goals
-
+import rubin_scheduler.scheduler.basis_functions as bf
+import rubin_scheduler.scheduler.detailers as detailers
 from lsst.ts.scheduler.utils.test.feature_scheduler_sim import MJD_START
+from rubin_scheduler.scheduler.model_observatory import ModelObservatory
+from rubin_scheduler.scheduler.schedulers import CoreScheduler
+from rubin_scheduler.scheduler.surveys import GreedySurvey
+from rubin_scheduler.scheduler.utils import Footprint, SkyAreaGenerator
 
 
 def gen_greedy_surveys(
@@ -123,7 +122,6 @@ def gen_greedy_surveys(
 
 
 if __name__ == "config":
-
     nside = 32
     per_night = True  # Dither DDF per night
     seed = 42
@@ -134,12 +132,13 @@ if __name__ == "config":
     observatory.sky_model.load_length = 3
     conditions = observatory.return_conditions()
 
-    footprints_hp = standard_goals(nside=nside)
+    sky = SkyAreaGenerator(nside=nside)
+    footprints_hp, footprints_labels = sky.return_maps()
 
     footprints = Footprint(
         conditions.mjd_start, sun_ra_start=conditions.sun_ra_start, nside=nside
     )
-    for i, key in enumerate(footprints_hp):
+    for i, key in enumerate(footprints_hp.dtype.names):
         footprints.footprints[i, :] = footprints_hp[key]
 
     greedy = gen_greedy_surveys(nside, nexp=1, footprints=footprints, seed=seed)

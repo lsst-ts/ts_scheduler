@@ -1,8 +1,9 @@
 maintel:
-  driver_type: lsst.ts.scheduler.driver.feature_scheduler
+  predicted_scheduler_window: 4.0
+  driver_type: feature_scheduler
   mode: ADVANCE
   startup_type: COLD
-  driver_configuration:
+  feature_scheduler_driver_configuration:
     scheduler_config: tests/data/config/fbs_config_anytime_targets.py
   models:
     observatory_model:

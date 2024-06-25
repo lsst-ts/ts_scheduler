@@ -1,0 +1,30 @@
+$schema: http://json-schema.org/draft-07/schema#
+type: object
+properties:
+  find_target:
+    type: object
+    additionalProperties: false
+    required:
+      - az
+      - el
+      - mag_limit
+    description: >-
+        Optional configuration section. Find a target to perform CWFS in the given
+        position and magnitude range. If not specified, the step is ignored.
+    properties:
+      az:
+        type: number
+        description: Azimuth (in degrees) to find a target.
+      el:
+        type: number
+        description: Elevation (in degrees) to find a target.
+      mag_limit:
+        type: number
+        description: Minimum (brightest) V-magnitude limit.
+  program:
+      type: string
+      description: Name of the program these observations are part of.
+required:
+  - find_target
+  - program
+additionalProperties: false

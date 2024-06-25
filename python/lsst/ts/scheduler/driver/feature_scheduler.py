@@ -1,6 +1,6 @@
-# This file is part of ts_scheduler
+# This file is part of ts_scheduler.
 #
-# Developed for the LSST Telescope and Site Systems.
+# Developed for the Rubin Observatory Telescope and Site Systems.
 # This product includes software developed by the LSST Project
 # (https://www.lsst.org).
 # See the COPYRIGHT file at the top-level directory of this distribution
@@ -17,6 +17,7 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import importlib
 import io
@@ -32,13 +33,13 @@ import pandas
 import yaml
 from astropy.time import Time
 from lsst.ts.utils import index_generator
-from rubin_sim.scheduler.features import Conditions
-from rubin_sim.scheduler.utils import empty_observation
-from rubin_sim.site_models import Almanac
-from rubin_sim.utils import _ra_dec2_hpid
+from rubin_scheduler.scheduler.features import Conditions
+from rubin_scheduler.scheduler.utils import empty_observation
+from rubin_scheduler.site_models import Almanac
+from rubin_scheduler.utils import _ra_dec2_hpid
 
-from ..utils import SchemaConverter
-from .driver import Driver, DriverParameters
+from ..utils.fbs_utils import SchemaConverter, make_fbs_observation_from_target
+from . import Driver, DriverParameters
 from .driver_target import DriverTarget
 from .feature_scheduler_target import FeatureSchedulerTarget
 from .observation import Observation
@@ -82,8 +83,9 @@ class FeatureScheduler(Driver):
         pathlib.Path.home() / "fbs_observation_database.sql"
     )
 
-    def __init__(self, models, raw_telemetry, parameters=None, log=None):
-
+    def __init__(
+        self, models, raw_telemetry, observing_blocks, parameters=None, log=None
+    ):
         self.scheduler = None
 
         self.nside = None
@@ -106,7 +108,13 @@ class FeatureScheduler(Driver):
 
         self.schema_converter = SchemaConverter()
 
-        super().__init__(models, raw_telemetry, parameters, log=log)
+        super().__init__(
+            models=models,
+            raw_telemetry=raw_telemetry,
+            parameters=parameters,
+            observing_blocks=observing_blocks,
+            log=log,
+        )
 
     def configure_scheduler(self, config=None):
         """This method is responsible for running the scheduler configuration
@@ -138,19 +146,20 @@ class FeatureScheduler(Driver):
 
         self._desired_obs = None
 
-        if not hasattr(config, "driver_configuration"):
+        if not hasattr(config, "feature_scheduler_driver_configuration"):
             raise RuntimeError("No driver configuration section defined.")
-        elif "scheduler_config" not in config.driver_configuration:
+        elif "scheduler_config" not in config.feature_scheduler_driver_configuration:
             raise RuntimeError("No feature scheduler configuration defined.")
         elif not os.path.exists(
-            scheduler_config := config.driver_configuration["scheduler_config"]
+            scheduler_config := config.feature_scheduler_driver_configuration[
+                "scheduler_config"
+            ]
         ):
             raise RuntimeError(
                 f"Feature scheduler configuration file {scheduler_config} not found."
             )
 
-        if self.scheduler is None or config.driver_configuration.get("force", False):
-
+        if self.scheduler is None:
             self.log.info(
                 f"Loading feature based scheduler configuration from: {scheduler_config}."
             )
@@ -185,10 +194,19 @@ class FeatureScheduler(Driver):
                     for key in self.models["seeing"].filter_list
                 ]
             )
+        else:
+            self.log.warning(
+                "Scheduler already loaded, skipping. If you are doing a hot or "
+                "warm start of the Scheduler CSC this is a normal condition. Nevertheless, "
+                "this is unexpected if you are trying to cold start. "
+                "If this is the case, report this condition."
+            )
 
-        if "observation_database_name" in config.driver_configuration:
+        if "observation_database_name" in config.feature_scheduler_driver_configuration:
             self.observation_database_name = pathlib.Path(
-                config.driver_configuration["observation_database_name"]
+                config.feature_scheduler_driver_configuration[
+                    "observation_database_name"
+                ]
             )
             self.log.debug(f"Observation database: {self.observation_database_name}")
         else:
@@ -199,9 +217,6 @@ class FeatureScheduler(Driver):
                 "want to define a destination with persistent storage."
             )
 
-        self.script_configuration = config.driver_configuration.get(
-            "script_configuration", dict()
-        )
         survey_topology = super().configure_scheduler(config)
 
         # self.scheduler.survey_lists is a list of lists with different surveys
@@ -244,17 +259,14 @@ class FeatureScheduler(Driver):
         fbs_observations = self.schema_converter.opsim2obs(filename=filename)
         observations = []
         for fbs_observation in fbs_observations:
-            (
-                observing_script_name,
-                observing_script_is_standard,
-            ) = self.get_survey_observing_script(
-                self._get_survey_name_from_observation(fbs_observation)
+            observation = np.array(fbs_observation, ndmin=1)
+            observing_block = self.get_survey_observing_block(
+                self._get_survey_name_from_observation(observation)
             )
 
             target = FeatureSchedulerTarget(
-                observing_script_name=observing_script_name,
-                observing_script_is_standard=observing_script_is_standard,
-                observation=np.array(fbs_observation, ndmin=1),
+                observing_block=observing_block,
+                observation=observation,
                 log=self.log,
                 **self.script_configuration,
             )
@@ -356,7 +368,6 @@ class FeatureScheduler(Driver):
         desired_target = None
 
         if desired_observation is not None:
-
             desired_target = self._get_validated_target_from_observation(
                 observation=desired_observation
             )
@@ -388,26 +399,25 @@ class FeatureScheduler(Driver):
         Target
         """
 
-        (
-            observing_script_name,
-            observing_script_is_standard,
-        ) = self.get_survey_observing_script(
+        observing_block = self.get_survey_observing_block(
             self._get_survey_name_from_observation(observation)
         )
 
         target = FeatureSchedulerTarget(
-            observing_script_name=observing_script_name,
-            observing_script_is_standard=observing_script_is_standard,
+            observing_block=observing_block,
             observation=observation,
             log=self.log,
-            **self.script_configuration,
         )
 
         slew_time, error = self.models["observatory_model"].get_slew_delay(target)
 
         if error > 0:
+            observatory_state = self.models["observatory_model"].current_state
             self.log.error(
-                f"Error[{error}]: Cannot slew to target @ ra={target.ra}, dec={target.dec}."
+                f"Error[{error}]: Cannot slew to target @ ra={target.ra}, dec={target.dec}.\n"
+                f"target={target}.\n"
+                f"{observation=}.\n"
+                f"Observatory State:{observatory_state}.\n"
             )
             self.scheduler.flush_queue()
             return None
@@ -520,7 +530,13 @@ class FeatureScheduler(Driver):
         Observation
         """
 
-        self.scheduler.add_observation(target.observation[0])
+        observation = (
+            target.observation[0]
+            if hasattr(target, "observation")
+            else make_fbs_observation_from_target(target)
+        )
+
+        self.scheduler.add_observation(observation)
 
         return super().register_observed_target(target)
 
@@ -775,7 +791,7 @@ class FeatureScheduler(Driver):
             Survey name parsed from observation
         """
         # For now simply return the "notes" field.
-        return observation["note"][0].split(":")[0]
+        return observation["note"][0].split(":", maxsplit=1)[0]
 
     def _get_driver_target_from_observation_data_frame(
         self, observation_data_frame: typing.Tuple[pandas.Timestamp, pandas.Series]
@@ -801,19 +817,14 @@ class FeatureScheduler(Driver):
             observation_data_frame
         )
 
-        (
-            observing_script_name,
-            observing_script_is_standard,
-        ) = self.get_survey_observing_script(
+        observing_block = self.get_survey_observing_block(
             self._get_survey_name_from_observation(fbs_observation)
         )
 
         target = FeatureSchedulerTarget(
-            observing_script_name=observing_script_name,
-            observing_script_is_standard=observing_script_is_standard,
+            observing_block=observing_block,
             observation=np.array(fbs_observation, ndmin=1),
             log=self.log,
-            **self.script_configuration,
         )
 
         return target

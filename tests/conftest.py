@@ -27,10 +27,11 @@ import typing
 import numpy as np
 import pytest
 import requests
-from rubin_sim.data.data_sets import get_data_dir
-from rubin_sim.data.rs_download_sky import MyHTMLParser
-
 from lsst.ts import utils
+from lsst.ts.scheduler.utils import efd_utils
+from lsst.ts.scheduler.utils.csc_utils import DDS_VERSION
+from rubin_scheduler.data.data_sets import get_data_dir
+from rubin_scheduler.data.rs_download_sky import MyHTMLParser
 
 
 def has_required_sky_file(path: pathlib.Path, mjd: float) -> bool:
@@ -128,7 +129,7 @@ def find_sky_file(source: str, mjd: float) -> str:
 
 def download_sky_file(path: pathlib.Path, mjd: float) -> None:
     """Download sky file for the specified mjd into the provided path from the
-    rubin_sim server.
+    rubin_sim_data server.
 
     Parameters
     ----------
@@ -137,7 +138,8 @@ def download_sky_file(path: pathlib.Path, mjd: float) -> None:
     mjd : `float`
         MJD of the test.
     """
-    source = "https://s3df.slac.stanford.edu/groups/rubin/static/sim-data/sims_skybrightness_pre/h5/"
+    source = "https://s3df.slac.stanford.edu/groups/rubin/static/sim-data/"
+    source += "sims_skybrightness_pre/h5_2023_09_12/"
 
     if not path.exists():
         path.mkdir(parents=True)
@@ -173,6 +175,11 @@ def get_skybrightness_data() -> None:
 def start_ospl_daemon() -> None:
     """Start ospl daemon."""
 
+    if not DDS_VERSION:
+        print("Running non-dds version.")
+        yield
+        return
+
     # Check if a daemon is already running
     output = subprocess.run(["ospl", "status", "-e"])
 
@@ -198,3 +205,8 @@ def start_ospl_daemon() -> None:
         print(f"ospl status {output.returncode}... Nothing to do.")
 
         yield
+
+
+@pytest.fixture(scope="session", autouse=True)
+def mock_efd_client() -> None:
+    efd_utils.__with_lsst_efd_client__ = False

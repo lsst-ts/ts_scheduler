@@ -1,6 +1,6 @@
-# This file is part of ts_scheduler
+# This file is part of ts_scheduler.
 #
-# Developed for the LSST Telescope and Site Systems.
+# Developed for the Rubin Observatory Telescope and Site Systems.
 # This product includes software developed by the LSST Project
 # (https://www.lsst.org).
 # See the COPYRIGHT file at the top-level directory of this distribution
@@ -17,12 +17,10 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import math
-
-import yaml
-from astropy import units
-from astropy.coordinates import Angle
+import numpy as np
+from lsst.ts import observing
 
 from .driver_target import DriverTarget
 
@@ -32,39 +30,22 @@ class FeatureSchedulerTarget(DriverTarget):
 
     Parameters
     ----------
-    observing_script_name : str
-        Name of the observing script.
-    observing_script_is_standard: bool
-        Is the observing script standard?
-    observation : `np.ndarray`
+    observing_block: `observing.ObservingBlock`
+        Observing block.
+    observation: `np.ndarray`
         Observation produced by the feature based scheduler.
-
     """
 
     def __init__(
         self,
-        observing_script_name,
-        observing_script_is_standard,
-        observation,
+        observing_block: observing.ObservingBlock,
+        observation: np.ndarray,
         **kwargs,
     ):
-
         self.observation = observation
 
-        self._script_config_root = "script_configuration"
-
-        self._script_configuration = dict()
-        for key in kwargs:
-            if key.startswith(self._script_config_root):
-                self._script_configuration[key] = kwargs[key]
-
-        self._script_get_config = dict(
-            cwfs=self._get_script_config_cwfs, spec=self._get_script_config_spec
-        )
-
         super().__init__(
-            observing_script_name=observing_script_name,
-            observing_script_is_standard=observing_script_is_standard,
+            observing_block=observing_block,
             targetid=observation["ID"][0],
             band_filter=observation["filter"][0],
             ra_rad=observation["RA"][0],
@@ -78,82 +59,3 @@ class FeatureSchedulerTarget(DriverTarget):
         )
         self.note = str(observation["note"][0])
         self.slewtime = float(observation["slewtime"][0])
-
-    def get_script_config(self):
-        survey_name = self._get_survey_name()
-
-        if survey_name in self._script_get_config:
-            return self._script_get_config[survey_name]()
-        else:
-            script_config_yaml = super().get_script_config()
-
-            script_config = yaml.safe_load(script_config_yaml)
-
-            # Handle multiple observations for the same target
-            if len(self.observation) > 1:
-
-                script_config["band_filter"] = []
-                script_config["exp_times"] = []
-
-                for observation in self.observation:
-                    script_config["band_filter"] += [
-                        str(observation["filter"]),
-                    ] * observation["nexp"]
-
-                    script_config["exp_times"] += [
-                        float(observation["exptime"] / observation["nexp"])
-                        for i in range(observation["nexp"])
-                    ]
-            additional_script_config = self._script_configuration.get(
-                self._script_config_root, dict()
-            ).copy()
-
-            for key in additional_script_config:
-                script_config[key] = additional_script_config[key]
-
-            script_config["program"] = survey_name
-
-            return yaml.safe_dump(script_config)
-
-    def _get_script_config_cwfs(self):
-        script_config = self._script_configuration.get(
-            f"{self._script_config_root}_cwfs", dict()
-        ).copy()
-
-        if "find_target" in script_config:
-            script_config["find_target"]["az"] = math.degrees(
-                float(self.observation["az"][0])
-            )
-            script_config["find_target"]["el"] = math.degrees(
-                float(self.observation["alt"][0])
-            )
-        else:
-            script_config["find_target"] = dict(
-                az=math.degrees(float(self.observation["az"][0])),
-                el=math.degrees(float(self.observation["alt"][0])),
-            )
-
-        return yaml.safe_dump(script_config)
-
-    def _get_script_config_spec(self):
-        script_config = {
-            "object_name": str(self.observation["note"][0]).split(":", maxsplit=1)[-1],
-            "object_dec": str(
-                Angle(float(self.observation["dec"][0]), unit=units.rad).to_string(
-                    unit=units.degree, sep=":"
-                )
-            ),
-            "object_ra": str(
-                Angle(float(self.observation["RA"][0]), unit=units.rad).to_string(
-                    unit=units.hourangle, sep=":"
-                )
-            ),
-            **self._script_configuration.get(
-                f"{self._script_config_root}_spec", dict()
-            ),
-        }
-
-        return yaml.safe_dump(script_config)
-
-    def _get_survey_name(self):
-        return self.observation["note"][0].split(":")[0]

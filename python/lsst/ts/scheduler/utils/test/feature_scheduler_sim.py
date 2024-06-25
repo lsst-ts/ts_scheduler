@@ -1,6 +1,6 @@
-# This file is part of ts_scheduler
+# This file is part of ts_scheduler.
 #
-# Developed for the LSST Telescope and Site Systems.
+# Developed for the Rubin Observatory Telescope and Site Systems.
 # This product includes software developed by the LSST Project
 # (https://www.lsst.org).
 # See the COPYRIGHT file at the top-level directory of this distribution
@@ -17,6 +17,7 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 __all__ = ["FeatureSchedulerSim", "MJD_START"]
 
@@ -25,16 +26,18 @@ import types
 import typing
 
 from astropy.time import Time
+from lsst.ts import observing
 from lsst.ts.astrosky.model import AstronomicalSkyModel
 from lsst.ts.dateloc import ObservatoryLocation
 from lsst.ts.observatory.model import ObservatoryModel, ObservatoryState
-from rubin_sim.site_models.cloud_model import CloudModel
-from rubin_sim.site_models.seeing_model import SeeingModel
+from rubin_scheduler.site_models.cloud_model import CloudModel
+from rubin_scheduler.site_models.seeing_model import SeeingModel
+from rubin_scheduler.utils import survey_start_mjd
 
 from ...driver import FeatureScheduler
 from ...driver.feature_scheduler_target import FeatureSchedulerTarget
 
-MJD_START = 60110.983
+MJD_START = survey_start_mjd()
 
 
 class FeatureSchedulerSim:
@@ -44,7 +47,6 @@ class FeatureSchedulerSim:
     """
 
     def __init__(self, log: logging.Logger) -> None:
-
         self.log = log.getChild(__name__)
 
         self.mjd_start = MJD_START
@@ -82,28 +84,113 @@ class FeatureSchedulerSim:
         self.models["seeing"] = SeeingModel()
         self.models["cloud"] = CloudModel()
 
+        observing_blocks = self.get_observing_blocks()
+
         self.driver = FeatureScheduler(
-            models=self.models, raw_telemetry=self.raw_telemetry
+            models=self.models,
+            raw_telemetry=self.raw_telemetry,
+            observing_blocks=observing_blocks,
+            log=log,
         )
 
         self.config = types.SimpleNamespace(
             driver_configuration=dict(
-                scheduler_config="",
-                force=True,
-                default_observing_script_name="standard_visit.py",
-                default_observing_script_is_standard=True,
                 stop_tracking_observing_script_name="stop_tracking.py",
                 stop_tracking_observing_script_is_standard=True,
-            )
+            ),
+            feature_scheduler_driver_configuration=dict(
+                scheduler_config="",
+            ),
         )
 
         self.files_to_delete = []
+
+    @staticmethod
+    def get_observing_blocks() -> dict[str, observing.ObservingBlock]:
+        """Generate a observing blocks for testing.
+
+        Returns
+        -------
+        dict[str, observing.ObservingBlock]
+            Observing blocks.
+        """
+
+        script1 = observing.ObservingScript(
+            name="slew",
+            standard=True,
+            parameters={
+                "name": "$name",
+                "ra": "$ra",
+                "dec": "$dec",
+                "rot_sky": "$rot_sky",
+                "estimated_slew_time": "$estimated_slew_time",
+                "obs_time": "$obs_time",
+                "note": "Static note will be preserved.",
+            },
+        )
+        script2 = observing.ObservingScript(
+            name="standard_visit",
+            standard=True,
+            parameters={
+                "exp_times": "$exp_times",
+                "band_filter": "$band_filter",
+                "program": "$program",
+                "note": "Static note will be preserved.",
+            },
+        )
+
+        script_cwfs = observing.ObservingScript(
+            name="cwfs",
+            standard=False,
+            parameters={
+                "find_target": {
+                    "az": "$az",
+                    "el": "$el",
+                    "mag_limit": 8.0,
+                },
+                "program": "$program",
+            },
+        )
+
+        standard_visit_block = observing.ObservingBlock(
+            name="StandardVisit",
+            program="greedy",
+            scripts=[script1, script2],
+            constraints=[],
+        )
+
+        survey_1 = observing.ObservingBlock(
+            name="StandardVisit",
+            program="Survey1",
+            scripts=[script1, script2],
+            constraints=[observing.AirmassConstraint(max=1.5)],
+        )
+
+        survey_2 = observing.ObservingBlock(
+            name="StandardVisit",
+            program="Survey2",
+            scripts=[script1, script2],
+            constraints=[observing.AirmassConstraint(max=1.5)],
+        )
+
+        cwfs = observing.ObservingBlock(
+            name="CurvatureWavefrontSensing",
+            program="cwfs",
+            scripts=[script_cwfs],
+            constraints=[],
+        )
+
+        return {
+            cwfs.program: cwfs,
+            standard_visit_block.program: standard_visit_block,
+            survey_1.program: survey_1,
+            survey_2.program: survey_2,
+        }
 
     def make_scheduler_configuration(
         self,
         test_config_dir: str,
         scheduler_config_name: str,
-        survey_observing_script: typing.Optional[str] = None,
         observation_database_name: typing.Optional[str] = None,
     ) -> None:
         """Make a simple Scheduler configuration.
@@ -119,22 +206,19 @@ class FeatureSchedulerSim:
         observation_database_name : `str`, optional
             Name ot the observation database.
         """
-        self.config.driver_configuration["scheduler_config"] = test_config_dir.parents[
-            1
-        ].joinpath("data", "config", scheduler_config_name)
-
-        if survey_observing_script is not None:
-            self.config.driver_configuration[
-                "survey_observing_script"
-            ] = survey_observing_script
+        self.config.feature_scheduler_driver_configuration["scheduler_config"] = (
+            test_config_dir.parents[1].joinpath("data", "config", scheduler_config_name)
+        )
 
         if observation_database_name is not None:
-            self.config.driver_configuration[
+            self.config.feature_scheduler_driver_configuration[
                 "observation_database_name"
             ] = test_config_dir.parents[1].joinpath("data", observation_database_name)
 
             self.files_to_delete.append(
-                self.config.driver_configuration["observation_database_name"]
+                self.config.feature_scheduler_driver_configuration[
+                    "observation_database_name"
+                ]
             )
 
     def configure_scheduler_for_test(self, test_config_dir: str) -> None:
@@ -175,12 +259,6 @@ class FeatureSchedulerSim:
         self.make_scheduler_configuration(
             test_config_dir=test_config_dir,
             scheduler_config_name="fbs_config_good_with_cwfs.py",
-            survey_observing_script=dict(
-                cwfs=dict(
-                    observing_script_name="cwfs_script",
-                    observing_script_is_standard=False,
-                ),
-            ),
             observation_database_name="fbs_test_observation_database_with_cwfs",
         )
 
@@ -208,12 +286,6 @@ class FeatureSchedulerSim:
         self.make_scheduler_configuration(
             test_config_dir=test_config_dir,
             scheduler_config_name="fbs_config_good_with_cwfs.py",
-            survey_observing_script=dict(
-                cwfs=dict(
-                    observing_script_name="cwfs_script",
-                    observing_script_is_standard=False,
-                ),
-            ),
         )
 
         self.log.debug(f"Config: {self.config}")
@@ -248,7 +320,6 @@ class FeatureSchedulerSim:
         self.models["observatory_model"].update_state(current_time)
 
         while current_time < sunrise_time:
-
             self.log.debug(
                 f"current_time: {current_time}, sunset: {sunset_time}, sunrise: {sunrise_time}."
             )
@@ -266,7 +337,6 @@ class FeatureSchedulerSim:
                 )
                 self.driver.update_conditions()
             else:
-
                 self.log.debug(f"[{len(targets)}]::{target}")
 
                 self.models["observatory_model"].observe(target)

@@ -23,8 +23,7 @@ import unittest
 import pandas
 from astropy import units
 from astropy.time import Time, TimeDelta
-
-from lsst.ts.scheduler.utils import get_efd_client, get_mock_efd_client
+from lsst.ts.scheduler.utils.efd_utils import get_efd_client, get_mock_efd_client
 
 
 class TestEfdUtils(unittest.IsolatedAsyncioTestCase):
@@ -33,7 +32,6 @@ class TestEfdUtils(unittest.IsolatedAsyncioTestCase):
         assert isinstance(mock_efd_client, unittest.mock.AsyncMock)
 
     async def test_get_mock_efd_client(self):
-
         mock_efd_client = get_mock_efd_client("mock_efd")
 
         assert isinstance(mock_efd_client, unittest.mock.AsyncMock)

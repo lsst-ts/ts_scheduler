@@ -1,4 +1,4 @@
-# This file is part of ts_scheduler
+# This file is part of ts_scheduler.
 #
 # Developed for the Rubin Observatory Telescope and Site Systems.
 # This product includes software developed by the LSST Project
@@ -23,31 +23,40 @@ __all__ = ["Model"]
 
 import asyncio
 import functools
-import inspect
 import io
 import logging
 import pathlib
+import types
 import typing
 import urllib.request
-from importlib import import_module
+import uuid
 
 import numpy as np
+from jsonschema import ValidationError
+from lsst.ts import observing, utils
 from lsst.ts.astrosky.model import AstronomicalSkyModel
 from lsst.ts.dateloc import ObservatoryLocation
 from lsst.ts.idl.enums import Script
 from lsst.ts.observatory.model import ObservatoryModel, ObservatoryState
-from rubin_sim.site_models.cloud_model import CloudModel
-from rubin_sim.site_models.seeing_model import SeeingModel
+from lsst.ts.salobj.type_hints import BaseDdsDataType
+from rubin_scheduler.site_models.cloud_model import CloudModel
+from rubin_scheduler.site_models.seeing_model import SeeingModel
 
-from lsst.ts import utils
-
-from .driver import Driver
+from .driver import Driver, DriverFactory, DriverType
 from .driver.driver_target import DriverTarget
 from .driver.survey_topology import SurveyTopology
+from .exceptions.exceptions import TargetScriptFailedError, UpdateTelemetryError
+from .observing_blocks.observing_block_status import ObservingBlockStatus
 from .telemetry_stream_handler import TelemetryStreamHandler
-from .utils.csc_utils import NonFinalStates, is_uri, is_valid_efd_query
-from .utils.exceptions import UpdateTelemetryError
+from .utils.csc_utils import (
+    BlockStatus,
+    FailedStates,
+    NonFinalStates,
+    is_uri,
+    is_valid_efd_query,
+)
 from .utils.scheduled_targets_info import ScheduledTargetsInfo
+from .utils.types import ValidationRules
 
 
 class Model:
@@ -57,49 +66,87 @@ class Model:
     instantiates the model and offload the operations to it, which allows for
     better separation of concerns and cleaner code on the CSC part.
 
+    Parameters
+    ----------
+    log : `logging.Logger`
+        Logger class to create child from.
+    config_dir : pathlib.Path
+        Directory containing configuration files.
+
     Attributes
     ----------
+    log : `logging.Logger`
+        Class logger instance.
+    config_dir : `pathlib.Path`
+        Directory containing configuration files.
     telemetry_stream_handler : `TelemetryStreamHandler`
         Object to handle telemetry streams.
+    time_delta_no_target : `float`
+        How far to step into the future when there are no targets, in seconds.
     models : `dict`[`str`, `Any`]
         Dictionary to store the scheduler models.
     raw_telemetry : `dict`[`str`, `Any`]
         Dictionary to store raw telemetry.
+    script_info : `dict`[`int`, `BaseDdsDataType`]
+        Dictionary to store information about the scripts sent to the
+        script queue.
+    observing_blocks : `dict`[`str`, `observing.ObservingBlock`]
+        Observing blocks.
     driver : `Driver`
-        Lock for the scheduler detailed state.
+        Scheduler driver.
+    max_scripts : `int`
+        Maximum number of scripts to keep track of.
+    startup_type : dict[str, coroutine]
+        Dictionary with the startup types and functions.
     """
 
-    def __init__(self, log) -> None:
-
+    def __init__(self, log: logging.Logger, config_dir: pathlib.Path) -> None:
         self.log = log.getChild(type(self).__name__)
 
-        self.telemetry_stream_handler = None
+        self.config_dir = config_dir
+
+        self.telemetry_stream_handler: TelemetryStreamHandler = None
 
         # How far to step into the future when there's not targets in seconds
         self.time_delta_no_target = 30.0
 
         # Dictionary to store the scheduler models
-        self.models = dict()
+        self.models: dict[str, typing.Any] = dict()
 
         # Dictionary to store raw telemetry
-        self.raw_telemetry = dict()
+        self.raw_telemetry: dict[str, typing.Any] = dict()
 
         # Dictionary to store information about the scripts put on the queue
-        self.script_info = dict()
+        self.script_info: dict[int, BaseDdsDataType] = dict()
+        self._block_scripts_final_state: dict[uuid.UUID, dict[int, asyncio.Future]] = (
+            dict()
+        )
+
+        # Dictionary to store observing blocks
+        self.observing_blocks: dict[str, observing.ObservingBlock] = dict()
+        self.observing_blocks_status: dict[str, ObservingBlockStatus] = dict()
 
         # Scheduler driver instance.
-        self.driver = None
+        self.driver: Driver | None = None
 
         self.max_scripts = 0
 
-        self.startup_types = dict(
+        self.startup_types: dict[
+            str, typing.Coroutine[typing.Any, typing.Any, SurveyTopology]
+        ] = dict(
             HOT=self.configure_driver_hot,
             WARM=self.configure_driver_warm,
             COLD=self.configure_driver_cold,
         )
 
-    async def configure(self, config):
+    async def configure(self, config: types.SimpleNamespace) -> None:
+        """Configure model.
 
+        Parameters
+        ----------
+        config : `types.SimpleNamespace`
+            Model configuration.
+        """
         self.log.debug("Configuring telemetry streams.")
 
         self.max_scripts = config.max_scripts
@@ -128,20 +175,22 @@ class Model:
             else:
                 self.log.warning(f"No configuration for {model}. Skipping.")
 
+        await self.load_observing_blocks(config.path_observing_blocks)
+
         self.log.debug("Configuring Driver and Scheduler.")
 
         return await self.configure_driver(config)
 
-    def init_telemetry(self):
+    def init_telemetry(self) -> None:
         """Initialize telemetry streams."""
 
         # List of scheduled targets and script ids
-        self.raw_telemetry["scheduled_targets"] = None
+        self.reset_scheduled_targets()
 
         # List of things on the observatory queue
         self.raw_telemetry["observing_queue"] = []
 
-    def init_models(self):
+    def init_models(self) -> None:
         """Initialize but not configure needed models."""
         try:
             self.models["location"] = ObservatoryLocation()
@@ -167,28 +216,121 @@ class Model:
             Telemetry stream configuration.
         """
 
+        efd_name = config["efd_name"]
+
+        self.log.debug(
+            f"Configuring telemetry stream handler for {efd_name} efd instance."
+        )
+
+        self.telemetry_stream_handler = TelemetryStreamHandler(
+            log=self.log, efd_name=efd_name
+        )
+
         if "streams" not in config:
             self.log.warning(
                 "No telemetry stream defined in configuration. Skipping configuring telemetry streams."
             )
+            await self.telemetry_stream_handler.configure_telemetry_stream(
+                telemetry_stream=[]
+            )
             return
-
-        self.log.debug(
-            f"Configuring telemetry stream handler for {config['efd_name']} efd instance."
-        )
-
-        self.telemetry_stream_handler = TelemetryStreamHandler(
-            log=self.log, efd_name=config["efd_name"]
-        )
 
         self.log.debug("Configuring telemetry stream.")
 
         await self.telemetry_stream_handler.configure_telemetry_stream(
-            config["streams"]
+            telemetry_stream=config["streams"]
         )
 
         for telemetry in self.telemetry_stream_handler.telemetry_streams:
             self.raw_telemetry[telemetry] = np.nan
+
+    async def load_observing_blocks(self, path: str) -> None:
+        """Load observing blocks from the provided path.
+
+        The method will glob the provided path for all json files and load them
+        as observing blocks.
+
+        Parameters
+        ----------
+        path : `str`
+            Path to the observing blocks directory relative to the
+            configuration path.
+        """
+        path_observing_blocks = self.config_dir.joinpath(path)
+
+        if not path_observing_blocks.exists():
+            raise RuntimeError(
+                "Provided observing block directory does not exists. "
+                f"Got {path_observing_blocks.absolute()}"
+            )
+        for observing_block_file in path_observing_blocks.glob("**/*.json"):
+            observing_block = observing.ObservingBlock.parse_file(observing_block_file)
+            self.observing_blocks[observing_block.program] = observing_block
+            self.observing_blocks_status[observing_block.program] = (
+                await self._get_block_status(program=observing_block.program)
+            )
+
+    async def validate_observing_blocks(
+        self, observing_scripts_config_validator: ValidationRules
+    ) -> None:
+        """Validate observing blocks script configurations.
+
+        Parameters
+        ----------
+        observing_scripts_config_validator : `ValidationRules`
+            Dictionary with script configuration validator.
+        """
+
+        for block_id in self.observing_blocks:
+            target_validate = DriverTarget(
+                observing_block=self.observing_blocks[block_id].copy(deep=True)
+            )
+            observing_block = target_validate.get_observing_block()
+            for script in observing_block.scripts:
+                key = (script.name, script.standard)
+                try:
+                    if observing_scripts_config_validator[key] is not None:
+                        observing_scripts_config_validator[key].validate(
+                            script.parameters
+                        )
+                    else:
+                        self.log.debug(f"Script {script} does not have configuration.")
+                except ValidationError as validation_error:
+                    self.log.error(
+                        f"Script {script.name} from observing block {block_id} failed validation: "
+                        f"{validation_error.message}.\n{script.parameters}"
+                    )
+                    self.observing_blocks_status[block_id].status = BlockStatus.INVALID
+                    break
+                except Exception:
+                    self.log.exception(
+                        f"Failed to validate script {script.name} from observing block {block_id} "
+                        f"with:\n{script.parameters}"
+                    )
+                    self.observing_blocks_status[block_id].status = BlockStatus.INVALID
+                    break
+                else:
+                    self.log.debug(
+                        f"Successfully validated script {script.name} from {block_id} "
+                        f"with:\n{script.parameters}"
+                    )
+                    self.observing_blocks_status[block_id].status = (
+                        BlockStatus.AVAILABLE
+                    )
+
+    def get_valid_observing_blocks(self) -> list[str]:
+        """Get list of valid observing blocks.
+
+        Returns
+        -------
+        `list`[ `str` ]
+            List of valid observing blocks.
+        """
+        return [
+            block_id
+            for block_id in self.observing_blocks_status
+            if self.observing_blocks_status[block_id].status != BlockStatus.INVALID
+        ]
 
     async def configure_driver(self, config: typing.Any) -> SurveyTopology:
         """Load driver for selected scheduler and configure its basic
@@ -294,7 +436,6 @@ class Model:
 
         Parameters
         ----------
-
         config : `types.SimpleNamespace`
             Configuration, as described by ``schema/Scheduler.yaml``
 
@@ -315,51 +456,21 @@ class Model:
         return survey_topology
 
     def load_driver(self, driver_type: str) -> None:
-        """Utility method to load a driver from a driver type.
+        """Utility method to load a driver from a driver type name.
 
         Parameters
         ----------
-        driver_type : str
-            A driver module "import string", e.g.
-            "lsst.ts.scheduler.driver.driver".
-
-        Raises
-        ------
-        RuntimeError:
-            If a Driver cannot be found in the provided module.
-
-        Notes
-        -----
-
-        The `driver_type` parameter must specify a python module which defines
-        a subclass of `Driver`. The scheduler ships with a set of standard
-        drivers, which are defined in `lsst.ts.scheduler.driver`. For example,
-        `lsst.ts.scheduler.driver.feature_scheduler` defines `FeatureScheduler`
-        which is a subclass of `Driver` and implements the feature based
-        scheduler driver.
-
-        Users can also provide external drivers, as long as they subclass
-        `Driver` the CSC will be able to load it.
+        driver_type : `str`
+            Name of the driver type. Available options are in `DriveType`.
         """
-        self.log.info(f"Loading driver from {driver_type}")
+        self.log.info(f"Loading driver {driver_type}")
 
-        driver_lib = import_module(driver_type)
-        members_of_driver_lib = inspect.getmembers(driver_lib)
-
-        driver_type = None
-        for member in members_of_driver_lib:
-            try:
-                if issubclass(member[1], Driver):
-                    self.log.debug(f"Found driver {member[0]}{member[1]}")
-                    driver_type = member[1]
-            except TypeError:
-                pass
-
-        if driver_type is None:
-            raise RuntimeError("Could not find Driver on module %s" % driver_type)
-
-        self.driver = driver_type(
-            models=self.models, raw_telemetry=self.raw_telemetry, log=self.log
+        self.driver = DriverFactory.get_driver(
+            driver_type=DriverType(driver_type),
+            models=self.models,
+            raw_telemetry=self.raw_telemetry,
+            observing_blocks=self.observing_blocks,
+            log=self.log,
         )
 
     def reset_scheduled_targets(self) -> None:
@@ -381,15 +492,22 @@ class Model:
 
         Returns
         -------
-        list[DriverTarget]
+        `list`[`DriverTarget`]
             List of currently scheduled targets.
         """
         return self.raw_telemetry["scheduled_targets"]
 
-    def callback_script_info(self, data):
+    async def callback_script_info(self, data: BaseDdsDataType) -> None:
         """This callback function will store in a dictionary information about
         the scripts.
 
+        Parameters
+        ----------
+        data : `BaseDdsDataType`
+            Script info topic data.
+
+        Notes
+        -----
         The method will store information about any script that is placed in
         the queue so that the scheduler can access information about those if
         needed. It then, tracks the size of the dictionary where this
@@ -403,16 +521,145 @@ class Model:
         # a named tuple so it is possible to access the data the same way if
         # the topic itself was stored.
 
+        sal_index = data.scriptSalIndex
+        script_state = Script.ScriptState(data.scriptState)
+
         self.script_info[data.scriptSalIndex] = data
 
-        # Make sure the size of script info is smaller then the maximum allowed
+        block_all_done: list[uuid.UUID] = []
+
+        self.log.debug(f"Script[{sal_index}]::{script_state!r}")
+
+        for block_uid in self._block_scripts_final_state:
+            self.log.debug(
+                f"Checking {block_uid=}::{self._block_scripts_final_state[block_uid]}"
+            )
+            if (
+                sal_index in self._block_scripts_final_state[block_uid]
+                and script_state not in NonFinalStates
+            ):
+                self.log.debug(f"{block_uid=}::{sal_index=}::{script_state!r}")
+                # Script in a final state set value of the future.
+                if script_state in FailedStates:
+                    self._block_scripts_final_state[block_uid][sal_index].set_exception(
+                        TargetScriptFailedError(
+                            f"Script {sal_index} failed, state is " f"{script_state!r}."
+                        )
+                    )
+                elif not self._block_scripts_final_state[block_uid][sal_index].done():
+                    self._block_scripts_final_state[block_uid][sal_index].set_result(
+                        script_state
+                    )
+            all_done = all(
+                [
+                    task.done()
+                    for task in self._block_scripts_final_state[block_uid].values()
+                ]
+            )
+            if all_done:
+                block_all_done.append(block_uid)
+
         script_info_size = len(self.script_info)
         if script_info_size > self.max_scripts:
             # Removes old entries
-            for key in self.script_info:
+            items_to_remove = list(self.script_info.keys())[
+                : script_info_size - self.max_scripts
+            ]
+            for key in items_to_remove:
                 del self.script_info[key]
-                if len(self.script_info) < self.max_scripts:
-                    break
+
+        if len(block_all_done) > self.max_scripts:
+            blocks_to_remove = block_all_done[: self.max_scripts - 1]
+            self.log.debug(f"Removing done blocks: {blocks_to_remove}")
+            for block_uid_done in blocks_to_remove:
+                del self._block_scripts_final_state[block_uid_done]
+
+    def register_new_block(self, id: uuid.UUID) -> None:
+        """Register new block.
+
+        Parameters
+        ----------
+        id : `uuid.UUID`
+            Block id.
+        """
+        if id not in self._block_scripts_final_state:
+            self._block_scripts_final_state[id] = dict()
+
+    async def add_scheduled_script(
+        self, id: uuid.UUID, sal_index: int
+    ) -> asyncio.Future:
+        """Add scheduled script to list of scripts to account for.
+
+        Parameters
+        ----------
+        sal_index : `int`
+            Index of the SAL Script.
+
+        Return
+        ------
+        `asyncio.Future`
+            A Future that will have its result set to the final state of the
+            script, or an exception, in case the script final state is a
+            `FailedStates`.
+        """
+        self._block_scripts_final_state[id][sal_index] = asyncio.Future()
+        return self._block_scripts_final_state[id][sal_index]
+
+    async def check_block_scripts(self, id: uuid.UUID) -> None:
+        """Check the input script states.
+
+        If one of the scripts failed, raise its exception.
+
+        Parameters
+        ----------
+        id : `uuid.UUID`
+            Unique id of the block to check scripts.
+        """
+
+        for sal_index in self._block_scripts_final_state[id]:
+            if self._block_scripts_final_state[id][sal_index].done():
+                try:
+                    await self._block_scripts_final_state[id][sal_index]
+                except Exception:
+                    message = f"Target script {id=}::{sal_index} failed."
+                    self.log.exception(message)
+                    raise TargetScriptFailedError(message)
+
+    async def remove_block_done_scripts(self, id: uuid.UUID) -> None:
+        """Remove all done scripts for a particular block.
+
+        If all scripts are done, leave an empty dict.
+
+        Parameters
+        ----------
+        id : uuid.UUID
+            Unique id of the block to cleanup.
+        """
+        done_scripts = [
+            sal_index
+            for sal_index in self._block_scripts_final_state[id]
+            if self._block_scripts_final_state[id][sal_index].done()
+        ]
+
+        if done_scripts:
+            self.log.info(f"Removing {done_scripts} done scripts from block {id}.")
+
+            for sal_index in done_scripts:
+                del self._block_scripts_final_state[id][sal_index]
+
+    async def mark_block_done(self, id: uuid.UUID) -> None:
+        """Mark all scripts from a block as done.
+
+        Parameters
+        ----------
+        id : uuid.UUID
+            Unique id of the block.
+        """
+        for sal_index in self._block_scripts_final_state[id]:
+            if not self._block_scripts_final_state[id][sal_index].done():
+                self._block_scripts_final_state[id][sal_index].set_exception(
+                    RuntimeError(f"Marking script {sal_index} as done.")
+                )
 
     async def check_scheduled_targets(self) -> ScheduledTargetsInfo:
         """Loop through the scheduled targets list, check status and tell
@@ -423,7 +670,9 @@ class Model:
         scheduled_targets_info : `ScheduledTargetsInfo`
             Information about scheduled targets.
         """
-        number_of_targets = len(self.raw_telemetry["scheduled_targets"])
+        scheduled_targets = self.get_scheduled_targets()
+
+        number_of_targets = len(scheduled_targets)
 
         scheduled_targets_info = ScheduledTargetsInfo()
 
@@ -432,16 +681,26 @@ class Model:
         report = ""
 
         for _ in range(number_of_targets):
-            target = self.raw_telemetry["scheduled_targets"].pop(0)
-            if target.sal_index in self.script_info:
-                info = self.script_info[target.sal_index]
-            else:
-                # No information on script on queue, put it back and continue
+            target = scheduled_targets.pop(0)
+            sal_indices = target.get_sal_indices()
+
+            script_info = [
+                self.script_info[sal_index]
+                for sal_index in sal_indices
+                if sal_index in self.script_info
+            ]
+
+            if not script_info or len(script_info) != len(sal_indices):
+                report += f"No information on all scripts on queue, put it back and continue: {target}.\n"
+                # No information on all scripts on queue,
+                # put it back and continue
                 self.raw_telemetry["scheduled_targets"].append(target)
                 continue
 
-            if info.scriptState == Script.ScriptState.DONE:
-                # Script completed successfully
+            scripts_state = [info.scriptState for info in script_info]
+
+            if all([state == Script.ScriptState.DONE for state in scripts_state]):
+                # All scripts completed successfully
                 report += (
                     f"\n\t{target.note} observation completed successfully. "
                     "Registering observation."
@@ -450,30 +709,37 @@ class Model:
                 self.driver.register_observation(target)
                 scheduled_targets_info.observed.append(target)
                 # Remove related script from the list
-                self.script_info.pop(target.sal_index)
+                for index in sal_indices:
+                    self.script_info.pop(index)
                 # target now simply disappears... Should I keep it in for
                 # future refs?
-            elif info.scriptState in NonFinalStates:
-                # script in a non-final state, just put it back on the list.
-                self.raw_telemetry["scheduled_targets"].append(target)
-            elif info.scriptState == Script.ScriptState.FAILED:
+            elif any([state in FailedStates for state in scripts_state]):
+                # one or more script failed
                 report += f"\n\t{target.note} failed. Not registering observation."
                 # Remove related script from the list
-                scheduled_targets_info.failed.append(target.sal_index)
-                self.script_info.pop(target.sal_index)
+                scheduled_targets_info.failed.append(target)
+                for index in sal_indices:
+                    self.script_info.pop(index)
+            elif any([state in NonFinalStates for state in scripts_state]):
+                # one or more script in a non-final state, just put it back on
+                # the list.
+                self.raw_telemetry["scheduled_targets"].append(target)
             else:
                 report += (
                     (
-                        f"\n\tUnrecognized state [{info.scriptState}] for observation "
-                        f"{target.sal_index} for target {target}."
+                        f"\n\tOne or more state unrecognized [{scripts_state}] for observations "
+                        f"{sal_indices} for target {target}."
                     ),
                 )
-                scheduled_targets_info.unrecognized.append(target.sal_index)
+                scheduled_targets_info.unrecognized.extend(sal_indices)
                 # Remove related script from the list
-                self.script_info.pop(target.sal_index)
+                for index in sal_indices:
+                    self.script_info.pop(index)
 
         if report:
-            self.log.debug(f"Check scheduled report: {report}")
+            self.log.info(f"Check scheduled report:\n\n{report}")
+        else:
+            self.log.debug("Nothing to report.")
 
         return scheduled_targets_info
 
@@ -482,7 +748,7 @@ class Model:
 
         Returns
         -------
-        dict[str, bool | float | int | str]
+        `dict`[`str`, `bool` | `float` | `int` | `str`]
             Dictionary with general information.
         """
         return dict(
@@ -557,7 +823,6 @@ class Model:
         self.log.debug(f"Requesting {max_targets} additional targets.")
 
         for _ in range(max_targets):
-
             # Inside the loop we are running update_conditions directly
             # from the driver instead of update_telemetry. This bypasses
             # the updates done by the CSC method.
@@ -670,7 +935,6 @@ class Model:
             len(targets) < max_targets
             and (time_scheduler_evaluation - time_start) < time_window
         ):
-
             await loop.run_in_executor(None, self.driver.update_conditions)
 
             await asyncio.sleep(0)
@@ -707,7 +971,7 @@ class Model:
 
         Returns
         -------
-        dict[str, float | int | bool | str]
+        `dict`[`str`, `float` | `int` | `bool` | `str`]
             Observatory state.
         """
         return dict(
@@ -763,7 +1027,7 @@ class Model:
 
         Returns
         -------
-        tuple[io.BytesIO, str]
+        `tuple`[`io.BytesIO`, `str`]
             Tuple with driver state and a name of the file with a stored
             version.
         """
@@ -811,7 +1075,7 @@ class Model:
 
         Parameters
         ----------
-        startup_database : str
+        startup_database : `str`
             Uri of the startup database.
 
         Raises
@@ -838,7 +1102,7 @@ class Model:
 
         Parameters
         ----------
-        startup_database : str
+        startup_database : `str`
             Path to a local database or EFD query.
 
         Raises
@@ -874,7 +1138,7 @@ class Model:
 
         Parameters
         ----------
-        database_path : str
+        database_path : `str`
             Path to the local database file.
         """
         observations = await self._parse_observation_database(database_path)
@@ -887,7 +1151,7 @@ class Model:
 
         Parameters
         ----------
-        efd_query : str
+        efd_query : `str`
             A valid EFD query that should return a list of observations.
         """
         observations = await self._query_observations_from_efd(efd_query)
@@ -904,7 +1168,7 @@ class Model:
 
         Parameters
         ----------
-        uri : str
+        uri : `str`
             Uri with the address of the snapshot.
         """
         loop = asyncio.get_running_loop()
@@ -931,7 +1195,7 @@ class Model:
 
         Parameters
         ----------
-        observations : list of DriverTarget
+        observations : `list`[`DriverTarget`]
             List of observations.
         """
         if observations is None:
@@ -949,12 +1213,12 @@ class Model:
 
         Parameters
         ----------
-        database_path : str
+        database_path : `str`
             Path to the local database file.
 
         Returns
         -------
-        list of DriverTargets
+        `list`[`DriverTargets`]
             List of observations.
         """
         loop = asyncio.get_running_loop()
@@ -973,16 +1237,18 @@ class Model:
 
         Parameters
         ----------
-        efd_query : str
+        efd_query : `str`
             EFD query to retrieve list of observations.
 
         Returns
         -------
-        observations : list of DriverTarget
+        observations : `list`[`DriverTargets`]
             List of observations.
         """
-        efd_observations = await self.telemetry_stream_handler.efd_client.query(
-            efd_query
+        efd_observations = (
+            await self.telemetry_stream_handler.efd_client.influx_client.query(
+                efd_query
+            )
         )
 
         loop = asyncio.get_running_loop()
@@ -994,6 +1260,47 @@ class Model:
 
         return await loop.run_in_executor(None, convert_efd_observations_to_targets)
 
+    async def _get_block_status(self, program: str) -> ObservingBlockStatus:
+        """Get block status.
+
+        Parameters
+        ----------
+        program : `str`
+            Name of the program.
+
+        Returns
+        -------
+        `ObservingBlockStatus`
+            Block status.
+
+        Notes
+        -----
+        This method will query the EFD for the latest status of the input
+        program and return an `ObservingBlockStatus` built with the
+        appropriate information. If no block is found return a new empty one.
+        """
+
+        topic = '"efd"."autogen"."lsst.sal.Scheduler.logevent_blockStatus"'
+        query = (
+            f"SELECT * FROM {topic} WHERE id = '{program}' ORDER BY time DESC LIMIT 1"
+        )
+        query_res = await self.telemetry_stream_handler.efd_client.influx_client.query(
+            query
+        )
+
+        if len(query_res) == 0:
+            return ObservingBlockStatus(
+                executions_completed=0,
+                executions_total=0,
+                status=BlockStatus.AVAILABLE,
+            )
+        else:
+            return ObservingBlockStatus(
+                executions_completed=query_res["executionsCompleted"][0],
+                executions_total=query_res["executionsTotal"][0],
+                status=BlockStatus(query_res["statusId"][0]),
+            )
+
     async def update_telemetry(self):
         """Update data on all the telemetry values."""
 
@@ -1003,7 +1310,9 @@ class Model:
 
                 for telemetry in self.telemetry_stream_handler.telemetry_streams:
                     telemetry_data = (
-                        await self.telemetry_stream_handler.retrive_telemetry(telemetry)
+                        await self.telemetry_stream_handler.retrieve_telemetry(
+                            telemetry
+                        )
                     )
 
                     self.raw_telemetry[telemetry] = (
