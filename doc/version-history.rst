@@ -4,13 +4,14 @@
 Version History
 ===============
 
-v2.0.0
+v2.0.1
 ------
 
-.. Unreleased! Remove this comment before releasing it!
-.. This is part of a major refactor of the Scheduler to include the observing block feature.
-.. It will be spread over several PRs untill the feature is fully implemented.
-.. In the meantime use Release Candidate (in the develop branch) to deploy at the summit.
+* Pin version of scipy.
+
+
+v2.0.0
+------
 
 * Moves from rubin-sim package to rubin-scheduler. The rubin-scheduler package contains all of the scheduling-related code from rubin-sim, but without MAF. This reduces the dependencies typically installed with rubin-sim, as well as reduces the default data download to only that required to run the scheduler.
 

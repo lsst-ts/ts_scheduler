@@ -18,6 +18,7 @@ test:
     - astropy
     - jsonschema
     - numpy
+    - scipy =1.13
     - pandas
     - yaml
     - ts-idl {{ idl_version }}
@@ -57,6 +58,7 @@ requirements:
     - astropy
     - jsonschema
     - numpy
+    - scipy =1.13
     - pandas
     - yaml
     - ts-idl
