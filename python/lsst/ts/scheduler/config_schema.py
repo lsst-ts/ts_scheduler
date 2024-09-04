@@ -652,6 +652,9 @@ definitions:
                 type: array
                 items:
                   type: string
+              cwfs_block_name:
+                description: Name of the CWFS block.
+                type: string
           stop_tracking_observing_script_name:
             description: >-
               Name of the SAL script used to stop the telescope if there is no
