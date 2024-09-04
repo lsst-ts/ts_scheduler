@@ -49,11 +49,13 @@ class DriverParameters:
 
     night_boundary: float = -12.0
     new_moon_phase_threshold: float = 20.0
+    cwfs_block_name: str = "cwfs"
 
     def setDefaults(self) -> None:
         """Set defaults for the LSST Scheduler's Driver."""
         self.night_boundary = -12.0
         self.new_moon_phase_threshold = 20.0
+        self.cwfs_block_name = "cwfs"
 
 
 class Driver:
