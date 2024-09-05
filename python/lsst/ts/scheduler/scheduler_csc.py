@@ -62,7 +62,6 @@ from .utils.csc_utils import (
     DetailedState,
     SchedulerModes,
     set_detailed_state,
-    support_command,
 )
 from .utils.error_codes import (
     ADVANCE_LOOP_ERROR,
@@ -171,17 +170,6 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         initial_state=salobj.base_csc.State.STANDBY,
         simulation_mode=0,
     ):
-        compatibility_commands = dict(
-            computePredictedSchedule=self._do_computePredictedSchedule,
-            addBlock=self._do_addBlock,
-            getBlockStatus=self._do_getBlockStatus,
-            removeBlock=self._do_removeBlock,
-            validateBlock=self._do_validateBlock,
-        )
-
-        for command_name, command_method in compatibility_commands.items():
-            if support_command(command_name):
-                setattr(self, f"do_{command_name}", command_method)
 
         super().__init__(
             name="Scheduler",
@@ -582,7 +570,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         await self.model.handle_load_snapshot(data.uri)
 
-    async def _do_computePredictedSchedule(self, data):
+    async def do_computePredictedSchedule(self, data):
         """Compute and publish the predicted schedule.
 
         This command can only be executed if the Scheduler is idle. It is
@@ -614,7 +602,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             )
             await self._tasks["compute_predicted_schedule"]
 
-    async def _do_addBlock(self, data):
+    async def do_addBlock(self, data):
         """Implement add block command.
 
         Parameters
@@ -713,7 +701,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             definition=observing_block.json(),
         )
 
-    async def _do_getBlockStatus(self, data):
+    async def do_getBlockStatus(self, data):
         """Implement get block status command.
 
         Parameters
@@ -729,7 +717,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         self.assert_enabled()
         raise NotImplementedError("Command not implemented yet.")
 
-    async def _do_removeBlock(self, data):
+    async def do_removeBlock(self, data):
         """Implement remove block command.
 
         Parameters
@@ -745,7 +733,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         self.assert_enabled()
         raise NotImplementedError("Command not implemented yet.")
 
-    async def _do_validateBlock(self, data):
+    async def do_validateBlock(self, data):
         """Implement validate block command.
 
         Parameters

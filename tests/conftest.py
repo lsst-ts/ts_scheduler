@@ -29,9 +29,15 @@ import pytest
 import requests
 from lsst.ts import utils
 from lsst.ts.scheduler.utils import efd_utils
-from lsst.ts.scheduler.utils.csc_utils import DDS_VERSION
 from rubin_scheduler.data.data_sets import get_data_dir
 from rubin_scheduler.data.rs_download_sky import MyHTMLParser
+
+DDS_VERSION = True
+
+try:
+    from lsst.ts.salobj import parse_idl  # noqa: F401
+except ImportError:
+    DDS_VERSION = False
 
 
 def has_required_sky_file(path: pathlib.Path, mjd: float) -> bool:
