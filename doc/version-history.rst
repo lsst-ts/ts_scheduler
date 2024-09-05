@@ -4,6 +4,13 @@
 Version History
 ===============
 
+v2.1.0
+------
+
+* Add support for users to customize the name of the cwfs survey.
+* Remove old code that added support for "supported commands".
+  This feature is now available in salobj directly and it not needed by the Scheduler, now that all the supported commands are released.
+
 v2.0.1
 ------
 
