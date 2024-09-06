@@ -72,6 +72,8 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
         cls.log = logging.getLogger("AdvancedTargetLoopTestCase")
 
     async def asyncSetUp(self):
+        self._setup_time = utils.current_tai()
+
         self.datadir = os.path.abspath(os.path.join(os.path.dirname(__file__), "data"))
         standardpath = os.path.join(self.datadir, "standard")
         externalpath = os.path.join(self.datadir, "external")
@@ -110,6 +112,7 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
     async def asyncTearDown(self):
         try:
             await salobj.set_summary_state(self.scheduler_remote, salobj.State.STANDBY)
+            await salobj.set_summary_state(self.queue_remote, salobj.State.STANDBY)
         finally:
             try:
                 await asyncio.gather(
@@ -189,6 +192,11 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
         data = await self.scheduler_remote.evt_errorCode.next(
             flush=False, timeout=STD_TIMEOUT
         )
+        while data.private_sndStamp < self._setup_time:
+            self.log.debug(f"discarding old sample: {data}.")
+            data = await self.scheduler_remote.evt_errorCode.next(
+                flush=False, timeout=STD_TIMEOUT
+            )
         assert data.errorCode == 0
 
         # Test 1 - Enable scheduler, Queue is not enabled. Scheduler should go
@@ -576,12 +584,12 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
         with self.assertRaisesRegex(
             salobj.AckError,
             expected_regex=(
-                "Block invalid-block is not in the list of valid blocks. "
+                "Block BLOCK-5 is not in the list of valid blocks. "
                 "Current valid blocks are: "
             ),
         ):
             await self.scheduler_remote.cmd_addBlock.set_start(
-                id="invalid-block",
+                id="BLOCK-5",
                 timeout=STD_TIMEOUT,
             )
 
@@ -600,22 +608,22 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
         )
 
         await self.scheduler_remote.cmd_addBlock.set_start(
-            id="valid-block",
+            id="BLOCK-8",
             timeout=STD_TIMEOUT,
         )
 
         await self.assert_next_block_id_status(
-            block_id="valid-block",
+            block_id="BLOCK-8",
             block_status_expected=BlockStatus.STARTED,
         )
 
         await self.assert_next_block_id_status(
-            block_id="valid-block",
+            block_id="BLOCK-8",
             block_status_expected=BlockStatus.EXECUTING,
         )
 
         await self.assert_next_block_id_status(
-            block_id="valid-block",
+            block_id="BLOCK-8",
             block_status_expected=BlockStatus.COMPLETED,
         )
 
@@ -634,23 +642,23 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
         )
 
         await self.scheduler_remote.cmd_addBlock.set_start(
-            id="huge-block",
+            id="BLOCK-4",
             timeout=STD_TIMEOUT,
         )
 
         await self.assert_next_block_id_status(
-            block_id="huge-block",
+            block_id="BLOCK-4",
             block_status_expected=BlockStatus.STARTED,
         )
 
         await self.assert_next_block_id_status(
-            block_id="huge-block",
+            block_id="BLOCK-4",
             block_status_expected=BlockStatus.EXECUTING,
             timeout=SCRIPT_TIMEOUT * 5,
         )
 
         await self.assert_next_block_id_status(
-            block_id="huge-block",
+            block_id="BLOCK-4",
             block_status_expected=BlockStatus.COMPLETED,
         )
 
@@ -692,7 +700,7 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
         script_remote.evt_logMessage.callback = store_script_logs
 
         await self.scheduler_remote.cmd_addBlock.set_start(
-            id="huge-block-with-config",
+            id="BLOCK-3",
             override=yaml.safe_dump(
                 dict(
                     optional_field_string="This is a test string.",
@@ -703,18 +711,18 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
         )
 
         await self.assert_next_block_id_status(
-            block_id="huge-block-with-config",
+            block_id="BLOCK-3",
             block_status_expected=BlockStatus.STARTED,
         )
 
         await self.assert_next_block_id_status(
-            block_id="huge-block-with-config",
+            block_id="BLOCK-3",
             block_status_expected=BlockStatus.EXECUTING,
             timeout=SCRIPT_TIMEOUT * 5,
         )
 
         await self.assert_next_block_id_status(
-            block_id="huge-block-with-config",
+            block_id="BLOCK-3",
             block_status_expected=BlockStatus.COMPLETED,
         )
 
@@ -741,22 +749,22 @@ class AdvancedTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
         self.scheduler_remote.evt_blockStatus.flush()
 
         await self.scheduler_remote.cmd_addBlock.set_start(
-            id="valid-block",
+            id="BLOCK-8",
             timeout=STD_TIMEOUT,
         )
 
         await self.assert_next_block_id_status(
-            block_id="valid-block",
+            block_id="BLOCK-8",
             block_status_expected=BlockStatus.STARTED,
         )
 
         await self.assert_next_block_id_status(
-            block_id="valid-block",
+            block_id="BLOCK-8",
             block_status_expected=BlockStatus.EXECUTING,
         )
 
         await self.assert_next_block_id_status(
-            block_id="valid-block",
+            block_id="BLOCK-8",
             block_status_expected=BlockStatus.COMPLETED,
         )
 
