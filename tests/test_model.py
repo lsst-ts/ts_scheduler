@@ -95,7 +95,16 @@ class TestModel(unittest.IsolatedAsyncioTestCase):
 
         await self.model.configure(config)
 
-        await self.model.load_observing_blocks("../observing_blocks")
+        with self.assertLogs(
+            self.model.log, level=logging.WARNING
+        ) as load_obs_block_logs:
+            await self.model.load_observing_blocks("../observing_blocks")
+
+        assert (
+            "WARNING:Model:The following blocks have malformed program values: "
+            "not-a-block. Block program must have the format BLOCK-123 or BLOCK-T123. "
+            "These blocks will be ignored." in load_obs_block_logs.output
+        )
 
         observing_blocks_expected = self.get_expected_observing_blocks()
 
