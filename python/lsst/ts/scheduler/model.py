@@ -263,6 +263,8 @@ class Model:
                 "Provided observing block directory does not exists. "
                 f"Got {path_observing_blocks.absolute()}"
             )
+        # make sure old blocks are wiped out.
+        self.observing_blocks = dict()
         for observing_block_file in path_observing_blocks.glob("**/*.json"):
             observing_block = observing.ObservingBlock.parse_file(observing_block_file)
             self.observing_blocks[observing_block.program] = observing_block
