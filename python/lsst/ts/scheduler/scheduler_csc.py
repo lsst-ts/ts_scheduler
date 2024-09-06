@@ -922,14 +922,26 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         scheduled. If the limit is reached, the method will block and only
         make progress once the scripts finish executing.
         """
+        start_block = True
+        block_size = len(observing_block.scripts)
         for script in observing_block.scripts:
             sal_index = await self._queue_one_script(
-                block_uid=observing_block.id, script=script
+                block_uid=observing_block.id,
+                script=script,
+                block_name=observing_block.program,
+                start_block=start_block,
+                block_size=block_size,
             )
+            start_block = False
             yield sal_index
 
     async def _queue_one_script(
-        self, block_uid: uuid.UUID, script: ObservingScript
+        self,
+        block_uid: uuid.UUID,
+        script: ObservingScript,
+        block_name: str,
+        start_block: bool,
+        block_size: int,
     ) -> int:
         """Queue one script to the script queue.
 
@@ -939,6 +951,14 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             The uid of the block.
         script : `ObservingScript`
             Observing script to queue.
+        block_name : `str`
+            Name of the block (e.g. BLOCK-1).
+        start_block : `bool`
+            Start a new block?
+            Should be `True` for the first script of a block,
+            `False` otherwise.
+        block_size : `int`
+            How many scripts are part of this block?
 
         Returns
         -------
@@ -967,6 +987,9 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 isStandard=script.standard,
                 location=ScriptQueue.Location.LAST,
                 logLevel=self.log.getEffectiveLevel(),
+                block=block_name,
+                blockSize=block_size,
+                startBlock=start_block,
                 timeout=self.parameters.cmd_timeout,
             )
             sal_index = int(add_task.result)
