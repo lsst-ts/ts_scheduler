@@ -22,6 +22,7 @@
 __all__ = [
     "NonFinalStates",
     "FailedStates",
+    "block_regex",
     "SchedulerModes",
     "is_uri",
     "OBSERVATION_NAMED_PARAMETERS",
@@ -59,6 +60,10 @@ FailedStates = frozenset(
 )
 
 efd_query_re = re.compile(r"SELECT (.*) FROM (.*) WHERE (.*)")
+
+block_regex = re.compile(
+    r"(?P<block_test_case>BLOCK-T)?(?P<block>BLOCK-)?(?P<id>[0-9]*)"
+)
 
 OBSERVATION_NAMED_PARAMETERS = [
     "targetId",
