@@ -52,6 +52,7 @@ from .utils.csc_utils import (
     BlockStatus,
     FailedStates,
     NonFinalStates,
+    block_regex,
     is_uri,
     is_valid_efd_query,
 )
@@ -263,11 +264,29 @@ class Model:
                 "Provided observing block directory does not exists. "
                 f"Got {path_observing_blocks.absolute()}"
             )
+        # make sure old blocks are wiped out.
+        self.observing_blocks = dict()
+        bad_block_programs = set()
         for observing_block_file in path_observing_blocks.glob("**/*.json"):
             observing_block = observing.ObservingBlock.parse_file(observing_block_file)
+
+            match = block_regex.match(observing_block.program)
+            try:
+                abs(int(match.groupdict()["id"]))
+            except ValueError:
+                bad_block_programs.add(observing_block.program)
+                continue
             self.observing_blocks[observing_block.program] = observing_block
             self.observing_blocks_status[observing_block.program] = (
                 await self._get_block_status(program=observing_block.program)
+            )
+
+        if bad_block_programs:
+            bad_blocks = ", ".join(bad_block_programs)
+            self.log.warning(
+                f"The following blocks have malformed program values: {bad_blocks}. "
+                "Block program must have the format BLOCK-123 or BLOCK-T123. "
+                "These blocks will be ignored."
             )
 
     async def validate_observing_blocks(

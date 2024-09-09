@@ -95,7 +95,16 @@ class TestModel(unittest.IsolatedAsyncioTestCase):
 
         await self.model.configure(config)
 
-        await self.model.load_observing_blocks("../observing_blocks")
+        with self.assertLogs(
+            self.model.log, level=logging.WARNING
+        ) as load_obs_block_logs:
+            await self.model.load_observing_blocks("../observing_blocks")
+
+        assert (
+            "WARNING:Model:The following blocks have malformed program values: "
+            "not-a-block. Block program must have the format BLOCK-123 or BLOCK-T123. "
+            "These blocks will be ignored." in load_obs_block_logs.output
+        )
 
         observing_blocks_expected = self.get_expected_observing_blocks()
 
@@ -127,7 +136,7 @@ class TestModel(unittest.IsolatedAsyncioTestCase):
         await self.model.load_observing_blocks("../observing_blocks")
 
         self.model.add_scheduled_target(
-            target=DriverTarget(observing_block=self.model.observing_blocks["Survey1"])
+            target=DriverTarget(observing_block=self.model.observing_blocks["BLOCK-6"])
         )
 
         assert len(self.model.get_scheduled_targets()) == 1
@@ -142,7 +151,7 @@ class TestModel(unittest.IsolatedAsyncioTestCase):
 
         await self.model.load_observing_blocks("../observing_blocks")
 
-        target = DriverTarget(observing_block=self.model.observing_blocks["Survey1"])
+        target = DriverTarget(observing_block=self.model.observing_blocks["BLOCK-6"])
 
         target.add_sal_index(10000)
         target.add_sal_index(10001)
@@ -197,7 +206,7 @@ class TestModel(unittest.IsolatedAsyncioTestCase):
         assert len(self.model.script_info) == 0
         assert len(self.model.get_scheduled_targets()) == 0
 
-        target = DriverTarget(observing_block=self.model.observing_blocks["Survey1"])
+        target = DriverTarget(observing_block=self.model.observing_blocks["BLOCK-6"])
 
         target.add_sal_index(sal_index=10003)
         target.add_sal_index(sal_index=10004)
@@ -236,23 +245,23 @@ class TestModel(unittest.IsolatedAsyncioTestCase):
 
     def get_expected_observing_blocks(self) -> set[str]:
         return {
-            "Survey1",
-            "greedy",
-            "valid-block",
-            "Survey2",
-            "cwfs",
-            "invalid-block",
-            "huge-block",
-            "huge-block-with-config",
+            "BLOCK-1",
+            "BLOCK-2",
+            "BLOCK-3",
+            "BLOCK-4",
+            "BLOCK-5",
+            "BLOCK-6",
+            "BLOCK-7",
+            "BLOCK-8",
         }
 
     def get_expected_block_status(self) -> dict[str, BlockStatus]:
         return {
-            "cwfs": BlockStatus.AVAILABLE,
-            "greedy": BlockStatus.AVAILABLE,
-            "Survey1": BlockStatus.AVAILABLE,
-            "Survey2": BlockStatus.INVALID,
-            "valid-block": BlockStatus.AVAILABLE,
+            "BLOCK-1": BlockStatus.AVAILABLE,
+            "BLOCK-2": BlockStatus.AVAILABLE,
+            "BLOCK-6": BlockStatus.AVAILABLE,
+            "BLOCK-7": BlockStatus.INVALID,
+            "BLOCK-8": BlockStatus.AVAILABLE,
         }
 
     def get_sample_configuration(self):

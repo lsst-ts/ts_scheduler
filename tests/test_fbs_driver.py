@@ -142,14 +142,14 @@ class TestFeatureSchedulerDriver(unittest.TestCase):
     def test_select_next_target_with_cwfs(self):
         self.configure_scheduler_for_test_with_cwfs()
 
-        self.driver.assert_survey_observing_script("cwfs")
+        self.driver.assert_survey_observing_script("BLOCK-1")
 
         targets = self.run_observations(register_observations=True)
 
         self.assertGreater(len(targets), 0)
 
         number_of_cwfs_targets = len(
-            [target for target in targets if target.observation["note"][0] == "cwfs"]
+            [target for target in targets if target.observation["note"][0] == "BLOCK-1"]
         )
 
         registered_targets = self.driver.schema_converter.opsim2obs(

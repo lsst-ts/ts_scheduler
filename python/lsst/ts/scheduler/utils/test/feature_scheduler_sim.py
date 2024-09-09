@@ -154,28 +154,28 @@ class FeatureSchedulerSim:
 
         standard_visit_block = observing.ObservingBlock(
             name="StandardVisit",
-            program="greedy",
+            program="BLOCK-2",
             scripts=[script1, script2],
             constraints=[],
         )
 
         survey_1 = observing.ObservingBlock(
             name="StandardVisit",
-            program="Survey1",
+            program="BLOCK-6",
             scripts=[script1, script2],
             constraints=[observing.AirmassConstraint(max=1.5)],
         )
 
         survey_2 = observing.ObservingBlock(
             name="StandardVisit",
-            program="Survey2",
+            program="BLOCK-7",
             scripts=[script1, script2],
             constraints=[observing.AirmassConstraint(max=1.5)],
         )
 
         cwfs = observing.ObservingBlock(
             name="CurvatureWavefrontSensing",
-            program="cwfs",
+            program="BLOCK-1",
             scripts=[script_cwfs],
             constraints=[],
         )

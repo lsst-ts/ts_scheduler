@@ -72,7 +72,7 @@ def gen_greedy_surveys(
         "seed": seed,
         "camera": "LSST",
         "dither": False,
-        "survey_name": "greedy",
+        "survey_name": "BLOCK-2",
     }
 
     surveys = []

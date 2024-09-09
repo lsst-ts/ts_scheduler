@@ -1,6 +1,6 @@
 {
     "name": "StandardVisit",
-    "program": "BLOCK-7",
+    "program": "not-a-block",
     "constraints": [],
     "scripts": [
         {

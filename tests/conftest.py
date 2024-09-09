@@ -23,15 +23,22 @@ import os
 import pathlib
 import subprocess
 import typing
+from unittest.mock import patch
 
 import numpy as np
 import pytest
 import requests
 from lsst.ts import utils
 from lsst.ts.scheduler.utils import efd_utils
-from lsst.ts.scheduler.utils.csc_utils import DDS_VERSION
 from rubin_scheduler.data.data_sets import get_data_dir
 from rubin_scheduler.data.rs_download_sky import MyHTMLParser
+
+DDS_VERSION = True
+
+try:
+    from lsst.ts.salobj import parse_idl  # noqa: F401
+except ImportError:
+    DDS_VERSION = False
 
 
 def has_required_sky_file(path: pathlib.Path, mjd: float) -> bool:
@@ -210,3 +217,16 @@ def start_ospl_daemon() -> None:
 @pytest.fixture(scope="session", autouse=True)
 def mock_efd_client() -> None:
     efd_utils.__with_lsst_efd_client__ = False
+
+
+@pytest.fixture(autouse=True)
+def patch_environment(monkeypatch):
+    monkeypatch.setenv("IMAGE_SERVER_URL", "mytemp")
+
+
+@pytest.fixture(autouse=True)
+def patch_get_next_obs_id():
+    with patch("lsst.ts.utils.ImageNameServiceClient.get_next_obs_id") as mock_method:
+        # Configure the mock if needed, e.g., set return_value
+        mock_method.return_value = (0, "BL1_O_20240906_000001")
+        yield mock_method

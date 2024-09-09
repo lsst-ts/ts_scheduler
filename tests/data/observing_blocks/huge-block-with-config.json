@@ -1,6 +1,6 @@
 {
     "name": "UnitTest",
-    "program": "huge-block-with-config",
+    "program": "BLOCK-3",
     "constraints": [],
     "configuration_schema": "$schema: http://json-schema.org/draft-07/schema#\ntitle: BLOCK-123 configuration\ndescription: Configuration for BLOCK-123.\ntype: object\nproperties:\n  optional_field_string:\n    description: An optional string that can be passed to the script.\n    type: string\n    default: \"\"\n  optional_field_number:\n    description: An optional number that can be passed to the script.\n    type: number\n    default: 0\n",
     "scripts": [

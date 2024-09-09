@@ -3,7 +3,7 @@ targets:
     ra: 0.
     dec: -50.
     name: tile01
-    program: Survey1
+    program: BLOCK-6 
     instrument_setup:
       -
         exptime: 15.
@@ -15,7 +15,7 @@ targets:
     ra: 3.
     dec: -50.
     name: tile02
-    program: Survey1
+    program: BLOCK-6
     instrument_setup:
       -
         exptime: 15.
@@ -27,7 +27,7 @@ targets:
     ra: 6.
     dec: -50.
     name: tile03
-    program: Survey1
+    program: BLOCK-6
     instrument_setup:
       -
         exptime: 15.
@@ -39,7 +39,7 @@ targets:
     ra: 9.
     dec: -50.
     name: tile04
-    program: Survey1
+    program: BLOCK-6
     instrument_setup:
       -
         exptime: 15.
@@ -51,7 +51,7 @@ targets:
     ra: 12.
     dec: -50.
     name: tile05
-    program: Survey1
+    program: BLOCK-6
     instrument_setup:
       -
         exptime: 15.
@@ -63,7 +63,7 @@ targets:
     ra: 15.
     dec: -50.
     name: tile06
-    program: Survey1
+    program: BLOCK-6
     instrument_setup:
       -
         exptime: 15.
@@ -75,7 +75,7 @@ targets:
     ra: 18.
     dec: -50.
     name: tile07
-    program: Survey1
+    program: BLOCK-6
     instrument_setup:
       -
         exptime: 15.
@@ -87,7 +87,7 @@ targets:
     ra: 21.
     dec: -50.
     name: tile08
-    program: Survey1
+    program: BLOCK-6
     instrument_setup:
       -
         exptime: 15.
@@ -99,7 +99,7 @@ targets:
     ra: 12.
     dec: -10.
     name: tile09
-    program: Survey1
+    program: BLOCK-6
     instrument_setup:
       -
         exptime: 15.
@@ -111,7 +111,7 @@ targets:
     ra: 12
     dec: -13.5
     name: tile10
-    program: Survey1
+    program: BLOCK-6
     instrument_setup:
       -
         exptime: 15.
