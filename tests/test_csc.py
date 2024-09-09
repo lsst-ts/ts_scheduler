@@ -31,7 +31,7 @@ from lsst.ts import salobj
 from lsst.ts.scheduler import SchedulerCSC
 from lsst.ts.scheduler.mock import ObservatoryStateMock
 from lsst.ts.scheduler.utils import SchedulerModes
-from lsst.ts.scheduler.utils.csc_utils import DetailedState, support_command
+from lsst.ts.scheduler.utils.csc_utils import DetailedState
 from lsst.ts.scheduler.utils.error_codes import OBSERVATORY_STATE_UPDATE
 
 SHORT_TIMEOUT = 10.0
@@ -198,12 +198,16 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
             self.remote.evt_detailedState.flush()
 
             await self.check_standard_state_transitions(
-                enabled_commands=["resume", "stop", "load"]
-                + (
-                    ["computePredictedSchedule"]
-                    if support_command("computePredictedSchedule")
-                    else []
-                ),
+                enabled_commands=[
+                    "resume",
+                    "stop",
+                    "load",
+                    "computePredictedSchedule",
+                    "addBlock",
+                    "removeBlock",
+                    "validateBlock",
+                    "getBlockStatus",
+                ]
             )
             await self.assert_next_sample(
                 self.remote.evt_detailedState,
@@ -305,11 +309,6 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
             finally:
                 await salobj.set_summary_state(self.remote, salobj.State.STANDBY)
 
-    # TODO: (DM-34905) Remove backward compatibility.
-    @unittest.skipIf(
-        not support_command("computePredictedSchedule"),
-        "Command 'computePredictedSchedule' not supported.",
-    )
     async def test_compute_predicted_schedule(self):
         async with self.make_csc(
             config_dir=TEST_CONFIG_DIR,
@@ -368,11 +367,6 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                     salobj.State.STANDBY,
                 )
 
-    # TODO: (DM-34905) Remove backward compatibility.
-    @unittest.skipIf(
-        not support_command("computePredictedSchedule"),
-        "Command 'computePredictedSchedule' not supported.",
-    )
     async def test_disable_while_computing_predicted_schedule(self):
         async with self.make_csc(
             config_dir=TEST_CONFIG_DIR,

@@ -50,7 +50,7 @@ requirements:
     - python {{ python }}
     - setuptools {{ setuptools }}
     - setuptools_scm {{ setuptools_scm }}
-    - ts-conda-build =0.3
+    - ts-conda-build =0.4
   run:
     - python {{ python }}
     - setuptools {{ setuptools }}

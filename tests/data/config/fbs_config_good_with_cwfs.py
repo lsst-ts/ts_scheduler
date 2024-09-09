@@ -92,7 +92,7 @@ def gen_greedy_surveys(
         "seed": seed,
         "camera": "LSST",
         "dither": True,
-        "survey_name": "greedy",
+        "survey_name": "BLOCK-2",
     }
 
     surveys = []
@@ -173,7 +173,7 @@ if __name__ == "config":
         footprints.footprints[i, :] = footprints_hp[key]
 
     greedy = gen_greedy_surveys(nside, nexp=1, footprints=footprints, seed=seed)
-    cwfs = gen_cwfs_survey(nside=nside, survey_name="cwfs", time_gap_min=5.0)
+    cwfs = gen_cwfs_survey(nside=nside, survey_name="BLOCK-1", time_gap_min=5.0)
 
     surveys = [cwfs, greedy]
 

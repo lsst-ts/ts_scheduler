@@ -6,6 +6,7 @@ auxtel:
     parameters:
       new_moon_phase_threshold: 20.0
       night_boundary: -12.0
+      cwfs_block_name: cwfs
     stop_tracking_observing_script_is_standard: true
     stop_tracking_observing_script_name: stop_tracking.py
   driver_type: driver
@@ -148,6 +149,7 @@ maintel:
     parameters:
       new_moon_phase_threshold: 20.0
       night_boundary: -12.0
+      cwfs_block_name: cwfs
     stop_tracking_observing_script_is_standard: true
     stop_tracking_observing_script_name: stop_tracking.py
   driver_type: driver

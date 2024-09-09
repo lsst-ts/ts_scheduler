@@ -463,12 +463,12 @@ class FeatureScheduler(Driver):
         """
 
         try:
-            self.assert_survey_observing_script("cwfs")
+            self.assert_survey_observing_script(self.parameters.cwfs_block_name)
         except AssertionError:
             self.log.debug("CWFS survey not configured.")
             return False
 
-        if target.observation["note"][0] == "cwfs":
+        if target.observation["note"][0] == self.parameters.cwfs_block_name:
             self.log.debug("Scheduled target already cwfs.")
             return False
 
@@ -505,10 +505,10 @@ class FeatureScheduler(Driver):
         `Target`
             Validated target for CWFS.
         """
-        self.assert_survey_observing_script("cwfs")
+        self.assert_survey_observing_script(self.parameters.cwfs_block_name)
 
         cwfs_observation = observation.copy()
-        cwfs_observation["note"][0] = "cwfs"
+        cwfs_observation["note"][0] = self.parameters.cwfs_block_name
 
         self.log.debug(f"Get cwfs target for: {observation}.")
 

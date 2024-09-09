@@ -22,9 +22,9 @@
 __all__ = [
     "NonFinalStates",
     "FailedStates",
+    "block_regex",
     "SchedulerModes",
     "is_uri",
-    "support_command",
     "OBSERVATION_NAMED_PARAMETERS",
     "set_detailed_state",
     "BlockStatus",
@@ -34,18 +34,7 @@ import enum
 import re
 from urllib.parse import urlparse
 
-from lsst.ts.idl import get_idl_dir
 from lsst.ts.idl.enums import Script
-
-DDS_VERSION = True
-try:
-    from lsst.ts.salobj import parse_idl
-except ImportError:
-    import warnings
-
-    warnings.warn("Running kafka version of CSC.", Warning)
-    DDS_VERSION = False
-    from lsst.ts.salobj import ComponentInfo
 
 NonFinalStates = frozenset(
     (
@@ -71,6 +60,10 @@ FailedStates = frozenset(
 )
 
 efd_query_re = re.compile(r"SELECT (.*) FROM (.*) WHERE (.*)")
+
+block_regex = re.compile(
+    r"(?P<block_test_case>BLOCK-T)?(?P<block>BLOCK-)?(?P<id>[0-9]*)"
+)
 
 OBSERVATION_NAMED_PARAMETERS = [
     "targetId",
@@ -176,31 +169,6 @@ def is_valid_efd_query(entry: str) -> bool:
         True if it is a valid EFD query.
     """
     return efd_query_re.match(entry) is not None
-
-
-def support_command(command_name: str) -> bool:
-    """Check if the CSC supports a particular command.
-
-    This is used to provide backward compatibility for new commands being added
-    to the CSC.
-
-    Returns
-    -------
-    `bool`
-        True if the CSC interface defines the command, False
-        otherwise.
-    """
-    component_metadata = (
-        parse_idl("Scheduler", get_idl_dir() / "sal_revCoded_Scheduler.idl")
-        if DDS_VERSION
-        else ComponentInfo("Scheduler", "none")
-    )
-
-    return (
-        f"command_{command_name}" in component_metadata.topic_info
-        if DDS_VERSION
-        else f"cmd_{command_name}" in component_metadata.topics
-    )
 
 
 def set_detailed_state(detailed_state):
