@@ -363,7 +363,7 @@ class Driver:
     def get_stop_tracking_target(self) -> DriverTarget:
         stop_tracking_block = observing.ObservingBlock(
             name="StopTracking",
-            program="_Internal",
+            program="",
             constraints=[],
             scripts=[
                 observing.ObservingScript(
