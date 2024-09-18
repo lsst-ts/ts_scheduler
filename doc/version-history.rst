@@ -4,6 +4,12 @@
 Version History
 ===============
 
+v2.1.1
+------
+
+* In ``driver/driver.py``, update ``get_stop_tracking_target`` to return a block with empty program.
+  The previously used string (``_Internal``) is no longer valid.
+
 v2.1.0
 ------
 
