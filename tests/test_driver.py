@@ -140,7 +140,7 @@ class TestSchedulerDriver(unittest.TestCase):
         stop_tracking_target = self.driver.get_stop_tracking_target()
 
         assert stop_tracking_target.observing_block.name == "StopTracking"
-        assert stop_tracking_target.observing_block.program == "_Internal"
+        assert stop_tracking_target.observing_block.program == ""
         assert (
             stop_tracking_target.observing_block.scripts[0].name
             == config.driver_configuration["stop_tracking_observing_script_name"]
