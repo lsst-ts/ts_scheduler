@@ -69,13 +69,18 @@ def gen_greedy_surveys(
         "seed": seed,
         "camera": "LSST",
         "dither": True,
-        "survey_name": "BLOCK-2",
+        "survey_name": "Greedy",
     }
 
     surveys = []
-    detailer = detailers.CameraRotDetailer(
-        min_rot=np.min(camera_rot_limits), max_rot=np.max(camera_rot_limits)
-    )
+    survey_detailers = [
+        detailers.CameraRotDetailer(
+            min_rot=np.min(camera_rot_limits), max_rot=np.max(camera_rot_limits)
+        ),
+        detailers.TrackingInfoDetailer(
+            science_program="BLOCK-2",
+        ),
+    ]
 
     for filtername in filters:
         bfs = [
@@ -94,7 +99,7 @@ def gen_greedy_surveys(
             ),
             (bf.StrictFilterBasisFunction(filtername=filtername), stayfilter_weight),
             (
-                bf.ZenithShadowMaskBasisFunction(
+                bf.AltAzShadowMaskBasisFunction(
                     nside=nside, shadow_minutes=shadow_minutes, max_alt=max_alt
                 ),
                 0,
@@ -113,7 +118,7 @@ def gen_greedy_surveys(
                 nside=nside,
                 ignore_obs=ignore_obs,
                 nexp=nexp,
-                detailers=[detailer],
+                detailers=survey_detailers,
                 **greed_survey_params,
             )
         )
@@ -136,7 +141,7 @@ if __name__ == "config":
     footprints_hp, footprints_labels = sky.return_maps()
 
     footprints = Footprint(
-        conditions.mjd_start, sun_ra_start=conditions.sun_ra_start, nside=nside
+        conditions.mjd_start, sun_ra_start=conditions.sun_ra, nside=nside
     )
     for i, key in enumerate(footprints_hp.dtype.names):
         footprints.footprints[i, :] = footprints_hp[key]
