@@ -34,7 +34,7 @@ import yaml
 from astropy.time import Time
 from lsst.ts.utils import index_generator
 from rubin_scheduler.scheduler.features import Conditions
-from rubin_scheduler.scheduler.utils import empty_observation
+from rubin_scheduler.scheduler.utils import ObservationArray
 from rubin_scheduler.site_models import Almanac
 from rubin_scheduler.utils import _ra_dec2_hpid
 
@@ -714,6 +714,31 @@ class FeatureScheduler(Driver):
         self.conditions.moonrise = self.almanac.sunsets["moonrise"][almanac_indx]
         self.conditions.moonset = self.almanac.sunsets["moonset"][almanac_indx]
 
+        # Telescope limits
+        self.conditions.tel_az_limits = [
+            self.models["observatory_model"].params.telaz_minpos_rad,
+            self.models["observatory_model"].params.telaz_maxpos_rad,
+        ]
+
+        self.conditions.tel_alt_limits = [
+            self.models["observatory_model"].params.telalt_minpos_rad,
+            self.models["observatory_model"].params.telalt_maxpos_rad,
+        ]
+
+        # Sky limits provides a way to mask specific regions of the sky.
+        # This is a list of regions (not necessarily contiguous) to
+        # avoid. We currently don't have a way to specify these so
+        # will leave them as None for now.
+        self.conditions.sky_alt_limits = None
+        self.conditions.sky_az_limits = None
+
+        # TODO (DM-46403): Add AltAz limit pad configuration to the
+        # observatory model.
+        # we don't have this as part of the observatory model
+        # module. Will hardcode it for now but should see
+        # about incorporating it.
+        self.conditions.altaz_limit_pad = np.radians(2.0)
+
         # Planet positions from almanac
         self.conditions.planet_positions = self.almanac.get_planet_positions(
             self.conditions.mjd
@@ -790,8 +815,11 @@ class FeatureScheduler(Driver):
         survey_name : `str`
             Survey name parsed from observation
         """
-        # For now simply return the "notes" field.
-        return observation["note"][0].split(":", maxsplit=1)[0]
+        survey_name = observation["science_program"][0]
+        if not survey_name:
+            raise RuntimeError(f"Survey name not set for {observation=}.")
+
+        return survey_name
 
     def _get_driver_target_from_observation_data_frame(
         self, observation_data_frame: typing.Tuple[pandas.Timestamp, pandas.Series]
@@ -845,7 +873,7 @@ class FeatureScheduler(Driver):
         fbs_observation : `np.ndarray`
             Feature scheduler observation.
         """
-        fbs_observation = empty_observation()
+        fbs_observation = ObservationArray(n=1)
 
         for key in self.fbs_observation_named_parameter_map():
             fbs_observation[key] = observation_data_frame[1][
