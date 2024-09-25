@@ -45,8 +45,6 @@ I0 = scriptqueue.script_queue.SCRIPT_INDEX_MULT  # initial Script SAL index
 STD_TIMEOUT = 15.0
 TEST_CONFIG_DIR = pathlib.Path(__file__).parents[1].joinpath("tests", "data", "config")
 
-logging.basicConfig()
-
 
 @unittest.skipIf(not with_scriptqueue, "Could not import scriptqueue.")
 class SimpleTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
@@ -66,9 +64,12 @@ class SimpleTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
             super().run(result)
 
     async def asyncSetUp(self):
+        self.log = logging.getLogger(__name__)
         self.datadir = os.path.abspath(os.path.join(os.path.dirname(__file__), "data"))
         standardpath = os.path.join(self.datadir, "standard")
         externalpath = os.path.join(self.datadir, "external")
+        self._test_start_time = utils.current_tai()
+
         self.queue = scriptqueue.ScriptQueue(
             index=1, standardpath=standardpath, externalpath=externalpath
         )
@@ -110,17 +111,27 @@ class SimpleTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
                 self.observatory_mock.close(),
             )
 
+    async def next_sample(self, topic_reader, timeout=STD_TIMEOUT):
+        sample = await topic_reader.next(flush=False, timeout=timeout)
+        while sample.private_sndStamp < self._test_start_time:
+            self.log.debug(f"Discarding old sample: {sample}.")
+            sample = await topic_reader.next(flush=False, timeout=timeout)
+        return sample
+
     async def test_no_queue(self):
         """Test the simple target production loop.
 
         This test makes sure the scheduler will go to a fault state if it is
         enabled and the queue is not enabled.
         """
-        data = await self.scheduler_remote.evt_errorCode.next(
-            flush=False, timeout=STD_TIMEOUT
-        )
+        data = await self.next_sample(self.scheduler_remote.evt_errorCode)
         assert data.errorCode == 0
 
+        data = await self.next_sample(self.queue_remote.evt_summaryState)
+        assert data.summaryState == salobj.State.STANDBY
+
+        data = await self.next_sample(self.scheduler_remote.evt_summaryState)
+        assert data.summaryState == salobj.State.STANDBY
         # Test 1 - Enable scheduler, with Queue enabled, then put queue in
         # standby. Scheduler should go to ENABLE and then to FAULT It may take
         # some time for the scheduler to go to FAULT state.
