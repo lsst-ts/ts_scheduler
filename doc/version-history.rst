@@ -4,6 +4,12 @@
 Version History
 ===============
 
+v2.2.0
+------
+
+* Update Scheduler CSC to work with rubin-scheduler v3.
+* Force output of the observation event when registering observations.
+
 v2.1.1
 ------
 
