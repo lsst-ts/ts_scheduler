@@ -149,7 +149,11 @@ class TestFeatureSchedulerDriver(unittest.TestCase):
         self.assertGreater(len(targets), 0)
 
         number_of_cwfs_targets = len(
-            [target for target in targets if target.observation["note"][0] == "BLOCK-1"]
+            [
+                target
+                for target in targets
+                if target.observation["science_program"][0] == "BLOCK-1"
+            ]
         )
 
         registered_targets = self.driver.schema_converter.opsim2obs(

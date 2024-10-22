@@ -1,27 +1,33 @@
 import numpy as np
 import rubin_scheduler.scheduler.basis_functions as bf
 import rubin_scheduler.scheduler.detailers as detailers
-from lsst.ts.scheduler.utils.test.feature_scheduler_sim import MJD_START
 from rubin_scheduler.scheduler.model_observatory import ModelObservatory
 from rubin_scheduler.scheduler.schedulers import CoreScheduler
 from rubin_scheduler.scheduler.surveys import GreedySurvey
 from rubin_scheduler.scheduler.utils import Footprint, SkyAreaGenerator
+from rubin_scheduler.utils import SURVEY_START_MJD as MJD_START
 
 
-def gen_cwfs_survey(nside, survey_name, time_gap_min):
+def gen_cwfs_survey(nside, survey_name, science_program, time_gap_min):
     bfs = [
         bf.SlewtimeBasisFunction(nside=nside),
         bf.MoonAvoidanceBasisFunction(nside=nside),
-        bf.ZenithShadowMaskBasisFunction(min_alt=28.0, max_alt=85.5, nside=nside),
+        bf.AltAzShadowMaskBasisFunction(min_alt=28.0, max_alt=85.5, nside=nside),
         bf.VisitGap(note=survey_name, gap_min=time_gap_min),
     ]
 
+    survey_detailers = [
+        detailers.TrackingInfoDetailer(
+            science_program=science_program,
+        ),
+    ]
     return [
         GreedySurvey(
             bfs,
             np.ones_like(bfs) * 1000.0,
             nside=nside,
             survey_name=survey_name,
+            detailers=survey_detailers,
             nexp=4,
         )
     ]
@@ -92,13 +98,18 @@ def gen_greedy_surveys(
         "seed": seed,
         "camera": "LSST",
         "dither": True,
-        "survey_name": "BLOCK-2",
+        "survey_name": "Greedy",
     }
 
     surveys = []
-    detailer = detailers.CameraRotDetailer(
-        min_rot=np.min(camera_rot_limits), max_rot=np.max(camera_rot_limits)
-    )
+    survey_detailers = [
+        detailers.CameraRotDetailer(
+            min_rot=np.min(camera_rot_limits), max_rot=np.max(camera_rot_limits)
+        ),
+        detailers.TrackingInfoDetailer(
+            science_program="BLOCK-2",
+        ),
+    ]
 
     for filtername in filters:
         bfs = [
@@ -120,7 +131,7 @@ def gen_greedy_surveys(
             (bf.NotTwilightBasisFunction(sun_alt_limit=sun_alt_limit), 0),
             # Masks, give these 0 weight
             (
-                bf.ZenithShadowMaskBasisFunction(
+                bf.AltAzShadowMaskBasisFunction(
                     nside=nside, shadow_minutes=shadow_minutes, max_alt=max_alt
                 ),
                 0,
@@ -144,7 +155,7 @@ def gen_greedy_surveys(
                 nside=nside,
                 ignore_obs=ignore_obs,
                 nexp=nexp,
-                detailers=[detailer],
+                detailers=survey_detailers,
                 **greed_survey_params,
             )
         )
@@ -166,14 +177,17 @@ if __name__ == "config":
     sky = SkyAreaGenerator(nside=nside)
     footprints_hp, labels = sky.return_maps()
 
-    footprints = Footprint(
-        conditions.mjd_start, sun_ra_start=conditions.sun_ra_start, nside=nside
-    )
+    footprints = Footprint(MJD_START, sun_ra_start=conditions.sun_ra, nside=nside)
     for i, key in enumerate(footprints_hp.dtype.names):
         footprints.footprints[i, :] = footprints_hp[key]
 
     greedy = gen_greedy_surveys(nside, nexp=1, footprints=footprints, seed=seed)
-    cwfs = gen_cwfs_survey(nside=nside, survey_name="BLOCK-1", time_gap_min=5.0)
+    cwfs = gen_cwfs_survey(
+        nside=nside,
+        survey_name="CurvatureWavefrontSensing",
+        science_program="BLOCK-1",
+        time_gap_min=5.0,
+    )
 
     surveys = [cwfs, greedy]
 

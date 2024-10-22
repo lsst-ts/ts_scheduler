@@ -129,7 +129,7 @@ def make_fbs_observation_from_target(target: DriverTarget) -> np.ndarray:
     `np.ndarray`
         Feature based scheduler observation.
     """
-    observation = rs_sched_utils.empty_observation()
+    observation = rs_sched_utils.ObservationArray(n=1)
 
     observation["ID"][0] = target.targetid
     observation["filter"][0] = target.filter

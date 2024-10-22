@@ -1920,7 +1920,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             Observation to be registered.
         """
         await self.evt_observation.set_write(
-            **dataclasses.asdict(target.get_observation())
+            **dataclasses.asdict(target.get_observation()),
+            force_output=True,
         )
         observing_block = target.get_observing_block()
         await self._update_block_status(

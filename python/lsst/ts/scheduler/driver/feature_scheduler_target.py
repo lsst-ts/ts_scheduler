@@ -59,3 +59,8 @@ class FeatureSchedulerTarget(DriverTarget):
         )
         self.note = str(observation["note"][0])
         self.slewtime = float(observation["slewtime"][0])
+
+    @property
+    def rot(self) -> float:
+        """Return the physical rotator position in degrees."""
+        return np.degrees(self.observation["rotTelPos"][0])
