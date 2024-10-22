@@ -31,7 +31,7 @@ from lsst.ts import observing
 from lsst.ts.observatory.model import ObservatoryModel
 from lsst.ts.scheduler.driver.feature_scheduler_target import FeatureSchedulerTarget
 from lsst.ts.scheduler.utils.test.feature_scheduler_sim import MJD_START
-from rubin_scheduler.scheduler.utils import empty_observation
+from rubin_scheduler.scheduler.utils import ObservationArray
 
 
 class TestFeatureSchedulerTarget(unittest.TestCase):
@@ -213,7 +213,7 @@ class TestFeatureSchedulerTarget(unittest.TestCase):
 
     def make_fbs_observation(self, note, filter_obs="r"):
         observations = np.concatenate(
-            [empty_observation() for _ in range(len(filter_obs))]
+            [ObservationArray(n=1) for _ in range(len(filter_obs))]
         )
 
         ra, dec, _ = self.observatory_model.altaz2radecpa(

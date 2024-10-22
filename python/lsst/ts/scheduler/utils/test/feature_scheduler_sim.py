@@ -32,12 +32,10 @@ from lsst.ts.dateloc import ObservatoryLocation
 from lsst.ts.observatory.model import ObservatoryModel, ObservatoryState
 from rubin_scheduler.site_models.cloud_model import CloudModel
 from rubin_scheduler.site_models.seeing_model import SeeingModel
-from rubin_scheduler.utils import survey_start_mjd
+from rubin_scheduler.utils import SURVEY_START_MJD as MJD_START
 
 from ...driver import FeatureScheduler
 from ...driver.feature_scheduler_target import FeatureSchedulerTarget
-
-MJD_START = survey_start_mjd()
 
 
 class FeatureSchedulerSim:
