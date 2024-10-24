@@ -73,4 +73,5 @@ class FeatureSchedulerTarget(DriverTarget):
         `str`
             Target name.
         """
-        return str(self.observation["target_name"][0])
+        target_name = str(self.observation["target_name"][0])
+        return target_name if target_name else "FeatureSchedulerTarget"
