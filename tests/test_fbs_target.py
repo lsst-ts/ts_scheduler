@@ -71,7 +71,7 @@ class TestFeatureSchedulerTarget(unittest.TestCase):
         script_config_expected = {
             "targetid": target.targetid,
             "band_filter": target.filter,
-            "name": observation["note"][0],
+            "name": target.get_target_name(),
             "ra": target.get_ra(),
             "dec": target.get_dec(),
             "alt": target.alt,
@@ -151,7 +151,7 @@ class TestFeatureSchedulerTarget(unittest.TestCase):
         )
 
         script_config_expected = {
-            "object_name": observation["note"][0].split(":", maxsplit=1)[-1],
+            "object_name": target.get_target_name(),
             "object_dec": Angle(float(observation["dec"][0]), unit=units.rad).to_string(
                 unit=units.degree, sep=":", alwayssign=True
             ),
@@ -164,7 +164,6 @@ class TestFeatureSchedulerTarget(unittest.TestCase):
         script_config = yaml.safe_load(
             target.get_observing_block().scripts[0].get_script_configuration()
         )
-
         assert script_config == script_config_expected
 
     def test_get_script_config_spec_with_additional_config(self):
@@ -192,9 +191,7 @@ class TestFeatureSchedulerTarget(unittest.TestCase):
 
         script_config_expected = additional_config.copy()
 
-        script_config_expected["object_name"] = observation["note"][0].split(
-            ":", maxsplit=1
-        )[-1]
+        script_config_expected["object_name"] = target.get_target_name()
         script_config_expected["object_dec"] = Angle(
             float(observation["dec"][0]), unit=units.rad
         ).to_string(unit=units.degree, sep=":", alwayssign=True)
