@@ -64,3 +64,13 @@ class FeatureSchedulerTarget(DriverTarget):
     def rot(self) -> float:
         """Return the physical rotator position in degrees."""
         return np.degrees(self.observation["rotTelPos"][0])
+
+    def get_target_name(self) -> str:
+        """Parse the note field to get the target name.
+
+        Returns
+        -------
+        `str`
+            Target name.
+        """
+        return str(self.observation["target_name"][0])
