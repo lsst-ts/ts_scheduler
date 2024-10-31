@@ -1941,6 +1941,23 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             height=settings.models["location"]["obs_site"]["height"],
         )
 
+        await self.evt_cameraConfig.set_write(
+            readoutTime=settings.models["observatory_model"]["camera"]["readout_time"],
+            shutterTime=settings.models["observatory_model"]["camera"]["shutter_time"],
+            filterChangeTime=settings.models["observatory_model"]["camera"][
+                "filter_change_time"
+            ],
+            filterMounted=",".join(
+                settings.models["observatory_model"]["camera"]["filter_mounted"]
+            ),
+            filterRemovable=",".join(
+                settings.models["observatory_model"]["camera"]["filter_removable"]
+            ),
+            filterUnmounted=",".join(
+                settings.models["observatory_model"]["camera"]["filter_unmounted"]
+            ),
+        )
+
         await self.evt_telescopeConfig.set_write(
             altitudeMinpos=settings.models["observatory_model"]["telescope"][
                 "altitude_minpos"
