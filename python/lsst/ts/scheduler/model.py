@@ -1016,9 +1016,9 @@ class Model:
             telescopeRotator=self.models["observatory_state"].telrot,
             domeAltitude=self.models["observatory_state"].domalt,
             domeAzimuth=self.models["observatory_state"].domaz,
-            filterPosition="",
-            filterMounted="",
-            filterUnmounted="",
+            filterPosition=self.models["observatory_state"].filter,
+            filterMounted=",".join(self.models["observatory_state"].mountedfilters),
+            filterUnmounted=",".join(self.models["observatory_state"].unmountedfilters),
         )
 
     def set_observatory_state(self, current_target_state) -> None:
