@@ -176,6 +176,17 @@ class Model:
             else:
                 self.log.warning(f"No configuration for {model}. Skipping.")
 
+        self.log.info("Synchronizing observatory state.")
+        self.models["observatory_state"].filter = self.models[
+            "observatory_model"
+        ].current_state.filter
+        self.models["observatory_state"].mountedfilters = self.models[
+            "observatory_model"
+        ].current_state.mountedfilters
+        self.models["observatory_state"].unmountedfilters = self.models[
+            "observatory_model"
+        ].current_state.unmountedfilters
+
         await self.load_observing_blocks(config.path_observing_blocks)
 
         self.log.debug("Configuring Driver and Scheduler.")
