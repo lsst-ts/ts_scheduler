@@ -214,6 +214,34 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                 flush=False,
                 substate=DetailedState.IDLE,
             )
+            await self.assert_next_sample(
+                self.remote.evt_cameraConfig,
+                flush=False,
+            )
+            await self.assert_next_sample(
+                self.remote.evt_telescopeConfig,
+                flush=False,
+            )
+            await self.assert_next_sample(
+                self.remote.evt_rotatorConfig,
+                flush=False,
+            )
+            await self.assert_next_sample(
+                self.remote.evt_domeConfig,
+                flush=False,
+            )
+            await self.assert_next_sample(
+                self.remote.evt_slewConfig,
+                flush=False,
+            )
+            await self.assert_next_sample(
+                self.remote.evt_opticsLoopCorrConfig,
+                flush=False,
+            )
+            await self.assert_next_sample(
+                self.remote.evt_parkConfig,
+                flush=False,
+            )
 
     async def test_configuration_invalid(self):
         """Test basic configuration."""
