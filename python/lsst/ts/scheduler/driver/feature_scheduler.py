@@ -432,10 +432,30 @@ class FeatureScheduler(Driver):
 
             hpid = _ra_dec2_hpid(self.nside, target.ra_rad, target.dec_rad)
 
+            effective_filter_name = target.filter
+            if effective_filter_name not in self.conditions.skybrightness:
+                for filter_name in self.conditions.skybrightness:
+                    if filter_name in effective_filter_name:
+                        self.log.debug(
+                            f"Using effective filter name {filter_name} instead of {effective_filter_name}."
+                        )
+                        effective_filter_name = filter_name
+                        break
+                else:
+                    available_filters = list(self.conditions.skybrightness.keys())
+                    mid_range = int(len(available_filters) / 2)
+                    effective_filter_name = available_filters[mid_range]
+                    self.log.warning(
+                        f"Could not find effective filter name for {target.filter} in {available_filters},"
+                        f"using mid range {effective_filter_name}."
+                    )
+
             target.observation["skybrightness"] = self.conditions.skybrightness[
-                target.filter
+                effective_filter_name
             ][hpid]
-            target.observation["FWHMeff"] = self.conditions.FWHMeff[target.filter][hpid]
+            target.observation["FWHMeff"] = self.conditions.FWHMeff[
+                effective_filter_name
+            ][hpid]
             target.observation["airmass"] = self.conditions.airmass[hpid]
             target.observation["alt"] = target.alt_rad
             target.observation["az"] = target.az_rad
