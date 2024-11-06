@@ -709,6 +709,7 @@ class Model:
         self.log.debug(f"Checking {number_of_targets} scheduled targets")
 
         report = ""
+        debug_report = ""
 
         for _ in range(number_of_targets):
             target = scheduled_targets.pop(0)
@@ -719,57 +720,74 @@ class Model:
                 for sal_index in sal_indices
                 if sal_index in self.script_info
             ]
+            try:
 
-            if not script_info or len(script_info) != len(sal_indices):
-                report += f"No information on all scripts on queue, put it back and continue: {target}.\n"
-                # No information on all scripts on queue,
-                # put it back and continue
-                self.raw_telemetry["scheduled_targets"].append(target)
-                continue
+                if not script_info or len(script_info) != len(sal_indices):
+                    report += f"No information on all scripts on queue, put it back and continue: {target}.\n"
+                    # No information on all scripts on queue,
+                    # put it back and continue
+                    self.raw_telemetry["scheduled_targets"].append(target)
+                    continue
 
-            scripts_state = [info.scriptState for info in script_info]
+                scripts_state = [
+                    Script.ScriptState(info.scriptState) for info in script_info
+                ]
 
-            if all([state == Script.ScriptState.DONE for state in scripts_state]):
-                # All scripts completed successfully
-                report += (
-                    f"\n\t{target.note} observation completed successfully. "
-                    "Registering observation."
+                if all([state == Script.ScriptState.DONE for state in scripts_state]):
+                    # All scripts completed successfully
+                    report += (
+                        f"\n\t{target.note} observation completed successfully. "
+                        "Registering observation."
+                    )
+
+                    self.driver.register_observation(target)
+                    scheduled_targets_info.observed.append(target)
+                    # Remove related script from the list
+                    for index in sal_indices:
+                        self.script_info.pop(index)
+                    # target now simply disappears... Should I keep it in for
+                    # future refs?
+                elif any([state in FailedStates for state in scripts_state]):
+                    # one or more script failed
+                    report += f"\n\t{target.note} failed. Not registering observation."
+                    # Remove related script from the list
+                    scheduled_targets_info.failed.append(target)
+                    for index in sal_indices:
+                        self.script_info.pop(index)
+                elif any([state in NonFinalStates for state in scripts_state]):
+                    # one or more script in a non-final state, just put it
+                    # back on
+                    # the list.
+                    debug_report += (
+                        f"\n\t{target} scripts still executing.\n"
+                        f"{target.observing_block}\n"
+                        f"{sal_indices}::{scripts_state}."
+                    )
+                    self.raw_telemetry["scheduled_targets"].append(target)
+                else:
+                    report += (
+                        (
+                            f"\n\tOne or more state unrecognized [{scripts_state}] for observations "
+                            f"{sal_indices} for target {target}."
+                        ),
+                    )
+                    scheduled_targets_info.unrecognized.extend(sal_indices)
+                    # Remove related script from the list
+                    for index in sal_indices:
+                        self.script_info.pop(index)
+            except Exception:
+                self.log.exception(
+                    f"Failed to check scheduled target {target}.\n"
+                    f"{sal_indices}."
+                    f"Report:\n\t{report}\n\tFull report: {debug_report}"
                 )
-
-                self.driver.register_observation(target)
-                scheduled_targets_info.observed.append(target)
-                # Remove related script from the list
-                for index in sal_indices:
-                    self.script_info.pop(index)
-                # target now simply disappears... Should I keep it in for
-                # future refs?
-            elif any([state in FailedStates for state in scripts_state]):
-                # one or more script failed
-                report += f"\n\t{target.note} failed. Not registering observation."
-                # Remove related script from the list
-                scheduled_targets_info.failed.append(target)
-                for index in sal_indices:
-                    self.script_info.pop(index)
-            elif any([state in NonFinalStates for state in scripts_state]):
-                # one or more script in a non-final state, just put it back on
-                # the list.
-                self.raw_telemetry["scheduled_targets"].append(target)
-            else:
-                report += (
-                    (
-                        f"\n\tOne or more state unrecognized [{scripts_state}] for observations "
-                        f"{sal_indices} for target {target}."
-                    ),
-                )
-                scheduled_targets_info.unrecognized.extend(sal_indices)
-                # Remove related script from the list
-                for index in sal_indices:
-                    self.script_info.pop(index)
 
         if report:
-            self.log.info(f"Check scheduled report:\n\n{report}")
+            self.log.info(
+                f"Check scheduled report:\n\n{report}\n\nFull report: {debug_report}."
+            )
         else:
-            self.log.debug("Nothing to report.")
+            self.log.debug(f"Full report: {debug_report}")
 
         return scheduled_targets_info
 
