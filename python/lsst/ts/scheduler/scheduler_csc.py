@@ -981,17 +981,38 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             # failed this will raise an exception and stop adding more
             # scripts
             await self.model.check_block_scripts(id=block_uid)
-            add_task = await self.queue_remote.cmd_add.set_start(
-                path=script.name,
-                config=script.get_script_configuration(),
-                isStandard=script.standard,
-                location=ScriptQueue.Location.LAST,
-                logLevel=self.log.getEffectiveLevel(),
-                block=block_name,
-                blockSize=block_size,
-                startBlock=start_block,
-                timeout=self.parameters.cmd_timeout,
-            )
+            n_retries = 3
+            for retry in range(n_retries):
+                try:
+                    add_task = await self.queue_remote.cmd_add.set_start(
+                        path=script.name,
+                        config=script.get_script_configuration(),
+                        isStandard=script.standard,
+                        location=ScriptQueue.Location.LAST,
+                        logLevel=self.log.getEffectiveLevel(),
+                        block=block_name,
+                        blockSize=block_size,
+                        startBlock=start_block,
+                        timeout=self.parameters.cmd_timeout,
+                    )
+                    break
+                except salobj.AckError as ack:
+                    if "Bad Gateway" in ack.ackcmd.result:
+                        self.log.warning(
+                            f"Failed to add script to queue due to name server error: {ack!r}. "
+                            f"Waiting {self.heartbeat_interval*(retry+1)}s and trying again. "
+                            f"Attempt {retry+1} of {n_retries}."
+                        )
+                        await asyncio.sleep(self.heartbeat_interval * (retry + 1))
+                    else:
+                        raise
+            else:
+                raise RuntimeError(
+                    "Failed to add scripts to the script queue. "
+                    "This is usually related to the camera name server not working correctly "
+                    "as the ScriptQueue used it to query for block ids. "
+                    "Contact support from camera team."
+                )
             sal_index = int(add_task.result)
             script_final_state_future = await self.model.add_scheduled_script(
                 id=block_uid, sal_index=sal_index
