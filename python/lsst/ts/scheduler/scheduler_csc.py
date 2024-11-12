@@ -1327,6 +1327,13 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         if len(scheduled_targets_info.failed) > 0:
             await self.remove_from_queue(scheduled_targets_info.failed)
+            for target in scheduled_targets_info.failed:
+                observing_block = target.get_observing_block()
+                await self._update_block_status(
+                    block_id=observing_block.program,
+                    block_status=BlockStatus.ERROR,
+                    observing_block=observing_block,
+                )
 
         return (
             len(scheduled_targets_info.failed) == 0
