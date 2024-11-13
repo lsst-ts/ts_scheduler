@@ -854,13 +854,12 @@ class Model:
             when the target was computed, how long to wait to observe the
             target and the target.
         """
+        self.synchronize_observatory_model()
+        self.register_scheduled_targets(targets_queue)
         # Note that here it runs the update_telemetry method from the
         # scheduler. This method will update the telemetry based on most
         # current recent data in the system.
         await self.update_telemetry()
-
-        self.synchronize_observatory_model()
-        self.register_scheduled_targets(targets_queue)
 
         # For now it will only generate enough targets to send to the queue
         # and leave one extra in the internal queue. In the future we will
