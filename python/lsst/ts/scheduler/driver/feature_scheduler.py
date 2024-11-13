@@ -258,20 +258,29 @@ class FeatureScheduler(Driver):
 
         fbs_observations = self.schema_converter.opsim2obs(filename=filename)
         observations = []
+        failed_observations = 0
         for fbs_observation in fbs_observations:
-            observation = np.array(fbs_observation, ndmin=1)
-            observing_block = self.get_survey_observing_block(
-                self._get_survey_name_from_observation(observation)
-            )
+            try:
+                observation = np.array(fbs_observation, ndmin=1)
+                observing_block = self.get_survey_observing_block(
+                    self._get_survey_name_from_observation(observation)
+                )
 
-            target = FeatureSchedulerTarget(
-                observing_block=observing_block,
-                observation=observation,
-                log=self.log,
-                **self.script_configuration,
-            )
+                target = FeatureSchedulerTarget(
+                    observing_block=observing_block,
+                    observation=observation,
+                    log=self.log,
+                    **self.script_configuration,
+                )
 
-            observations.append(target)
+                observations.append(target)
+            except Exception:
+                failed_observations += 1
+
+        if failed_observations > 0:
+            self.log.warning(
+                f"Failed to parse {failed_observations} of {len(fbs_observations)}."
+            )
 
         return observations
 
