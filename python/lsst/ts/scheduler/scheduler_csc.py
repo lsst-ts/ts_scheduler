@@ -1669,12 +1669,20 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             if len(self.targets_queue) > 0:
                 self._should_compute_predicted_schedule = True
                 await self.reset_handle_no_targets_on_queue()
-            elif len(self.targets_queue) == 0:
+            elif (
+                len(self.targets_queue) == 0
+                and self.model.get_number_of_scheduled_targets() == 0
+            ):
                 await self.handle_no_targets_on_queue()
+            else:
+                self.log.info("No targets generated, but still have scheduled targets.")
 
         await self.check_targets_queue_condition()
 
-        self.log.debug(f"Generated queue with {len(self.targets_queue)} targets.")
+        self.log.debug(
+            f"Generated queue with {len(self.targets_queue)} targets. "
+            f"Current scheduled targets: {self.model.get_number_of_scheduled_targets()}."
+        )
 
     async def check_targets_queue_condition(self):
         """Check targets queue condition.
