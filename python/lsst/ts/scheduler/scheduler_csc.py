@@ -851,8 +851,31 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         current_target_state = await self.ptg.tel_currentTargetStatus.next(
             flush=True, timeout=self.loop_die_timeout
         )
+        current_filter = None
+        mounted_filters = None
+        if self.salinfo.index % 2 == 1 and self.camera is not None:
+            try:
+                current_filter = (
+                    await self.camera.evt_endSetFilter.aget(
+                        timeout=self.loop_die_timeout
+                    )
+                ).filterName
+            except asyncio.TimeoutError:
+                self.log.warning("Could not get current camera filter.")
+            try:
+                mounted_filters = (
+                    await self.camera.evt_availableFilters.aget(
+                        timeout=self.loop_die_timeout
+                    )
+                ).filterNames.split(":")
+            except asyncio.TimeoutError:
+                self.log.warning("Could not get available filters.")
 
-        self.model.set_observatory_state(current_target_state=current_target_state)
+        self.model.set_observatory_state(
+            current_target_state=current_target_state,
+            current_filter=current_filter,
+            mounted_filters=mounted_filters,
+        )
 
     async def put_on_queue(self, targets: list[DriverTarget]) -> None:
         """Given a list of targets, append them on the queue to be observed.
