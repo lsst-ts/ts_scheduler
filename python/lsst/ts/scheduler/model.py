@@ -975,7 +975,7 @@ class Model:
         time_start = self.models["observatory_model"].current_state.time
         time_scheduler_evaluation = time_start
 
-        self.models["observatory_model"].stop_tracking(time_scheduler_evaluation)
+        self.models["observatory_model"].update_state(time_scheduler_evaluation)
 
         targets = []
         while (
