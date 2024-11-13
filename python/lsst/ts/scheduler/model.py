@@ -1038,7 +1038,9 @@ class Model:
             filterUnmounted=",".join(self.models["observatory_state"].unmountedfilters),
         )
 
-    def set_observatory_state(self, current_target_state) -> None:
+    def set_observatory_state(
+        self, current_target_state, current_filter=None, mounted_filters=None
+    ) -> None:
         self.models["observatory_state"].time = current_target_state.timestamp
         self.models["observatory_state"].az_rad = np.radians(
             current_target_state.demandAz
@@ -1058,6 +1060,25 @@ class Model:
         self.models["observatory_state"].pa_rad = np.radians(
             current_target_state.parAngle
         )
+        self.models["observatory_state"].telalt_rad = np.radians(
+            current_target_state.demandEl
+        )
+        self.models["observatory_state"].telaz_rad = np.radians(
+            current_target_state.demandAz
+        )
+        self.models["observatory_state"].telrot_rad = np.radians(
+            current_target_state.demandRot
+        )
+        self.models["observatory_state"].domalt_rad = np.radians(
+            current_target_state.demandEl
+        )
+        self.models["observatory_state"].domaz_rad = np.radians(
+            current_target_state.demandAz
+        )
+        if current_filter is not None:
+            self.models["observatory_state"].filter = current_filter
+        if mounted_filters is not None:
+            self.models["observatory_state"].mountedfilters = mounted_filters
 
     def get_stop_tracking_target(self) -> DriverTarget:
         """Get stop tracking target.
