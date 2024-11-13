@@ -1833,7 +1833,6 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         self._should_compute_predicted_schedule = False
 
         async with self.current_scheduler_state(publish_lfoa=False):
-            self.model.synchronize_observatory_model()
             self.model.register_scheduled_targets(targets_queue=self.targets_queue)
 
             (
@@ -2445,6 +2444,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         """
 
         async with self.scheduler_state_lock:
+            self.model.synchronize_observatory_model()
+            await self.model.update_telemetry()
             last_scheduler_state_filename = await self.save_scheduler_state(
                 publish_lfoa=publish_lfoa
             )
