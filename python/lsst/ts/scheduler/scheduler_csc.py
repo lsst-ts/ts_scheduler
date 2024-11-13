@@ -195,7 +195,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             "MTPtg" if index % 2 == 1 else "ATPtg",
             include=["currentTargetStatus"],
         )
-
+        self.camera = None
         self.no_observatory_state_warning = False
 
         self.parameters = SchedulerCscParameters()
@@ -1129,6 +1129,19 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             )
 
         self.log.debug(f"Settings for {instance!r}: {settings}")
+
+        if hasattr(settings, "instrument_name"):
+            if settings.instrument_name in {"MTCamera", "CCCamera"}:
+                self.log.info(
+                    f"Starting remote for {settings.instrument_name} to update instrument configuration."
+                )
+                self.camera = salobj.Remote(
+                    self.domain,
+                    settings.instrument_name,
+                    include=["endSetFilter", "availableFilters"],
+                    readonly=True,
+                )
+                await self.camera.start_task
 
         self.parameters.driver_type = settings.driver_type
         self.parameters.startup_type = settings.startup_type
