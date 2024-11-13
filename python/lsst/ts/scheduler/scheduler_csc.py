@@ -220,6 +220,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         # will not run once the CSC is enabled, and a "resume" command is
         # needed to start it.
         self.run_target_loop = asyncio.Event()
+        self.telemetry_in_sync = asyncio.Event()
 
         # Lock for the event loop. This is used to synchronize actions that
         # will affect the target production loop.
@@ -317,6 +318,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         """
 
         self.log.info("Enabling Scheduler CSC...")
+        self.telemetry_in_sync.clear()
 
         await asyncio.sleep(self.heartbeat_interval / 2.0)
 
@@ -813,6 +815,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             await self.tel_observatoryState.set_write(
                 **self.model.get_observatory_state()
             )
+            self.telemetry_in_sync.set()
 
             try:
                 await asyncio.wait_for(
@@ -1483,6 +1486,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 ):
                     await self.next_target_timer
 
+            await self.telemetry_in_sync.wait()
             await self.run_target_loop.wait()
 
             try:
