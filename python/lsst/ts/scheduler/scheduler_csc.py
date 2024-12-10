@@ -195,7 +195,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             "MTPtg" if index % 2 == 1 else "ATPtg",
             include=["currentTargetStatus"],
         )
-
+        self.camera = None
         self.no_observatory_state_warning = False
 
         self.parameters = SchedulerCscParameters()
@@ -220,6 +220,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         # will not run once the CSC is enabled, and a "resume" command is
         # needed to start it.
         self.run_target_loop = asyncio.Event()
+        self.telemetry_in_sync = asyncio.Event()
 
         # Lock for the event loop. This is used to synchronize actions that
         # will affect the target production loop.
@@ -317,6 +318,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         """
 
         self.log.info("Enabling Scheduler CSC...")
+        self.telemetry_in_sync.clear()
 
         await asyncio.sleep(self.heartbeat_interval / 2.0)
 
@@ -813,6 +815,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             await self.tel_observatoryState.set_write(
                 **self.model.get_observatory_state()
             )
+            self.telemetry_in_sync.set()
 
             try:
                 await asyncio.wait_for(
@@ -848,8 +851,31 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         current_target_state = await self.ptg.tel_currentTargetStatus.next(
             flush=True, timeout=self.loop_die_timeout
         )
+        current_filter = None
+        mounted_filters = None
+        if self.salinfo.index % 2 == 1 and self.camera is not None:
+            try:
+                current_filter = (
+                    await self.camera.evt_endSetFilter.aget(
+                        timeout=self.loop_die_timeout
+                    )
+                ).filterName
+            except asyncio.TimeoutError:
+                self.log.warning("Could not get current camera filter.")
+            try:
+                mounted_filters = (
+                    await self.camera.evt_availableFilters.aget(
+                        timeout=self.loop_die_timeout
+                    )
+                ).filterNames.split(":")
+            except asyncio.TimeoutError:
+                self.log.warning("Could not get available filters.")
 
-        self.model.set_observatory_state(current_target_state=current_target_state)
+        self.model.set_observatory_state(
+            current_target_state=current_target_state,
+            current_filter=current_filter,
+            mounted_filters=mounted_filters,
+        )
 
     async def put_on_queue(self, targets: list[DriverTarget]) -> None:
         """Given a list of targets, append them on the queue to be observed.
@@ -981,17 +1007,38 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             # failed this will raise an exception and stop adding more
             # scripts
             await self.model.check_block_scripts(id=block_uid)
-            add_task = await self.queue_remote.cmd_add.set_start(
-                path=script.name,
-                config=script.get_script_configuration(),
-                isStandard=script.standard,
-                location=ScriptQueue.Location.LAST,
-                logLevel=self.log.getEffectiveLevel(),
-                block=block_name,
-                blockSize=block_size,
-                startBlock=start_block,
-                timeout=self.parameters.cmd_timeout,
-            )
+            n_retries = 3
+            for retry in range(n_retries):
+                try:
+                    add_task = await self.queue_remote.cmd_add.set_start(
+                        path=script.name,
+                        config=script.get_script_configuration(),
+                        isStandard=script.standard,
+                        location=ScriptQueue.Location.LAST,
+                        logLevel=self.log.getEffectiveLevel(),
+                        block=block_name,
+                        blockSize=block_size,
+                        startBlock=start_block,
+                        timeout=self.parameters.cmd_timeout,
+                    )
+                    break
+                except salobj.AckError as ack:
+                    if "Bad Gateway" in ack.ackcmd.result:
+                        self.log.warning(
+                            f"Failed to add script to queue due to name server error: {ack!r}. "
+                            f"Waiting {self.heartbeat_interval*(retry+1)}s and trying again. "
+                            f"Attempt {retry+1} of {n_retries}."
+                        )
+                        await asyncio.sleep(self.heartbeat_interval * (retry + 1))
+                    else:
+                        raise
+            else:
+                raise RuntimeError(
+                    "Failed to add scripts to the script queue. "
+                    "This is usually related to the camera name server not working correctly "
+                    "as the ScriptQueue used it to query for block ids. "
+                    "Contact support from camera team."
+                )
             sal_index = int(add_task.result)
             script_final_state_future = await self.model.add_scheduled_script(
                 id=block_uid, sal_index=sal_index
@@ -1105,6 +1152,19 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             )
 
         self.log.debug(f"Settings for {instance!r}: {settings}")
+
+        if hasattr(settings, "instrument_name"):
+            if settings.instrument_name in {"MTCamera", "CCCamera"}:
+                self.log.info(
+                    f"Starting remote for {settings.instrument_name} to update instrument configuration."
+                )
+                self.camera = salobj.Remote(
+                    self.domain,
+                    settings.instrument_name,
+                    include=["endSetFilter", "availableFilters"],
+                    readonly=True,
+                )
+                await self.camera.start_task
 
         self.parameters.driver_type = settings.driver_type
         self.parameters.startup_type = settings.startup_type
@@ -1306,6 +1366,13 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         if len(scheduled_targets_info.failed) > 0:
             await self.remove_from_queue(scheduled_targets_info.failed)
+            for target in scheduled_targets_info.failed:
+                observing_block = target.get_observing_block()
+                await self._update_block_status(
+                    block_id=observing_block.program,
+                    block_status=BlockStatus.ERROR,
+                    observing_block=observing_block,
+                )
 
         return (
             len(scheduled_targets_info.failed) == 0
@@ -1455,6 +1522,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 ):
                     await self.next_target_timer
 
+            await self.telemetry_in_sync.wait()
             await self.run_target_loop.wait()
 
             try:
@@ -1637,12 +1705,20 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             if len(self.targets_queue) > 0:
                 self._should_compute_predicted_schedule = True
                 await self.reset_handle_no_targets_on_queue()
-            elif len(self.targets_queue) == 0:
+            elif (
+                len(self.targets_queue) == 0
+                and self.model.get_number_of_scheduled_targets() == 0
+            ):
                 await self.handle_no_targets_on_queue()
+            else:
+                self.log.info("No targets generated, but still have scheduled targets.")
 
         await self.check_targets_queue_condition()
 
-        self.log.debug(f"Generated queue with {len(self.targets_queue)} targets.")
+        self.log.debug(
+            f"Generated queue with {len(self.targets_queue)} targets. "
+            f"Current scheduled targets: {self.model.get_number_of_scheduled_targets()}."
+        )
 
     async def check_targets_queue_condition(self):
         """Check targets queue condition.
@@ -1805,7 +1881,6 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         self._should_compute_predicted_schedule = False
 
         async with self.current_scheduler_state(publish_lfoa=False):
-            self.model.synchronize_observatory_model()
             self.model.register_scheduled_targets(targets_queue=self.targets_queue)
 
             (
@@ -1939,6 +2014,23 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             latitude=settings.models["location"]["obs_site"]["latitude"],
             longitude=settings.models["location"]["obs_site"]["longitude"],
             height=settings.models["location"]["obs_site"]["height"],
+        )
+
+        await self.evt_cameraConfig.set_write(
+            readoutTime=settings.models["observatory_model"]["camera"]["readout_time"],
+            shutterTime=settings.models["observatory_model"]["camera"]["shutter_time"],
+            filterChangeTime=settings.models["observatory_model"]["camera"][
+                "filter_change_time"
+            ],
+            filterMounted=",".join(
+                settings.models["observatory_model"]["camera"]["filter_mounted"]
+            ),
+            filterRemovable=",".join(
+                settings.models["observatory_model"]["camera"]["filter_removable"]
+            ),
+            filterUnmounted=",".join(
+                settings.models["observatory_model"]["camera"]["filter_unmounted"]
+            ),
         )
 
         await self.evt_telescopeConfig.set_write(
@@ -2400,6 +2492,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         """
 
         async with self.scheduler_state_lock:
+            self.model.synchronize_observatory_model()
+            await self.model.update_telemetry()
             last_scheduler_state_filename = await self.save_scheduler_state(
                 publish_lfoa=publish_lfoa
             )

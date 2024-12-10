@@ -714,6 +714,13 @@ definitions:
           Path to the directory containing the observing blocks definition.
           This should be relative to the CSC configuration path.
         type: string
+      instrument_name:
+        description: Name of the instrument.
+        type: string
+        enum:
+          - LATISS
+          - MTCamera
+          - CCCamera
 type: object
 additionalProperties: false
 properties:

@@ -1,0 +1,23 @@
+maintel:
+  models:
+    observatory_model:
+      camera:
+        filter_mounted:
+        - g_6
+        - r_57
+        - y_10
+        - ""
+        - ""
+        filter_removable:
+        - u
+        - g_6
+        - r_57
+        - i
+        - y_10
+        - z
+        filter_unmounted:
+        - u
+        - i
+        - z
+      park:
+        filter_position: r_57

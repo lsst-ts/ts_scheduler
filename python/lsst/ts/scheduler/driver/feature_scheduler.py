@@ -258,20 +258,29 @@ class FeatureScheduler(Driver):
 
         fbs_observations = self.schema_converter.opsim2obs(filename=filename)
         observations = []
+        failed_observations = 0
         for fbs_observation in fbs_observations:
-            observation = np.array(fbs_observation, ndmin=1)
-            observing_block = self.get_survey_observing_block(
-                self._get_survey_name_from_observation(observation)
-            )
+            try:
+                observation = np.array(fbs_observation, ndmin=1)
+                observing_block = self.get_survey_observing_block(
+                    self._get_survey_name_from_observation(observation)
+                )
 
-            target = FeatureSchedulerTarget(
-                observing_block=observing_block,
-                observation=observation,
-                log=self.log,
-                **self.script_configuration,
-            )
+                target = FeatureSchedulerTarget(
+                    observing_block=observing_block,
+                    observation=observation,
+                    log=self.log,
+                    **self.script_configuration,
+                )
 
-            observations.append(target)
+                observations.append(target)
+            except Exception:
+                failed_observations += 1
+
+        if failed_observations > 0:
+            self.log.warning(
+                f"Failed to parse {failed_observations} of {len(fbs_observations)}."
+            )
 
         return observations
 
@@ -432,10 +441,30 @@ class FeatureScheduler(Driver):
 
             hpid = _ra_dec2_hpid(self.nside, target.ra_rad, target.dec_rad)
 
+            effective_filter_name = target.filter
+            if effective_filter_name not in self.conditions.skybrightness:
+                for filter_name in self.conditions.skybrightness:
+                    if filter_name in effective_filter_name:
+                        self.log.debug(
+                            f"Using effective filter name {filter_name} instead of {effective_filter_name}."
+                        )
+                        effective_filter_name = filter_name
+                        break
+                else:
+                    available_filters = list(self.conditions.skybrightness.keys())
+                    mid_range = int(len(available_filters) / 2)
+                    effective_filter_name = available_filters[mid_range]
+                    self.log.warning(
+                        f"Could not find effective filter name for {target.filter} in {available_filters},"
+                        f"using mid range {effective_filter_name}."
+                    )
+
             target.observation["skybrightness"] = self.conditions.skybrightness[
-                target.filter
+                effective_filter_name
             ][hpid]
-            target.observation["FWHMeff"] = self.conditions.FWHMeff[target.filter][hpid]
+            target.observation["FWHMeff"] = self.conditions.FWHMeff[
+                effective_filter_name
+            ][hpid]
             target.observation["airmass"] = self.conditions.airmass[hpid]
             target.observation["alt"] = target.alt_rad
             target.observation["az"] = target.az_rad
