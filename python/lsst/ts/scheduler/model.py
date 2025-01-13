@@ -176,6 +176,17 @@ class Model:
             else:
                 self.log.warning(f"No configuration for {model}. Skipping.")
 
+        self.log.info("Synchronizing observatory state.")
+        self.models["observatory_state"].filter = self.models[
+            "observatory_model"
+        ].current_state.filter
+        self.models["observatory_state"].mountedfilters = self.models[
+            "observatory_model"
+        ].current_state.mountedfilters
+        self.models["observatory_state"].unmountedfilters = self.models[
+            "observatory_model"
+        ].current_state.unmountedfilters
+
         await self.load_observing_blocks(config.path_observing_blocks)
 
         self.log.debug("Configuring Driver and Scheduler.")
@@ -698,6 +709,7 @@ class Model:
         self.log.debug(f"Checking {number_of_targets} scheduled targets")
 
         report = ""
+        debug_report = ""
 
         for _ in range(number_of_targets):
             target = scheduled_targets.pop(0)
@@ -708,57 +720,74 @@ class Model:
                 for sal_index in sal_indices
                 if sal_index in self.script_info
             ]
+            try:
 
-            if not script_info or len(script_info) != len(sal_indices):
-                report += f"No information on all scripts on queue, put it back and continue: {target}.\n"
-                # No information on all scripts on queue,
-                # put it back and continue
-                self.raw_telemetry["scheduled_targets"].append(target)
-                continue
+                if not script_info or len(script_info) != len(sal_indices):
+                    report += f"No information on all scripts on queue, put it back and continue: {target}.\n"
+                    # No information on all scripts on queue,
+                    # put it back and continue
+                    self.raw_telemetry["scheduled_targets"].append(target)
+                    continue
 
-            scripts_state = [info.scriptState for info in script_info]
+                scripts_state = [
+                    Script.ScriptState(info.scriptState) for info in script_info
+                ]
 
-            if all([state == Script.ScriptState.DONE for state in scripts_state]):
-                # All scripts completed successfully
-                report += (
-                    f"\n\t{target.note} observation completed successfully. "
-                    "Registering observation."
+                if all([state == Script.ScriptState.DONE for state in scripts_state]):
+                    # All scripts completed successfully
+                    report += (
+                        f"\n\t{target.note} observation completed successfully. "
+                        "Registering observation."
+                    )
+
+                    self.driver.register_observation(target)
+                    scheduled_targets_info.observed.append(target)
+                    # Remove related script from the list
+                    for index in sal_indices:
+                        self.script_info.pop(index)
+                    # target now simply disappears... Should I keep it in for
+                    # future refs?
+                elif any([state in FailedStates for state in scripts_state]):
+                    # one or more script failed
+                    report += f"\n\t{target.note} failed. Not registering observation."
+                    # Remove related script from the list
+                    scheduled_targets_info.failed.append(target)
+                    for index in sal_indices:
+                        self.script_info.pop(index)
+                elif any([state in NonFinalStates for state in scripts_state]):
+                    # one or more script in a non-final state, just put it
+                    # back on
+                    # the list.
+                    debug_report += (
+                        f"\n\t{target} scripts still executing.\n"
+                        f"{target.observing_block}\n"
+                        f"{sal_indices}::{scripts_state}."
+                    )
+                    self.raw_telemetry["scheduled_targets"].append(target)
+                else:
+                    report += (
+                        (
+                            f"\n\tOne or more state unrecognized [{scripts_state}] for observations "
+                            f"{sal_indices} for target {target}."
+                        ),
+                    )
+                    scheduled_targets_info.unrecognized.extend(sal_indices)
+                    # Remove related script from the list
+                    for index in sal_indices:
+                        self.script_info.pop(index)
+            except Exception:
+                self.log.exception(
+                    f"Failed to check scheduled target {target}.\n"
+                    f"{sal_indices}."
+                    f"Report:\n\t{report}\n\tFull report: {debug_report}"
                 )
-
-                self.driver.register_observation(target)
-                scheduled_targets_info.observed.append(target)
-                # Remove related script from the list
-                for index in sal_indices:
-                    self.script_info.pop(index)
-                # target now simply disappears... Should I keep it in for
-                # future refs?
-            elif any([state in FailedStates for state in scripts_state]):
-                # one or more script failed
-                report += f"\n\t{target.note} failed. Not registering observation."
-                # Remove related script from the list
-                scheduled_targets_info.failed.append(target)
-                for index in sal_indices:
-                    self.script_info.pop(index)
-            elif any([state in NonFinalStates for state in scripts_state]):
-                # one or more script in a non-final state, just put it back on
-                # the list.
-                self.raw_telemetry["scheduled_targets"].append(target)
-            else:
-                report += (
-                    (
-                        f"\n\tOne or more state unrecognized [{scripts_state}] for observations "
-                        f"{sal_indices} for target {target}."
-                    ),
-                )
-                scheduled_targets_info.unrecognized.extend(sal_indices)
-                # Remove related script from the list
-                for index in sal_indices:
-                    self.script_info.pop(index)
 
         if report:
-            self.log.info(f"Check scheduled report:\n\n{report}")
+            self.log.info(
+                f"Check scheduled report:\n\n{report}\n\nFull report: {debug_report}."
+            )
         else:
-            self.log.debug("Nothing to report.")
+            self.log.debug(f"Full report: {debug_report}")
 
         return scheduled_targets_info
 
@@ -825,13 +854,12 @@ class Model:
             when the target was computed, how long to wait to observe the
             target and the target.
         """
+        self.synchronize_observatory_model()
+        self.register_scheduled_targets(targets_queue)
         # Note that here it runs the update_telemetry method from the
         # scheduler. This method will update the telemetry based on most
         # current recent data in the system.
         await self.update_telemetry()
-
-        self.synchronize_observatory_model()
-        self.register_scheduled_targets(targets_queue)
 
         # For now it will only generate enough targets to send to the queue
         # and leave one extra in the internal queue. In the future we will
@@ -947,7 +975,7 @@ class Model:
         time_start = self.models["observatory_model"].current_state.time
         time_scheduler_evaluation = time_start
 
-        self.models["observatory_model"].stop_tracking(time_scheduler_evaluation)
+        self.models["observatory_model"].update_state(time_scheduler_evaluation)
 
         targets = []
         while (
@@ -1005,12 +1033,14 @@ class Model:
             telescopeRotator=self.models["observatory_state"].telrot,
             domeAltitude=self.models["observatory_state"].domalt,
             domeAzimuth=self.models["observatory_state"].domaz,
-            filterPosition="",
-            filterMounted="",
-            filterUnmounted="",
+            filterPosition=self.models["observatory_state"].filter,
+            filterMounted=",".join(self.models["observatory_state"].mountedfilters),
+            filterUnmounted=",".join(self.models["observatory_state"].unmountedfilters),
         )
 
-    def set_observatory_state(self, current_target_state) -> None:
+    def set_observatory_state(
+        self, current_target_state, current_filter=None, mounted_filters=None
+    ) -> None:
         self.models["observatory_state"].time = current_target_state.timestamp
         self.models["observatory_state"].az_rad = np.radians(
             current_target_state.demandAz
@@ -1030,6 +1060,25 @@ class Model:
         self.models["observatory_state"].pa_rad = np.radians(
             current_target_state.parAngle
         )
+        self.models["observatory_state"].telalt_rad = np.radians(
+            current_target_state.demandEl
+        )
+        self.models["observatory_state"].telaz_rad = np.radians(
+            current_target_state.demandAz
+        )
+        self.models["observatory_state"].telrot_rad = np.radians(
+            current_target_state.demandRot
+        )
+        self.models["observatory_state"].domalt_rad = np.radians(
+            current_target_state.demandEl
+        )
+        self.models["observatory_state"].domaz_rad = np.radians(
+            current_target_state.demandAz
+        )
+        if current_filter is not None:
+            self.models["observatory_state"].filter = current_filter
+        if mounted_filters is not None:
+            self.models["observatory_state"].mountedfilters = mounted_filters
 
     def get_stop_tracking_target(self) -> DriverTarget:
         """Get stop tracking target.

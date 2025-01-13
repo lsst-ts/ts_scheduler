@@ -4,6 +4,61 @@
 Version History
 ===============
 
+v2.3.0
+------
+
+* In driver/feature_scheduler_target.py, implement method to return target name in FeatureSchedulerDriver.
+
+* Update test_fbs_target.py to check target name with the correct source.
+
+* In model.py, synchronize filter information between the observatory model and the observatory state when configuring the models.
+
+* In model.py, update get_observatory_state to pass mounted and unmounted filter information.
+
+* In scheduler_csc.py, update _publish_settings to publish the camera configuration.
+
+* Update CSC state transition unit tests to check that observatory configuration events are all published.
+
+* Add unit test to check that CSC handles custom filters correctly.
+
+* In driver/feature_scheduler.py, update _get_validated_target_from_observation to handle condition where the filter name is not in the sky brightness list.
+
+* In model.py, add more logging in check_scheduled_target method.
+
+* In scheduler_csc.py, update _queue_one_script to retry adding scripts if it fails.
+
+* In scheduler_csc.py, update check_scheduled_targets method to update block status with ERROR state if there is a failure.
+
+* In driver/feature_scheduler.py, update parse_observation_database method to handle conditions when the observation fails to be parsed.
+
+* In model.py, update generate_target_queue to call synchronize_observatory_model and register_scheduled_targets before update_telemetry.
+    
+  When update_telemetry is called, the conditions object in the feature scheduler is filled up with the information from the observatory model, so we need to sync before calling it.
+
+* In model.py, update generate_targets_in_time_window to use update_state instead of stop_tracking in the observatory model.
+
+* In model.py, update set_observatory_state to fill telescope and dome position from the current_target_state information and to allow passing current_filter and mounted_filters.
+
+* In scheduler_csc.py, remove observatory synchronization call from compute_predicted_schedule and add it to current_scheduler_state.
+    
+  The idea is to capture the current state of the observatory before we store its state.
+
+* In scheduler_csc.py, add a synchronization mechanism to allow the advance target production loop to wait until observatory state is synchronized before it starts producing targets.
+
+* In scheduler_csc.py, fix an issue with the generate_target_queue method that would cause the scheduler to fault when there was no target produced but there was still targets being observed.
+    
+  The method was prematurely calling handle_no_targets_on_queue, in this condition. Now it will only call it if there are no targets in the queue and nothing being observed.
+
+* Update CSC configuration schema to add an instrument_name parameter.
+    
+  This will allow users to specify which instrument the Scheduler is supposed to look for to determine the instrument configuration.
+
+* In scheduler_csc.py, update configure method to create a remote for the MTCamera or CCCamera if they are defined as the instrument of interest.
+    
+  Handling of LATISS will be included later.
+
+* In scheduler_csc.py, update the handle_observatory_state method to retrieve the current and mounted filters from the camera and pass that along to model.set_observatory_state.
+
 v2.2.0
 ------
 

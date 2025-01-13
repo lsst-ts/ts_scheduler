@@ -214,6 +214,34 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                 flush=False,
                 substate=DetailedState.IDLE,
             )
+            await self.assert_next_sample(
+                self.remote.evt_cameraConfig,
+                flush=False,
+            )
+            await self.assert_next_sample(
+                self.remote.evt_telescopeConfig,
+                flush=False,
+            )
+            await self.assert_next_sample(
+                self.remote.evt_rotatorConfig,
+                flush=False,
+            )
+            await self.assert_next_sample(
+                self.remote.evt_domeConfig,
+                flush=False,
+            )
+            await self.assert_next_sample(
+                self.remote.evt_slewConfig,
+                flush=False,
+            )
+            await self.assert_next_sample(
+                self.remote.evt_opticsLoopCorrConfig,
+                flush=False,
+            )
+            await self.assert_next_sample(
+                self.remote.evt_parkConfig,
+                flush=False,
+            )
 
     async def test_configuration_invalid(self):
         """Test basic configuration."""
@@ -273,6 +301,47 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                             salobj.State(self.csc.summary_state)
                             == salobj.State.DISABLED
                         )
+            finally:
+                await salobj.set_summary_state(self.remote, salobj.State.STANDBY)
+
+    async def test_custom_filters(self):
+
+        async with self.make_csc(
+            config_dir=TEST_CONFIG_DIR,
+            initial_state=salobj.State.STANDBY,
+            simulation_mode=SchedulerModes.SIMULATION,
+        ), ObservatoryStateMock(), self.make_script_queue(running=True):
+            try:
+                configuration_override = os.path.join(
+                    TEST_CONFIG_DIR, "custom_filters.yaml"
+                )
+                await salobj.set_summary_state(self.remote, salobj.State.STANDBY)
+                self.remote.evt_summaryState.flush()
+                await self.remote.cmd_start.set_start(
+                    configurationOverride=configuration_override,
+                    timeout=SHORT_TIMEOUT,
+                )
+                expected_current_filter = "r_57"
+                expected_filter_mounted = "g_6,r_57,y_10,,"
+                expected_filter_removable = "u,g_6,r_57,i,y_10,z"
+                expected_filter_unmounted = "u,i,z"
+                await self.assert_next_sample(
+                    self.remote.evt_cameraConfig,
+                    filterMounted=expected_filter_mounted,
+                    filterRemovable=expected_filter_removable,
+                    filterUnmounted=expected_filter_unmounted,
+                    flush=False,
+                )
+                self.log.info(f"{self.csc.model.models['observatory_model']}")
+                await self.remote.cmd_enable.start(timeout=SHORT_TIMEOUT)
+                observatory_state = await self.assert_next_sample(
+                    self.remote.tel_observatoryState,
+                    flush=True,
+                    filterMounted=expected_filter_mounted,
+                    filterUnmounted=expected_filter_unmounted,
+                    filterPosition=expected_current_filter,
+                )
+                self.log.info(f"{observatory_state=}")
             finally:
                 await salobj.set_summary_state(self.remote, salobj.State.STANDBY)
 
