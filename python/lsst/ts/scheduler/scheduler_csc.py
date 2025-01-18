@@ -848,9 +848,18 @@ class SchedulerCSC(salobj.ConfigurableCsc):
     async def handle_observatory_state(self):
         """Handle observatory state."""
 
-        current_target_state = await self.ptg.tel_currentTargetStatus.next(
-            flush=True, timeout=self.loop_die_timeout
-        )
+        try:
+            current_target_state = await self.ptg.tel_currentTargetStatus.next(
+                flush=True, timeout=self.loop_die_timeout
+            )
+        except asyncio.TimeoutError:
+            self.log.warning(
+                "Timeout retrieving telescope status. Trying the last available value."
+            )
+            current_target_state = await self.ptg.tel_currentTargetStatus.aget(
+                timeout=self.loop_die_timeout
+            )
+
         current_filter = None
         mounted_filters = None
         if self.salinfo.index % 2 == 1 and self.camera is not None:
