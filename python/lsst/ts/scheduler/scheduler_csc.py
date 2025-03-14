@@ -41,9 +41,9 @@ import yaml
 from lsst.ts import salobj, utils
 from lsst.ts.astrosky.model import version as astrosky_version
 from lsst.ts.dateloc import version as dateloc_version
-from lsst.ts.idl.enums import Scheduler, ScriptQueue
 from lsst.ts.observatory.model import version as obs_mod_version
 from lsst.ts.observing import ObservingBlock, ObservingScript
+from lsst.ts.xml.enums import Scheduler, ScriptQueue
 from rubin_scheduler.version import __version__ as rubin_scheduler_version
 
 from . import CONFIG_SCHEMA, __version__
