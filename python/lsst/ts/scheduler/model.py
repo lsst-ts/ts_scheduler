@@ -36,9 +36,9 @@ from jsonschema import ValidationError
 from lsst.ts import observing, utils
 from lsst.ts.astrosky.model import AstronomicalSkyModel
 from lsst.ts.dateloc import ObservatoryLocation
-from lsst.ts.idl.enums import Script
 from lsst.ts.observatory.model import ObservatoryModel, ObservatoryState
 from lsst.ts.salobj.type_hints import BaseDdsDataType
+from lsst.ts.xml.enums import Script
 from rubin_scheduler.site_models.cloud_model import CloudModel
 from rubin_scheduler.site_models.seeing_model import SeeingModel
 
