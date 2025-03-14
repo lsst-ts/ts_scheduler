@@ -34,7 +34,7 @@ import enum
 import re
 from urllib.parse import urlparse
 
-from lsst.ts.idl.enums import Script
+from lsst.ts.xml.enums import Script
 
 NonFinalStates = frozenset(
     (
