@@ -898,8 +898,11 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             self.log.info(f"Adding {target=!s} scripts on the queue.")
 
             self.model.register_new_block(id=observing_block.id)
+            initial_sal_index = None
             async for sal_index in self._queue_block_scripts(observing_block):
                 self.log.info(f"{observing_block.name}::{sal_index=}.")
+                if initial_sal_index is None:
+                    initial_sal_index = sal_index
                 try:
                     target.add_sal_index(sal_index)
                 except NonConsecutiveIndexError:
@@ -918,7 +921,9 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     await asyncio.sleep(self.heartbeat_interval)
 
             # publishes target event
-            await self.evt_target.set_write(**target.as_dict())
+            target_data = target.as_dict()
+            target_data["blockId"] = initial_sal_index
+            await self.evt_target.set_write(**target_data)
 
             await self._update_block_status(
                 block_id=observing_block.program,
