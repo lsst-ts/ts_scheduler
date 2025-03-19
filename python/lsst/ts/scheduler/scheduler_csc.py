@@ -1060,9 +1060,9 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             Future with the script final state.
         """
         async with self._queue_capacity:
-            self.log.debug("Waiting Script final state.")
+            self.log.trace("Waiting Script final state.")
             await script_final_state
-            self.log.debug(f"Script final state: {script_final_state.result()!r}")
+            self.log.trace(f"Script final state: {script_final_state.result()!r}")
 
     async def remove_from_queue(self, targets: list[DriverTarget]) -> None:
         """Given a list of targets, remove them from the queue.
