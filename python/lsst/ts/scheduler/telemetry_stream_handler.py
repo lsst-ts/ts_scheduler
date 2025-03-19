@@ -220,7 +220,7 @@ class TelemetryStreamHandler:
             self.telemetry_streams[stream_name]["efd_delta_time"] * units.second
         )
 
-        self.log.debug(
+        self.log.trace(
             f"Retrieving {stream_name} telemetry between {time_query_start}::{time_query_end}."
         )
 
