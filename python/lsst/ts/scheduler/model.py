@@ -558,17 +558,17 @@ class Model:
 
         block_all_done: list[uuid.UUID] = []
 
-        self.log.debug(f"Script[{sal_index}]::{script_state!r}")
+        self.log.trace(f"Script[{sal_index}]::{script_state!r}")
 
         for block_uid in self._block_scripts_final_state:
-            self.log.debug(
+            self.log.trace(
                 f"Checking {block_uid=}::{self._block_scripts_final_state[block_uid]}"
             )
             if (
                 sal_index in self._block_scripts_final_state[block_uid]
                 and script_state not in NonFinalStates
             ):
-                self.log.debug(f"{block_uid=}::{sal_index=}::{script_state!r}")
+                self.log.trace(f"{block_uid=}::{sal_index=}::{script_state!r}")
                 # Script in a final state set value of the future.
                 if script_state in FailedStates:
                     self._block_scripts_final_state[block_uid][sal_index].set_exception(
@@ -932,12 +932,12 @@ class Model:
         self.log.debug("Registering current scheduled targets.")
 
         for target in self.raw_telemetry["scheduled_targets"]:
-            self.log.debug(f"Temporarily registering scheduled target: {target.note}.")
+            self.log.debug(f"Temporarily registering scheduled target: {target}.")
             self.driver.register_observed_target(target)
             self.models["observatory_model"].observe(target)
 
         for target in targets_queue:
-            self.log.debug(f"Temporarily registering queued target: {target.note}.")
+            self.log.debug(f"Temporarily registering queued target: {target}.")
             self.driver.register_observed_target(target)
             self.models["observatory_model"].observe(target)
 
@@ -1374,7 +1374,7 @@ class Model:
 
         try:
             if self.telemetry_stream_handler is not None:
-                self.log.debug("Updating telemetry stream.")
+                self.log.trace("Updating telemetry stream.")
 
                 for telemetry in self.telemetry_stream_handler.telemetry_streams:
                     telemetry_data = (
