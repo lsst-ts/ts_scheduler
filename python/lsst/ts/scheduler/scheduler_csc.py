@@ -762,6 +762,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         failed_observatory_state_logged = False
         while self.run_loop:
             # Update observatory state and sleep at the same time.
+            timer_task = asyncio.create_task(asyncio.sleep(self.heartbeat_interval))
             try:
                 await self.handle_observatory_state()
                 failed_observatory_state_logged = False
@@ -828,6 +829,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 self.log.exception("Error computing general info. Ignoring...")
 
             await self._cleanup_script_tasks()
+
+            await timer_task
 
     async def _cleanup_script_tasks(self) -> None:
         """Cleanup completed script tasks."""
