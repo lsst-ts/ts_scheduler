@@ -468,7 +468,6 @@ class FeatureScheduler(Driver):
             target.observation["airmass"] = self.conditions.airmass[hpid]
             target.observation["alt"] = target.alt_rad
             target.observation["az"] = target.az_rad
-            target.observation["rotSkyPos"] = target.ang_rad
             target.observation["clouds"] = self.conditions.bulk_cloud
 
             target.slewtime = slew_time
