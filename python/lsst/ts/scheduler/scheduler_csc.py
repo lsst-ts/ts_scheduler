@@ -922,7 +922,6 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
             # publishes target event
             target_data = target.as_dict()
-            target_data["snapshotUri"] = self.evt_largeFileObjectAvailable.data.url
             target_data["blockId"] = initial_sal_index
             await self.evt_target.set_write(**target_data)
 
