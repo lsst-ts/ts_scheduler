@@ -104,6 +104,7 @@ class DriverTarget(Target):
         self._sal_indices = []
 
         self.block_configuration = dict()
+        self._snapshot_uri = ""
 
         if observing_block.configuration_schema:
 
@@ -296,6 +297,7 @@ class DriverTarget(Target):
         for i, prop_id in enumerate(self.propid_list):
             topic_target["proposalId"][i] = int(prop_id)
         topic_target["note"] = self.note
+        topic_target["snapshotUri"] = self._snapshot_uri
 
         return topic_target
 
@@ -328,3 +330,13 @@ class DriverTarget(Target):
             Target additional information.
         """
         return ""
+
+    def set_snapshot_uri(self, uri):
+        """Set the value for the snapshot uri.
+
+        Parameters
+        ----------
+        uri : `str`
+            Value for the snapshot uri.
+        """
+        self._snapshot_uri = uri
