@@ -44,7 +44,7 @@ from lsst.ts.dateloc import version as dateloc_version
 from lsst.ts.observatory.model import version as obs_mod_version
 from lsst.ts.observing import ObservingBlock, ObservingScript
 from lsst.ts.xml.enums import Scheduler, ScriptQueue
-from rubin_scheduler.version import __version__ as rubin_scheduler_version
+from rubin_scheduler import __version__ as rubin_scheduler_version
 
 from . import CONFIG_SCHEMA, __version__
 from .driver.driver_target import DriverTarget
