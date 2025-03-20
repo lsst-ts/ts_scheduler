@@ -46,7 +46,11 @@ class FeatureSchedulerTarget(DriverTarget):
 
         super().__init__(
             observing_block=observing_block,
-            targetid=observation["ID"][0],
+            targetid=(
+                observation["target_id"][0]
+                if "target_id" in observation.dtype.names
+                else observation["ID"][0]
+            ),
             band_filter=observation["filter"][0],
             ra_rad=observation["RA"][0],
             dec_rad=observation["dec"][0],
