@@ -1700,6 +1700,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 targets_queue=self.targets_queue,
                 max_targets=self.parameters.n_targets + 1,
             ):
+                target.set_snapshot_uri(self.evt_largeFileObjectAvailable.data.url)
                 self.targets_queue.append(target)
 
                 await self._publish_time_to_next_target(
