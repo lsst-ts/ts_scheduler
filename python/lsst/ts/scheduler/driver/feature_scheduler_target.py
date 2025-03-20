@@ -65,6 +65,11 @@ class FeatureSchedulerTarget(DriverTarget):
         """Return the physical rotator position in degrees."""
         return np.degrees(self.observation["rotTelPos"][0])
 
+    @property
+    def ang(self) -> float:
+        """Return the sky angle in degrees."""
+        return np.degrees(self.observation["rotSkyPos"][0])
+
     def get_target_name(self) -> str:
         """Parse the note field to get the target name.
 
