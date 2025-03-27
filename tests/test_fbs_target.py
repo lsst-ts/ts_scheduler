@@ -54,6 +54,8 @@ class TestFeatureSchedulerTarget(unittest.TestCase):
             observation=observation,
         )
 
+        print(f"{target.observation=}")
+
         slew_time, error = self.observatory_model.get_slew_delay(target)
 
         self.assertEqual(error, 0)
@@ -71,7 +73,13 @@ class TestFeatureSchedulerTarget(unittest.TestCase):
         script_config_expected = {
             "targetid": target.targetid,
             "band_filter": target.filter,
+            "filter_name": (
+                f"RUBIN{target.filter}_random_filter_name"
+                if "band" in observation.dtype.names
+                else target.filter
+            ),
             "name": target.get_target_name(),
+            "note": str(target.note),
             "ra": target.get_ra(),
             "dec": target.get_dec(),
             "alt": target.alt,
@@ -213,14 +221,20 @@ class TestFeatureSchedulerTarget(unittest.TestCase):
             [ObservationArray(n=1) for _ in range(len(filter_obs))]
         )
 
-        ra, dec, _ = self.observatory_model.altaz2radecpa(
+        ra, dec, rot_sky = self.observatory_model.altaz2radecpa(
             self.observatory_model.dateprofile, np.deg2rad(65.0), np.deg2rad(180.0)
         )
         for obs_filter, observation in zip(filter_obs, observations):
             observation["RA"] = ra
             observation["dec"] = dec
+            observation["rotSkyPos"] = rot_sky
             observation["mjd"] = self.observatory_model.dateprofile.mjd
-            observation["filter"] = obs_filter
+            if "band" in observation.dtype.names:
+                observation["filter"] = f"RUBIN{obs_filter}_random_filter_name"
+                observation["band"] = obs_filter
+            else:
+                observation["filter"] = obs_filter
+
             observation["exptime"] = 30.0
             observation["nexp"] = 2
             observation["note"] = note
