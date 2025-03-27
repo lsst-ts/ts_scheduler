@@ -1,0 +1,1 @@
+Added a timer task in the Scheduler CSC telemetry loop to ensure it is not executing faster than a heartbeat.
