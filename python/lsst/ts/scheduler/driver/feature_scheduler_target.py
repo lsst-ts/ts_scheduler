@@ -57,7 +57,7 @@ class FeatureSchedulerTarget(DriverTarget):
             ang_rad=observation["rotSkyPos"][0],
             num_exp=observation["nexp"][0],
             exp_times=[
-                observation["exptime"][0] / observation["nexp"][0]
+                float(observation["exptime"][0] / observation["nexp"][0])
                 for i in range(observation["nexp"][0])
             ],
         )
