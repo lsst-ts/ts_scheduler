@@ -191,6 +191,7 @@ class DriverTarget(Target):
             "targetid": int(self.targetid),
             "band_filter": str(self.filter),
             "name": self.get_target_name(),
+            "note": str(self.note),
             "ra": self.get_ra(),
             "dec": self.get_dec(),
             "rot_sky": float(self.ang),
