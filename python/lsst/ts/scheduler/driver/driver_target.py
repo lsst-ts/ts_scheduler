@@ -190,6 +190,7 @@ class DriverTarget(Target):
         script_config = {
             "targetid": int(self.targetid),
             "band_filter": str(self.filter),
+            "filter_name": self.get_filter_name(),
             "name": self.get_target_name(),
             "note": str(self.note),
             "ra": self.get_ra(),
@@ -265,6 +266,21 @@ class DriverTarget(Target):
         """
         self.format_config()
         return self.observing_block
+
+    def get_filter_name(self) -> str:
+        """Get the name of the filter.
+
+        Filter name is the long string that is particular to
+        an individual filter. For the generic identifier use
+        band_filter.
+
+        Returns
+        -------
+        filter_name : `str`
+            The name of the filter, e.g. SDSSr_65mm for a
+            specific r band.
+        """
+        return self.filter
 
     def as_dict(
         self, exposure_times_size: int = 10, proposal_id_size: int = 5
