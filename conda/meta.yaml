@@ -38,7 +38,7 @@ test:
     - pyproject.toml
   commands:
     - scheduler_download_data --update
-    - pytest -vsx
+    - pytest
 
 requirements:
   host:
