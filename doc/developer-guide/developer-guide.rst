@@ -267,6 +267,61 @@ Finally, the following functional methods are needed for full-featured operation
 * :py:meth:`Driver.load <lsst.ts.scheduler.driver.Driver.load>`
 * :py:meth:`Driver.cold_start <lsst.ts.scheduler.driver.Driver.cold_start>`
 
+Block and Script Configuration
+------------------------------
+
+When the Scheduler CSC executes an observation of a target, it does so by executing a Block.
+A Block is a sequence of SAL Scripts that will be executed in order by the Scheduler.
+
+When writting a Block we need to configure which parameters will be passed from the Scheduler to each of the Scripts in the block.
+The following is a list of parameters that the Scheduler will pass along:
+
+* ``targetid``: An integer id of the target.
+* ``band_filter``: The band name, e.g. u, g, r, i, z, y.
+* ``filter_name``: The name of the filter. This is the identifier of the element itself, e.g. ``SDSSr_65mm``, ``r_01_xyz``.
+* ``name``: The target name.
+* ``note``: A note about the target.
+* ``ra``: Right ascention of the target in sexagesimal format; HH:MM:SS.sss.
+* ``dec``: Declination of the target in sexagesimal format; DD:MM:SS.sss.
+* ``rot_sky``: Sky angle, in degrees (0 means north up, east right).
+* ``alt``: Expected altitute/elevation of the target in degrees. This is usually calculated from the ``ra`` and ``dec`` parameters for the expected time of the observations.
+* ``az``: Expected azimuth of the target in degrees. This is usually calculated from the ``ra`` and ``dec`` parameters for the expected time of the observations.
+* ``rot``: Expected physical position of the rotator. This is usually calculated from ``ra``, ``dec`` and ``rot_sky``. However, in some cases, this could be provided directly from the scheduling algorithm.
+* ``obs_time``: Expected MJD time the target will be observed.
+* ``num_exp``: Number of exposures.
+* ``exp_times``: List of exposure times, in seconds.
+* ``estimated_slew_time``: Estimated slew time, in seconds.
+* ``program``: The name of the program/block.
+
+In order to configure a block to use any of the parameters above, you can simply add a ``$`` before the parameter name in the block.
+For example, the following block configuration;
+
+.. code-block:: json
+
+  {
+      "name": "Imaging",
+      "program": "BLOCK-303",
+      "constraints": [],
+      "scripts": [
+          {
+              "name": "maintel/track_target.py",
+              "standard": true,
+              "parameters": {
+                "slew_icrs": {
+                  "ra": "$ra",
+                  "dec": "$dec"
+                },
+                "rot_value": "$rot",
+                "rot_type": "PhysicalSky",
+                "track_for": 30.0,
+                "stop_when_done": false
+              }
+          }
+      ]
+  }
+
+would replace ``$ra``, ``$dec`` and ``$rot`` with the ``ra``, ``dec`` and ``rot`` values, respectively.
+This is an example where we use the sky coordinates for position and physical coordinates for the rotator.
 
 .. _Developer_Guide_Driver_FBS:
 
