@@ -51,7 +51,11 @@ class FeatureSchedulerTarget(DriverTarget):
                 if "target_id" in observation.dtype.names
                 else observation["ID"][0]
             ),
-            band_filter=observation["filter"][0],
+            band_filter=(
+                observation["band"][0]
+                if "band" in observation.dtype.names
+                else observation["filter"][0]
+            ),
             ra_rad=observation["RA"][0],
             dec_rad=observation["dec"][0],
             ang_rad=observation["rotSkyPos"][0],
