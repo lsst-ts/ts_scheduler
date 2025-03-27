@@ -1,0 +1,1 @@
+Update the Scheduler CSC put_on_queue method to included additional metadata to the target event. This adds the snapshot url in addition to the index of the first script of the block. It should help us track which scripts belong to each target as well as which snapshop was used to generate the target.

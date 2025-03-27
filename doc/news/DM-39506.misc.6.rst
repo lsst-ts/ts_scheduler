@@ -1,0 +1,1 @@
+Updates how rubin_scheduler version is imported.

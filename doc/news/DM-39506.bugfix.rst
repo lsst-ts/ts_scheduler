@@ -1,0 +1,1 @@
+Stops overriding the rotSkyPos in the observation after target validation.

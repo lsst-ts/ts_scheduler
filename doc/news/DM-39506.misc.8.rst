@@ -1,0 +1,1 @@
+Adds general improvements to the feature scheduler metadata translation. This includes correct handlig of band and filter name, passing scheduler_note as note and some others.
