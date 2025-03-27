@@ -65,7 +65,7 @@ class FeatureSchedulerTarget(DriverTarget):
                 for i in range(observation["nexp"][0])
             ],
         )
-        self.note = str(observation["note"][0])
+        self.note = str(observation["scheduler_note"][0])
         self.slewtime = float(observation["slewtime"][0])
 
     @property
