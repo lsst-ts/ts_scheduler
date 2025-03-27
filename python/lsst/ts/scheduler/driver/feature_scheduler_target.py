@@ -78,6 +78,19 @@ class FeatureSchedulerTarget(DriverTarget):
         """Return the sky angle in degrees."""
         return np.degrees(self.observation["rotSkyPos"][0])
 
+    def get_filter_name(self) -> str:
+        """Filter name as provided by the feature scheduler observation.
+
+        For the FBS band is band_filter or Target.filter, and filter
+        is the filter_name.
+
+        Returns
+        -------
+        filter_name : `str`
+            Name of the filter.
+        """
+        return str(self.observation["filter"][0])
+
     def get_target_name(self) -> str:
         """Parse the note field to get the target name.
 
