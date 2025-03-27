@@ -147,7 +147,9 @@ class TestDriverTarget(unittest.TestCase):
         script_config_expected = {
             "targetid": target.targetid,
             "band_filter": target.filter,
-            "name": target.note,
+            "filter_name": target.get_filter_name(),
+            "name": target.get_target_name(),
+            "note": target.note,
             "ra": target.get_ra(),
             "dec": target.get_dec(),
             "rot_sky": target.ang,
