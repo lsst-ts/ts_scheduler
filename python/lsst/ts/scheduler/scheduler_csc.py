@@ -508,6 +508,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             )
             await self._stop_background_task("target_production_task")
             await self._cleanup_queue_targets()
+            await self.reset_handle_no_targets_on_queue()
+            await self._transition_running_to_idle()
             await self._start_target_production_task()
 
     async def stop_target_loop_execution(self) -> None:
