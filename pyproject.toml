@@ -32,6 +32,8 @@ __version__ = "{version}"
  
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+addopts = "-vsx"
+log_cli_level = "DEBUG"
  
 [tool.mypy]
 disallow_untyped_defs = "True"
