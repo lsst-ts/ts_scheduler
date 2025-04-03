@@ -34,7 +34,7 @@ __version__ = "{version}"
 asyncio_mode = "auto"
 addopts = "-vsx"
 log_cli = true
-log_cli_level = "DEBUG"
+log_cli_level = "INFO"
  
 [tool.mypy]
 disallow_untyped_defs = "True"
