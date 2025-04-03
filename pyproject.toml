@@ -33,6 +33,7 @@ __version__ = "{version}"
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 addopts = "-vsx"
+log_cli = true
 log_cli_level = "DEBUG"
  
 [tool.mypy]
