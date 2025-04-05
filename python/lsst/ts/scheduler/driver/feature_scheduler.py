@@ -339,24 +339,21 @@ class FeatureScheduler(Driver):
                 "Call `update_conditions` before requesting a target."
             )
 
-        desired_obs = self.scheduler.request_observation(mjd=self.next_observation_mjd)
+        observations = self.scheduler.request_observation(
+            mjd=self.next_observation_mjd, whole_queue=True
+        )
 
-        desired_observations = [
-            self._handle_desired_observation(desired_observation=desired_obs),
-        ]
-
-        if self._desired_obs is not None:
+        desired_observations = []
+        for observation in observations:
             desired_observations.append(
-                self._get_validated_target_from_observation(self._desired_obs)
+                self._handle_desired_observation(desired_observation=observation)
             )
-            self._desired_obs = None
 
-        if len(self.scheduler.queue) > 0:
-            desired_observations += [
-                self._get_validated_target_from_observation(observation)
-                for observation in self.scheduler.queue
-            ]
-            self.scheduler.flush_queue()
+            if self._desired_obs is not None:
+                desired_observations.append(
+                    self._get_validated_target_from_observation(self._desired_obs)
+                )
+                self._desired_obs = None
 
         return desired_observations
 
