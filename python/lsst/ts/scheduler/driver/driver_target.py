@@ -315,6 +315,7 @@ class DriverTarget(Target):
             topic_target["proposalId"][i] = int(prop_id)
         topic_target["note"] = self.note
         topic_target["snapshotUri"] = self._snapshot_uri
+        topic_target["targetName"] = self.get_target_name()
 
         return topic_target
 
