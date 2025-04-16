@@ -292,6 +292,7 @@ The following is a list of parameters that the Scheduler will pass along:
 * ``exp_times``: List of exposure times, in seconds.
 * ``estimated_slew_time``: Estimated slew time, in seconds.
 * ``program``: The name of the program/block.
+* ``observation_reason``: The reason for this observation.
 
 In order to configure a block to use any of the parameters above, you can simply add a ``$`` before the parameter name in the block.
 For example, the following block configuration;
