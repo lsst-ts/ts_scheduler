@@ -101,3 +101,7 @@ class FeatureSchedulerTarget(DriverTarget):
         """
         target_name = str(self.observation["target_name"][0])
         return target_name if target_name else "FeatureSchedulerTarget"
+
+    def get_observation_reason(self) -> str:
+        """Get the observation reason."""
+        return str(self.observation["observation_reason"][0])
