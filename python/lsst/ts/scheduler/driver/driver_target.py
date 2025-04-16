@@ -204,6 +204,7 @@ class DriverTarget(Target):
             "exp_times": [float(exptime) for exptime in self.exp_times],
             "estimated_slew_time": float(self.slewtime),
             "program": self.observing_block.program,
+            "observation_reason": self.get_observation_reason(),
         }
         script_config.update(self.block_configuration)
 
@@ -281,6 +282,10 @@ class DriverTarget(Target):
             specific r band.
         """
         return self.filter
+
+    def get_observation_reason(self) -> str:
+        """Get the observation reason."""
+        return "Scheduler_Driven_Observation"
 
     def as_dict(
         self, exposure_times_size: int = 10, proposal_id_size: int = 5
