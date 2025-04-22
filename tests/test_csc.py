@@ -345,6 +345,68 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
             finally:
                 await salobj.set_summary_state(self.remote, salobj.State.STANDBY)
 
+    async def test_filter_band_mapping(self):
+
+        async with self.make_csc(
+            config_dir=TEST_CONFIG_DIR,
+            initial_state=salobj.State.STANDBY,
+            simulation_mode=SchedulerModes.SIMULATION,
+        ), ObservatoryStateMock(), self.make_script_queue(
+            running=True
+        ), salobj.Controller(
+            "MTCamera"
+        ) as camera:
+            try:
+                # Publish available filters from instrument, should pick this
+                # up when enabled.
+                await camera.evt_availableFilters.set_write(
+                    filterNames="NONE,g_6,u_24,i_39,r_57"
+                )
+                await camera.evt_endSetFilter.set_write(filterName="r_57")
+                configuration_override = os.path.join(
+                    TEST_CONFIG_DIR, "filter_band_mapping.yaml"
+                )
+                await salobj.set_summary_state(
+                    self.remote, salobj.State.ENABLED, override=configuration_override
+                )
+                expected_current_filter = "r"
+                expected_filter_mounted = ",g,u,i,r"
+
+                await self.assert_next_sample(
+                    self.remote.tel_observatoryState,
+                    flush=True,
+                    filterMounted=expected_filter_mounted,
+                    filterPosition=expected_current_filter,
+                )
+
+                await self.remote.cmd_resume.start(timeout=SHORT_TIMEOUT)
+
+                # publish a filter that is not mapped should cause
+                # the Scheduler to go to fault.
+                self.remote.evt_summaryState.flush()
+
+                await camera.evt_endSetFilter.set_write(filterName="Pinhole")
+                await self.assert_next_summary_state(salobj.State.FAULT)
+
+                # publish a valid filter again
+                await camera.evt_endSetFilter.set_write(filterName="r_57")
+
+                await salobj.set_summary_state(
+                    self.remote, salobj.State.ENABLED, override=configuration_override
+                )
+
+                await self.remote.cmd_resume.start(timeout=SHORT_TIMEOUT)
+
+                self.remote.evt_summaryState.flush()
+
+                await camera.evt_availableFilters.set_write(
+                    filterNames="NONE,Pinhole,u_24,i_39,r_57"
+                )
+
+                await self.assert_next_summary_state(salobj.State.FAULT)
+            finally:
+                await salobj.set_summary_state(self.remote, salobj.State.STANDBY)
+
     async def test_load(self):
         """Test load command."""
         async with self.make_csc(
