@@ -85,7 +85,7 @@ class TestModel(unittest.IsolatedAsyncioTestCase):
         """
 
         n_targets = 0
-        async for _ in self.model.generate_target_queue([], 5):
+        async for _ in self.model.generate_target_queue():
             n_targets += 1
 
         assert n_targets == 0
