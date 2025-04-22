@@ -157,6 +157,7 @@ class TestDriverTarget(unittest.TestCase):
             "az": float(target.az),
             "rot": float(target.rot),
             "obs_time": target.obs_time,
+            "observation_reason": target.get_observation_reason(),
             "num_exp": target.num_exp,
             "exp_times": target.exp_times,
             "estimated_slew_time": target.slewtime,
