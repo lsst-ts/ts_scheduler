@@ -199,6 +199,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         self.no_observatory_state_warning = False
 
         self.parameters = SchedulerCscParameters()
+        self.filter_band_mapping = dict()
 
         # The maximum tolerable time without targets in seconds.
         self.max_time_no_target = 3600.0
@@ -865,6 +866,13 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                         timeout=self.loop_die_timeout
                     )
                 ).filterName
+                if self.filter_band_mapping:
+                    if current_filter not in self.filter_band_mapping:
+                        mapped_filters = ",".join(self.filter_band_mapping.keys())
+                        raise ValueError(
+                            f"Filter {current_filter} not in the filter band mapping: {mapped_filters}."
+                        )
+                    current_filter = self.filter_band_mapping[current_filter]
             except asyncio.TimeoutError:
                 self.log.warning("Could not get current camera filter.")
             try:
@@ -872,7 +880,20 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     await self.camera.evt_availableFilters.aget(
                         timeout=self.loop_die_timeout
                     )
-                ).filterNames.split(":")
+                ).filterNames.split(",")
+                if self.filter_band_mapping:
+                    missing_filter_map = set(mounted_filters).difference(
+                        set(self.filter_band_mapping)
+                    )
+                    if missing_filter_map:
+                        raise ValueError(
+                            "The following filters are missing in the filter map configuration: "
+                            f"{missing_filter_map}."
+                        )
+                    mounted_filters = [
+                        self.filter_band_mapping[filter_name]
+                        for filter_name in mounted_filters
+                    ]
             except asyncio.TimeoutError:
                 self.log.warning("Could not get available filters.")
 
@@ -1161,7 +1182,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 "a session for this instance of the Scheduler."
             )
 
-        self.log.debug(f"Settings for {instance!r}: {settings}")
+        self.log.info(f"Settings for {instance!r}: {settings}")
 
         if hasattr(settings, "instrument_name"):
             if settings.instrument_name in {"MTCamera", "CCCamera"}:
@@ -1185,6 +1206,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         self.parameters.loop_sleep_time = settings.loop_sleep_time
         self.parameters.cmd_timeout = settings.cmd_timeout
         self.parameters.max_scripts = settings.max_scripts
+        self.filter_band_mapping = getattr(settings, "filter_band_mapping", dict())
 
         survey_topology = await self.model.configure(settings)
 
