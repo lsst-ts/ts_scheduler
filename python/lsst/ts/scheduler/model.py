@@ -836,16 +836,8 @@ class Model:
 
         await loop.run_in_executor(None, self.driver.update_conditions)
 
-    async def generate_target_queue(self, targets_queue, max_targets):
+    async def generate_target_queue(self):
         """Generate target queue.
-
-        Parameters
-        ----------
-        targets_queue : `list`[`DriverTarget`]
-            List of already queued targets. These are in the scheduler queue
-            but not scheduled to run yet.
-        max_targets : `int`
-            Number of target to generate.
 
         Yields
         ------
@@ -854,71 +846,42 @@ class Model:
             when the target was computed, how long to wait to observe the
             target and the target.
         """
-        self.synchronize_observatory_model()
-        self.register_scheduled_targets(targets_queue)
-        # Note that here it runs the update_telemetry method from the
-        # scheduler. This method will update the telemetry based on most
-        # current recent data in the system.
-        await self.update_telemetry()
 
-        # For now it will only generate enough targets to send to the queue
-        # and leave one extra in the internal queue. In the future we will
-        # generate targets to fill the
-        # self.parameters.predicted_scheduler_window.
-        # But then we will have to improve how we handle the target
-        # generation and the check_targets_queue_condition.
-        self.log.debug(f"Requesting {max_targets} additional targets.")
+        targets = await self.select_next_targets()
 
-        for _ in range(max_targets):
-            # Inside the loop we are running update_conditions directly
-            # from the driver instead of update_telemetry. This bypasses
-            # the updates done by the CSC method.
-            await self.update_conditions()
+        await asyncio.sleep(0)
 
-            await asyncio.sleep(0)
-
-            targets = await self.select_next_targets()
-
-            await asyncio.sleep(0)
-
-            if targets is None:
-                n_scheduled_targets = self.get_number_of_scheduled_targets()
-                self.log.warning(
-                    "No target from the scheduler. "
-                    f"Stopping with {len(targets_queue)+n_scheduled_targets}. "
-                    f"Number of scheduled targets is {n_scheduled_targets}."
-                )
-                break
-            else:
-                for target in targets:
-                    if target is None:
-                        self.log.debug("No target, skipping...")
-                        continue
-                    self.log.debug(
-                        f"Temporarily registering selected targets: {target.note}."
-                    )
-                    self.driver.register_observed_target(target)
-
-                    # The following will playback the observations on the
-                    # observatory model but will keep the observatory state
-                    # unchanged
-                    self.models["observatory_model"].observe(target)
-
-                    wait_time = (
-                        self.models["observatory_model"].current_state.time
-                        - self.models["observatory_state"].time
-                    )
-
-                    yield self.models[
-                        "observatory_model"
-                    ].current_state.time, wait_time, target
-
-            if self.get_number_of_scheduled_targets() >= max_targets:
+        if targets is None:
+            n_scheduled_targets = self.get_number_of_scheduled_targets()
+            self.log.warning(
+                "No target from the scheduler. "
+                f"Number of scheduled targets is {n_scheduled_targets}."
+            )
+        else:
+            for target in targets:
+                if target is None:
+                    self.log.debug("No target, skipping...")
+                    continue
                 self.log.debug(
-                    f"Generated {self.get_number_of_scheduled_targets()} targets."
-                    f"Max targets: {max_targets}."
+                    f"Temporarily registering selected targets: {target.note}."
                 )
-                break
+                self.driver.register_observed_target(target)
+
+                # The following will playback the observations on the
+                # observatory model but will keep the observatory state
+                # unchanged
+                self.models["observatory_model"].observe(target)
+
+                wait_time = (
+                    self.models["observatory_model"].current_state.time
+                    - self.models["observatory_state"].time
+                )
+
+                yield self.models[
+                    "observatory_model"
+                ].current_state.time, wait_time, target
+
+        self.log.debug(f"Generated {self.get_number_of_scheduled_targets()} targets.")
 
     def register_scheduled_targets(self, targets_queue: list[DriverTarget]) -> None:
         """Register scheduled targets.
