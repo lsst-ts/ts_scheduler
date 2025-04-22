@@ -71,8 +71,8 @@ class TestFeatureSchedulerTarget(unittest.TestCase):
         )
 
         script_config_expected = {
-            "targetid": target.targetid,
-            "band_filter": target.filter,
+            "targetid": int(target.targetid),
+            "band_filter": str(target.filter),
             "filter_name": (
                 f"RUBIN{target.filter}_random_filter_name"
                 if "band" in observation.dtype.names
@@ -84,10 +84,11 @@ class TestFeatureSchedulerTarget(unittest.TestCase):
             "dec": target.get_dec(),
             "alt": target.alt,
             "az": target.az,
-            "rot": target.rot,
-            "rot_sky": target.ang,
+            "rot": float(target.rot),
+            "rot_sky": float(target.ang),
             "obs_time": target.obs_time,
-            "num_exp": target.num_exp,
+            "observation_reason": target.get_observation_reason(),
+            "num_exp": int(target.num_exp),
             "exp_times": target.exp_times,
             "estimated_slew_time": target.slewtime,
             "program": observing_block.program,
