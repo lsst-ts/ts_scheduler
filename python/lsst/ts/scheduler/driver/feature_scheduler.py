@@ -786,8 +786,13 @@ class FeatureScheduler(Driver):
 
         return filename
 
-    def get_state_as_file_object(self):
+    def get_state_as_file_object(self, targets_queue: list[FeatureSchedulerTarget]):
         """Get the current state of the scheduling algorithm as a file object.
+
+        Parameters
+        ----------
+        targets_queue : `list`[`DriverTarget`]
+            A List of targets in the queue to be observed.
 
         Returns
         -------
@@ -800,6 +805,11 @@ class FeatureScheduler(Driver):
             [
                 self.scheduler,
                 self.conditions,
+                [
+                    target.observation
+                    for target in targets_queue
+                    if hasattr(target, "observation")
+                ],
             ],
             file_object,
         )

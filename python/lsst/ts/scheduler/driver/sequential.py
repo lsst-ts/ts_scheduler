@@ -362,7 +362,7 @@ properties:
 
         return filename
 
-    def get_state_as_file_object(self):
+    def get_state_as_file_object(self, targets_queue: list[DriverTarget]):
         """Get the current state of the scheduling algorithm as a file object.
 
         Returns
