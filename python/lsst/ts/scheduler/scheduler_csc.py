@@ -1691,45 +1691,57 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         scheduler for the future, generating a list of observations.
         """
 
-        async with self.current_scheduler_state(publish_lfoa=True):
-            self.log.debug(f"Target queue contains {len(self.targets_queue)} targets.")
+        for n in range(self.parameters.n_targets + 1):
 
-            async for (
-                observatory_time,
-                wait_time,
-                target,
-            ) in self.model.generate_target_queue(
-                targets_queue=self.targets_queue,
-                max_targets=self.parameters.n_targets + 1,
-            ):
-                target.set_snapshot_uri(self.evt_largeFileObjectAvailable.data.url)
-                self.targets_queue.append(target)
-
-                await self._publish_time_to_next_target(
-                    current_time=observatory_time,
-                    wait_time=wait_time,
-                    ra=target.ra,
-                    dec=target.dec,
-                    rot_sky_pos=target.ang,
+            async with self.current_scheduler_state(publish_lfoa=True):
+                self.log.debug(
+                    f"Target queue contains {len(self.targets_queue)} targets."
                 )
+                self.model.register_scheduled_targets(self.targets_queue)
 
-            if len(self.targets_queue) > 0:
-                self._should_compute_predicted_schedule = True
-                await self.reset_handle_no_targets_on_queue()
-            elif (
-                len(self.targets_queue) == 0
-                and self.model.get_number_of_scheduled_targets() == 0
-            ):
-                await self.handle_no_targets_on_queue()
-            else:
-                self.log.info("No targets generated, but still have scheduled targets.")
+                async for (
+                    observatory_time,
+                    wait_time,
+                    target,
+                ) in self.model.generate_target_queue():
+                    target.set_snapshot_uri(self.evt_largeFileObjectAvailable.data.url)
+                    self.targets_queue.append(target)
 
-        await self.check_targets_queue_condition()
+                    await self._publish_time_to_next_target(
+                        current_time=observatory_time,
+                        wait_time=wait_time,
+                        ra=target.ra,
+                        dec=target.dec,
+                        rot_sky_pos=target.ang,
+                    )
 
-        self.log.debug(
-            f"Generated queue with {len(self.targets_queue)} targets. "
-            f"Current scheduled targets: {self.model.get_number_of_scheduled_targets()}."
-        )
+                if len(self.targets_queue) > 0:
+                    self._should_compute_predicted_schedule = True
+                    await self.reset_handle_no_targets_on_queue()
+                elif (
+                    len(self.targets_queue) == 0
+                    and self.model.get_number_of_scheduled_targets() == 0
+                ):
+                    await self.handle_no_targets_on_queue()
+                else:
+                    self.log.info(
+                        "No targets generated, but still have scheduled targets."
+                    )
+
+            await self.check_targets_queue_condition()
+
+            if len(self.targets_queue) > self.parameters.n_targets + 1:
+                self.log.info(
+                    f"Target queue contains {len(self.targets_queue)}. "
+                    f"Current scheduled targets: {self.model.get_number_of_scheduled_targets()}. "
+                    "Stop generating targets."
+                )
+                break
+
+            self.log.debug(
+                f"Generated queue with {len(self.targets_queue)} targets. "
+                f"Current scheduled targets: {self.model.get_number_of_scheduled_targets()}."
+            )
 
     async def check_targets_queue_condition(self):
         """Check targets queue condition.
@@ -2507,6 +2519,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         async with self.scheduler_state_lock:
             self.model.synchronize_observatory_model()
             await self.model.update_telemetry()
+            await self.model.update_conditions()
             last_scheduler_state_filename = await self.save_scheduler_state(
                 publish_lfoa=publish_lfoa
             )
