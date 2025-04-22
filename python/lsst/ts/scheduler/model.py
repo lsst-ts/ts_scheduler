@@ -1090,8 +1090,13 @@ class Model:
         """
         return self.driver.get_stop_tracking_target()
 
-    def get_state(self) -> tuple[io.BytesIO, str]:
+    def get_state(self, targets_queue: list[DriverTarget]) -> tuple[io.BytesIO, str]:
         """Get driver state.
+
+        Parameters
+        ----------
+        targets_queue : `list`[`DriverTarget`]
+            A List of targets in the queue to be observed.
 
         Returns
         -------
@@ -1099,7 +1104,10 @@ class Model:
             Tuple with driver state and a name of the file with a stored
             version.
         """
-        return self.driver.get_state_as_file_object(), self.driver.save_state()
+        return (
+            self.driver.get_state_as_file_object(targets_queue=targets_queue),
+            self.driver.save_state(),
+        )
 
     def reset_state(self, last_scheduler_state_filename: str) -> None:
         """Reset driver state from file.
