@@ -1,0 +1,9 @@
+maintel:
+  filter_band_mapping:
+    u_0123: u
+    g_1234: g
+    r_2345: r
+    i_3456: i
+    z_4567: z
+    y_4678: y
+    NONE: ""
