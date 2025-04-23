@@ -728,6 +728,10 @@ definitions:
         type: object
         additionalProperties:
             type: string
+      filter_names_separator:
+        description: >-
+            Character used to separate the filter names.
+        type: string
 type: object
 additionalProperties: false
 properties:
