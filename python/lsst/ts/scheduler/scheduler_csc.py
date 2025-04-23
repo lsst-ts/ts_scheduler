@@ -200,6 +200,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         self.parameters = SchedulerCscParameters()
         self.filter_band_mapping = dict()
+        self.filter_names_separator = ","
 
         # The maximum tolerable time without targets in seconds.
         self.max_time_no_target = 3600.0
@@ -880,7 +881,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     await self.camera.evt_availableFilters.aget(
                         timeout=self.loop_die_timeout
                     )
-                ).filterNames.split(",")
+                ).filterNames.split(self.filter_names_separator)
                 if self.filter_band_mapping:
                     missing_filter_map = set(mounted_filters).difference(
                         set(self.filter_band_mapping)
@@ -1207,6 +1208,9 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         self.parameters.cmd_timeout = settings.cmd_timeout
         self.parameters.max_scripts = settings.max_scripts
         self.filter_band_mapping = getattr(settings, "filter_band_mapping", dict())
+        self.filter_names_separator = getattr(
+            settings, "filter_names_separator", self.filter_names_separator
+        )
 
         survey_topology = await self.model.configure(settings)
 
