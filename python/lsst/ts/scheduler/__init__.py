@@ -20,7 +20,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 try:
-    from .version import *
+    from .version import __version__
 except ModuleNotFoundError:
     __version__ = "?"
 
