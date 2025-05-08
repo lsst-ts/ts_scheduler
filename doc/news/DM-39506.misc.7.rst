@@ -1,1 +1,0 @@
-For rubin_schedule v3.6 and above, replaced ID with target_id to get the id of the target from the feature based scheduler observation.

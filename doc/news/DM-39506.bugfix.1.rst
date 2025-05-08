@@ -1,1 +1,0 @@
-Fixed a bug in the Scheduler CSC stop command that would leave the detailed state as RUNNING if the target generation loop didn't stop in time and had to be cancelled.
