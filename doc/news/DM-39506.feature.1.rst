@@ -1,1 +1,0 @@
-Added observation_reason to the script configuration payload.

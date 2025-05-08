@@ -1,1 +1,0 @@
-Fixed how the FeatureSchedulerDriver retrieves a list of targets.
