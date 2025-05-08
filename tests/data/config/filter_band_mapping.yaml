@@ -1,0 +1,9 @@
+maintel:
+  instrument_name: MTCamera
+  filter_band_mapping:
+    NONE: ""
+    g_6: g
+    u_24: u
+    i_39: i
+    r_57: r
+

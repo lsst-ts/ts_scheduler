@@ -18,10 +18,10 @@ test:
     - astropy
     - jsonschema
     - numpy
-    - scipy =1.13
+    - scipy
     - pandas
     - yaml
-    - ts-idl {{ idl_version }}
+    - ts-xml {{ xml_version }}
     - ts-utils
     - ts-salobj {{ salobj_version }}
     - ts-scriptqueue
@@ -38,7 +38,7 @@ test:
     - pyproject.toml
   commands:
     - scheduler_download_data --update
-    - pytest -vsx
+    - pytest
 
 requirements:
   host:
@@ -58,11 +58,11 @@ requirements:
     - astropy
     - jsonschema
     - numpy
-    - scipy =1.13
+    - scipy
     - pandas
     - yaml
-    - ts-idl
     - ts-utils
+    - ts-xml
     - ts-salobj
     - ts-observatory-model
     - ts-astrosky-model >=1.4

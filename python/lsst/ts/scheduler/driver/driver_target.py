@@ -104,6 +104,7 @@ class DriverTarget(Target):
         self._sal_indices = []
 
         self.block_configuration = dict()
+        self._snapshot_uri = ""
 
         if observing_block.configuration_schema:
 
@@ -189,7 +190,9 @@ class DriverTarget(Target):
         script_config = {
             "targetid": int(self.targetid),
             "band_filter": str(self.filter),
+            "filter_name": self.get_filter_name(),
             "name": self.get_target_name(),
+            "note": str(self.note),
             "ra": self.get_ra(),
             "dec": self.get_dec(),
             "rot_sky": float(self.ang),
@@ -201,6 +204,7 @@ class DriverTarget(Target):
             "exp_times": [float(exptime) for exptime in self.exp_times],
             "estimated_slew_time": float(self.slewtime),
             "program": self.observing_block.program,
+            "observation_reason": self.get_observation_reason(),
         }
         script_config.update(self.block_configuration)
 
@@ -264,6 +268,25 @@ class DriverTarget(Target):
         self.format_config()
         return self.observing_block
 
+    def get_filter_name(self) -> str:
+        """Get the name of the filter.
+
+        Filter name is the long string that is particular to
+        an individual filter. For the generic identifier use
+        band_filter.
+
+        Returns
+        -------
+        filter_name : `str`
+            The name of the filter, e.g. SDSSr_65mm for a
+            specific r band.
+        """
+        return self.filter
+
+    def get_observation_reason(self) -> str:
+        """Get the observation reason."""
+        return "Scheduler_Driven_Observation"
+
     def as_dict(
         self, exposure_times_size: int = 10, proposal_id_size: int = 5
     ) -> typing.Dict[str, typing.Any]:
@@ -296,6 +319,8 @@ class DriverTarget(Target):
         for i, prop_id in enumerate(self.propid_list):
             topic_target["proposalId"][i] = int(prop_id)
         topic_target["note"] = self.note
+        topic_target["snapshotUri"] = self._snapshot_uri
+        topic_target["targetName"] = self.get_target_name()
 
         return topic_target
 
@@ -328,3 +353,13 @@ class DriverTarget(Target):
             Target additional information.
         """
         return ""
+
+    def set_snapshot_uri(self, uri):
+        """Set the value for the snapshot uri.
+
+        Parameters
+        ----------
+        uri : `str`
+            Value for the snapshot uri.
+        """
+        self._snapshot_uri = uri

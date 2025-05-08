@@ -130,7 +130,7 @@ def find_sky_file(source: str, mjd: float) -> str:
 
     raise RuntimeError(
         f"No suitable sky brightness file found for mjd={mjd} in {source}. "
-        f"Available files are: { ', '.join(sky_files)}."
+        f"Available files are: {', '.join(sky_files)}."
     )
 
 

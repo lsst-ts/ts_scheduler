@@ -46,24 +46,50 @@ class FeatureSchedulerTarget(DriverTarget):
 
         super().__init__(
             observing_block=observing_block,
-            targetid=observation["ID"][0],
-            band_filter=observation["filter"][0],
+            targetid=(
+                observation["target_id"][0]
+                if "target_id" in observation.dtype.names
+                else observation["ID"][0]
+            ),
+            band_filter=(
+                observation["band"][0]
+                if "band" in observation.dtype.names
+                else observation["filter"][0]
+            ),
             ra_rad=observation["RA"][0],
             dec_rad=observation["dec"][0],
             ang_rad=observation["rotSkyPos"][0],
             num_exp=observation["nexp"][0],
             exp_times=[
-                observation["exptime"][0] / observation["nexp"][0]
+                float(observation["exptime"][0] / observation["nexp"][0])
                 for i in range(observation["nexp"][0])
             ],
         )
-        self.note = str(observation["note"][0])
+        self.note = str(observation["scheduler_note"][0])
         self.slewtime = float(observation["slewtime"][0])
 
     @property
     def rot(self) -> float:
         """Return the physical rotator position in degrees."""
         return np.degrees(self.observation["rotTelPos"][0])
+
+    @property
+    def ang(self) -> float:
+        """Return the sky angle in degrees."""
+        return np.degrees(self.observation["rotSkyPos"][0])
+
+    def get_filter_name(self) -> str:
+        """Filter name as provided by the feature scheduler observation.
+
+        For the FBS band is band_filter or Target.filter, and filter
+        is the filter_name.
+
+        Returns
+        -------
+        filter_name : `str`
+            Name of the filter.
+        """
+        return str(self.observation["filter"][0])
 
     def get_target_name(self) -> str:
         """Parse the note field to get the target name.
@@ -75,3 +101,7 @@ class FeatureSchedulerTarget(DriverTarget):
         """
         target_name = str(self.observation["target_name"][0])
         return target_name if target_name else "FeatureSchedulerTarget"
+
+    def get_observation_reason(self) -> str:
+        """Get the observation reason."""
+        return str(self.observation["observation_reason"][0])

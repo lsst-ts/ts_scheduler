@@ -20,10 +20,23 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 try:
-    from .version import *
+    from .version import __version__
 except ModuleNotFoundError:
     __version__ = "?"
+
+import logging
 
 from .config_schema import *
 from .scheduler_csc import *
 from .telemetry_stream_handler import *
+
+TRACE_LEVEL_NUM = 5
+logging.addLevelName(TRACE_LEVEL_NUM, "TRACE")
+
+
+def trace(self, message, *args, **kwargs):
+    if self.isEnabledFor(TRACE_LEVEL_NUM):
+        self._log(TRACE_LEVEL_NUM, message, args, **kwargs)
+
+
+logging.getLoggerClass().trace = trace

@@ -25,12 +25,12 @@ import unittest
 from unittest.mock import AsyncMock, Mock, patch
 
 import yaml
-from lsst.ts.idl.enums.Script import ScriptState
 from lsst.ts.salobj import DefaultingValidator
 from lsst.ts.scheduler.driver.driver_target import DriverTarget
 from lsst.ts.scheduler.model import Model
 from lsst.ts.scheduler.utils.csc_utils import BlockStatus
 from lsst.ts.scheduler.utils.types import ValidationRules
+from lsst.ts.xml.enums.Script import ScriptState
 
 TEST_CONFIG_DIR = pathlib.Path(__file__).parents[1].joinpath("tests", "data", "config")
 
@@ -85,7 +85,7 @@ class TestModel(unittest.IsolatedAsyncioTestCase):
         """
 
         n_targets = 0
-        async for _ in self.model.generate_target_queue([], 5):
+        async for _ in self.model.generate_target_queue():
             n_targets += 1
 
         assert n_targets == 0

@@ -339,24 +339,21 @@ class FeatureScheduler(Driver):
                 "Call `update_conditions` before requesting a target."
             )
 
-        desired_obs = self.scheduler.request_observation(mjd=self.next_observation_mjd)
+        observations = self.scheduler.request_observation(
+            mjd=self.next_observation_mjd, whole_queue=True
+        )
 
-        desired_observations = [
-            self._handle_desired_observation(desired_observation=desired_obs),
-        ]
-
-        if self._desired_obs is not None:
+        desired_observations = []
+        for observation in observations:
             desired_observations.append(
-                self._get_validated_target_from_observation(self._desired_obs)
+                self._handle_desired_observation(desired_observation=observation)
             )
-            self._desired_obs = None
 
-        if len(self.scheduler.queue) > 0:
-            desired_observations += [
-                self._get_validated_target_from_observation(observation)
-                for observation in self.scheduler.queue
-            ]
-            self.scheduler.flush_queue()
+            if self._desired_obs is not None:
+                desired_observations.append(
+                    self._get_validated_target_from_observation(self._desired_obs)
+                )
+                self._desired_obs = None
 
         return desired_observations
 
@@ -468,7 +465,6 @@ class FeatureScheduler(Driver):
             target.observation["airmass"] = self.conditions.airmass[hpid]
             target.observation["alt"] = target.alt_rad
             target.observation["az"] = target.az_rad
-            target.observation["rotSkyPos"] = target.ang_rad
             target.observation["clouds"] = self.conditions.bulk_cloud
 
             target.slewtime = slew_time
@@ -604,7 +600,7 @@ class FeatureScheduler(Driver):
 
         self.conditions.mjd = self.models["observatory_model"].dateprofile.mjd
 
-        self.log.debug(f"Format conditions. mjd={self.conditions.mjd}")
+        self.log.trace(f"Format conditions. mjd={self.conditions.mjd}")
 
         almanac_indx = self.almanac.mjd_indx(self.conditions.mjd)
 
@@ -790,8 +786,13 @@ class FeatureScheduler(Driver):
 
         return filename
 
-    def get_state_as_file_object(self):
+    def get_state_as_file_object(self, targets_queue: list[FeatureSchedulerTarget]):
         """Get the current state of the scheduling algorithm as a file object.
+
+        Parameters
+        ----------
+        targets_queue : `list`[`DriverTarget`]
+            A List of targets in the queue to be observed.
 
         Returns
         -------
@@ -804,6 +805,11 @@ class FeatureScheduler(Driver):
             [
                 self.scheduler,
                 self.conditions,
+                [
+                    target.observation
+                    for target in targets_queue
+                    if hasattr(target, "observation")
+                ],
             ],
             file_object,
         )

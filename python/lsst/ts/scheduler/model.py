@@ -36,9 +36,9 @@ from jsonschema import ValidationError
 from lsst.ts import observing, utils
 from lsst.ts.astrosky.model import AstronomicalSkyModel
 from lsst.ts.dateloc import ObservatoryLocation
-from lsst.ts.idl.enums import Script
 from lsst.ts.observatory.model import ObservatoryModel, ObservatoryState
 from lsst.ts.salobj.type_hints import BaseDdsDataType
+from lsst.ts.xml.enums import Script
 from rubin_scheduler.site_models.cloud_model import CloudModel
 from rubin_scheduler.site_models.seeing_model import SeeingModel
 
@@ -558,17 +558,17 @@ class Model:
 
         block_all_done: list[uuid.UUID] = []
 
-        self.log.debug(f"Script[{sal_index}]::{script_state!r}")
+        self.log.trace(f"Script[{sal_index}]::{script_state!r}")
 
         for block_uid in self._block_scripts_final_state:
-            self.log.debug(
+            self.log.trace(
                 f"Checking {block_uid=}::{self._block_scripts_final_state[block_uid]}"
             )
             if (
                 sal_index in self._block_scripts_final_state[block_uid]
                 and script_state not in NonFinalStates
             ):
-                self.log.debug(f"{block_uid=}::{sal_index=}::{script_state!r}")
+                self.log.trace(f"{block_uid=}::{sal_index=}::{script_state!r}")
                 # Script in a final state set value of the future.
                 if script_state in FailedStates:
                     self._block_scripts_final_state[block_uid][sal_index].set_exception(
@@ -836,16 +836,8 @@ class Model:
 
         await loop.run_in_executor(None, self.driver.update_conditions)
 
-    async def generate_target_queue(self, targets_queue, max_targets):
+    async def generate_target_queue(self):
         """Generate target queue.
-
-        Parameters
-        ----------
-        targets_queue : `list`[`DriverTarget`]
-            List of already queued targets. These are in the scheduler queue
-            but not scheduled to run yet.
-        max_targets : `int`
-            Number of target to generate.
 
         Yields
         ------
@@ -854,71 +846,42 @@ class Model:
             when the target was computed, how long to wait to observe the
             target and the target.
         """
-        self.synchronize_observatory_model()
-        self.register_scheduled_targets(targets_queue)
-        # Note that here it runs the update_telemetry method from the
-        # scheduler. This method will update the telemetry based on most
-        # current recent data in the system.
-        await self.update_telemetry()
 
-        # For now it will only generate enough targets to send to the queue
-        # and leave one extra in the internal queue. In the future we will
-        # generate targets to fill the
-        # self.parameters.predicted_scheduler_window.
-        # But then we will have to improve how we handle the target
-        # generation and the check_targets_queue_condition.
-        self.log.debug(f"Requesting {max_targets} additional targets.")
+        targets = await self.select_next_targets()
 
-        for _ in range(max_targets):
-            # Inside the loop we are running update_conditions directly
-            # from the driver instead of update_telemetry. This bypasses
-            # the updates done by the CSC method.
-            await self.update_conditions()
+        await asyncio.sleep(0)
 
-            await asyncio.sleep(0)
-
-            targets = await self.select_next_targets()
-
-            await asyncio.sleep(0)
-
-            if targets is None:
-                n_scheduled_targets = self.get_number_of_scheduled_targets()
-                self.log.warning(
-                    "No target from the scheduler. "
-                    f"Stopping with {len(targets_queue)+n_scheduled_targets}. "
-                    f"Number of scheduled targets is {n_scheduled_targets}."
-                )
-                break
-            else:
-                for target in targets:
-                    if target is None:
-                        self.log.debug("No target, skipping...")
-                        continue
-                    self.log.debug(
-                        f"Temporarily registering selected targets: {target.note}."
-                    )
-                    self.driver.register_observed_target(target)
-
-                    # The following will playback the observations on the
-                    # observatory model but will keep the observatory state
-                    # unchanged
-                    self.models["observatory_model"].observe(target)
-
-                    wait_time = (
-                        self.models["observatory_model"].current_state.time
-                        - self.models["observatory_state"].time
-                    )
-
-                    yield self.models[
-                        "observatory_model"
-                    ].current_state.time, wait_time, target
-
-            if self.get_number_of_scheduled_targets() >= max_targets:
+        if targets is None:
+            n_scheduled_targets = self.get_number_of_scheduled_targets()
+            self.log.warning(
+                "No target from the scheduler. "
+                f"Number of scheduled targets is {n_scheduled_targets}."
+            )
+        else:
+            for target in targets:
+                if target is None:
+                    self.log.debug("No target, skipping...")
+                    continue
                 self.log.debug(
-                    f"Generated {self.get_number_of_scheduled_targets()} targets."
-                    f"Max targets: {max_targets}."
+                    f"Temporarily registering selected targets: {target.note}."
                 )
-                break
+                self.driver.register_observed_target(target)
+
+                # The following will playback the observations on the
+                # observatory model but will keep the observatory state
+                # unchanged
+                self.models["observatory_model"].observe(target)
+
+                wait_time = (
+                    self.models["observatory_model"].current_state.time
+                    - self.models["observatory_state"].time
+                )
+
+                yield self.models[
+                    "observatory_model"
+                ].current_state.time, wait_time, target
+
+        self.log.debug(f"Generated {self.get_number_of_scheduled_targets()} targets.")
 
     def register_scheduled_targets(self, targets_queue: list[DriverTarget]) -> None:
         """Register scheduled targets.
@@ -932,12 +895,12 @@ class Model:
         self.log.debug("Registering current scheduled targets.")
 
         for target in self.raw_telemetry["scheduled_targets"]:
-            self.log.debug(f"Temporarily registering scheduled target: {target.note}.")
+            self.log.debug(f"Temporarily registering scheduled target: {target}.")
             self.driver.register_observed_target(target)
             self.models["observatory_model"].observe(target)
 
         for target in targets_queue:
-            self.log.debug(f"Temporarily registering queued target: {target.note}.")
+            self.log.debug(f"Temporarily registering queued target: {target}.")
             self.driver.register_observed_target(target)
             self.models["observatory_model"].observe(target)
 
@@ -1090,8 +1053,13 @@ class Model:
         """
         return self.driver.get_stop_tracking_target()
 
-    def get_state(self) -> tuple[io.BytesIO, str]:
+    def get_state(self, targets_queue: list[DriverTarget]) -> tuple[io.BytesIO, str]:
         """Get driver state.
+
+        Parameters
+        ----------
+        targets_queue : `list`[`DriverTarget`]
+            A List of targets in the queue to be observed.
 
         Returns
         -------
@@ -1099,7 +1067,10 @@ class Model:
             Tuple with driver state and a name of the file with a stored
             version.
         """
-        return self.driver.get_state_as_file_object(), self.driver.save_state()
+        return (
+            self.driver.get_state_as_file_object(targets_queue=targets_queue),
+            self.driver.save_state(),
+        )
 
     def reset_state(self, last_scheduler_state_filename: str) -> None:
         """Reset driver state from file.
@@ -1374,7 +1345,7 @@ class Model:
 
         try:
             if self.telemetry_stream_handler is not None:
-                self.log.debug("Updating telemetry stream.")
+                self.log.trace("Updating telemetry stream.")
 
                 for telemetry in self.telemetry_stream_handler.telemetry_streams:
                     telemetry_data = (
