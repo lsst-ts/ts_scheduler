@@ -428,8 +428,13 @@ class Driver:
         """
         raise NotImplementedError("Parse observation database not implemented.")
 
-    def get_state_as_file_object(self) -> io.BytesIO:
+    def get_state_as_file_object(self, targets_queue: list[DriverTarget]) -> io.BytesIO:
         """Get the current state of the scheduling algorithm as a file object.
+
+        Parameters
+        ----------
+        targets_queue : `list`[`DriverTarget`]
+            A List of targets in the queue to be observed.
 
         Returns
         -------

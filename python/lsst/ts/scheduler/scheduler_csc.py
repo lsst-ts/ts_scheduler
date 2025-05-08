@@ -41,10 +41,10 @@ import yaml
 from lsst.ts import salobj, utils
 from lsst.ts.astrosky.model import version as astrosky_version
 from lsst.ts.dateloc import version as dateloc_version
-from lsst.ts.idl.enums import Scheduler, ScriptQueue
 from lsst.ts.observatory.model import version as obs_mod_version
 from lsst.ts.observing import ObservingBlock, ObservingScript
-from rubin_scheduler.version import __version__ as rubin_scheduler_version
+from lsst.ts.xml.enums import Scheduler, ScriptQueue
+from rubin_scheduler import __version__ as rubin_scheduler_version
 
 from . import CONFIG_SCHEMA, __version__
 from .driver.driver_target import DriverTarget
@@ -199,6 +199,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         self.no_observatory_state_warning = False
 
         self.parameters = SchedulerCscParameters()
+        self.filter_band_mapping = dict()
+        self.filter_names_separator = ","
 
         # The maximum tolerable time without targets in seconds.
         self.max_time_no_target = 3600.0
@@ -508,6 +510,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             )
             await self._stop_background_task("target_production_task")
             await self._cleanup_queue_targets()
+            await self.reset_handle_no_targets_on_queue()
+            await self._transition_running_to_idle()
             await self._start_target_production_task()
 
     async def stop_target_loop_execution(self) -> None:
@@ -762,6 +766,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         failed_observatory_state_logged = False
         while self.run_loop:
             # Update observatory state and sleep at the same time.
+            timer_task = asyncio.create_task(asyncio.sleep(self.heartbeat_interval))
             try:
                 await self.handle_observatory_state()
                 failed_observatory_state_logged = False
@@ -829,6 +834,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
             await self._cleanup_script_tasks()
 
+            await timer_task
+
     async def _cleanup_script_tasks(self) -> None:
         """Cleanup completed script tasks."""
         script_tasks_done = [
@@ -860,6 +867,13 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                         timeout=self.loop_die_timeout
                     )
                 ).filterName
+                if self.filter_band_mapping:
+                    if current_filter not in self.filter_band_mapping:
+                        mapped_filters = ",".join(self.filter_band_mapping.keys())
+                        raise ValueError(
+                            f"Filter {current_filter} not in the filter band mapping: {mapped_filters}."
+                        )
+                    current_filter = self.filter_band_mapping[current_filter]
             except asyncio.TimeoutError:
                 self.log.warning("Could not get current camera filter.")
             try:
@@ -867,7 +881,20 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     await self.camera.evt_availableFilters.aget(
                         timeout=self.loop_die_timeout
                     )
-                ).filterNames.split(":")
+                ).filterNames.split(self.filter_names_separator)
+                if self.filter_band_mapping:
+                    missing_filter_map = set(mounted_filters).difference(
+                        set(self.filter_band_mapping)
+                    )
+                    if missing_filter_map:
+                        raise ValueError(
+                            "The following filters are missing in the filter map configuration: "
+                            f"{missing_filter_map}."
+                        )
+                    mounted_filters = [
+                        self.filter_band_mapping[filter_name]
+                        for filter_name in mounted_filters
+                    ]
             except asyncio.TimeoutError:
                 self.log.warning("Could not get available filters.")
 
@@ -895,8 +922,11 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             self.log.info(f"Adding {target=!s} scripts on the queue.")
 
             self.model.register_new_block(id=observing_block.id)
+            initial_sal_index = None
             async for sal_index in self._queue_block_scripts(observing_block):
                 self.log.info(f"{observing_block.name}::{sal_index=}.")
+                if initial_sal_index is None:
+                    initial_sal_index = sal_index
                 try:
                     target.add_sal_index(sal_index)
                 except NonConsecutiveIndexError:
@@ -915,7 +945,9 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     await asyncio.sleep(self.heartbeat_interval)
 
             # publishes target event
-            await self.evt_target.set_write(**target.as_dict())
+            target_data = target.as_dict()
+            target_data["blockId"] = initial_sal_index
+            await self.evt_target.set_write(**target_data)
 
             await self._update_block_status(
                 block_id=observing_block.program,
@@ -1060,9 +1092,9 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             Future with the script final state.
         """
         async with self._queue_capacity:
-            self.log.debug("Waiting Script final state.")
+            self.log.trace("Waiting Script final state.")
             await script_final_state
-            self.log.debug(f"Script final state: {script_final_state.result()!r}")
+            self.log.trace(f"Script final state: {script_final_state.result()!r}")
 
     async def remove_from_queue(self, targets: list[DriverTarget]) -> None:
         """Given a list of targets, remove them from the queue.
@@ -1151,7 +1183,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 "a session for this instance of the Scheduler."
             )
 
-        self.log.debug(f"Settings for {instance!r}: {settings}")
+        self.log.info(f"Settings for {instance!r}: {settings}")
 
         if hasattr(settings, "instrument_name"):
             if settings.instrument_name in {"MTCamera", "CCCamera"}:
@@ -1175,6 +1207,10 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         self.parameters.loop_sleep_time = settings.loop_sleep_time
         self.parameters.cmd_timeout = settings.cmd_timeout
         self.parameters.max_scripts = settings.max_scripts
+        self.filter_band_mapping = getattr(settings, "filter_band_mapping", dict())
+        self.filter_names_separator = getattr(
+            settings, "filter_names_separator", self.filter_names_separator
+        )
 
         survey_topology = await self.model.configure(settings)
 
@@ -1681,44 +1717,57 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         scheduler for the future, generating a list of observations.
         """
 
-        async with self.current_scheduler_state(publish_lfoa=True):
-            self.log.debug(f"Target queue contains {len(self.targets_queue)} targets.")
+        for n in range(self.parameters.n_targets + 1):
 
-            async for (
-                observatory_time,
-                wait_time,
-                target,
-            ) in self.model.generate_target_queue(
-                targets_queue=self.targets_queue,
-                max_targets=self.parameters.n_targets + 1,
-            ):
-                self.targets_queue.append(target)
-
-                await self._publish_time_to_next_target(
-                    current_time=observatory_time,
-                    wait_time=wait_time,
-                    ra=target.ra,
-                    dec=target.dec,
-                    rot_sky_pos=target.ang,
+            async with self.current_scheduler_state(publish_lfoa=True):
+                self.log.debug(
+                    f"Target queue contains {len(self.targets_queue)} targets."
                 )
+                self.model.register_scheduled_targets(self.targets_queue)
 
-            if len(self.targets_queue) > 0:
-                self._should_compute_predicted_schedule = True
-                await self.reset_handle_no_targets_on_queue()
-            elif (
-                len(self.targets_queue) == 0
-                and self.model.get_number_of_scheduled_targets() == 0
-            ):
-                await self.handle_no_targets_on_queue()
-            else:
-                self.log.info("No targets generated, but still have scheduled targets.")
+                async for (
+                    observatory_time,
+                    wait_time,
+                    target,
+                ) in self.model.generate_target_queue():
+                    target.set_snapshot_uri(self.evt_largeFileObjectAvailable.data.url)
+                    self.targets_queue.append(target)
 
-        await self.check_targets_queue_condition()
+                    await self._publish_time_to_next_target(
+                        current_time=observatory_time,
+                        wait_time=wait_time,
+                        ra=target.ra,
+                        dec=target.dec,
+                        rot_sky_pos=target.ang,
+                    )
 
-        self.log.debug(
-            f"Generated queue with {len(self.targets_queue)} targets. "
-            f"Current scheduled targets: {self.model.get_number_of_scheduled_targets()}."
-        )
+                if len(self.targets_queue) > 0:
+                    self._should_compute_predicted_schedule = True
+                    await self.reset_handle_no_targets_on_queue()
+                elif (
+                    len(self.targets_queue) == 0
+                    and self.model.get_number_of_scheduled_targets() == 0
+                ):
+                    await self.handle_no_targets_on_queue()
+                else:
+                    self.log.info(
+                        "No targets generated, but still have scheduled targets."
+                    )
+
+            await self.check_targets_queue_condition()
+
+            if len(self.targets_queue) > self.parameters.n_targets + 1:
+                self.log.info(
+                    f"Target queue contains {len(self.targets_queue)}. "
+                    f"Current scheduled targets: {self.model.get_number_of_scheduled_targets()}. "
+                    "Stop generating targets."
+                )
+                break
+
+            self.log.debug(
+                f"Generated queue with {len(self.targets_queue)} targets. "
+                f"Current scheduled targets: {self.model.get_number_of_scheduled_targets()}."
+            )
 
     async def check_targets_queue_condition(self):
         """Check targets queue condition.
@@ -1748,7 +1797,9 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             Path to the current scheduler state snapshot.
         """
 
-        file_object, saved_scheduler_state_filename = self.model.get_state()
+        file_object, saved_scheduler_state_filename = self.model.get_state(
+            targets_queue=self.targets_queue
+        )
 
         if publish_lfoa:
             scheduler_state_filename = "last_scheduler_state.p"
@@ -2494,6 +2545,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         async with self.scheduler_state_lock:
             self.model.synchronize_observatory_model()
             await self.model.update_telemetry()
+            await self.model.update_conditions()
             last_scheduler_state_filename = await self.save_scheduler_state(
                 publish_lfoa=publish_lfoa
             )

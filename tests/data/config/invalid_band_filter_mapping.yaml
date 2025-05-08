@@ -1,0 +1,6 @@
+maintel:
+  filter_band_mapping:
+    u_57: u
+    g_09: g
+    r_66: r
+    i_67: 1 # cannot be a number

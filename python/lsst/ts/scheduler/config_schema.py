@@ -721,6 +721,17 @@ definitions:
           - LATISS
           - MTCamera
           - CCCamera
+      filter_band_mapping:
+        description: >-
+            The mapping between the filter name (the element identifier)
+            and the band name (ugrizy).
+        type: object
+        additionalProperties:
+            type: string
+      filter_names_separator:
+        description: >-
+            Character used to separate the filter names.
+        type: string
 type: object
 additionalProperties: false
 properties:

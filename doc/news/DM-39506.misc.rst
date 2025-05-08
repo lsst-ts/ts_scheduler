@@ -1,0 +1,1 @@
+Updated conda recipe to remove ts-idl, add label for xml version on test requirements and remove pin on numpy.
