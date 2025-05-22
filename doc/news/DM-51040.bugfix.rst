@@ -1,0 +1,1 @@
+Fixes condition when the FBS returns ``None`` as a target (e.g. no target condition).
