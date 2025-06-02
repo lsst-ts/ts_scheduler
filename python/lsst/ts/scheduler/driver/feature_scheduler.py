@@ -343,6 +343,9 @@ class FeatureScheduler(Driver):
             mjd=self.next_observation_mjd, whole_queue=True
         )
 
+        if observations is None:
+            return None
+
         desired_observations = []
         for observation in observations:
             desired_observations.append(
