@@ -1,3 +1,13 @@
+v2.4.1 (2025-06-02)
+===================
+
+Bug Fixes
+---------
+
+- Fixes condition when the FBS returns ``None`` as a target (e.g. no target condition). (`DM-51040 <https://rubinobs.atlassian.net//browse/DM-51040>`_)
+- Fixes issue in the telemetry loop to handle setting the observatory state synchronization flag. (`DM-51040 <https://rubinobs.atlassian.net//browse/DM-51040>`_)
+
+
 v2.4.0 (2025-05-08)
 ===================
 
