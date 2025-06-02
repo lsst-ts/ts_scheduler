@@ -771,6 +771,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 await self.handle_observatory_state()
                 failed_observatory_state_logged = False
             except Exception:
+                self.telemetry_in_sync.clear()
                 queue = await self.get_queue(request=False)
                 if (
                     self.summary_state == salobj.State.ENABLED
@@ -816,11 +817,12 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                         "Failed to update observatory state. "
                         f"Ignoring, scheduler in {self.summary_state!r}{message_text}."
                     )
+            else:
+                self.telemetry_in_sync.set()
 
             await self.tel_observatoryState.set_write(
                 **self.model.get_observatory_state()
             )
-            self.telemetry_in_sync.set()
 
             try:
                 await asyncio.wait_for(
