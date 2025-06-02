@@ -1,1 +1,0 @@
-Fixes issue in the telemetry loop to handle setting the observatory state synchronization flag.
