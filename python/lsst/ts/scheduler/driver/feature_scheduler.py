@@ -32,9 +32,9 @@ import numpy as np
 import pandas
 import yaml
 from astropy.time import Time
-from lsst.ts.utils import index_generator
+from lsst.ts.utils import astropy_time_from_tai_unix, index_generator, tai_from_utc
 from rubin_scheduler.scheduler.features import Conditions
-from rubin_scheduler.scheduler.utils import ObservationArray
+from rubin_scheduler.scheduler.utils import ObservationArray, TargetoO
 from rubin_scheduler.site_models import Almanac
 from rubin_scheduler.utils import _ra_dec2_hpid
 
@@ -765,6 +765,32 @@ class FeatureScheduler(Driver):
         self.conditions.planet_positions = self.almanac.get_planet_positions(
             self.conditions.mjd
         )
+
+        if "too_alerts" in self.raw_telemetry:
+            self.log.debug("Passing ToO alerts.")
+
+            targets_of_opportunity = []
+
+            for too in self.raw_telemetry["too_alerts"]:
+                ra_rad_center = float(np.mean(self.conditions.ra[too.reward_map]))
+                dec_rad_center = float(np.mean(self.conditions.dec[too.reward_map]))
+                targets_of_opportunity.append(
+                    TargetoO(
+                        tooid=too.tooid,
+                        ra_rad_center=ra_rad_center,
+                        dec_rad_center=dec_rad_center,
+                        footprint=too.reward_map,
+                        mjd_start=float(
+                            astropy_time_from_tai_unix(
+                                tai_from_utc(too.event_trigger_timestamp, "isot")
+                            ).value
+                        ),
+                        duration=1.0,
+                        too_type=too.alert_type,
+                    )
+                )
+
+            self.conditions.targets_of_opportunity = targets_of_opportunity
 
     def save_state(self):
         """Save the current state of the scheduling algorithm to a file.
