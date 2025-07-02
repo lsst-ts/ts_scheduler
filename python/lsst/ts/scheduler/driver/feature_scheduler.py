@@ -32,11 +32,11 @@ import numpy as np
 import pandas
 import yaml
 from astropy.time import Time
-from lsst.ts.utils import index_generator
+from lsst.ts.utils import astropy_time_from_tai_unix, index_generator, tai_from_utc
 from rubin_scheduler.scheduler.features import Conditions
 from rubin_scheduler.scheduler.utils import ObservationArray
 from rubin_scheduler.site_models import Almanac
-from rubin_scheduler.utils import _ra_dec2_hpid
+from rubin_scheduler.utils import TargetoO, _ra_dec2_hpid
 
 from ..utils.fbs_utils import SchemaConverter, make_fbs_observation_from_target
 from . import Driver, DriverParameters
@@ -765,6 +765,21 @@ class FeatureScheduler(Driver):
         self.conditions.planet_positions = self.almanac.get_planet_positions(
             self.conditions.mjd
         )
+
+        self.conditions.targets_of_opportunity = [
+            TargetoO(
+                tooid=too.source,
+                footprints=too.reward_map,
+                mjd_start=float(
+                    astropy_time_from_tai_unix(
+                        tai_from_utc(too.event_trigger_timestamp, "isot")
+                    ).value
+                ),
+                duration=1.0,
+                too_type=too.alert_type,
+            )
+            for too in self.raw_telemetry.get("too_alerts", [])
+        ]
 
     def save_state(self):
         """Save the current state of the scheduling algorithm to a file.
