@@ -48,6 +48,7 @@ from .driver.survey_topology import SurveyTopology
 from .exceptions.exceptions import TargetScriptFailedError, UpdateTelemetryError
 from .observing_blocks.observing_block_status import ObservingBlockStatus
 from .telemetry_stream_handler import TelemetryStreamHandler
+from .too_client import TooClient
 from .utils.csc_utils import (
     BlockStatus,
     FailedStates,
@@ -129,6 +130,7 @@ class Model:
 
         # Scheduler driver instance.
         self.driver: Driver | None = None
+        self.too_client: TooClient | None = None
 
         self.max_scripts = 0
 
@@ -237,6 +239,12 @@ class Model:
         self.telemetry_stream_handler = TelemetryStreamHandler(
             log=self.log, efd_name=efd_name
         )
+
+        if "too_client" in config:
+            self.too_client = TooClient(
+                efd_name=efd_name,
+                **config["too_client"],
+            )
 
         if "streams" not in config:
             self.log.warning(
@@ -1361,6 +1369,12 @@ class Model:
                     )
             else:
                 self.log.debug("Telemetry stream not configured.")
+
+            if self.too_client is not None:
+                self.log.trace("Retrieving ToO alerts.")
+                too_alerts = await self.too_client.get_too_alerts()
+                if too_alerts:
+                    self.raw_telemetry["too_alerts"] = too_alerts
 
             self.models["observatory_model"].update_state(
                 utils.astropy_time_from_tai_unix(utils.current_tai()).unix
