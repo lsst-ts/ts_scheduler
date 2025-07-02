@@ -27,7 +27,7 @@ CONFIG_SCHEMA = yaml.safe_load(
     """$schema: http://json-schema.org/draft-07/schema#
 $id: https://github.com/lsst-ts/ts_scheduler/blob/master/schema/Scheduler.yaml
 # title must end with one or more spaces followed by the schema version, which must begin with "v"
-title: Scheduler v7
+title: Scheduler v8
 description: Schema for Scheduler configuration files
 definitions:
   instance_specific_config:
@@ -551,6 +551,20 @@ definitions:
           efd_name:
             type: string
             description: Name of the EFD instance telemetry should be queried from.
+          too_client:
+            type: object
+            description: Configuration for the Target of Opportunity client.
+            additionalProperties: false
+            properties:
+              topic_name:
+                type: string
+                description: The name of the topic with the ToO data in the EFD.
+              delta_time:
+                type: number
+                description: How long in the past to look for ToO alerts?
+              db_name:
+                type: string
+                description: The name of the database where the topics are written.
           streams:
             type: array
             items:
