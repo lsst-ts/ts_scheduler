@@ -54,8 +54,9 @@ class TestModel(unittest.IsolatedAsyncioTestCase):
 
         return super().setUp()
 
+    @unittest.mock.patch("lsst_efd_client.EfdClient", AsyncMock())
     async def test_configure(self) -> None:
-        config = self.get_sample_configuration()
+        config = self.get_sample_configuration(with_too_client=True)
 
         await self.model.configure(config)
 
@@ -78,6 +79,7 @@ class TestModel(unittest.IsolatedAsyncioTestCase):
             == self.get_expected_observing_blocks()
         )
         assert self.model.driver is not None
+        assert self.model.too_client is not None
 
     async def test_generate_target_queue_no_target(self) -> None:
         """Test for when select_next_targets returns no target in
@@ -264,7 +266,7 @@ class TestModel(unittest.IsolatedAsyncioTestCase):
             "BLOCK-8": BlockStatus.AVAILABLE,
         }
 
-    def get_sample_configuration(self):
+    def get_sample_configuration(self, with_too_client: bool = False):
         config = types.SimpleNamespace(
             max_scripts=100,
             telemetry=dict(
@@ -280,6 +282,13 @@ class TestModel(unittest.IsolatedAsyncioTestCase):
             ),
             startup_database="",
         )
+
+        if with_too_client:
+            config.telemetry["too_client"] = dict(
+                topic_name="too_alert",
+                delta_time=300.0,
+                db_name="scimma",
+            )
 
         return config
 
