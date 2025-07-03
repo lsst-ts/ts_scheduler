@@ -34,9 +34,9 @@ import yaml
 from astropy.time import Time
 from lsst.ts.utils import astropy_time_from_tai_unix, index_generator, tai_from_utc
 from rubin_scheduler.scheduler.features import Conditions
-from rubin_scheduler.scheduler.utils import ObservationArray
+from rubin_scheduler.scheduler.utils import ObservationArray, TargetoO
 from rubin_scheduler.site_models import Almanac
-from rubin_scheduler.utils import TargetoO, _ra_dec2_hpid
+from rubin_scheduler.utils import _ra_dec2_hpid
 
 from ..utils.fbs_utils import SchemaConverter, make_fbs_observation_from_target
 from . import Driver, DriverParameters
