@@ -1374,7 +1374,7 @@ class Model:
                 self.log.trace("Retrieving ToO alerts.")
                 too_alerts = await self.too_client.get_too_alerts()
                 if too_alerts:
-                    self.raw_telemetry["too_alerts"] = too_alerts
+                    self.raw_telemetry["too_alerts"] = list(too_alerts.values())
 
             self.models["observatory_model"].update_state(
                 utils.astropy_time_from_tai_unix(utils.current_tai()).unix
