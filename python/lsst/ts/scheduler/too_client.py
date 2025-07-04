@@ -173,7 +173,10 @@ class TooClient:
         ):
 
             reward_map = await self._retrieve_reward_map(
-                time_query_start, time_query_end, source
+                time_query_start=time_query_start,
+                time_query_end=time_query_end,
+                source=source,
+                nside=reward_map_nside,
             )
 
             too_alert = TooAlert(
