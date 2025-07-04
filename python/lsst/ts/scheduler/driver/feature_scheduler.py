@@ -768,7 +768,7 @@ class FeatureScheduler(Driver):
 
         self.conditions.targets_of_opportunity = [
             TargetoO(
-                tooid=too.source,
+                tooid=too.tooid,
                 footprint=too.reward_map,
                 mjd_start=float(
                     astropy_time_from_tai_unix(
