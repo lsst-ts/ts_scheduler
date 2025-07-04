@@ -772,6 +772,8 @@ class FeatureScheduler(Driver):
             self.conditions.targets_of_opportunity = [
                 TargetoO(
                     tooid=too.tooid,
+                    ra_rad_center=self.conditions.tel_ra,  # FIXME
+                    dec_rad_center=self.conditions.tel_dec,  # FIXME
                     footprint=too.reward_map,
                     mjd_start=float(
                         astropy_time_from_tai_unix(
