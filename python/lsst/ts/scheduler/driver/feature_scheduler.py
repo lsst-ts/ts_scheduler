@@ -769,7 +769,7 @@ class FeatureScheduler(Driver):
         self.conditions.targets_of_opportunity = [
             TargetoO(
                 tooid=too.source,
-                footprints=too.reward_map,
+                footprint=too.reward_map,
                 mjd_start=float(
                     astropy_time_from_tai_unix(
                         tai_from_utc(too.event_trigger_timestamp, "isot")
