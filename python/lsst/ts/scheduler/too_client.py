@@ -223,7 +223,7 @@ class TooClient:
         reward_map_query += f" AND source = '{source}'"
         reward_map = await self.efd_client._do_query(reward_map_query)
         return (
-            reward_map.to_numpy()[-1][[hp.ring2nest(i) for i in range(npix)]]
+            reward_map.to_numpy()[-1][[hp.ring2nest(nside, i) for i in range(npix)]]
             if not reward_map.empty
             else np.zeros(npix, dtype=np.bool)
         )
