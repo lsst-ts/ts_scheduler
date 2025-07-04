@@ -29,6 +29,7 @@ import lsst_efd_client
 import numpy as np
 from astropy import units
 from astropy.time import Time, TimeDelta
+from lsst.ts.utils import index_generator
 from numpy.typing import NDArray
 
 
@@ -38,6 +39,9 @@ class TooAlert:
 
     source: str
     """A unique identifier for this event"""
+
+    tooid: int
+    """Unique identifier of the ToO."""
 
     instrument: list[str]
     """A list of names of instruments responsible for the
@@ -111,6 +115,8 @@ class TooClient:
         self.too_alerts: dict[str, TooAlert] = dict()
         self.latest_update: Time | None = None
 
+        self._index_generator = index_generator()
+
     def get_initial_query_parameters(self) -> list[str]:
         """Return the initial query parameters for the ToO Alert."""
         return [
@@ -179,8 +185,15 @@ class TooClient:
                 nside=reward_map_nside,
             )
 
+            tooid = (
+                next(self._index_generator)
+                if source not in self.too_alerts
+                else self.too_alerts[source].tooid
+            )
+
             too_alert = TooAlert(
                 source=source,
+                tooid=tooid,
                 alert_type=alert_type,
                 event_trigger_timestamp=event_trigger_timestamp,
                 reward_map_nside=reward_map_nside,
