@@ -766,20 +766,23 @@ class FeatureScheduler(Driver):
             self.conditions.mjd
         )
 
-        self.conditions.targets_of_opportunity = [
-            TargetoO(
-                tooid=too.tooid,
-                footprint=too.reward_map,
-                mjd_start=float(
-                    astropy_time_from_tai_unix(
-                        tai_from_utc(too.event_trigger_timestamp, "isot")
-                    ).value
-                ),
-                duration=1.0,
-                too_type=too.alert_type,
-            )
-            for too in self.raw_telemetry.get("too_alerts", [])
-        ]
+        if "too_alerts" in self.raw_telemetry:
+            self.log.debug("Passing ToO alerts.")
+
+            self.conditions.targets_of_opportunity = [
+                TargetoO(
+                    tooid=too.tooid,
+                    footprint=too.reward_map,
+                    mjd_start=float(
+                        astropy_time_from_tai_unix(
+                            tai_from_utc(too.event_trigger_timestamp, "isot")
+                        ).value
+                    ),
+                    duration=1.0,
+                    too_type=too.alert_type,
+                )
+                for too in self.raw_telemetry.get("too_alerts", [])
+            ]
 
     def save_state(self):
         """Save the current state of the scheduling algorithm to a file.
