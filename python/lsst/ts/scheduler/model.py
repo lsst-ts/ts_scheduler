@@ -245,6 +245,8 @@ class Model:
                 efd_name=efd_name,
                 **config["too_client"],
             )
+        else:
+            self.too_client = None
 
         if "streams" not in config:
             self.log.warning(
