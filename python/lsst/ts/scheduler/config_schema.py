@@ -565,6 +565,20 @@ definitions:
               db_name:
                 type: string
                 description: The name of the database where the topics are written.
+          lfa_client:
+            type: object
+            description: Configuration for the Large File Annex client.
+            additionalProperties: false
+            properties:
+              source:
+                type: string
+                description: The name of the component that is generating the LFA data.
+              delta_time:
+                type: number
+                description: How long in the past to look for ToO alerts?
+              db_name:
+                type: string
+                description: The name of the database where the topics are written.
           streams:
             type: array
             items:
