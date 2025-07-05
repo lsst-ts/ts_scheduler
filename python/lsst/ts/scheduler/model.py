@@ -46,6 +46,7 @@ from .driver import Driver, DriverFactory, DriverType
 from .driver.driver_target import DriverTarget
 from .driver.survey_topology import SurveyTopology
 from .exceptions.exceptions import TargetScriptFailedError, UpdateTelemetryError
+from .lfa_client import LFAClient
 from .observing_blocks.observing_block_status import ObservingBlockStatus
 from .telemetry_stream_handler import TelemetryStreamHandler
 from .too_client import TooClient
@@ -131,6 +132,7 @@ class Model:
         # Scheduler driver instance.
         self.driver: Driver | None = None
         self.too_client: TooClient | None = None
+        self.lfa_client: LFAClient | None = None
 
         self.max_scripts = 0
 
@@ -249,6 +251,16 @@ class Model:
             self.too_client = None
 
         self.raw_telemetry.pop("too_alerts", None)
+
+        if "lfa_client" in config:
+            self.lfa_client = LFAClient(
+                efd_name=efd_name,
+                **config["lfa_client"],
+            )
+        else:
+            self.lfa_client = None
+
+        self.raw_telemetry.pop("lfa_data", None)
 
         if "streams" not in config:
             self.log.warning(
@@ -1380,6 +1392,12 @@ class Model:
                 if too_alerts:
                     self.log.debug(f"{too_alerts=}")
                     self.raw_telemetry["too_alerts"] = list(too_alerts.values())
+
+            if self.lfa_client is not None:
+                self.log.trace("Retrieving LFA alerts.")
+                lfa_data = await self.lfa_client.retrieve_lfa_data()
+                if lfa_data:
+                    self.raw_telemetry["lfa_data"] = list(lfa_data.values())
 
             self.models["observatory_model"].update_state(
                 utils.astropy_time_from_tai_unix(utils.current_tai()).unix
