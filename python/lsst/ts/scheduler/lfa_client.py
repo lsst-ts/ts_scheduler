@@ -35,13 +35,14 @@ from astropy.time import Time, TimeDelta
 class DreamCloudMap:
     """Class to handle DREAM cloud maps."""
 
-    def __init__(self, clouds) -> None:
+    def __init__(self, clouds, mjd) -> None:
         self.clouds = clouds
+        self.mjd = mjd
 
     @classmethod
-    def from_file(cls, filename):
+    def from_file(cls, filename, mjd):
         data = h5py.File(filename, "r")
-        return cls(clouds=data["clouds"][:])
+        return cls(clouds=data["clouds"][:], mjd=mjd)
 
 
 class LFAClient:
@@ -102,6 +103,18 @@ class LFAClient:
             else self.latest_update
         )
 
+        time_query_start_mjd = (
+            time_query_end - TimeDelta(self.delta_time * units.second)
+        ).mjd
+        old_data = [
+            key
+            for key, data in self.lfa_data.items()
+            if data.mjd < time_query_start_mjd
+        ]
+
+        for data_to_remove in old_data:
+            del self.lfa_data[data_to_remove]
+
         efd_data = await self.efd_client.select_time_series(
             f"lsst.sal.{self.source}.logevent_largeFileObjectAvailable",
             ["url"],
@@ -114,7 +127,8 @@ class LFAClient:
         if efd_data.empty:
             return
 
-        for url in efd_data.url:
+        for time, data in efd_data.iterrows():
+            url = data["url"]
 
             save_path = get_filename_from_url(url)
 
@@ -123,7 +137,9 @@ class LFAClient:
             if not save_path.exists():
                 await retrieve_lfa_file(url=url, save_path=save_path_name)
 
-            self.lfa_data[save_path_name] = DreamCloudMap.from_file(save_path_name)
+            self.lfa_data[save_path_name] = DreamCloudMap.from_file(
+                save_path_name, float(Time(time).mjd)
+            )
 
 
 async def retrieve_lfa_file(url, save_path):
