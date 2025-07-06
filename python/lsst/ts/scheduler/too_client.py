@@ -178,6 +178,10 @@ class TooClient:
             efd_data.is_update,
         ):
 
+            self.log.info(
+                f"Retrieving target of opportunity reward map for {source=}, {alert_type=}."
+            )
+
             reward_map = await self._retrieve_reward_map(
                 time_query_start=time_query_start,
                 time_query_end=time_query_end,
