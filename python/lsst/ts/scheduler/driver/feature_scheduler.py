@@ -35,9 +35,10 @@ from astropy.time import Time
 from lsst.ts.utils import astropy_time_from_tai_unix, index_generator, tai_from_utc
 from rubin_scheduler.scheduler.features import Conditions
 from rubin_scheduler.scheduler.utils import ObservationArray, TargetoO
-from rubin_scheduler.site_models import Almanac
+from rubin_scheduler.site_models import Almanac, CloudMap
 from rubin_scheduler.utils import _ra_dec2_hpid
 
+from ..lfa_client import DreamCloudMap
 from ..utils.fbs_utils import SchemaConverter, make_fbs_observation_from_target
 from . import Driver, DriverParameters
 from .driver_target import DriverTarget
@@ -187,6 +188,9 @@ class FeatureScheduler(Driver):
             np.random.seed(self.seed)
             self.scheduler = conf.scheduler
             self.conditions = Conditions(nside=self.nside)
+            self.conditions.cloud_maps = CloudMap(
+                nside_out=self.nside,
+            )
 
             self.conditions.FWHMeff = dict(
                 [
@@ -785,6 +789,19 @@ class FeatureScheduler(Driver):
                 )
                 for too in self.raw_telemetry.get("too_alerts", [])
             ]
+
+        if "lfa_data" in self.raw_telemetry:
+            for data in self.raw_telemetry["lfa_data"]:
+                if issubclass(data, DreamCloudMap) and data.mjd > (
+                    max(self.conditions.cloud_maps.mjds)
+                    if self.conditions.cloud_maps.mjds
+                    else 0
+                ):
+                    self.conditions.cloud_maps.add_frame(
+                        input_cloud_extinction=data.clouds,
+                        mjd=data.mjd,
+                        nest=True,
+                    )
 
     def save_state(self):
         """Save the current state of the scheduling algorithm to a file.
