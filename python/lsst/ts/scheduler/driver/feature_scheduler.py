@@ -773,22 +773,28 @@ class FeatureScheduler(Driver):
         if "too_alerts" in self.raw_telemetry:
             self.log.debug("Passing ToO alerts.")
 
-            self.conditions.targets_of_opportunity = [
-                TargetoO(
-                    tooid=too.tooid,
-                    ra_rad_center=self.conditions.tel_ra,  # FIXME
-                    dec_rad_center=self.conditions.tel_dec,  # FIXME
-                    footprint=too.reward_map,
-                    mjd_start=float(
-                        astropy_time_from_tai_unix(
-                            tai_from_utc(too.event_trigger_timestamp, "isot")
-                        ).value
-                    ),
-                    duration=1.0,
-                    too_type=too.alert_type,
+            targets_of_opportunity = []
+
+            for too in self.raw_telemetry["too_alerts"]:
+                ra_rad_center = float(np.mean(self.conditions.ra[too.reward_map]))
+                dec_rad_center = float(np.mean(self.conditions.dec[too.reward_map]))
+                targets_of_opportunity.append(
+                    TargetoO(
+                        tooid=too.tooid,
+                        ra_rad_center=ra_rad_center,
+                        dec_rad_center=dec_rad_center,
+                        footprint=too.reward_map,
+                        mjd_start=float(
+                            astropy_time_from_tai_unix(
+                                tai_from_utc(too.event_trigger_timestamp, "isot")
+                            ).value
+                        ),
+                        duration=1.0,
+                        too_type=too.alert_type,
+                    )
                 )
-                for too in self.raw_telemetry.get("too_alerts", [])
-            ]
+
+            self.conditions.targets_of_opportunity = targets_of_opportunity
 
         if "lfa_data" in self.raw_telemetry:
             for data in self.raw_telemetry["lfa_data"]:
