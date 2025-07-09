@@ -260,6 +260,8 @@ class Model:
         else:
             self.lfa_client = None
 
+        self.raw_telemetry["lfa_data"].pop(None)
+
         if "streams" not in config:
             self.log.warning(
                 "No telemetry stream defined in configuration. Skipping configuring telemetry streams."
@@ -1394,7 +1396,6 @@ class Model:
             if self.lfa_client is not None:
                 self.log.trace("Retrieving LFA alerts.")
                 lfa_data = await self.lfa_client.retrieve_lfa_data()
-
                 if lfa_data:
                     self.raw_telemetry["lfa_data"] = list(lfa_data.values())
 
