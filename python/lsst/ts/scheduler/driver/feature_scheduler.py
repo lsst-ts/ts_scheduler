@@ -798,7 +798,7 @@ class FeatureScheduler(Driver):
 
         if "lfa_data" in self.raw_telemetry:
             for data in self.raw_telemetry["lfa_data"]:
-                if issubclass(data, DreamCloudMap) and data.mjd > (
+                if isinstance(data, DreamCloudMap) and data.mjd > (
                     max(self.conditions.cloud_maps.mjds)
                     if self.conditions.cloud_maps.mjds
                     else 0
