@@ -250,6 +250,8 @@ class Model:
         else:
             self.too_client = None
 
+        self.raw_telemetry["too_alerts"].pop(None)
+
         if "lfa_client" in config:
             self.lfa_client = LFAClient(
                 efd_name=efd_name,
