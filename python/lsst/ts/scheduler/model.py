@@ -260,7 +260,7 @@ class Model:
         else:
             self.lfa_client = None
 
-        self.raw_telemetry["lfa_data"].pop(None)
+        self.raw_telemetry.pop("lfa_data", None)
 
         if "streams" not in config:
             self.log.warning(
