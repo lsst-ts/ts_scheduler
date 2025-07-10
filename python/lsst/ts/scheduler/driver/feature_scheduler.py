@@ -797,6 +797,12 @@ class FeatureScheduler(Driver):
             self.conditions.targets_of_opportunity = targets_of_opportunity
 
         if "lfa_data" in self.raw_telemetry:
+            if self.conditions.cloud_maps is None:
+
+                self.conditions.cloud_maps = CloudMap(
+                    nside_out=self.nside,
+                )
+
             for data in self.raw_telemetry["lfa_data"]:
                 if isinstance(data, DreamCloudMap) and data.mjd > (
                     max(self.conditions.cloud_maps.mjds)
