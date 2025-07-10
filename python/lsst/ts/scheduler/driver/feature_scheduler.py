@@ -812,7 +812,7 @@ class FeatureScheduler(Driver):
                     self.conditions.cloud_maps.add_frame(
                         input_cloud_extinction=data.clouds,
                         mjd=data.mjd,
-                        nest=True,
+                        nested=True,
                     )
 
     def save_state(self):
