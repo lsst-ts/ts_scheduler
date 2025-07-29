@@ -113,7 +113,6 @@ class TooClient:
         )
 
         self.too_alerts: dict[str, TooAlert] = dict()
-        self.latest_update: Time | None = None
 
         self._index_generator = index_generator()
 
@@ -144,11 +143,7 @@ class TooClient:
         """Update the ToO Alert information."""
 
         time_query_end = Time.now()
-        time_query_start = (
-            (time_query_end - TimeDelta(self.delta_time * units.second))
-            if self.latest_update is None
-            else self.latest_update
-        )
+        time_query_start = time_query_end - TimeDelta(self.delta_time * units.second)
 
         efd_data = await self.efd_client.select_time_series(
             self.topic_name,
@@ -156,8 +151,6 @@ class TooClient:
             start=time_query_start,
             end=time_query_end,
         )
-
-        self.latest_update = time_query_end
 
         if efd_data.empty:
             return
@@ -177,6 +170,9 @@ class TooClient:
             efd_data.is_test,
             efd_data.is_update,
         ):
+            if source in self.too_alerts:
+                self.log.debug(f"ToO {source=} already retrieved, skipping.")
+                continue
 
             self.log.info(
                 f"Retrieving target of opportunity reward map for {source=}, {alert_type=}."
