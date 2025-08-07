@@ -607,6 +607,10 @@ class FeatureScheduler(Driver):
 
         self.conditions.mjd = self.models["observatory_model"].dateprofile.mjd
 
+        self.models["sky"].date_profile.update(
+            self.models["observatory_model"].dateprofile.timestamp
+        )
+
         self.log.trace(f"Format conditions. mjd={self.conditions.mjd}")
 
         almanac_indx = self.almanac.mjd_indx(self.conditions.mjd)
