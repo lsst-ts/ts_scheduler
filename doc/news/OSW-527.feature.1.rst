@@ -1,0 +1,1 @@
+Added new LFAClient class to handle retrieving cloud data from the Large File Annex server.
