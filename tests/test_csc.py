@@ -278,6 +278,9 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
             finally:
                 await salobj.set_summary_state(self.remote, salobj.State.STANDBY)
 
+    @unittest.mock.patch(
+        "lsst.ts.scheduler.too_client.TooClient.get_too_alerts", dict()
+    )
     async def test_configuration_valid(self):
         """Test basic configuration."""
         async with self.make_csc(
