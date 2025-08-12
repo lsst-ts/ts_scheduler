@@ -1,3 +1,25 @@
+v2.5.0 (2025-08-12)
+===================
+
+New Features
+------------
+
+- Initial implementation of handling targets of opportunity. (`OSW-527 <https://rubinobs.atlassian.net//browse/OSW-527>`_)
+- Initial implementation of handling cloud maps. (`OSW-527 <https://rubinobs.atlassian.net//browse/OSW-527>`_)
+- Added new LFAClient class to handle retrieving cloud data from the Large File Annex server. (`OSW-527 <https://rubinobs.atlassian.net//browse/OSW-527>`_)
+- Added new ToOClient class to handle retrieving target of opportunity alerts from the EFD. (`OSW-527 <https://rubinobs.atlassian.net//browse/OSW-527>`_)
+
+
+Bug Fixes
+---------
+
+- Improved the predicted scheduled implementation to take into account the current scheduled targets. (`OSW-527 <https://rubinobs.atlassian.net//browse/OSW-527>`_)
+- Fixed a sky model timing issue in ``FeatureScheduler._format_conditions``.
+
+  The method was not updating the timestamp in the sky model which was causing the method to calculate wrong values for the sun/moon and even sky brightness. (`OSW-527 <https://rubinobs.atlassian.net//browse/OSW-527>`_)
+- Updated ``Model.load_observing_blocks`` to catch exceptions when parsing block files and augment the exception with the name of the file. (`OSW-527 <https://rubinobs.atlassian.net//browse/OSW-527>`_)
+
+
 v2.4.1 (2025-06-02)
 ===================
 
