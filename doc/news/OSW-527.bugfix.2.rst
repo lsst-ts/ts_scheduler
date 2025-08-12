@@ -1,0 +1,1 @@
+Updated ``Model.load_observing_blocks`` to catch exceptions when parsing block files and augment the exception with the name of the file.

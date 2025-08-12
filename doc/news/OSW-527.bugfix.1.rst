@@ -1,0 +1,3 @@
+Fixed a sky model timing issue in ``FeatureScheduler._format_conditions``.
+
+The method was not updating the timestamp in the sky model which was causing the method to calculate wrong values for the sun/moon and even sky brightness.
