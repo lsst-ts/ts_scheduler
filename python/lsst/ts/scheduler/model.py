@@ -303,7 +303,14 @@ class Model:
         self.observing_blocks = dict()
         bad_block_programs = set()
         for observing_block_file in path_observing_blocks.glob("**/*.json"):
-            observing_block = observing.ObservingBlock.parse_file(observing_block_file)
+            try:
+                observing_block = observing.ObservingBlock.parse_file(
+                    observing_block_file
+                )
+            except Exception as e:
+                raise RuntimeError(
+                    f"Failed to parse block file: {observing_block_file}."
+                ) from e
 
             match = block_regex.match(observing_block.program)
             try:
