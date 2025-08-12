@@ -514,6 +514,11 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             await self._transition_running_to_idle()
             await self._start_target_production_task()
 
+        self.log.info(
+            f"Cleaning up targets queue. Discarding {len(self.targets_queue)} targets."
+        )
+        self.targets_queue = []
+
     async def stop_target_loop_execution(self) -> None:
         """Stop target production loop execution."""
         async with self.target_loop_lock:
@@ -1936,18 +1941,23 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         async with self.current_scheduler_state(publish_lfoa=False):
             self.model.register_scheduled_targets(targets_queue=self.targets_queue)
 
+            needed_targets = max(
+                [self.max_predicted_targets - len(self.targets_queue), 0]
+            )
+
             (
                 _,
                 _,
                 targets,
             ) = await self.model.generate_targets_in_time_window(
-                max_targets=self.max_predicted_targets,
+                max_targets=needed_targets,
                 time_window=self.parameters.predicted_scheduler_window * 60.0 * 60.0,
             )
 
             targets_info = [
-                dataclasses.asdict(target.get_observation()) for target in targets
-            ]
+                dataclasses.asdict(target.get_observation())
+                for target in self.targets_queue
+            ] + [dataclasses.asdict(target.get_observation()) for target in targets]
 
             extra_nans = [np.nan] * (self.max_predicted_targets - len(targets))
 

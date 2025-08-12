@@ -31,6 +31,7 @@ test:
     - ts-observing >=0.2
     - rubin-scheduler =3
     - rsync
+    - lsst-efd-client
   source_files:
     - python
     - tests
@@ -69,3 +70,4 @@ requirements:
     - ts-dateloc
     - ts-observing >=0.2
     - rubin-scheduler =3
+    - lsst-efd-client
