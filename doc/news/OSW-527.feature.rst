@@ -1,1 +1,0 @@
-Added new ToOClient class to handle retrieving target of opportunity alerts from the EFD.
