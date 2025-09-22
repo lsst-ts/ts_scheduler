@@ -1,3 +1,12 @@
+v2.5.1 (2025-09-17)
+===================
+
+New Features
+------------
+
+- Added placeholder for new CSC commands; flush and reshedule, and mark them as extra commands for backwards compatibility. (`OSW-670 <https://rubinobs.atlassian.net//browse/OSW-670>`_)
+
+
 v2.5.0 (2025-08-12)
 ===================
 
