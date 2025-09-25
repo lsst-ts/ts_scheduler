@@ -281,7 +281,7 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
     @unittest.mock.patch(
         "lsst.ts.scheduler.too_client.TooClient.get_too_alerts", dict()
     )
-    @unittest.mock.patch("lsst_efd_client.EfdClient", unittest.mock.AsyncMock())
+    @unittest.mock.patch("lsst_efd_client.EfdClient", unittest.mock.AsyncMock)
     async def test_configuration_valid(self):
         """Test basic configuration."""
         async with self.make_csc(
