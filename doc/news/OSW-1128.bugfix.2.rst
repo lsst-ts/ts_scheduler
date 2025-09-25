@@ -1,0 +1,1 @@
+Updated unit test to handle the fact that now the driver class is deleted when the Scheduler is closed.

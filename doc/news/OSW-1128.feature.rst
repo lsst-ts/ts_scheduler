@@ -1,0 +1,1 @@
+Added a ``close`` method to the ``Model`` class to cleanup resources.
