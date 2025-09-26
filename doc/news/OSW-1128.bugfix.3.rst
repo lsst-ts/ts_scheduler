@@ -1,0 +1,1 @@
+Updated ``tests/test_csc_hot_start.py`` and ``tests/test_csc_warm_start.py`` to handle the removal of the conditions object from the test configuration.
