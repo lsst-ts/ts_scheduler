@@ -28,6 +28,8 @@ import unittest
 from lsst.ts import salobj
 from lsst.ts.scheduler import SchedulerCSC
 from lsst.ts.scheduler.utils import SchedulerModes
+from rubin_scheduler.scheduler.model_observatory import ModelObservatory
+from rubin_scheduler.utils import SURVEY_START_MJD as MJD_START
 
 SHORT_TIMEOUT = 5.0
 LONG_TIMEOUT = 30.0
@@ -75,11 +77,15 @@ class TestSchedulerCscWarmStart(
             conf = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(conf)
 
+            observatory = ModelObservatory(nside=conf.nside, mjd_start=MJD_START)
+            observatory.sky_model.load_length = 3
+            conditions = observatory.return_conditions()
+
             with open(snapshot_file_path, "wb") as fp:
                 pickle.dump(
                     [
                         conf.scheduler,
-                        conf.conditions,
+                        conditions,
                     ],
                     fp,
                 )

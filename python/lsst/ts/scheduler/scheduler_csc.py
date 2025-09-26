@@ -278,6 +278,10 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         # Add callback to script info
         self.queue_remote.evt_script.callback = self.check_script_info
 
+    async def close(self):
+        await super().close()
+        self.model.close()
+
     async def begin_start(self, data):
         self.log.info("Starting Scheduler CSC...")
 

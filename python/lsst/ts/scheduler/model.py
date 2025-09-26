@@ -223,6 +223,13 @@ class Model:
             self.models = dict()
             raise e
 
+    def close(self):
+        model_names = list(self.models.keys())
+        for model in model_names:
+            del self.models[model]
+        del self.driver
+        self.driver = None
+
     async def configure_telemetry_streams(self, config: dict[str, typing.Any]) -> None:
         """Configure telemetry streams.
 

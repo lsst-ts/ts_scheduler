@@ -1,7 +1,6 @@
 import numpy as np
 import rubin_scheduler.scheduler.basis_functions as bf
 import rubin_scheduler.scheduler.detailers as detailers
-from rubin_scheduler.scheduler.model_observatory import ModelObservatory
 from rubin_scheduler.scheduler.schedulers import CoreScheduler
 from rubin_scheduler.scheduler.surveys import GreedySurvey
 from rubin_scheduler.scheduler.utils import Footprint, SkyAreaGenerator
@@ -152,17 +151,14 @@ if __name__ == "config":
     nside = 32
     per_night = True  # Dither DDF per night
     seed = 42
+    sun_ra_start = 3.771
 
     camera_ddf_rot_limit = 75.0
-
-    observatory = ModelObservatory(nside=nside, mjd_start=MJD_START)
-    observatory.sky_model.load_length = 3
-    conditions = observatory.return_conditions()
 
     sky = SkyAreaGenerator(nside=nside)
     footprints_hp, labels = sky.return_maps()
 
-    footprints = Footprint(MJD_START, sun_ra_start=conditions.sun_ra, nside=nside)
+    footprints = Footprint(MJD_START, sun_ra_start=sun_ra_start, nside=nside)
     for i, key in enumerate(footprints_hp.dtype.names):
         footprints.footprints[i, :] = footprints_hp[key]
 

@@ -47,6 +47,7 @@ class TestSchedulerCscColdStart(
     def setUp(self) -> None:
         self.scheduler_config_path = TEST_CONFIG_DIR / "fbs_config_good.py"
         self.driver_type = "feature_scheduler"
+        self.observation_database_name = None
 
         return super().setUp()
 
@@ -126,8 +127,11 @@ class TestSchedulerCscColdStart(
                 "SchedulerID = 1"
             )
         finally:
-            if self.csc.model.driver.observation_database_name.exists():
-                self.csc.model.driver.observation_database_name.unlink()
+            if (
+                self.observation_database_name is not None
+                and self.observation_database_name.exists()
+            ):
+                self.observation_database_name.unlink()
 
     @contextlib.asynccontextmanager
     async def make_script_queue(self, running: bool) -> None:
@@ -326,6 +330,9 @@ maintel:
                             remote=self.remote,
                             state=salobj.State.DISABLED,
                             override=override_path.name,
+                        )
+                        self.observation_database_name = (
+                            self.csc.model.driver.observation_database_name
                         )
                     finally:
                         for record, message in zip(csc_logs.records, csc_logs.output):
