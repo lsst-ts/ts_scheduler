@@ -1,1 +1,0 @@
-Added a ``close`` method to the ``SchedulerCSC`` (overriding the parent method) to call ``Model.cleanup``.

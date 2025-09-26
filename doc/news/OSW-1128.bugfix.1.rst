@@ -1,3 +1,0 @@
-Updated the feature scheduler test configurations to reduce the memory footprint created when importing them.
-The Scheduler CSC loads these configurations by importing them.
-This caused an issue with the garbage collector that is not able to clenaup any resources created in the process.
