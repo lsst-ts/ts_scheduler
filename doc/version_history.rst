@@ -1,3 +1,24 @@
+v2.5.2 (2025-09-26)
+===================
+
+New Features
+------------
+
+- Added a ``close`` method to the ``Model`` class to cleanup resources. (`OSW-1128 <https://rubinobs.atlassian.net//browse/OSW-1128>`_)
+- Added a ``close`` method to the ``SchedulerCSC`` (overriding the parent method) to call ``Model.cleanup``. (`OSW-1128 <https://rubinobs.atlassian.net//browse/OSW-1128>`_)
+
+
+Bug Fixes
+---------
+
+- Fixed how lsst_efd_client.EfdClient patch is defined in ``tests/test_csc.py``. (`OSW-1128 <https://rubinobs.atlassian.net//browse/OSW-1128>`_)
+- Updated the feature scheduler test configurations to reduce the memory footprint created when importing them.
+  The Scheduler CSC loads these configurations by importing them.
+  This caused an issue with the garbage collector that is not able to clenaup any resources created in the process. (`OSW-1128 <https://rubinobs.atlassian.net//browse/OSW-1128>`_)
+- Updated unit test to handle the fact that now the driver class is deleted when the Scheduler is closed. (`OSW-1128 <https://rubinobs.atlassian.net//browse/OSW-1128>`_)
+- Updated ``tests/test_csc_hot_start.py`` and ``tests/test_csc_warm_start.py`` to handle the removal of the conditions object from the test configuration. (`OSW-1128 <https://rubinobs.atlassian.net//browse/OSW-1128>`_)
+
+
 v2.5.1 (2025-09-17)
 ===================
 
