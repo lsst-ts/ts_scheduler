@@ -1184,7 +1184,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
     @staticmethod
     def get_config_pkg():
-        return "ts_config_ocs"
+        return "ts_config_scheduler"
 
     async def configure(self, config):
         """This method is responsible for configuring the scheduler models and

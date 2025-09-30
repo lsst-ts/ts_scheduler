@@ -2,7 +2,7 @@ pipeline{
     agent{
         docker {
             alwaysPull true
-            image 'ts-dockerhub.lsst.org/conda_package_builder:latest'
+            image 'ts-dockerhub.lsst.org/develop-env:develop'
             args "--entrypoint=''"
         }
     }
@@ -15,9 +15,9 @@ pipeline{
         stage("Build and Upload Documentation"){
             steps{
                 sh """
-                    source /home/saluser/.setup.sh
-                    mamba install -y -c lsstts ts-idl ts-utils ts-salobj ts-scriptqueue ts-observatory-model
-                    mamba install -y -c lsstts ts-astrosky-model ts-dateloc ts-observing rubin-scheduler
+                    source /home/saluser/.setup_dev.sh
+                    conda install -y -c lsstts ts-idl ts-utils ts-salobj ts-scriptqueue ts-observatory-model
+                    conda install -y -c lsstts ts-astrosky-model ts-dateloc ts-observing rubin-scheduler
                     pip install -e .
                     pip install -r doc/requirements.txt
                     package-docs build
