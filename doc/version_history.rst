@@ -1,3 +1,18 @@
+v2.6.0 (2025-10-10)
+===================
+
+New Features
+------------
+
+- Changed configuration repository from ts_config_ocs to ts_config_scheduler. (`OSW-847 <https://rubinobs.atlassian.net//browse/OSW-847>`_)
+
+
+Other Changes and Additions
+---------------------------
+
+- Fixes documentation build. (`OSW-847 <https://rubinobs.atlassian.net//browse/OSW-847>`_)
+
+
 v2.5.2 (2025-09-26)
 ===================
 
