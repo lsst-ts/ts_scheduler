@@ -1,1 +1,0 @@
-Changed configuration repository from ts_config_ocs to ts_config_scheduler.
