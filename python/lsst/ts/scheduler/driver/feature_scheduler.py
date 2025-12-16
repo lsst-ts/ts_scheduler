@@ -20,7 +20,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import importlib
-import io
 import math
 import os
 import pathlib
@@ -841,38 +840,6 @@ class FeatureScheduler(Driver):
             )
 
         return filename
-
-    def get_state_as_file_object(self, targets_queue: list[FeatureSchedulerTarget]):
-        """Get the current state of the scheduling algorithm as a file object.
-
-        Parameters
-        ----------
-        targets_queue : `list`[`DriverTarget`]
-            A List of targets in the queue to be observed.
-
-        Returns
-        -------
-        file_object : `io.BytesIO`
-            File object with the current.
-        """
-        file_object = io.BytesIO()
-
-        pickle.dump(
-            [
-                self.scheduler,
-                self.conditions,
-                [
-                    target.observation
-                    for target in targets_queue
-                    if hasattr(target, "observation")
-                ],
-            ],
-            file_object,
-        )
-
-        file_object.seek(0)
-
-        return file_object
 
     def reset_from_state(self, filename):
         """Load the state from a file.
