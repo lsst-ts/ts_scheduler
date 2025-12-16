@@ -404,15 +404,20 @@ class Driver:
         if not os.path.exists(config):
             raise RuntimeError(f"Input configuration file {config} does not exist.")
 
-    def save_state(self) -> None:
+    def save_state(self, targets_queue=None) -> None:
         """Save the current state of the scheduling algorithm to a file.
+
+        Parameters
+        ----------
+        targets_queue : `list`[`DriverTarget`] | None
+            List of targets already queued or pulled from the scheduler.
 
         Returns
         -------
         filename: `str`
             The name of the file with the state.
         """
-        raise NotImplementedError("Save state is is not implemented.")
+        raise NotImplementedError("Save state is not implemented.")
 
     def parse_observation_database(self, filename: str) -> None:
         """Parse an observation database into a list of observations.
