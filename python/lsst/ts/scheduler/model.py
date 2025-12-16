@@ -175,7 +175,7 @@ class Model:
                 try:
                     self.models[model].configure(config.models[model])
                 except Exception:
-                    self.log.exception(f"Failed to configure model {model}.")
+                    self.log.debug(f"Failed to configure model {model}.", exc_info=True)
             else:
                 self.log.warning(f"No configuration for {model}. Skipping.")
 
