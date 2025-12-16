@@ -344,8 +344,13 @@ properties:
 
         self.log.debug(f"Got {len(new_targets)} objects.")
 
-    def save_state(self):
+    def save_state(self, targets_queue=None):
         """Save the current state of the scheduling algorithm to a file.
+
+        Parameters
+        ----------
+        targets_queue : `list`[`DriverTarget`] | None
+            List of targets already queued or pulled from the scheduler.
 
         Returns
         -------
