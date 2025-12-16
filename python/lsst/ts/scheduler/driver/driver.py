@@ -18,7 +18,6 @@
 #
 # You should have received a copy of the GNU General Public License
 
-import io
 import logging
 import os
 import types
@@ -427,21 +426,6 @@ class Driver:
         observations : `list` of `DriverTarget`
         """
         raise NotImplementedError("Parse observation database not implemented.")
-
-    def get_state_as_file_object(self, targets_queue: list[DriverTarget]) -> io.BytesIO:
-        """Get the current state of the scheduling algorithm as a file object.
-
-        Parameters
-        ----------
-        targets_queue : `list`[`DriverTarget`]
-            A List of targets in the queue to be observed.
-
-        Returns
-        -------
-        file_object : `io.BytesIO`
-            File object with the current.
-        """
-        raise NotImplementedError("Get state as file object not implemented.")
 
     def reset_from_state(self, filename: str) -> None:
         """Load the state from a file."""
