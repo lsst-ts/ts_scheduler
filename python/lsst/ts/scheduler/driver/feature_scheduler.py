@@ -818,8 +818,13 @@ class FeatureScheduler(Driver):
                         nested=True,
                     )
 
-    def save_state(self):
+    def save_state(self, targets_queue=None):
         """Save the current state of the scheduling algorithm to a file.
+
+        Parameters
+        ----------
+        targets_queue : `list`[`DriverTarget`] | None
+            List of targets already queued or pulled from the scheduler.
 
         Returns
         -------
@@ -835,6 +840,7 @@ class FeatureScheduler(Driver):
                 [
                     self.scheduler,
                     self.conditions,
+                    targets_queue if targets_queue is not None else [],
                 ],
                 fp,
             )
