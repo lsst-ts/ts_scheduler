@@ -858,7 +858,7 @@ class FeatureScheduler(Driver):
         # Reset random number generator
         np.random.seed(self.seed)
         with open(filename, "rb") as fp:
-            self.scheduler, _ = pickle.load(fp)
+            self.scheduler, _, _ = pickle.load(fp)
 
     def _get_survey_name_from_observation(self, observation):
         """Get the survey name for the feature scheduler observation.
