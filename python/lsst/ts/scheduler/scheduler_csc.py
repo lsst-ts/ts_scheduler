@@ -1841,14 +1841,15 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             Path to the current scheduler state snapshot.
         """
 
-        file_object, saved_scheduler_state_filename = self.model.get_state(
+        saved_scheduler_state_filename = self.model.get_state(
             targets_queue=self.targets_queue
         )
 
         if publish_lfoa:
             scheduler_state_filename = "last_scheduler_state.p"
             try:
-                await self._handle_lfoa(file_object=file_object)
+                with open(saved_scheduler_state_filename, "rb") as fp:
+                    await self._handle_lfoa(file_object=fp)
             except Exception:
                 self.log.exception(
                     f"Could not upload file to S3 bucket. Keeping file {saved_scheduler_state_filename}."
