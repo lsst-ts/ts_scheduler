@@ -23,7 +23,6 @@ __all__ = ["Model"]
 
 import asyncio
 import functools
-import io
 import logging
 import pathlib
 import types
@@ -1091,7 +1090,7 @@ class Model:
         """
         return self.driver.get_stop_tracking_target()
 
-    def get_state(self, targets_queue: list[DriverTarget]) -> tuple[io.BytesIO, str]:
+    def get_state(self, targets_queue: list[DriverTarget]) -> str:
         """Get driver state.
 
         Parameters
@@ -1101,14 +1100,10 @@ class Model:
 
         Returns
         -------
-        `tuple`[`io.BytesIO`, `str`]
-            Tuple with driver state and a name of the file with a stored
-            version.
+        `str`
+            Name of the file with the stored state.
         """
-        return (
-            self.driver.get_state_as_file_object(targets_queue=targets_queue),
-            self.driver.save_state(),
-        )
+        return self.driver.save_state(targets_queue)
 
     def reset_state(self, last_scheduler_state_filename: str) -> None:
         """Reset driver state from file.
