@@ -86,6 +86,7 @@ class TestSchedulerCscWarmStart(
                     [
                         conf.scheduler,
                         conditions,
+                        [],
                     ],
                     fp,
                 )
