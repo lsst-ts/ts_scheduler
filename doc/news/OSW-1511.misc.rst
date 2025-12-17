@@ -1,1 +1,0 @@
-Updated conda recipe with ts-conda-build=0.5 and to set the version string.
