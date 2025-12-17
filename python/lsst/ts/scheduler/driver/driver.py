@@ -18,7 +18,6 @@
 #
 # You should have received a copy of the GNU General Public License
 
-import io
 import logging
 import os
 import types
@@ -405,15 +404,20 @@ class Driver:
         if not os.path.exists(config):
             raise RuntimeError(f"Input configuration file {config} does not exist.")
 
-    def save_state(self) -> None:
+    def save_state(self, targets_queue=None) -> None:
         """Save the current state of the scheduling algorithm to a file.
+
+        Parameters
+        ----------
+        targets_queue : `list`[`DriverTarget`] | None
+            List of targets already queued or pulled from the scheduler.
 
         Returns
         -------
         filename: `str`
             The name of the file with the state.
         """
-        raise NotImplementedError("Save state is is not implemented.")
+        raise NotImplementedError("Save state is not implemented.")
 
     def parse_observation_database(self, filename: str) -> None:
         """Parse an observation database into a list of observations.
@@ -427,21 +431,6 @@ class Driver:
         observations : `list` of `DriverTarget`
         """
         raise NotImplementedError("Parse observation database not implemented.")
-
-    def get_state_as_file_object(self, targets_queue: list[DriverTarget]) -> io.BytesIO:
-        """Get the current state of the scheduling algorithm as a file object.
-
-        Parameters
-        ----------
-        targets_queue : `list`[`DriverTarget`]
-            A List of targets in the queue to be observed.
-
-        Returns
-        -------
-        file_object : `io.BytesIO`
-            File object with the current.
-        """
-        raise NotImplementedError("Get state as file object not implemented.")
 
     def reset_from_state(self, filename: str) -> None:
         """Load the state from a file."""

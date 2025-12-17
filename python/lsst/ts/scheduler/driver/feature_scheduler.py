@@ -20,7 +20,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import importlib
-import io
 import math
 import os
 import pathlib
@@ -819,8 +818,13 @@ class FeatureScheduler(Driver):
                         nested=True,
                     )
 
-    def save_state(self):
+    def save_state(self, targets_queue=None):
         """Save the current state of the scheduling algorithm to a file.
+
+        Parameters
+        ----------
+        targets_queue : `list`[`DriverTarget`] | None
+            List of targets already queued or pulled from the scheduler.
 
         Returns
         -------
@@ -836,43 +840,12 @@ class FeatureScheduler(Driver):
                 [
                     self.scheduler,
                     self.conditions,
+                    targets_queue if targets_queue is not None else [],
                 ],
                 fp,
             )
 
         return filename
-
-    def get_state_as_file_object(self, targets_queue: list[FeatureSchedulerTarget]):
-        """Get the current state of the scheduling algorithm as a file object.
-
-        Parameters
-        ----------
-        targets_queue : `list`[`DriverTarget`]
-            A List of targets in the queue to be observed.
-
-        Returns
-        -------
-        file_object : `io.BytesIO`
-            File object with the current.
-        """
-        file_object = io.BytesIO()
-
-        pickle.dump(
-            [
-                self.scheduler,
-                self.conditions,
-                [
-                    target.observation
-                    for target in targets_queue
-                    if hasattr(target, "observation")
-                ],
-            ],
-            file_object,
-        )
-
-        file_object.seek(0)
-
-        return file_object
 
     def reset_from_state(self, filename):
         """Load the state from a file.
@@ -885,7 +858,7 @@ class FeatureScheduler(Driver):
         # Reset random number generator
         np.random.seed(self.seed)
         with open(filename, "rb") as fp:
-            self.scheduler, _ = pickle.load(fp)
+            self.scheduler, _, _ = pickle.load(fp)
 
     def _get_survey_name_from_observation(self, observation):
         """Get the survey name for the feature scheduler observation.
