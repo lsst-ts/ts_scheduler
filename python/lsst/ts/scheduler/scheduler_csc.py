@@ -27,6 +27,7 @@ __all__ = [
 import asyncio
 import contextlib
 import dataclasses
+import functools
 import os
 import shutil
 import subprocess
@@ -35,13 +36,19 @@ import traceback
 import types
 import typing
 import uuid
+from concurrent.futures import ProcessPoolExecutor
 
 import numpy as np
 import yaml
 from lsst.ts import salobj, utils
 from lsst.ts.astrosky.model import version as astrosky_version
 from lsst.ts.dateloc import version as dateloc_version
-from lsst.ts.observatory.model import version as obs_mod_version
+
+try:
+    from lsst.ts.observatory.model import version as obs_mod_version
+except ImportError:
+    obs_mod_version = types.SimpleNamespace(__version__="?")
+
 from lsst.ts.observing import ObservingBlock, ObservingScript
 from lsst.ts.xml.enums import Scheduler, ScriptQueue
 from rubin_scheduler import __version__ as rubin_scheduler_version
@@ -73,6 +80,7 @@ from .utils.error_codes import (
     UPDATE_TELEMETRY_ERROR,
 )
 from .utils.parameters import SchedulerCscParameters
+from .utils.s3_utils import handle_lfoa
 from .utils.types import ValidationRules
 
 
@@ -266,7 +274,6 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         # Large file object available
         self.s3bucket_name = None  # Set by `configure`.
-        self.s3bucket = None  # Set by `handle_summary_state`.
 
         # Path to the standard and external scripts. This is used
         # to validate blocks. If not defined it will fallback to
@@ -389,19 +396,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
             await self.reset_handle_no_targets_on_queue()
 
-            if self.s3bucket is None:
-                mock_s3 = self.simulation_mode == SchedulerModes.MOCKS3
-                self.log.debug(f"Creating s3bucket with mock = {mock_s3}.")
-                self.s3bucket = salobj.AsyncS3Bucket(
-                    name=self.s3bucket_name, domock=mock_s3, create=mock_s3
-                )
-
         elif self.summary_state == salobj.State.STANDBY:
             await self._stop_all_background_tasks()
-
-            if self.s3bucket is not None:
-                self.s3bucket.stop_mock()
-            self.s3bucket = None
 
         await self.evt_detailedState.set_write(
             substate=DetailedState.IDLE, force_output=True
@@ -1841,14 +1837,14 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             Path to the current scheduler state snapshot.
         """
 
-        file_object, saved_scheduler_state_filename = self.model.get_state(
+        saved_scheduler_state_filename = self.model.get_state(
             targets_queue=self.targets_queue
         )
 
         if publish_lfoa:
             scheduler_state_filename = "last_scheduler_state.p"
             try:
-                await self._handle_lfoa(file_object=file_object)
+                await self._handle_lfoa(saved_scheduler_state_filename)
             except Exception:
                 self.log.exception(
                     f"Could not upload file to S3 bucket. Keeping file {saved_scheduler_state_filename}."
@@ -1864,20 +1860,23 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         else:
             return saved_scheduler_state_filename
 
-    async def _handle_lfoa(self, file_object):
+    async def _handle_lfoa(self, file_name):
         """Handle publishing large file object available (LFOA)."""
 
-        key = self.s3bucket.make_key(
-            salname=self.salinfo.name,
-            salindexname=self.salinfo.index,
-            generator=f"{self.salinfo.name}:{self.salinfo.index}",
-            date=utils.astropy_time_from_tai_unix(utils.current_tai()),
-            suffix=".p",
-        )
+        with ProcessPoolExecutor(max_workers=1) as pool:
+            loop = asyncio.get_running_loop()
 
-        await self.s3bucket.upload(fileobj=file_object, key=key)
-
-        url = f"{self.s3bucket.service_resource.meta.client.meta.endpoint_url}/{self.s3bucket.name}/{key}"
+            url = await loop.run_in_executor(
+                pool,
+                functools.partial(
+                    handle_lfoa,
+                    self.s3bucket_name,
+                    self.simulation_mode == SchedulerModes.MOCKS3,
+                    self.salinfo.name,
+                    self.salinfo.index,
+                    file_name,
+                ),
+            )
 
         await self.evt_largeFileObjectAvailable.set_write(
             url=url, generator=f"{self.salinfo.name}:{self.salinfo.index}"

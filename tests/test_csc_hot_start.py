@@ -86,6 +86,7 @@ class TestSchedulerCscHotStart(
                     [
                         conf.scheduler,
                         conditions,
+                        [],
                     ],
                     fp,
                 )

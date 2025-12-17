@@ -1,0 +1,3 @@
+Removed the method ``get_state_as_file_object`` from the ``Driver`` class and its child classes; ``FeatureScheduler`` and ``Sequential``.
+While investigating the memory leak with the scheduler (see OBS-1431) I realized that the issue was creating the ``io.BytesIO`` to store the data for the scheduler state.
+To fix this we consolidate all that operation in the ``Driver.save_state`` and ``Driver.reset_from_state``.

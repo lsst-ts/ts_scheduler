@@ -9,12 +9,13 @@ source:
 build:
   noarch: python
   script: {{ PYTHON }} -m pip install --no-deps --ignore-installed .
+  string: "py{{ PY_VER | replace('.', '') }}_{{ PKG_HASH }}_{{ PKG_BUILDNUM }}"
   entry_points:
     - run_scheduler = lsst.ts.scheduler:run_scheduler
  
 test:
   requires:
-    - ts-conda-build =0.4
+    - ts-conda-build =0.5
     - astropy
     - jsonschema
     - numpy
@@ -51,7 +52,7 @@ requirements:
     - python {{ python }}
     - setuptools {{ setuptools }}
     - setuptools_scm {{ setuptools_scm }}
-    - ts-conda-build =0.4
+    - ts-conda-build =0.5
   run:
     - python {{ python }}
     - setuptools {{ setuptools }}
