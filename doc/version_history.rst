@@ -1,3 +1,23 @@
+v2.7.0 (2025-12-17)
+===================
+
+New Features
+------------
+
+- Removed the method ``get_state_as_file_object`` from the ``Driver`` class and its child classes; ``FeatureScheduler`` and ``Sequential``.
+  While investigating the memory leak with the scheduler (see OBS-1431) I realized that the issue was creating the ``io.BytesIO`` to store the data for the scheduler state.
+  To fix this we consolidate all that operation in the ``Driver.save_state`` and ``Driver.reset_from_state``. (`OSW-1511 <https://rubinobs.atlassian.net//browse/OSW-1511>`_)
+- Added new utility to upload files to s3/LFOA. (`OSW-1511 <https://rubinobs.atlassian.net//browse/OSW-1511>`_)
+- Updated scheduler CSC to upload files to s3/LFOA using the new utility running in a separate process.
+  This avoids a memory leak in the s3bucket client since it ensures the process is fully collected afterwards. (`OSW-1511 <https://rubinobs.atlassian.net//browse/OSW-1511>`_)
+
+
+Other Changes and Additions
+---------------------------
+
+- Updated conda recipe with ts-conda-build=0.5 and to set the version string. (`OSW-1511 <https://rubinobs.atlassian.net//browse/OSW-1511>`_)
+
+
 v2.6.0 (2025-10-10)
 ===================
 

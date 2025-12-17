@@ -1,2 +1,0 @@
-Updated scheduler CSC to upload files to s3/LFOA using the new utility running in a separate process.
-This avoids a memory leak in the s3bucket client since it ensures the process is fully collected afterwards.
