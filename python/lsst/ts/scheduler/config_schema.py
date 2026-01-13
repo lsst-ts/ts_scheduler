@@ -27,7 +27,7 @@ CONFIG_SCHEMA = yaml.safe_load(
     """$schema: http://json-schema.org/draft-07/schema#
 $id: https://github.com/lsst-ts/ts_scheduler/blob/master/schema/Scheduler.yaml
 # title must end with one or more spaces followed by the schema version, which must begin with "v"
-title: Scheduler v8
+title: Scheduler v9
 description: Schema for Scheduler configuration files
 definitions:
   instance_specific_config:
@@ -760,6 +760,22 @@ definitions:
         description: >-
             Character used to separate the filter names.
         type: string
+      observatory_status:
+        type: object
+        description: Configuration for the Observatory Status feature.
+        additionalProperties: false
+        required:
+          - enable
+          - components_to_monitor
+        properties:
+          enable:
+            type: boolean
+            description: Enable observatory status feature?
+          components_to_monitor:
+            description: List of components to monitor to set status as Fault.
+            type: array
+            items:
+              type: string
 type: object
 additionalProperties: false
 properties:
