@@ -79,7 +79,7 @@ from .utils.error_codes import (
     UNABLE_TO_FIND_TARGET,
     UPDATE_TELEMETRY_ERROR,
 )
-from .utils.parameters import SchedulerCscParameters
+from .utils.parameters import ObservatoryStatus, SchedulerCscParameters
 from .utils.s3_utils import handle_lfoa
 from .utils.types import ValidationRules
 
@@ -1247,6 +1247,9 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         self.parameters.loop_sleep_time = settings.loop_sleep_time
         self.parameters.cmd_timeout = settings.cmd_timeout
         self.parameters.max_scripts = settings.max_scripts
+        self.parameters.observatory_status = ObservatoryStatus(
+            **settings.observatory_status
+        )
         self.filter_band_mapping = getattr(settings, "filter_band_mapping", dict())
         self.filter_names_separator = getattr(
             settings, "filter_names_separator", self.filter_names_separator
