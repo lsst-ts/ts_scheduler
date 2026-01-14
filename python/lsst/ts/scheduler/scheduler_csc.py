@@ -186,7 +186,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             index=index,
             initial_state=initial_state,
             simulation_mode=simulation_mode,
-            extra_commands=["flush", "reschedule"],
+            extra_commands=["flush", "reschedule", "updateObservatoryStatus"],
         )
 
         # Communication channel with OCS queue.
@@ -779,6 +779,22 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
     async def do_reschedule(self, data):
         """Implement validate reschedule command.
+
+        Parameters
+        ----------
+        data : `DataType`
+            Command data.
+
+        Raises
+        ------
+        NotImplementedError
+            Command not implemented yet.
+        """
+        self.assert_enabled()
+        raise NotImplementedError("Command not implemented yet.")
+
+    async def do_updateObservatoryStatus(self, data):
+        """Implement the update observatory status command.
 
         Parameters
         ----------
