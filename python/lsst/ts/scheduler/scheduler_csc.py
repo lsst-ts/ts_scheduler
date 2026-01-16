@@ -315,6 +315,20 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             else None
         )
 
+    async def start(self):
+        """Override the start method to publish some additional events
+        at startup time.
+        """
+
+        await super().start()
+        await self.set_observatory_status(
+            status=SchedulerObservatoryStatus.UNKNOWN,
+            note=(
+                "Scheduler CSC started; "
+                "need to be in DISABLED or ENABLED to monitor observatory status."
+            ),
+        )
+
     async def close(self):
         await super().close()
         self.model.close()
