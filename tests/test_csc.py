@@ -196,6 +196,16 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
             simulation_mode=SchedulerModes.SIMULATION,
         ), ObservatoryStateMock(), self.make_script_queue(running=True):
             self.remote.evt_detailedState.flush()
+            if hasattr(self.remote, "evt_observatoryStatus"):
+                await self.assert_next_sample(
+                    self.remote.evt_observatoryStatus,
+                    status=Scheduler.ObservatoryStatus.UNKNOWN,
+                    statusLabels=Scheduler.ObservatoryStatus.UNKNOWN.name,
+                    note=(
+                        "Scheduler CSC started; "
+                        "need to be in DISABLED or ENABLED to monitor observatory status."
+                    ),
+                )
 
             await self.check_standard_state_transitions(
                 enabled_commands=[
@@ -207,6 +217,7 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                     "removeBlock",
                     "validateBlock",
                     "getBlockStatus",
+                    "updateObservatoryStatus",
                 ]
             )
             await self.assert_next_sample(
