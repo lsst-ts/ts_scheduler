@@ -189,22 +189,21 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             extra_commands=["flush", "reschedule", "updateObservatoryStatus"],
         )
 
-        # Communication channel with OCS queue.
-        self.queue_remote = salobj.Remote(
-            self.domain,
-            "ScriptQueue",
-            index=index,
-            include=["script", "queue", "configSchema"],
+        self._remotes = dict(
+            queue=salobj.Remote(
+                self.domain,
+                "ScriptQueue",
+                index=index,
+                include=["script", "queue", "configSchema"],
+            ),
+            ptg=salobj.Remote(
+                self.domain,
+                "MTPtg" if index % 2 == 1 else "ATPtg",
+                include=["currentTargetStatus"],
+            ),
         )
+        self._current_instrument_name = None
 
-        # Communication channel with pointing component to get observatory
-        # state
-        self.ptg = salobj.Remote(
-            self.domain,
-            "MTPtg" if index % 2 == 1 else "ATPtg",
-            include=["currentTargetStatus"],
-        )
-        self.camera = None
         self.no_observatory_state_warning = False
 
         self.parameters = SchedulerCscParameters()
@@ -284,6 +283,25 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         # Add callback to script info
         self.queue_remote.evt_script.callback = self.check_script_info
+
+    @property
+    def queue_remote(self):
+        """Access the remote for the script queue."""
+        return self._remotes["queue"]
+
+    @property
+    def ptg(self):
+        """Access the remote for the pointing component."""
+        return self._remotes["ptg"]
+
+    @property
+    def camera(self):
+        """Access the remote for the camera."""
+        return (
+            self._remotes.get(self._current_instrument_name, None)
+            if self._current_instrument_name is not None
+            else None
+        )
 
     async def close(self):
         await super().close()
@@ -1242,17 +1260,23 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         self.log.info(f"Settings for {instance!r}: {settings}")
 
         if hasattr(settings, "instrument_name"):
+            self._current_instrument_name = settings.instrument_name.lower()
             if settings.instrument_name in {"MTCamera", "CCCamera"}:
                 self.log.info(
                     f"Starting remote for {settings.instrument_name} to update instrument configuration."
                 )
-                self.camera = salobj.Remote(
-                    self.domain,
-                    settings.instrument_name,
-                    include=["endSetFilter", "availableFilters"],
-                    readonly=True,
-                )
-                await self.camera.start_task
+                if self._current_instrument_name not in self._remotes:
+                    self._remotes[self._current_instrument_name] = salobj.Remote(
+                        self.domain,
+                        settings.instrument_name,
+                        include=["endSetFilter", "availableFilters"],
+                        readonly=True,
+                    )
+                    await self.camera.start_task
+                else:
+                    self.log.info(
+                        f"Remote for {settings.instrument_name} already created."
+                    )
 
         self.parameters.driver_type = settings.driver_type
         self.parameters.startup_type = settings.startup_type
