@@ -57,9 +57,11 @@ from . import CONFIG_SCHEMA, __version__
 from .driver.driver_target import DriverTarget
 from .exceptions.exceptions import (
     FailedToQueueTargetsError,
+    InvalidStatusError,
     NonConsecutiveIndexError,
     TargetScriptFailedError,
     UnableToFindTargetError,
+    UpdateStatusError,
     UpdateTelemetryError,
 )
 from .model import Model
@@ -861,7 +863,12 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             Command not implemented yet.
         """
         self.assert_enabled()
-        raise NotImplementedError("Command not implemented yet.")
+        self.validate_observatory_status(data.status)
+        note = self.generate_status_note(user_note=data.note)
+        await self.set_observatory_status(
+            status=data.status,
+            note=note,
+        )
 
     async def telemetry_loop(self):
         """Scheduler telemetry loop.
@@ -2957,6 +2964,97 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 status=status,
                 note=status_note,
             )
+
+    def generate_status_note(self, user_note=None):
+        """Construct a descriptive string summarizing the current system
+        health.
+
+        This method aggregates an optional user-provided message with an
+        automatically generated list of all components currently reporting
+        a FAULT state.
+
+        Parameters
+        ----------
+        user_note : `str`, optional
+            A custom message to prepend to the status note. If None, only
+            the component fault information is returned.
+
+        Returns
+        -------
+        note : `str`
+            A combined string containing the user note (if provided) and
+            the list of components in a FAULT state.
+
+        Notes
+        -----
+        The method iterates through `self._components_summary_state` to
+        identify components where the state matches `salobj.State.FAULT`.
+        The resulting string uses the formal representation (`!r`) of
+        the `salobj.State` enumeration for clarity.
+        """
+        note = ""
+        if user_note is not None:
+            note += user_note
+        components_in_fault = [
+            component
+            for component, state in self._components_summary_state.items()
+            if state == salobj.State.FAULT
+        ]
+        if components_in_fault:
+            if note and not note[-1].isspace():
+                note += " "
+            note += f"The following components are in {salobj.State.FAULT!r} state: {components_in_fault}."
+        return note
+
+    def validate_observatory_status(self, status):
+        """Given an input status, check if it is a valid new status.
+
+        Parameters
+        ----------
+        status : `int`
+            Status to validate.
+
+        Raises
+        ------
+        `InvalidStatusError`
+            If input status is invalid.
+        `UpdateStatusError`
+            If applying the input status cannot be applied. For
+            example if input status clears the fault flags but
+            there are systems still in fault and, as such, flag cannot
+            be cleared.
+        """
+        if status < 0 or status > self.max_status:
+            raise InvalidStatusError(
+                f"Cannot set status to {status}. "
+                f"Must be equal to or larger than zero and smaller or equal to {self.max_status}."
+            )
+
+        if (
+            components_in_fault := [
+                component
+                for component, state in self._components_summary_state.items()
+                if state == salobj.State.FAULT
+            ]
+        ) and (status & Scheduler.ObservatoryStatus.FAULT == 0):
+
+            components_in_fault_str = ", ".join(components_in_fault)
+            raise UpdateStatusError(
+                "Cannot clear FAULT status, "
+                "the following components are still in fault: "
+                f"{components_in_fault_str}. "
+                "Make sure they are recovered before resetting the Fault flag."
+            )
+
+        if status & Scheduler.ObservatoryStatus.OPERATIONAL and (
+            status & Scheduler.ObservatoryStatus.DAYTIME
+            or status & Scheduler.ObservatoryStatus.FAULT
+            or status & Scheduler.ObservatoryStatus.DOWNTIME
+        ):
+            invalid_status_str = " | ".join(
+                [s.name for s in Scheduler.ObservatoryStatus if s & status]
+            )
+            raise InvalidStatusError(f"Invalid status: {invalid_status_str}.")
 
 
 def run_scheduler() -> None:
