@@ -68,6 +68,7 @@ from .utils.csc_utils import (
     BlockStatus,
     DetailedState,
     SchedulerModes,
+    SchedulerObservatoryStatus,
     set_detailed_state,
 )
 from .utils.error_codes import (
@@ -284,6 +285,17 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         # Add callback to script info
         self.queue_remote.evt_script.callback = self.check_script_info
 
+        # Future to store the task to monitor observatory status.
+        self._observatory_status_task = utils.make_done_future()
+
+        # Dictionary to store the state of the components
+        # being monitored for observatory status.
+        self._components_summary_state = dict()
+
+        self.max_status = 0
+        for observatory_status in SchedulerObservatoryStatus:
+            self.max_status = self.max_status ^ observatory_status
+
     @property
     def queue_remote(self):
         """Access the remote for the script queue."""
@@ -416,6 +428,16 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         elif self.summary_state == salobj.State.STANDBY:
             await self._stop_all_background_tasks()
+            for component in self.parameters.observatory_status.components_to_monitor:
+                component_reference_name = component.lower()
+                self._remotes[component_reference_name].evt_summaryState.callback = None
+            await self.set_observatory_status(
+                status=SchedulerObservatoryStatus.UNKNOWN,
+                note=(
+                    "Scheduler CSC in STANDBY; "
+                    "need to be in DISABLED or ENABLED to monitor observatory status."
+                ),
+            )
 
         await self.evt_detailedState.set_write(
             substate=DetailedState.IDLE, force_output=True
@@ -1290,6 +1312,41 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         self.parameters.observatory_status = ObservatoryStatus(
             **settings.observatory_status
         )
+        if self.parameters.observatory_status.enable:
+            if not hasattr(self, "evt_observatoryStatus"):
+                raise salobj.ExpectedError(
+                    "CSC interface does not support observatory status. "
+                    "Ensure 'observatory_status.enable: false' in the configuration."
+                )
+            await self.set_observatory_status(
+                status=SchedulerObservatoryStatus.UNKNOWN,
+                note=(
+                    "Observatory status feature enabled; "
+                    "observatory status will be monitored and updated while "
+                    "CSC is in DISABLED or ENABLED."
+                ),
+            )
+            if not self._observatory_status_task.done():
+                self.log.info("Observatory status task still running. Cancelling it.")
+                self._observatory_status_task.cancel()
+                try:
+                    await self._observatory_status_task
+                except asyncio.CancelledError:
+                    pass
+                except Exception:
+                    self.log.info(
+                        "Skipping exception while waiting for observatory status task to finish.",
+                        exc_info=True,
+                    )
+            self._observatory_status_task = asyncio.create_task(
+                self.monitor_observatory_status()
+            )
+        else:
+            await self.set_observatory_status(
+                status=SchedulerObservatoryStatus.UNKNOWN,
+                note="Observatory status feature disabled; will not monitor observatory status.",
+            )
+
         self.filter_band_mapping = getattr(settings, "filter_band_mapping", dict())
         self.filter_names_separator = getattr(
             settings, "filter_names_separator", self.filter_names_separator
@@ -2685,6 +2742,207 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             )
 
         await super().fault(code=code, report=report, traceback=traceback)
+
+    async def set_observatory_status(self, status, note):
+        """Set observatory status.
+
+        Parameters
+        ----------
+        status : `int`
+            Status value to set.
+        note : `str`, optional
+            Note to add to the status event.
+        """
+        if not hasattr(self, "evt_observatoryStatus"):
+            return
+
+        await self.evt_observatoryStatus.set_write(
+            status=status,
+            statusLabels=(
+                " | ".join(
+                    [
+                        observatory_status.name
+                        for observatory_status in SchedulerObservatoryStatus
+                        if observatory_status & status > 0
+                    ]
+                )
+                if status > 0
+                else SchedulerObservatoryStatus.UNKNOWN.name
+            ),
+            note=note,
+        )
+
+    async def monitor_observatory_status(self):
+        """Monitor and set the observatory status."""
+
+        for component in self.parameters.observatory_status.components_to_monitor:
+            component_reference_name = component.lower()
+            if component_reference_name not in self._remotes:
+                self.log.info(f"Creating remote to monitor {component} state.")
+                self._remotes[component_reference_name] = salobj.Remote(
+                    self.domain,
+                    component,
+                    include=["summaryState"],
+                    readonly=True,
+                )
+
+                await self._remotes[component_reference_name].start_task
+
+            if (
+                self._remotes[component_reference_name].evt_summaryState.callback
+                is None
+            ):
+
+                monitor_component_state_func = functools.partial(
+                    self._monitor_component_state,
+                    component_name=component,
+                )
+                try:
+                    summary_state = await self._remotes[
+                        component_reference_name
+                    ].evt_summaryState.aget(timeout=self.parameters.loop_sleep_time)
+                    await monitor_component_state_func(data=summary_state)
+                except asyncio.TimeoutError:
+                    pass
+                self._remotes[component_reference_name].evt_summaryState.callback = (
+                    monitor_component_state_func
+                )
+
+    async def _monitor_component_state(self, data, component_name):
+        """Monitor and update the summary state of a specific component.
+
+        This method processes the incoming state data for a component, updates
+        the internal state tracking dictionary, and triggers an
+        observatory-level fault status update if the component enters a
+        FAULT state.
+
+        Parameters
+        ----------
+        data : `lsst.ts.salobj.topics.ReadTopic`
+            The data object containing the component's telemetry or event
+            information. It must possess a `summaryState` attribute.
+        component_name : `str`
+            The unique identifier or name of the component being monitored.
+
+        See Also
+        --------
+        set_observatory_status_fault : Method called when a FAULT state is
+            detected.
+        unset_observatory_status_fault : Method called for non-FAULT states.
+
+        Notes
+        -----
+        The method utilizes `salobj.State` to cast the raw `summaryState`
+        integer into a readable enumeration.
+        """
+        self.log.debug(
+            f"Processing state for {component_name}: salobj.State(data.summaryState)."
+        )
+        component_state = salobj.State(data.summaryState)
+        self._components_summary_state[component_name] = component_state
+
+        if component_state == salobj.State.FAULT:
+            await self.set_observatory_status_fault()
+        else:
+            await self.unset_observatory_status_fault()
+
+    async def set_observatory_status_fault(self):
+        """Transition the observatory status to a FAULT state.
+
+        This method modifies the current observatory status by removing the
+        OPERATIONAL flag (if present) and ensuring the FAULT flag is set. It
+        then publishes the updated status and a generated status note.
+
+        See Also
+        --------
+        generate_status_note : Generates the descriptive text for the status
+            update.
+        set_observatory_status : The underlying method that publishes the
+            status change.
+        unset_observatory_status_fault : The inverse operation to clear fault
+            states.
+
+        Notes
+        -----
+        The status management uses bitwise flags from
+        `SchedulerObservatoryStatus`:
+
+        * **Bitwise XOR (`^`)**: Used to flip the `OPERATIONAL` bit to 0 if it
+          was previously 1.
+        * **Bitwise OR (`|`)**: Used to set the `FAULT` bit to 1.
+        * **Bitwise AND (`&`)**: Used to check the current state of specific
+          flags before applying changes.
+        """
+
+        status = self.evt_observatoryStatus.data.status
+        status_note = self.generate_status_note()
+        if status & SchedulerObservatoryStatus.OPERATIONAL:
+            self.log.debug("Disable operational.")
+            status = status ^ SchedulerObservatoryStatus.OPERATIONAL
+
+        if (
+            self.evt_observatoryStatus.data.status & SchedulerObservatoryStatus.FAULT
+            > 0
+        ):
+            self.log.debug("Status is already FAULT, nothing to do.")
+            await self.set_observatory_status(
+                status=status,
+                note=status_note,
+            )
+        else:
+            status = status | SchedulerObservatoryStatus.FAULT
+            await self.set_observatory_status(
+                status=status,
+                note=status_note,
+            )
+
+    async def unset_observatory_status_fault(self):
+        """Attempt to clear the observatory FAULT status.
+
+        This method evaluates if the observatory-level FAULT flag can be safely
+        removed. It checks the internal state of all components; if any single
+        component remains in a FAULT state, the global FAULT status is
+        preserved. Otherwise, the FAULT flag is cleared.
+
+        See Also
+        --------
+        set_observatory_status_fault : The inverse operation to set the fault
+            state.
+        _monitor_component_state : Updates the component states evaluated here.
+
+        Notes
+        -----
+        The clearing logic follows a specific hierarchy:
+        1. If the FAULT bit is already 0, no change is made.
+        2. A list comprehension scans `self._components_summary_state`. If any
+           component has a state equal to `salobj.State.FAULT`, the clearing
+           process is aborted to ensure safety.
+        3. If no components are in FAULT, the bitwise XOR (`^`) operator is
+           used to flip the `FAULT` bit to 0.
+        """
+        status = self.evt_observatoryStatus.data.status
+        status_note = self.generate_status_note()
+        if (
+            self.evt_observatoryStatus.data.status & SchedulerObservatoryStatus.FAULT
+            == 0
+        ):
+            self.log.debug("Fault status already cleared, nothing to do.")
+            return
+        elif any(
+            state == salobj.State.FAULT
+            for state in self._components_summary_state.values()
+        ):
+            await self.set_observatory_status(
+                status=status,
+                note=status_note,
+            )
+        else:
+            self.log.debug("No more components in fault, clearing.")
+            status = status ^ SchedulerObservatoryStatus.FAULT
+            await self.set_observatory_status(
+                status=status,
+                note=status_note,
+            )
 
 
 def run_scheduler() -> None:
