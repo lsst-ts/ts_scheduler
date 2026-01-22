@@ -931,6 +931,270 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                     flush=False,
                 )
 
+    @pytest.mark.skipif(
+        not supports_observatory_status,
+        reason="CSC interface does not support observatory status feature.",
+    )
+    async def test_observatory_status_daytime_monitoring_csc_enabled(self):
+        async with self.make_csc_cleanup_afterward(), ObservatoryStateMock(), self.make_script_queue(
+            running=True
+        ), salobj.Controller(
+            "MTMount"
+        ) as mtmount, salobj.Controller(
+            "MTRotator"
+        ) as mtrotator:
+            await mtmount.evt_summaryState.set_write(summaryState=salobj.State.ENABLED)
+            await mtrotator.evt_summaryState.set_write(
+                summaryState=salobj.State.ENABLED
+            )
+            await salobj.set_summary_state(
+                self.remote,
+                salobj.State.ENABLED,
+                override="monitor_observatory_state.yaml",
+            )
+
+            # patch the model class to ensure calling get_general_info
+            # returns that it is daytime
+            def get_general_info_daytime():
+                return dict(isNight=False)
+
+            def get_general_info_nighttime():
+                return dict(isNight=True)
+
+            self.csc.model.get_general_info = get_general_info_daytime
+
+            expected_initial_observatory_status_note = [
+                (Scheduler.ObservatoryStatus.UNKNOWN, "Scheduler CSC started"),
+                (Scheduler.ObservatoryStatus.UNKNOWN, "Scheduler CSC in STANDBY"),
+                (
+                    Scheduler.ObservatoryStatus.UNKNOWN,
+                    "Observatory status feature enabled",
+                ),
+                (Scheduler.ObservatoryStatus.DAYTIME, "Daytime started"),
+            ]
+
+            for status, note in expected_initial_observatory_status_note:
+                observatory_status = await self.assert_next_sample(
+                    self.remote.evt_observatoryStatus,
+                    status=status,
+                    flush=False,
+                )
+                assert note in observatory_status.note
+
+            with self.assertRaises(asyncio.TimeoutError):
+                await self.assert_next_sample(
+                    self.remote.evt_observatoryStatus,
+                    flush=False,
+                )
+
+            for status in Scheduler.ObservatoryStatus:
+                if status == Scheduler.ObservatoryStatus.DAYTIME:
+                    continue
+
+                with salobj.testutils.assertRaisesAckError(
+                    result_contains=f"Cannot set status to {status.name}; daytime flag is active."
+                ):
+                    await self.remote.cmd_updateObservatoryStatus.set_start(
+                        status=status,
+                    )
+
+            bad_daytime_status = [
+                Scheduler.ObservatoryStatus.FAULT | Scheduler.ObservatoryStatus.WEATHER,
+                Scheduler.ObservatoryStatus.FAULT
+                | Scheduler.ObservatoryStatus.DOWNTIME,
+                Scheduler.ObservatoryStatus.FAULT
+                | Scheduler.ObservatoryStatus.WEATHER
+                | Scheduler.ObservatoryStatus.DOWNTIME,
+                Scheduler.ObservatoryStatus.WEATHER
+                | Scheduler.ObservatoryStatus.DOWNTIME,
+            ]
+
+            for status in bad_daytime_status:
+                bad_daytime_status_str = " | ".join(
+                    [s.name for s in Scheduler.ObservatoryStatus if s & status]
+                )
+
+                with salobj.testutils.assertRaisesAckError(
+                    result_contains=f"Cannot set status to {bad_daytime_status_str}; daytime flag is active."
+                ):
+                    await self.remote.cmd_updateObservatoryStatus.set_start(
+                        status=status,
+                    )
+
+            good_daytime_status = [
+                Scheduler.ObservatoryStatus.FAULT
+                | Scheduler.ObservatoryStatus.WEATHER
+                | Scheduler.ObservatoryStatus.DAYTIME,
+                Scheduler.ObservatoryStatus.FAULT
+                | Scheduler.ObservatoryStatus.DOWNTIME
+                | Scheduler.ObservatoryStatus.DAYTIME,
+                Scheduler.ObservatoryStatus.FAULT
+                | Scheduler.ObservatoryStatus.WEATHER
+                | Scheduler.ObservatoryStatus.DOWNTIME
+                | Scheduler.ObservatoryStatus.DAYTIME,
+                Scheduler.ObservatoryStatus.WEATHER
+                | Scheduler.ObservatoryStatus.DOWNTIME
+                | Scheduler.ObservatoryStatus.DAYTIME,
+                Scheduler.ObservatoryStatus.DAYTIME,
+            ]
+
+            for status in good_daytime_status:
+                await self.remote.cmd_updateObservatoryStatus.set_start(
+                    status=status,
+                )
+                await self.assert_next_sample(
+                    self.remote.evt_observatoryStatus,
+                    status=status,
+                    flush=False,
+                )
+
+                self.csc.model.get_general_info = get_general_info_nighttime
+
+                observatory_status = await self.assert_next_sample(
+                    self.remote.evt_observatoryStatus,
+                    status=status ^ Scheduler.ObservatoryStatus.DAYTIME,
+                    flush=False,
+                )
+                assert "Nighttime started" in observatory_status.note
+
+                self.csc.model.get_general_info = get_general_info_daytime
+
+                observatory_status = await self.assert_next_sample(
+                    self.remote.evt_observatoryStatus,
+                    status=status,
+                    flush=False,
+                )
+                assert "Daytime started" in observatory_status.note
+
+            await mtmount.evt_summaryState.set_write(summaryState=salobj.State.FAULT)
+
+            observatory_status = await self.assert_next_sample(
+                self.remote.evt_observatoryStatus,
+                status=Scheduler.ObservatoryStatus.FAULT
+                | Scheduler.ObservatoryStatus.DAYTIME,
+                flush=False,
+            )
+            assert "MTMount" in observatory_status.note
+
+            self.csc.model.get_general_info = get_general_info_nighttime
+
+            observatory_status = await self.assert_next_sample(
+                self.remote.evt_observatoryStatus,
+                status=Scheduler.ObservatoryStatus.FAULT,
+                flush=False,
+            )
+            assert "MTMount" in observatory_status.note
+            assert "Nighttime started" in observatory_status.note
+
+            self.csc.model.get_general_info = get_general_info_daytime
+
+            observatory_status = await self.assert_next_sample(
+                self.remote.evt_observatoryStatus,
+                status=Scheduler.ObservatoryStatus.FAULT
+                | Scheduler.ObservatoryStatus.DAYTIME,
+                flush=False,
+            )
+            assert "Daytime started" in observatory_status.note
+            assert "MTMount" in observatory_status.note
+
+            await mtrotator.evt_summaryState.set_write(summaryState=salobj.State.FAULT)
+            observatory_status = await self.assert_next_sample(
+                self.remote.evt_observatoryStatus,
+                status=Scheduler.ObservatoryStatus.FAULT
+                | Scheduler.ObservatoryStatus.DAYTIME,
+                flush=False,
+            )
+            assert "MTMount" in observatory_status.note
+            assert "MTRotator" in observatory_status.note
+
+            await mtmount.evt_summaryState.set_write(summaryState=salobj.State.ENABLED)
+
+            observatory_status = await self.assert_next_sample(
+                self.remote.evt_observatoryStatus,
+                status=Scheduler.ObservatoryStatus.FAULT
+                | Scheduler.ObservatoryStatus.DAYTIME,
+                flush=False,
+            )
+            assert "MTMount" not in observatory_status.note
+            assert "MTRotator" in observatory_status.note
+
+            await mtrotator.evt_summaryState.set_write(
+                summaryState=salobj.State.ENABLED
+            )
+
+            observatory_status = await self.assert_next_sample(
+                self.remote.evt_observatoryStatus,
+                status=Scheduler.ObservatoryStatus.DAYTIME,
+                flush=False,
+            )
+            assert "MTMount" not in observatory_status.note
+            assert "MTRotator" not in observatory_status.note
+
+    @pytest.mark.skipif(
+        not supports_observatory_status,
+        reason="CSC interface does not support observatory status feature.",
+    )
+    async def test_observatory_status_daytime_monitoring_csc_disabled(self):
+        async with self.make_csc_cleanup_afterward(), ObservatoryStateMock(), self.make_script_queue(
+            running=True
+        ), salobj.Controller(
+            "MTMount"
+        ) as mtmount, salobj.Controller(
+            "MTRotator"
+        ) as mtrotator:
+            await mtmount.evt_summaryState.set_write(summaryState=salobj.State.ENABLED)
+            await mtrotator.evt_summaryState.set_write(
+                summaryState=salobj.State.ENABLED
+            )
+            await salobj.set_summary_state(
+                self.remote,
+                salobj.State.DISABLED,
+                override="monitor_observatory_state.yaml",
+            )
+
+            # patch the model class to ensure calling get_general_info
+            # returns that it is daytime
+            def get_general_info_daytime():
+                return dict(isNight=False)
+
+            def get_general_info_nighttime():
+                return dict(isNight=True)
+
+            self.csc.model.get_general_info = get_general_info_daytime
+
+            expected_initial_observatory_status_note = [
+                (Scheduler.ObservatoryStatus.UNKNOWN, "Scheduler CSC started"),
+                (Scheduler.ObservatoryStatus.UNKNOWN, "Scheduler CSC in STANDBY"),
+                (
+                    Scheduler.ObservatoryStatus.UNKNOWN,
+                    "Observatory status feature enabled",
+                ),
+                (Scheduler.ObservatoryStatus.DAYTIME, "Daytime started"),
+            ]
+
+            for status, note in expected_initial_observatory_status_note:
+                observatory_status = await self.assert_next_sample(
+                    self.remote.evt_observatoryStatus,
+                    status=status,
+                    flush=False,
+                )
+                assert note in observatory_status.note
+
+            with self.assertRaises(asyncio.TimeoutError):
+                await self.assert_next_sample(
+                    self.remote.evt_observatoryStatus,
+                    flush=False,
+                )
+
+            self.csc.model.get_general_info = get_general_info_nighttime
+
+            observatory_status = await self.assert_next_sample(
+                self.remote.evt_observatoryStatus,
+                status=Scheduler.ObservatoryStatus.UNKNOWN,
+                flush=False,
+            )
+            assert "Nighttime started" in observatory_status.note
+
     @contextlib.asynccontextmanager
     async def make_script_queue(self, running: bool) -> None:
         self.log.debug("Make queue.")
