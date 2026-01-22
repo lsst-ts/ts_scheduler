@@ -298,6 +298,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         for observatory_status in SchedulerObservatoryStatus:
             self.max_status = self.max_status ^ observatory_status
 
+        self.enable_observatory_status_monitor = False
+
     @property
     def queue_remote(self):
         """Access the remote for the script queue."""
@@ -443,6 +445,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             await self.reset_handle_no_targets_on_queue()
 
         elif self.summary_state == salobj.State.STANDBY:
+            self.enable_observatory_status_monitor = False
             await self._stop_all_background_tasks()
             for component in self.parameters.observatory_status.components_to_monitor:
                 component_reference_name = component.lower()
@@ -1359,10 +1362,12 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                         "Skipping exception while waiting for observatory status task to finish.",
                         exc_info=True,
                     )
+            self.enable_observatory_status_monitor = True
             self._observatory_status_task = asyncio.create_task(
                 self.monitor_observatory_status()
             )
         else:
+            self.enable_observatory_status_monitor = False
             await self.set_observatory_status(
                 status=SchedulerObservatoryStatus.UNKNOWN,
                 note="Observatory status feature disabled; will not monitor observatory status.",
@@ -2437,6 +2442,14 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         if hasattr(self, "evt_generalInfo"):
             await self.evt_generalInfo.set_write(**general_info)
 
+        if not self.enable_observatory_status_monitor:
+            return
+
+        if general_info["isNight"]:
+            await self.handle_observatory_status_nighttime()
+        else:
+            await self.handle_observatory_status_daytime()
+
     async def _publish_block_info(self) -> None:
         """Publish block information."""
 
@@ -3055,6 +3068,45 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 [s.name for s in Scheduler.ObservatoryStatus if s & status]
             )
             raise InvalidStatusError(f"Invalid status: {invalid_status_str}.")
+
+        general_info = self.model.get_general_info()
+        if (
+            not general_info["isNight"]
+            and not status & Scheduler.ObservatoryStatus.DAYTIME
+        ):
+            status_str = (
+                " | ".join([s.name for s in Scheduler.ObservatoryStatus if s & status])
+                if status > 0
+                else Scheduler.ObservatoryStatus.UNKNOWN.name
+            )
+
+            raise UpdateStatusError(
+                f"Cannot set status to {status_str}; daytime flag is active. "
+                "Status must include DAYTIME."
+            )
+
+    async def handle_observatory_status_nighttime(self):
+        if not hasattr(self, "evt_observatoryStatus"):
+            return
+
+        status = self.evt_observatoryStatus.data.status
+        if status & SchedulerObservatoryStatus.DAYTIME:
+            status = status ^ SchedulerObservatoryStatus.DAYTIME
+            note = self.generate_status_note(user_note="Nighttime started.")
+            await self.set_observatory_status(status=status, note=note)
+
+    async def handle_observatory_status_daytime(self):
+        if not hasattr(self, "evt_observatoryStatus"):
+            return
+
+        status = self.evt_observatoryStatus.data.status
+        if not status & SchedulerObservatoryStatus.DAYTIME:
+            status = status | SchedulerObservatoryStatus.DAYTIME
+            note = self.generate_status_note(user_note="Daytime started.")
+            await self.set_observatory_status(
+                status=status,
+                note=note,
+            )
 
 
 def run_scheduler() -> None:
