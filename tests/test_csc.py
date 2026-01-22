@@ -1195,6 +1195,20 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
             )
             assert "Nighttime started" in observatory_status.note
 
+    @pytest.mark.skipif(
+        supports_observatory_status,
+        reason="CSC interface supports observatory status feature.",
+    )
+    async def test_fails_configure_if_observatory_status_not_supported(self):
+        async with self.make_csc_cleanup_afterward():
+            with salobj.testutils.assertRaisesAckError(
+                result_contains="CSC interface does not support observatory status."
+            ):
+                await self.remote.cmd_start.set_start(
+                    configurationOverride="monitor_observatory_state.yaml",
+                    timeout=SHORT_TIMEOUT,
+                )
+
     @contextlib.asynccontextmanager
     async def make_script_queue(self, running: bool) -> None:
         self.log.debug("Make queue.")
