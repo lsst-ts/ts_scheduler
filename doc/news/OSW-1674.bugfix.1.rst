@@ -1,0 +1,1 @@
+Updated the configure method to properly set the observatory status configuration.

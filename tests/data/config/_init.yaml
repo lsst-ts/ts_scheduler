@@ -12,6 +12,9 @@ auxtel:
   driver_type: driver
   loop_sleep_time: 1.0
   max_scripts: 100
+  observatory_status:
+    enable: false
+    components_to_monitor: []
   mode: SIMPLE
   models:
     location:
@@ -155,6 +158,9 @@ maintel:
   driver_type: driver
   loop_sleep_time: 1.0
   max_scripts: 100
+  observatory_status:
+    enable: false
+    components_to_monitor: []
   mode: SIMPLE
   models:
     location:

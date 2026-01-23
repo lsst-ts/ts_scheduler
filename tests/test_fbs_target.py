@@ -74,7 +74,7 @@ class TestFeatureSchedulerTarget(unittest.TestCase):
             "targetid": int(target.targetid),
             "band_filter": str(target.filter),
             "filter_name": (
-                f"RUBIN{target.filter}_random_filter_name"
+                f"RUBIN{target.filter}_123"
                 if "band" in observation.dtype.names
                 else target.filter
             ),
@@ -231,7 +231,7 @@ class TestFeatureSchedulerTarget(unittest.TestCase):
             observation["rotSkyPos"] = rot_sky
             observation["mjd"] = self.observatory_model.dateprofile.mjd
             if "band" in observation.dtype.names:
-                observation["filter"] = f"RUBIN{obs_filter}_random_filter_name"
+                observation["filter"] = f"RUBIN{obs_filter}_123"
                 observation["band"] = obs_filter
             else:
                 observation["filter"] = obs_filter

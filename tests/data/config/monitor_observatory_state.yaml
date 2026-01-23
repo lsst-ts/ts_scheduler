@@ -1,0 +1,6 @@
+maintel:
+  observatory_status:
+    enable: true
+    components_to_monitor:
+      - MTMount
+      - MTRotator

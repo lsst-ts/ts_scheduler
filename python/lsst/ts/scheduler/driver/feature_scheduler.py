@@ -474,8 +474,8 @@ class FeatureScheduler(Driver):
             target.observation["clouds"] = self.conditions.bulk_cloud
 
             target.slewtime = slew_time
-            target.airmass = target.observation["airmass"]
-            target.sky_brightness = target.observation["skybrightness"]
+            target.airmass = target.observation["airmass"][0]
+            target.sky_brightness = target.observation["skybrightness"][0]
 
             return target
 

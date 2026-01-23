@@ -19,9 +19,23 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-__all__ = ["SchedulerCscParameters"]
+__all__ = [
+    "ObservatoryStatus",
+    "SchedulerCscParameters",
+]
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+
+
+@dataclass
+class ObservatoryStatus:
+    """Configuration for the observatory status feature."""
+
+    enable: bool = False
+    # Enable observatory status feature?
+
+    components_to_monitor: list[str] = field(default_factory=list)
+    # List of components that should be monitored for faults.
 
 
 @dataclass
@@ -88,6 +102,9 @@ class SchedulerCscParameters:
     max_scripts: int = 100
     # Maximum number of scripts to keep track of.
 
+    observatory_status: ObservatoryStatus = field(default_factory=ObservatoryStatus)
+    # Configuration for the observatory status features
+
     def set_defaults(self):
         """Set defaults for the LSST Scheduler's Driver."""
         self.driver_type = "driver"
@@ -101,3 +118,4 @@ class SchedulerCscParameters:
         self.observing_script = "standard_visit.py"
         self.observing_script_is_standard = True
         self.max_scripts = 100
+        self.observatory_status = ObservatoryStatus()
