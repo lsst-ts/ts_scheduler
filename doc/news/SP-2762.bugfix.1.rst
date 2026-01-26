@@ -1,1 +1,0 @@
-Use conditions.fwhm_eff to assign seeing fwhm eff values to the observations.

@@ -1,1 +1,0 @@
-Transition from setting conditions.mounted_filters to conditions.mounted_bands and conditions.current_filter to conditions.current_band.

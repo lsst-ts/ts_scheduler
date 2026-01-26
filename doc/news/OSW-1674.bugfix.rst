@@ -1,1 +1,0 @@
-Re-exported or defined the ObservatoryStatus enumeration in utils/csc_utils.py to support older ts_xml versions.
