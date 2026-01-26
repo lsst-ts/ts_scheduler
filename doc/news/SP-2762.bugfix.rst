@@ -1,0 +1,1 @@
+Remove assignment to conditions.FWHMeff and only use conditions.fwhm_eff -- only fwhm_eff is used in rubin-scheduler and this should alleviate some confusions.

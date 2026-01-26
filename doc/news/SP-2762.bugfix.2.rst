@@ -1,0 +1,1 @@
+Transition from SeeingModel.filter_list (deprecated) to SeeingModel.band_list.

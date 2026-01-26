@@ -191,10 +191,10 @@ class FeatureScheduler(Driver):
                 nside_out=self.nside,
             )
 
-            self.conditions.FWHMeff = dict(
+            self.conditions.fwhm_eff = dict(
                 [
                     (key, np.empty(hp.nside2npix(self.nside), dtype=float))
-                    for key in self.models["seeing"].filter_list
+                    for key in self.models["seeing"].band_list
                 ]
             )
         else:
@@ -465,7 +465,7 @@ class FeatureScheduler(Driver):
             target.observation["skybrightness"] = self.conditions.skybrightness[
                 effective_filter_name
             ][hpid]
-            target.observation["FWHMeff"] = self.conditions.FWHMeff[
+            target.observation["FWHMeff"] = self.conditions.fwhm_eff[
                 effective_filter_name
             ][hpid]
             target.observation["airmass"] = self.conditions.airmass[hpid]
@@ -640,7 +640,7 @@ class FeatureScheduler(Driver):
         # Use the model to get the seeing at this time and airmasses.
         seeing_dict = self.models["seeing"](FWHM_500, self.conditions.airmass[good])
         fwhm_eff = seeing_dict["fwhmEff"]
-        for i, key in enumerate(self.models["seeing"].filter_list):
+        for i, key in enumerate(self.models["seeing"].band_list):
             _fwhm_eff = np.empty(hp.nside2npix(self.conditions.nside))
             _fwhm_eff.fill(np.nan)
             _fwhm_eff[good] = fwhm_eff[i, :]
@@ -653,14 +653,12 @@ class FeatureScheduler(Driver):
             self.conditions.mjd,
         )
 
-        self.conditions.mounted_filters = self.models[
-            "observatory_state"
-        ].mountedfilters
+        self.conditions.mounted_bands = self.models["observatory_state"].mountedfilters
         # Use observatory_model current state because some target in the queue
         # may as well change the current filter, and this is not captured by
         # observatory_state which actually reflects the current observatory
         # state
-        self.conditions.current_filter = self.models[
+        self.conditions.current_band = self.models[
             "observatory_model"
         ].current_state.filter
 
