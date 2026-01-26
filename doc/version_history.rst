@@ -1,3 +1,36 @@
+v2.8.0 (2026-01-26)
+===================
+
+New Features
+------------
+
+- Added daytime and nighttime monitoring and handling logic in scheduler_csc.py. (`OSW-1674 <https://rubinobs.atlassian.net//browse/OSW-1674>`_)
+- Implemented the updateObservatoryState command and added updateObservatoryStatus for backwards compatibility. (`OSW-1674 <https://rubinobs.atlassian.net//browse/OSW-1674>`_)
+- Overrode the start method to ensure the initial observatory state is published immediately after CSC startup. (`OSW-1674 <https://rubinobs.atlassian.net//browse/OSW-1674>`_)
+- Implemented the initial observatory status flag feature and monitoring of component summary states. (`OSW-1674 <https://rubinobs.atlassian.net//browse/OSW-1674>`_)
+- Added InvalidStatusError and UpdateStatusError exception classes. (`OSW-1674 <https://rubinobs.atlassian.net//browse/OSW-1674>`_)
+- Added a new dataclass for observatory status configuration and updated the SchedulerCscParameters. (`OSW-1674 <https://rubinobs.atlassian.net//browse/OSW-1674>`_)
+
+
+Bug Fixes
+---------
+
+- Updated the configure method to properly set the observatory status configuration. (`OSW-1674 <https://rubinobs.atlassian.net//browse/OSW-1674>`_)
+- Fixed an issue in the feature-based scheduler driver where airmass and sky brightness were incorrectly assigned as arrays instead of single floats. (`OSW-1674 <https://rubinobs.atlassian.net//browse/OSW-1674>`_)
+- Re-exported or defined the ObservatoryStatus enumeration in utils/csc_utils.py to support older ts_xml versions. (`OSW-1674 <https://rubinobs.atlassian.net//browse/OSW-1674>`_)
+- Remove assignment to conditions.FWHMeff and only use conditions.fwhm_eff -- only fwhm_eff is used in rubin-scheduler and this should alleviate some confusions. (`SP-2762 <https://rubinobs.atlassian.net//browse/SP-2762>`_)
+- Transition from SeeingModel.filter_list (deprecated) to SeeingModel.band_list. (`SP-2762 <https://rubinobs.atlassian.net//browse/SP-2762>`_)
+- Transition from setting conditions.mounted_filters to conditions.mounted_bands and conditions.current_filter to conditions.current_band. (`SP-2762 <https://rubinobs.atlassian.net//browse/SP-2762>`_)
+- Use conditions.fwhm_eff to assign seeing fwhm eff values to the observations. (`SP-2762 <https://rubinobs.atlassian.net//browse/SP-2762>`_)
+
+
+Other Changes and Additions
+---------------------------
+
+- Updated CONFIG_SCHEMA to include session configurations for the observatory status. (`OSW-1674 <https://rubinobs.atlassian.net//browse/OSW-1674>`_)
+- Refactored remote storage in scheduler_csc.py to use a dictionary and property-based access. (`OSW-1674 <https://rubinobs.atlassian.net//browse/OSW-1674>`_)
+
+
 v2.7.0 (2025-12-17)
 ===================
 

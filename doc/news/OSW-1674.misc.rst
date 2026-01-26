@@ -1,1 +1,0 @@
-Refactored remote storage in scheduler_csc.py to use a dictionary and property-based access.

@@ -1,1 +1,0 @@
-Updated CONFIG_SCHEMA to include session configurations for the observatory status.

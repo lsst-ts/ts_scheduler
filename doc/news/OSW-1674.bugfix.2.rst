@@ -1,1 +1,0 @@
-Fixed an issue in the feature-based scheduler driver where airmass and sky brightness were incorrectly assigned as arrays instead of single floats.

@@ -1,1 +1,0 @@
-Added a new dataclass for observatory status configuration and updated the SchedulerCscParameters.
