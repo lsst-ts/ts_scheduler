@@ -1,0 +1,1 @@
+Overrode the start method to ensure the initial observatory state is published immediately after CSC startup.

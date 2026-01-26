@@ -1,0 +1,1 @@
+Added InvalidStatusError and UpdateStatusError exception classes.

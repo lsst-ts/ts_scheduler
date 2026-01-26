@@ -25,6 +25,8 @@ __all__ = [
     "FailedToQueueTargetsError",
     "TargetScriptFailedError",
     "NonConsecutiveIndexError",
+    "InvalidStatusError",
+    "UpdateStatusError",
 ]
 
 
@@ -45,4 +47,12 @@ class TargetScriptFailedError(Exception):
 
 
 class NonConsecutiveIndexError(Exception):
+    pass
+
+
+class InvalidStatusError(Exception):
+    pass
+
+
+class UpdateStatusError(Exception):
     pass
