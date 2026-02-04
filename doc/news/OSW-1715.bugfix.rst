@@ -1,0 +1,1 @@
+Updated ``Model._get_block_status`` to work with latest version of pandas.
