@@ -2234,6 +2234,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             observing_block=observing_block,
         )
         await self.model.remove_block_done_scripts(observing_block.id)
+        target.remove_scheduler_state()
 
     async def _publish_settings(self, settings) -> None:
         """Publish settings."""
