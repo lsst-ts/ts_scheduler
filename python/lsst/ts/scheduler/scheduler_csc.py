@@ -1900,10 +1900,6 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         for n in range(self.parameters.n_targets + 1):
 
             async with self.current_scheduler_state(publish_lfoa=True):
-                self.log.debug(
-                    f"Target queue contains {len(self.targets_queue)} targets."
-                )
-                self.model.register_scheduled_targets(self.targets_queue)
 
                 async for (
                     observatory_time,
