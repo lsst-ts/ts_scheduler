@@ -2717,7 +2717,9 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 await self.evt_detailedState.set_write(substate=initial_detailed_state)
 
     @contextlib.asynccontextmanager
-    async def current_scheduler_state(self, publish_lfoa):
+    async def current_scheduler_state(
+        self, publish_lfoa, reset_state=True, keep_state=True
+    ):
         """A context manager to handle storing the current scheduler state,
         performing some operations on it and then resetting it to the
         previous state.
@@ -2726,6 +2728,10 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         ----------
         publish_lfoa : bool
             Publish current state to large file annex?
+        reset_state : bool, optional
+            Reset state at the end? Default: True.
+        keep_state : bool, optional
+            Keep state file? Default: True.
         """
 
         async with self.scheduler_state_lock:
@@ -2739,8 +2745,10 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             try:
                 yield last_scheduler_state_filename
             finally:
-                self.model.reset_state(last_scheduler_state_filename)
-                shutil.os.remove(last_scheduler_state_filename)
+                if reset_state:
+                    self.model.reset_state(last_scheduler_state_filename)
+                if not keep_state:
+                    shutil.os.remove(last_scheduler_state_filename)
 
     @contextlib.asynccontextmanager
     async def idle_to_running(self):
