@@ -884,41 +884,35 @@ class Model:
             target and the target.
         """
 
-        targets = await self.select_next_targets()
+        target = await self.select_next_target()
 
         await asyncio.sleep(0)
 
-        if targets is None:
+        if target is None:
             n_scheduled_targets = self.get_number_of_scheduled_targets()
             self.log.warning(
                 "No target from the scheduler. "
                 f"Number of scheduled targets is {n_scheduled_targets}."
             )
         else:
-            for target in targets:
-                if target is None:
-                    self.log.debug("No target, skipping...")
-                    continue
-                self.log.debug(
-                    f"Temporarily registering selected targets: {target.note}."
-                )
-                self.driver.register_observed_target(target)
+            self.log.debug(f"Registering selected target: {target.note}.")
+            self.driver.register_observed_target(target)
 
-                # The following will playback the observations on the
-                # observatory model but will keep the observatory state
-                # unchanged
-                self.models["observatory_model"].observe(target)
+            # The following will playback the observation on the
+            # observatory model but will keep the observatory state
+            # unchanged
+            self.models["observatory_model"].observe(target)
 
-                wait_time = (
-                    self.models["observatory_model"].current_state.time
-                    - self.models["observatory_state"].time
-                )
+            wait_time = (
+                self.models["observatory_model"].current_state.time
+                - self.models["observatory_state"].time
+            )
 
-                yield self.models[
-                    "observatory_model"
-                ].current_state.time, wait_time, target
+            yield self.models["observatory_model"].current_state.time, wait_time, target
 
-        self.log.debug(f"Generated {self.get_number_of_scheduled_targets()} targets.")
+            self.log.debug(
+                f"Generated {self.get_number_of_scheduled_targets()} targets."
+            )
 
     def register_scheduled_targets(self, targets_queue: list[DriverTarget]) -> None:
         """Register scheduled targets.
