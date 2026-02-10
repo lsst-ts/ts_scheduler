@@ -20,6 +20,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import logging
+import os
 import typing
 from string import Template
 
@@ -105,6 +106,7 @@ class DriverTarget(Target):
 
         self.block_configuration = dict()
         self._snapshot_uri = ""
+        self._scheduler_state_filename = ""
 
         if observing_block.configuration_schema:
 
@@ -363,3 +365,36 @@ class DriverTarget(Target):
             Value for the snapshot uri.
         """
         self._snapshot_uri = uri
+
+    def set_scheduler_state_filename(self, filename):
+        """Set the value for the scheduler state filename.
+
+        Parameters
+        ----------
+        filename : `str`
+            Name of the file with the scheduler state used to
+            produce this target.
+        """
+        if os.path.exists(filename):
+            self._scheduler_state_filename = filename
+        else:
+            raise RuntimeError(f"Scheduler state file {filename} does not exist.")
+
+    def get_scheduler_state_filename(self):
+        """Get the scheduler state filename.
+
+        Returns
+        -------
+        `str`
+        """
+        return self._scheduler_state_filename
+
+    def remove_scheduler_state(self):
+        """Remove the scheduler state file and resets the scheduler state
+        filename.
+        """
+        if self._scheduler_state_filename and os.path.exists(
+            self._scheduler_state_filename
+        ):
+            os.remove(self._scheduler_state_filename)
+            self._scheduler_state_filename = ""
