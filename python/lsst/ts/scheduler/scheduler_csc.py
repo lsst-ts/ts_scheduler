@@ -1899,7 +1899,10 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         for n in range(self.parameters.n_targets + 1):
 
-            async with self.current_scheduler_state(publish_lfoa=True):
+            async with self.current_scheduler_state(
+                publish_lfoa=True,
+                reset_state=False,
+            ) as last_scheduler_state_filename:
 
                 async for (
                     observatory_time,
@@ -1907,6 +1910,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     target,
                 ) in self.model.generate_target_queue():
                     target.set_snapshot_uri(self.evt_largeFileObjectAvailable.data.url)
+                    target.set_scheduler_state_filename(last_scheduler_state_filename)
                     self.targets_queue.append(target)
 
                     await self._publish_time_to_next_target(
