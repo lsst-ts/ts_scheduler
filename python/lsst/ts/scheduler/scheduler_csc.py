@@ -1982,23 +1982,13 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         )
 
         if publish_lfoa:
-            scheduler_state_filename = "last_scheduler_state.p"
             try:
                 await self._handle_lfoa(saved_scheduler_state_filename)
             except Exception:
                 self.log.exception(
                     f"Could not upload file to S3 bucket. Keeping file {saved_scheduler_state_filename}."
                 )
-                return shutil.copy(
-                    saved_scheduler_state_filename, scheduler_state_filename
-                )
-            else:
-                return shutil.move(
-                    saved_scheduler_state_filename, scheduler_state_filename
-                )
-
-        else:
-            return saved_scheduler_state_filename
+        return saved_scheduler_state_filename
 
     async def _handle_lfoa(self, file_name):
         """Handle publishing large file object available (LFOA)."""
