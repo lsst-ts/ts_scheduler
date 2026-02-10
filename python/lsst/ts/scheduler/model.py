@@ -1002,6 +1002,7 @@ class Model:
                     "observatory_model"
                 ].current_state.time
                 targets.append(target)
+                await self.register_observations([target])
 
         return time_scheduler_evaluation, time_start, targets
 
