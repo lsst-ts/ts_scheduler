@@ -1580,6 +1580,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         if len(scheduled_targets_info.failed) > 0:
             await self.remove_from_queue(scheduled_targets_info.failed)
+            need_state_reset = True
             for target in scheduled_targets_info.failed:
                 observing_block = target.get_observing_block()
                 await self._update_block_status(
@@ -1587,6 +1588,13 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     block_status=BlockStatus.ERROR,
                     observing_block=observing_block,
                 )
+                if need_state_reset:
+                    scheduler_state_filename = target.get_scheduler_state_filename()
+                    if scheduler_state_filename:
+                        self.driver.reset_state(scheduler_state_filename)
+                        need_state_reset = False
+            await self._cleanup_queue_targets()
+            await self.reset_handle_no_targets_on_queue()
 
         return (
             len(scheduled_targets_info.failed) == 0
