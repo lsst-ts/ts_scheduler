@@ -1,3 +1,12 @@
+v2.8.1 (2026-02-10)
+===================
+
+Bug Fixes
+---------
+
+- Updated ``Model._get_block_status`` to work with latest version of pandas. (`OSW-1715 <https://rubinobs.atlassian.net//browse/OSW-1715>`_)
+
+
 v2.8.0 (2026-01-26)
 ===================
 
