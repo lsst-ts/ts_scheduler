@@ -772,12 +772,8 @@ class Model:
 
                 if all([state == Script.ScriptState.DONE for state in scripts_state]):
                     # All scripts completed successfully
-                    report += (
-                        f"\n\t{target.note} observation completed successfully. "
-                        "Registering observation."
-                    )
+                    report += f"\n\t{target.note} observation completed successfully."
 
-                    self.driver.register_observation(target)
                     scheduled_targets_info.observed.append(target)
                     # Remove related script from the list
                     for index in sal_indices:
