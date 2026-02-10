@@ -1368,9 +1368,9 @@ class Model:
             )
         else:
             return ObservingBlockStatus(
-                executions_completed=query_res["executionsCompleted"][0],
-                executions_total=query_res["executionsTotal"][0],
-                status=BlockStatus(query_res["statusId"][0]),
+                executions_completed=query_res["executionsCompleted"].iloc[0],
+                executions_total=query_res["executionsTotal"].iloc[0],
+                status=BlockStatus(query_res["statusId"].iloc[0]),
             )
 
     async def update_telemetry(self):
