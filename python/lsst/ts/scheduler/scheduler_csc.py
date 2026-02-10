@@ -1579,7 +1579,16 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             await self.register_observation(target)
 
         if len(scheduled_targets_info.failed) > 0:
+            if self.targets_queue:
+                self.log.info(
+                    f"Target queue contains {len(self.targets_queue)}. Clearing it."
+                )
+                while self.targets_queue:
+                    target = self.targets_queue.pop(0)
+                    target.remove_scheduler_state()
+
             await self.remove_from_queue(scheduled_targets_info.failed)
+            need_state_reset = True
             for target in scheduled_targets_info.failed:
                 observing_block = target.get_observing_block()
                 await self._update_block_status(
@@ -1587,6 +1596,17 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     block_status=BlockStatus.ERROR,
                     observing_block=observing_block,
                 )
+                if need_state_reset:
+                    scheduler_state_filename = target.get_scheduler_state_filename()
+                    if scheduler_state_filename:
+                        self.log.info(
+                            f"Reset scheduler state for {target=!s}: {scheduler_state_filename}."
+                        )
+                        self.model.reset_state(scheduler_state_filename)
+                        need_state_reset = False
+                target.remove_scheduler_state()
+            await self._cleanup_queue_targets()
+            await self.reset_handle_no_targets_on_queue()
 
         return (
             len(scheduled_targets_info.failed) == 0
