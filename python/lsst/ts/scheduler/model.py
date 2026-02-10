@@ -759,16 +759,28 @@ class Model:
             ]
             try:
 
-                if not script_info or len(script_info) != len(sal_indices):
-                    report += f"No information on all scripts on queue, put it back and continue: {target}.\n"
-                    # No information on all scripts on queue,
-                    # put it back and continue
-                    self.raw_telemetry["scheduled_targets"].append(target)
-                    continue
-
                 scripts_state = [
                     Script.ScriptState(info.scriptState) for info in script_info
                 ]
+
+                if not script_info or len(script_info) != len(sal_indices):
+                    if any([state in FailedStates for state in scripts_state]):
+                        report += (
+                            f"No information on all scripts on queue for {target.note}, "
+                            "but scripts failed. Mark as failed and continue.\n"
+                        )
+                        scheduled_targets_info.failed.append(target)
+                        for index in sal_indices:
+                            self.script_info.pop(index)
+                    else:
+                        report += (
+                            f"No information on all scripts on queue for {target}, "
+                            "put it back and continue.\n"
+                        )
+                        # No information on all scripts on queue,
+                        # put it back and continue
+                        self.raw_telemetry["scheduled_targets"].append(target)
+                    continue
 
                 if all([state == Script.ScriptState.DONE for state in scripts_state]):
                     # All scripts completed successfully
