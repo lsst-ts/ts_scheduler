@@ -2737,7 +2737,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             )
 
             try:
-                yield
+                yield last_scheduler_state_filename
             finally:
                 self.model.reset_state(last_scheduler_state_filename)
                 shutil.os.remove(last_scheduler_state_filename)
