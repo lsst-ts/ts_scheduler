@@ -859,6 +859,9 @@ class Model:
         `DriverTarget`
             Next target.
         """
+        if self.driver is None:
+            return None
+
         loop = asyncio.get_event_loop()
 
         return await loop.run_in_executor(None, self.driver.select_next_target)
