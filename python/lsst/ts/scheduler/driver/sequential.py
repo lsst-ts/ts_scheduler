@@ -44,32 +44,33 @@ class SequentialParameters(DriverParameters):
 
     Notes
     -----
+    Example of a yaml configuration:
 
-    Example of a yaml configuration.
+    .. code-block:: yaml
 
-    targets:
-      -
-        ra: 12:00:00
-        dec: -10:00:00
-        name: tile1
-        instrument_setup:
+        targets:
           -
-            exptime: 15.
-            filter: r
+            ra: 12:00:00
+            dec: -10:00:00
+            name: tile1
+            instrument_setup:
+              -
+                exptime: 15.
+                filter: r
+              -
+                exptime: 15.
+                filter: r
           -
-            exptime: 15.
-            filter: r
-    -
-        ra: 12:00:00
-        dec: -13:30:00
-        name: tile2
-        instrument_setup:
-          -
-            exptime: 15.
-            filter: r
-          -
-            exptime: 15.
-            filter: r
+            ra: 12:00:00
+            dec: -13:30:00
+            name: tile2
+            instrument_setup:
+              -
+                exptime: 15.
+                filter: r
+              -
+                exptime: 15.
+                filter: r
     """
 
     observing_list: str = ""
