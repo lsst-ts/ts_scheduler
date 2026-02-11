@@ -86,21 +86,21 @@ This mode of operation will reconstruct the state of the scheduling algorithm fr
 
 After performing a fresh configuration (overriding any previous values) the Scheduler will perform the following actions:
 
-- If startup_database_ is empty; finish startup as soon as the configuration is loaded.
+- If :ref:`startup database <startup_database>` is empty; finish startup as soon as the configuration is loaded.
 
-- If startup_database_ points to an existing file path:
+- If :ref:`startup database <startup_database>` points to an existing file path:
 
    1.  Assume it is an observations database that the ``Driver`` understands.
-   2.  Call :py:method:`Driver <lsst.ts.scheduler.driver.Driver.parse_observation_database>` to retrieve a list of observations.
-   3.  Call :py:method:`Driver <lsst.ts.scheduler.driver.Driver.cold_start>`, passing in the result of the previous call.
+   2.  Call :py:meth:`Driver <lsst.ts.scheduler.driver.Driver.parse_observation_database>` to retrieve a list of observations.
+   3.  Call :py:meth:`Driver <lsst.ts.scheduler.driver.Driver.cold_start>`, passing in the result of the previous call.
 
    If any of these steps fail, it will reject the ``start`` command and remain in STANDBY.
 
 - If neither of the above;
 
-   1.  Assume startup_database_ is an EFD query that retrieves a list of observations.
+   1.  Assume :ref:`startup database <startup_database>` is an EFD query that retrieves a list of observations.
    2.  If the result is empty, fail the startup process.
-   3.  Perform the query to the EFD and pass the results to :py:method:`Driver <lsst.ts.scheduler.driver.Driver.cold_start>`.
+   3.  Perform the query to the EFD and pass the results to :py:meth:`Driver <lsst.ts.scheduler.driver.Driver.cold_start>`.
 
    If any of these steps fails, it will reject the ``start`` command and remain in STANDBY.
 
@@ -117,13 +117,13 @@ The scheduler will check if it was previously configured, then perform the follo
 
    1. Perform a fresh driver configuration.
 
-   2. If a startup_database_ is provided, the Scheduler assumes it is a snapshot uri, and overrides the scheduling algorithm with the one indicated by this parameter.
+   2. If a :ref:`startup database <startup_database>` is provided, the Scheduler assumes it is a snapshot uri, and overrides the scheduling algorithm with the one indicated by this parameter.
       If it fails to load the startup database as a snapshot, the start command will be rejected and the Scheduler will remain in standby.
 
 - If yes (scheduler was already configured and is being re-enabled, e.g. after a fault):
 
    1. Skip driver configuration and retain all previous state.
-      This also means it will ignore any startup_database_ provided.
+      This also means it will ignore any :ref:`startup database <startup_database>` provided.
 
 Note that, to make sure the Scheduler will load a new configuration, one should either use WARM or COLD start.
 When executing in HOT start the Scheduler will default to using an already existing configuration.
@@ -138,7 +138,7 @@ In this case the Scheduler will perform the following actions:
 
 1. Perform a fresh configuration.
 
-2. If a startup_database_ is provided, the Scheduler assumes it is a snapshot uri, and overrides the scheduling algorithm with the one indicated by this parameter.
+2. If a :ref:`startup database <startup_database>` is provided, the Scheduler assumes it is a snapshot uri, and overrides the scheduling algorithm with the one indicated by this parameter.
    If it fails to load the startup database as a snapshot, the start command will be rejected and the Scheduler will remain in standby.
 
 .. _Developer_Guide_Operation_Modes:
@@ -202,7 +202,7 @@ The Advance mode of operation works like this:
       * Simulate the observation in the observatory model.
       * Register the observation in the driver with :py:meth:`Driver.register_observation <lsst.ts.scheduler.driver.Driver.register_observation>`.
 
-   3. Repeat until n_targets_ are generated or if no target is returned in step 1.
+   3. Repeat until :ref:`n_targets <n_targets>` are generated or if no target is returned in step 1.
 
 5. Reset the state of the :py:class:`Driver <lsst.ts.scheduler.driver.Driver>` by calling :py:meth:`Driver.reset_from_state <lsst.ts.scheduler.driver.Driver.reset_from_state>` with the file generated in step 3.
 
@@ -259,7 +259,6 @@ Nevertheless, for real operations of the observatory, the following methods shou
 
 * :py:meth:`Driver.save_state <lsst.ts.scheduler.driver.Driver.save_state>`
 * :py:meth:`Driver.parse_observation_database <lsst.ts.scheduler.driver.Driver.parse_observation_database>`
-* :py:meth:`Driver.get_state_as_file_object <lsst.ts.scheduler.driver.Driver.get_state_as_file_object>`
 * :py:meth:`Driver.reset_from_state <lsst.ts.scheduler.driver.Driver.reset_from_state>`
 
 Finally, the following functional methods are needed for full-featured operations.
@@ -343,16 +342,7 @@ TBD
 Code API
 ========
 
-.. automodapi:: lsst.ts.scheduler.scheduler_csc
-    :no-main-docstr:
-
-.. automodapi:: lsst.ts.scheduler.telemetry_stream_handler
-    :no-main-docstr:
-
-.. automodapi:: lsst.ts.scheduler.driver
-    :no-main-docstr:
-
-.. automodapi:: lsst.ts.scheduler.utils
+.. automodapi:: lsst.ts.scheduler
     :no-main-docstr:
 
 .. _Developer_Guide_Dependencies:
@@ -502,5 +492,5 @@ Contributing
 
 Code and documentation contributions utilize pull-requests on github.
 Feature requests can be made by filing a Jira ticket with the `Scheduler` label.
-In all cases, reaching out to the :ref:`contacts for this CSC <ts_xml:index:master-csc-table:Scheduler>` is recommended.
+In all cases, reaching out to the :ref:`contacts for this CSC <ts_xml:index:master-csc-table>` is recommended.
 
