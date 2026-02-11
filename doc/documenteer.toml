@@ -5,5 +5,13 @@ copyright = "2015-2024 Association of Universities for Research in Astronomy, In
 github_url = "https://github.com/lsst-ts/ts_scheduler"
 
 [project.python]
-package = "lsst.ts.scheduler"
+package = "ts_scheduler"
+documentation_url_key = "documentation"
+github_url_key = "repository"
 
+[sphinx.intersphinx.projects]
+ts_xml = "https://ts-xml.lsst.io"
+ts_salobj = "https://ts-salobj.lsst.io"
+ts_scriptqueue = "https://ts-scriptqueue.lsst.io"
+rubin_scheduler = "https://rubin-scheduler.lsst.io"
+python = "https://docs.python.org/3.13/"
