@@ -2962,12 +2962,16 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         Notes
         -----
         The clearing logic follows a specific hierarchy:
+
         1. If the FAULT bit is already 0, no change is made.
+
         2. A list comprehension scans `self._components_summary_state`. If any
            component has a state equal to `salobj.State.FAULT`, the clearing
            process is aborted to ensure safety.
+
         3. If no components are in FAULT, the bitwise XOR (`^`) operator is
            used to flip the `FAULT` bit to 0.
+
         """
         status = self.evt_observatoryStatus.data.status
         status_note = self.generate_status_note()
