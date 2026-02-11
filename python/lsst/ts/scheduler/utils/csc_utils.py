@@ -37,34 +37,29 @@ from urllib.parse import urlparse
 
 from lsst.ts.xml.enums import Script
 
-try:
-    from lsst.ts.xml.enums.Scheduler import (
-        ObservatoryStatus as SchedulerObservatoryStatus,
-    )
-except ImportError:
 
-    class SchedulerObservatoryStatus(enum.IntEnum):
-        """Enumeration with the valid observatory status values."""
+class SchedulerObservatoryStatus(enum.IntEnum):
+    """Enumeration with the valid observatory status values."""
 
-        # Observatory status is unknown.
-        UNKNOWN = 0
+    # Observatory status is unknown.
+    UNKNOWN = 0
 
-        # Observatory in regular daytime.
-        DAYTIME = 1
+    # Observatory in regular daytime.
+    DAYTIME = 1
 
-        # Observatory in regular night-time scheduler-driven
-        # operations.
-        OPERATIONAL = 2
+    # Observatory in regular night-time scheduler-driven
+    # operations.
+    OPERATIONAL = 2
 
-        # Fault detected on one or more critical component during
-        # night-time operations.
-        FAULT = 4
+    # Fault detected on one or more critical component during
+    # night-time operations.
+    FAULT = 4
 
-        # Observatory closed due to weather.
-        WEATHER = 8
+    # Observatory closed due to weather.
+    WEATHER = 8
 
-        # Observatory closed.
-        DOWNTIME = 16
+    # Observatory closed.
+    DOWNTIME = 16
 
 
 NonFinalStates = frozenset(
