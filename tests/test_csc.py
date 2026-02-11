@@ -921,6 +921,10 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                 salobj.State.ENABLED,
                 override="monitor_observatory_state.yaml",
             )
+            await self.assert_next_sample(
+                self.remote.evt_heartbeat,
+                flush=True,
+            )
             await salobj.set_summary_state(
                 self.remote,
                 salobj.State.STANDBY,
