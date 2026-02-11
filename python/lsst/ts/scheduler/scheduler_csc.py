@@ -197,12 +197,12 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 self.domain,
                 "ScriptQueue",
                 index=index,
-                include=["script", "queue", "configSchema"],
+                include=["script", "queue", "configSchema", "summaryState"],
             ),
             ptg=salobj.Remote(
                 self.domain,
                 "MTPtg" if index % 2 == 1 else "ATPtg",
-                include=["currentTargetStatus"],
+                include=["currentTargetStatus", "summaryState"],
             ),
         )
         self._current_instrument_name = None
