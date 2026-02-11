@@ -1,5 +1,5 @@
 maintel:
-  predicted_scheduler_window: 4.0
+  predicted_scheduler_window: 2.0
   driver_type: feature_scheduler
   mode: ADVANCE
   startup_type: COLD
