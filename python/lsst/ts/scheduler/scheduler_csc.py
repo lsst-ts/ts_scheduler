@@ -449,7 +449,16 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             await self._stop_all_background_tasks()
             for component in self.parameters.observatory_status.components_to_monitor:
                 component_reference_name = component.lower()
-                self._remotes[component_reference_name].evt_summaryState.callback = None
+                if component_reference_name not in self._remotes:
+                    components_list = ",".join(self._remotes.keys())
+                    self.log.warning(
+                        f"{component_reference_name} not in the list of remotes. "
+                        f"Must be one of: {components_list}."
+                    )
+                else:
+                    self._remotes[
+                        component_reference_name
+                    ].evt_summaryState.callback = None
             await self.set_observatory_status(
                 status=SchedulerObservatoryStatus.UNKNOWN,
                 note=(
