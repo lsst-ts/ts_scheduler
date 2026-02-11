@@ -2,8 +2,7 @@
 This configuration only affects single-package Sphinx documentation builds.
 """
 
-import lsst.ts.scheduler  # noqa
-from documenteer.conf.pipelinespkg import *  # type: ignore # noqa
+from documenteer.conf.guide import *  # type: ignore # noqa
 
 project = "ts_scheduler"
 html_title = project
