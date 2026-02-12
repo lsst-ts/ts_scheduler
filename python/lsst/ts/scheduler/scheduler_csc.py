@@ -3119,6 +3119,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         status = self.evt_observatoryStatus.data.status
         if not status & SchedulerObservatoryStatus.DAYTIME:
             status = status | SchedulerObservatoryStatus.DAYTIME
+            if status & SchedulerObservatoryStatus.OPERATIONAL:
+                status = status ^ SchedulerObservatoryStatus.OPERATIONAL
             note = self.generate_status_note(user_note="Daytime started.")
             await self.set_observatory_status(
                 status=status,
