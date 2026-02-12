@@ -1,0 +1,1 @@
+Modified 'unset_observatory_status_fault' to retain the FAULT status even after components clear, requiring explicit user intervention to update the status.
