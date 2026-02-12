@@ -2987,8 +2987,9 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 note=status_note,
             )
         else:
-            self.log.debug("No more components in fault, clearing.")
-            status = status ^ SchedulerObservatoryStatus.FAULT
+            self.log.debug(
+                "No more components in fault, updating note but leaving status as FAULT."
+            )
             await self.set_observatory_status(
                 status=status,
                 note=status_note,
