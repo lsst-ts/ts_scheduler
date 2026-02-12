@@ -192,19 +192,24 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             extra_commands=["flush", "reschedule", "updateObservatoryStatus"],
         )
 
-        self._remotes = dict(
-            queue=salobj.Remote(
-                self.domain,
-                "ScriptQueue",
-                index=index,
-                include=["script", "queue", "configSchema", "summaryState"],
-            ),
-            ptg=salobj.Remote(
-                self.domain,
-                "MTPtg" if index % 2 == 1 else "ATPtg",
-                include=["currentTargetStatus", "summaryState"],
-            ),
+        self._queue_name = f"scriptqueue:{index}"
+        self._ptg_name = ("mtptg" if index % 2 == 1 else "atpg",)
+
+        self._remotes = dict()
+
+        self._remotes[self._queue_name] = salobj.Remote(
+            self.domain,
+            "ScriptQueue",
+            index=index,
+            include=["script", "queue", "configSchema", "summaryState"],
         )
+
+        self._remotes[self._ptg_name] = salobj.Remote(
+            self.domain,
+            "MTPtg" if index % 2 == 1 else "ATPtg",
+            include=["currentTargetStatus", "summaryState"],
+        )
+
         self._current_instrument_name = None
 
         self.no_observatory_state_warning = False
@@ -303,12 +308,12 @@ class SchedulerCSC(salobj.ConfigurableCsc):
     @property
     def queue_remote(self):
         """Access the remote for the script queue."""
-        return self._remotes["queue"]
+        return self._remotes[self._queue_name]
 
     @property
     def ptg(self):
         """Access the remote for the pointing component."""
-        return self._remotes["ptg"]
+        return self._remotes[self._ptg_name]
 
     @property
     def camera(self):
