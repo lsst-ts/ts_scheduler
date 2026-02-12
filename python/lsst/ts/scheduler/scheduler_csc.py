@@ -2827,9 +2827,11 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             component_reference_name = component.lower()
             if component_reference_name not in self._remotes:
                 self.log.info(f"Creating remote to monitor {component} state.")
+                name, index = salobj.name_to_name_index(component)
                 self._remotes[component_reference_name] = salobj.Remote(
-                    self.domain,
-                    component,
+                    domain=self.domain,
+                    name=name,
+                    index=index,
                     include=["summaryState"],
                     readonly=True,
                 )
