@@ -42,7 +42,11 @@ import numpy as np
 import yaml
 from lsst.ts import salobj, utils
 from lsst.ts.astrosky.model import version as astrosky_version
-from lsst.ts.dateloc import version as dateloc_version
+
+try:
+    from lsst.ts.dateloc import version as dateloc_version
+except ImportError:
+    dateloc_version = types.SimpleNamespace(__version__="?")
 
 try:
     from lsst.ts.observatory.model import version as obs_mod_version
