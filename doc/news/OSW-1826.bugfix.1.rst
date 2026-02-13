@@ -1,0 +1,1 @@
+Improved the summary state callback reset logic in ``SchedulerCSC.handle_summary_state`` when transitioning to standby.

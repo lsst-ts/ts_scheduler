@@ -698,9 +698,12 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
 
             observatory_status = await self.assert_next_sample(
                 self.remote.evt_observatoryStatus,
-                status=Scheduler.ObservatoryStatus.UNKNOWN,
+                status=Scheduler.ObservatoryStatus.FAULT,
                 flush=False,
             )
+
+            assert "MTRotator" not in observatory_status.note
+            assert "MTMount" not in observatory_status.note
 
             good_status_notes = [
                 (
@@ -894,9 +897,12 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
 
             observatory_status = await self.assert_next_sample(
                 self.remote.evt_observatoryStatus,
-                status=Scheduler.ObservatoryStatus.UNKNOWN,
+                status=Scheduler.ObservatoryStatus.FAULT,
                 flush=False,
             )
+
+            assert "MTRotator" not in observatory_status.note
+            assert "MTMount" not in observatory_status.note
 
     @pytest.mark.skipif(
         not supports_observatory_status,
@@ -1124,11 +1130,22 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
 
             observatory_status = await self.assert_next_sample(
                 self.remote.evt_observatoryStatus,
-                status=Scheduler.ObservatoryStatus.DAYTIME,
+                status=Scheduler.ObservatoryStatus.FAULT
+                | Scheduler.ObservatoryStatus.DAYTIME,
                 flush=False,
             )
             assert "MTMount" not in observatory_status.note
             assert "MTRotator" not in observatory_status.note
+
+            await self.remote.cmd_updateObservatoryStatus.set_start(
+                status=Scheduler.ObservatoryStatus.DAYTIME,
+            )
+
+            observatory_status = await self.assert_next_sample(
+                self.remote.evt_observatoryStatus,
+                status=Scheduler.ObservatoryStatus.DAYTIME,
+                flush=False,
+            )
 
     @pytest.mark.skipif(
         not supports_observatory_status,
