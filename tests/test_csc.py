@@ -840,6 +840,10 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
             # test can be more reliably executed.
             self.csc.enable_observatory_status_monitor = False
 
+            await self.assert_next_sample(
+                self.remote.evt_heartbeat,
+            )
+
             self.remote.evt_observatoryStatus.flush()
             # sending to command to set the state to
             # good would not always work for the test
