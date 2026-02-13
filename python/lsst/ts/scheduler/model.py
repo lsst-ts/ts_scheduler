@@ -1263,7 +1263,10 @@ class Model:
 
         self.log.debug(f"Loading user-define configuration from {uri} -> {dest}.")
 
-        load = functools.partial(self.driver.load, config=dest)
+        load = functools.partial(
+            self.driver.load,
+            config=urllib.parse.unquote(dest),
+        )
         await loop.run_in_executor(None, load)
 
     async def register_observations(
