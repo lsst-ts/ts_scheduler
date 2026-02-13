@@ -458,7 +458,7 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
             config = (
                 pathlib.Path(__file__)
                 .parents[1]
-                .joinpath("tests", "data", "test_observing_list.yaml")
+                .joinpath("tests", "data", "test_observing_list@.yaml")
             )
 
             bad_config = (
