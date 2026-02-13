@@ -32,6 +32,7 @@ from lsst.ts import utils
 from lsst.ts.scheduler.utils import efd_utils
 from rubin_scheduler.data.data_sets import get_data_dir
 from rubin_scheduler.data.rs_download_sky import MyHTMLParser
+from rubin_scheduler.data.scheduler_download_data import download_rubin_data
 
 DDS_VERSION = True
 
@@ -180,6 +181,21 @@ def get_skybrightness_data() -> None:
     if not has_required_sky_file(sky_brightness_data_dir, 60980.5):
         # Download file
         download_sky_file(sky_brightness_data_dir, 60980.5)
+
+    download_rubin_data(
+        file_dict={
+            "scheduler": "scheduler_2025_10_27.tgz",
+            "site_models": "site_models_2023_10_02.tgz",
+            "skybrightness_pre": "skybrightness_pre_2025_12_01.tgz",
+            "utils": "utils_2023_11_02.tgz",
+        },
+        dirs=None,
+        print_versions_only=False,
+        update=True,
+        force=False,
+        url_base="https://s3df.slac.stanford.edu/data/rubin/sim-data/rubin_sim_data/",
+        tdqm_disable=False,
+    )
 
 
 @pytest.fixture(scope="session", autouse=True)
