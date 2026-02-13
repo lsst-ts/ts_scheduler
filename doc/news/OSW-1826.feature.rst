@@ -1,1 +1,0 @@
-Updated storage of script queue and pointing remotes to enable reuse by the observatory status feature.

@@ -1,3 +1,22 @@
+v2.8.2 (2026-02-12)
+===================
+
+New Features
+------------
+
+- Added summary state event monitoring for script queue and pointing component remotes initialized in the CSC. (`OSW-1826 <https://rubinobs.atlassian.net//browse/OSW-1826>`_)
+- Updated storage of script queue and pointing remotes to enable reuse by the observatory status feature. (`OSW-1826 <https://rubinobs.atlassian.net//browse/OSW-1826>`_)
+
+
+Bug Fixes
+---------
+
+- Improved the summary state callback reset logic in ``SchedulerCSC.handle_summary_state`` when transitioning to standby. (`OSW-1826 <https://rubinobs.atlassian.net//browse/OSW-1826>`_)
+- Fixed remote creation in ``SchedulerCSC.monitor_observatory_status`` to correctly handle indexed components. (`OSW-1826 <https://rubinobs.atlassian.net//browse/OSW-1826>`_)
+- Updated 'handle_observatory_status_daytime' to remove the OPERATIONAL flag when transitioning to DAYTIME mode. (`OSW-1826 <https://rubinobs.atlassian.net//browse/OSW-1826>`_)
+- Modified 'unset_observatory_status_fault' to retain the FAULT status even after components clear, requiring explicit user intervention to update the status. (`OSW-1826 <https://rubinobs.atlassian.net//browse/OSW-1826>`_)
+
+
 v2.8.1 (2026-02-10)
 ===================
 
