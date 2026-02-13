@@ -177,6 +177,10 @@ def get_skybrightness_data() -> None:
         # Download file
         download_sky_file(sky_brightness_data_dir, mjd)
 
+    if not has_required_sky_file(sky_brightness_data_dir, 60980.5):
+        # Download file
+        download_sky_file(sky_brightness_data_dir, 60980.5)
+
 
 @pytest.fixture(scope="session", autouse=True)
 def start_ospl_daemon() -> None:
