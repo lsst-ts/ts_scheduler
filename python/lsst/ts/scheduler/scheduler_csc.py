@@ -192,19 +192,24 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             extra_commands=["flush", "reschedule", "updateObservatoryStatus"],
         )
 
-        self._remotes = dict(
-            queue=salobj.Remote(
-                self.domain,
-                "ScriptQueue",
-                index=index,
-                include=["script", "queue", "configSchema"],
-            ),
-            ptg=salobj.Remote(
-                self.domain,
-                "MTPtg" if index % 2 == 1 else "ATPtg",
-                include=["currentTargetStatus"],
-            ),
+        self._queue_name = f"scriptqueue:{index}"
+        self._ptg_name = ("mtptg" if index % 2 == 1 else "atpg",)
+
+        self._remotes = dict()
+
+        self._remotes[self._queue_name] = salobj.Remote(
+            self.domain,
+            "ScriptQueue",
+            index=index,
+            include=["script", "queue", "configSchema", "summaryState"],
         )
+
+        self._remotes[self._ptg_name] = salobj.Remote(
+            self.domain,
+            "MTPtg" if index % 2 == 1 else "ATPtg",
+            include=["currentTargetStatus", "summaryState"],
+        )
+
         self._current_instrument_name = None
 
         self.no_observatory_state_warning = False
@@ -303,12 +308,12 @@ class SchedulerCSC(salobj.ConfigurableCsc):
     @property
     def queue_remote(self):
         """Access the remote for the script queue."""
-        return self._remotes["queue"]
+        return self._remotes[self._queue_name]
 
     @property
     def ptg(self):
         """Access the remote for the pointing component."""
-        return self._remotes["ptg"]
+        return self._remotes[self._ptg_name]
 
     @property
     def camera(self):
@@ -449,7 +454,16 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             await self._stop_all_background_tasks()
             for component in self.parameters.observatory_status.components_to_monitor:
                 component_reference_name = component.lower()
-                self._remotes[component_reference_name].evt_summaryState.callback = None
+                if component_reference_name not in self._remotes:
+                    components_list = ",".join(self._remotes.keys())
+                    self.log.warning(
+                        f"{component_reference_name} not in the list of remotes. "
+                        f"Must be one of: {components_list}."
+                    )
+                else:
+                    self._remotes[
+                        component_reference_name
+                    ].evt_summaryState.callback = None
             await self.set_observatory_status(
                 status=SchedulerObservatoryStatus.UNKNOWN,
                 note=(
@@ -2813,9 +2827,11 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             component_reference_name = component.lower()
             if component_reference_name not in self._remotes:
                 self.log.info(f"Creating remote to monitor {component} state.")
+                name, index = salobj.name_to_name_index(component)
                 self._remotes[component_reference_name] = salobj.Remote(
-                    self.domain,
-                    component,
+                    domain=self.domain,
+                    name=name,
+                    index=index,
                     include=["summaryState"],
                     readonly=True,
                 )
@@ -2971,8 +2987,9 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 note=status_note,
             )
         else:
-            self.log.debug("No more components in fault, clearing.")
-            status = status ^ SchedulerObservatoryStatus.FAULT
+            self.log.debug(
+                "No more components in fault, updating note but leaving status as FAULT."
+            )
             await self.set_observatory_status(
                 status=status,
                 note=status_note,
@@ -3102,6 +3119,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         status = self.evt_observatoryStatus.data.status
         if not status & SchedulerObservatoryStatus.DAYTIME:
             status = status | SchedulerObservatoryStatus.DAYTIME
+            if status & SchedulerObservatoryStatus.OPERATIONAL:
+                status = status ^ SchedulerObservatoryStatus.OPERATIONAL
             note = self.generate_status_note(user_note="Daytime started.")
             await self.set_observatory_status(
                 status=status,
