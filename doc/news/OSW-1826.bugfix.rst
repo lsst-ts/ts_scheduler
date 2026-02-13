@@ -1,1 +1,0 @@
-Fixed remote creation in ``SchedulerCSC.monitor_observatory_status`` to correctly handle indexed components.

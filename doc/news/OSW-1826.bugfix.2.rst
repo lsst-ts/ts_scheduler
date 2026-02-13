@@ -1,1 +1,0 @@
-Updated 'handle_observatory_status_daytime' to remove the OPERATIONAL flag when transitioning to DAYTIME mode.

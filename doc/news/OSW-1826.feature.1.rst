@@ -1,1 +1,0 @@
-Added summary state event monitoring for script queue and pointing component remotes initialized in the CSC.
