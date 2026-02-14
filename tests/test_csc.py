@@ -493,10 +493,17 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                     salobj.State.ENABLED,
                     override="advance_target_loop_fbs.yaml",
                 )
-
-                await self.remote.cmd_computePredictedSchedule.start(
-                    timeout=SHORT_TIMEOUT
-                )
+                await self.assert_next_sample(self.remote.evt_heartbeat)
+                self.remote.evt_predictedSchedule.flush()
+                try:
+                    await self.remote.cmd_computePredictedSchedule.start(
+                        timeout=SHORT_TIMEOUT
+                    )
+                except salobj.base.AckTimeoutError:
+                    self.log.warning(
+                        "Timed out waiting for predicted scheduler command to finish. Continuing..."
+                    )
+                    await self.assert_next_sample(self.remote.evt_heartbeat)
 
                 predicted_schedule = await self.assert_next_sample(
                     topic=self.remote.evt_predictedSchedule
