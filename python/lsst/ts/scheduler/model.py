@@ -134,6 +134,7 @@ class Model:
         self.lfa_client: LFAClient | None = None
 
         self.max_scripts = 0
+        self._number_of_targets_predicted = None
 
         self.startup_types: dict[
             str, typing.Coroutine[typing.Any, typing.Any, SurveyTopology]
@@ -983,6 +984,8 @@ class Model:
         self.models["observatory_model"].update_state(time_scheduler_evaluation)
 
         targets = []
+        self._number_of_targets_predicted = 0
+
         while (
             len(targets) < max_targets
             and (time_scheduler_evaluation - time_start) < time_window
@@ -996,9 +999,14 @@ class Model:
             await asyncio.sleep(0)
 
             if target is None:
+                self.log.info(
+                    f"No target for {time_scheduler_evaluation}, stepping {self.time_delta_no_target} "
+                    "and continue."
+                )
                 time_scheduler_evaluation += self.time_delta_no_target
                 self.models["observatory_model"].update_state(time_scheduler_evaluation)
             else:
+                self._number_of_targets_predicted += 1
                 target.obs_time = self.models["observatory_model"].dateprofile.mjd
                 self.models["observatory_model"].observe(target)
                 time_scheduler_evaluation = self.models[
@@ -1006,6 +1014,8 @@ class Model:
                 ].current_state.time
                 targets.append(target)
                 await self.register_observations([target])
+
+        self._number_of_targets_predicted = None
 
         return time_scheduler_evaluation, time_start, targets
 
@@ -1427,3 +1437,15 @@ class Model:
 
         except Exception as exception:
             raise UpdateTelemetryError("Failed to update telemetry.") from exception
+
+    def get_number_of_predicted_targets(self):
+        """Return the number of targets that are currently in the predicted
+        queue.
+
+        If the predicted routine is not running, it will return None.
+
+        Returns
+        -------
+        int or None
+        """
+        return self._number_of_targets_predicted
