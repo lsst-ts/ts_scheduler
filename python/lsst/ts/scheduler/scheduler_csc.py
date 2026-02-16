@@ -689,6 +689,39 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             self._tasks["compute_predicted_schedule"] = asyncio.create_task(
                 self.compute_predicted_schedule()
             )
+            number_of_predicted_targets = None
+            while number_of_predicted_targets is None:
+                number_of_predicted_targets = (
+                    self.model.get_number_of_predicted_targets()
+                )
+                await asyncio.sleep(self.heartbeat_interval)
+
+            while not self._tasks["compute_predicted_schedule"]:
+                for task in asyncio.as_completed(
+                    [
+                        asyncio.sleep(self.default_command_timeout / 2.0),
+                        self._tasks["compute_predicted_schedule"],
+                    ]
+                ):
+                    n_targets = self.model.get_number_of_predicted_targets()
+                    if (
+                        n_targets is not None
+                        and n_targets <= number_of_predicted_targets
+                    ):
+                        self._tasks["compute_predicted_schedule"].cancel()
+                        raise RuntimeError(
+                            "Predict scheduler loop not making progress. "
+                            f"Got {n_targets}."
+                        )
+                    else:
+                        number_of_predicted_targets = n_targets
+                        break
+                await self.cmd_computePredictedSchedule.ack_in_progress(
+                    data,
+                    timeout=self.default_command_timeout,
+                    result=f"Computing predicted schedule ({number_of_predicted_targets}).",
+                )
+
             await self._tasks["compute_predicted_schedule"]
 
     async def do_addBlock(self, data):
