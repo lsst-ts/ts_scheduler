@@ -1,0 +1,1 @@
+Migrated version history to 'doc/version_history.rst' and updated documentation configuration files.

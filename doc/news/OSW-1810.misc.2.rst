@@ -1,0 +1,1 @@
+Updated 'get_skybrightness_data' fixture to support Rubin data downloads for specific MJD values.
