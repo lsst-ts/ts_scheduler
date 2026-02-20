@@ -1,0 +1,1 @@
+Updated 'generate_target_queue' to explicitly set the expected observing time for each generated target.

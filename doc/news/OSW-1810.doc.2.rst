@@ -1,0 +1,1 @@
+Added descriptive documentation for all custom exception classes.
