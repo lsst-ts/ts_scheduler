@@ -1,0 +1,1 @@
+Fixed 'Model.select_next_target' to return None gracefully if no driver is configured.

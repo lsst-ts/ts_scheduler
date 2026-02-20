@@ -1,0 +1,1 @@
+Corrected a bug in 'handle_load_snapshot' to properly parse destination paths containing special symbols.

@@ -1,0 +1,1 @@
+Improved scheduler reliability by implementing a state reset and queue flush mechanism when a target fails.
