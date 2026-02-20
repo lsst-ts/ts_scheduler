@@ -135,6 +135,8 @@ class Model:
 
         self.max_scripts = 0
         self._number_of_targets_predicted = None
+        self._keep_alive_time_interval = 10.0
+        self._keep_alive_wait_time = 1.0
 
         self.startup_types: dict[
             str, typing.Coroutine[typing.Any, typing.Any, SurveyTopology]
@@ -986,10 +988,22 @@ class Model:
         targets = []
         self._number_of_targets_predicted = 0
 
+        keep_alive_elapsed_time_start = utils.current_tai()
+
         while (
             len(targets) < max_targets
             and (time_scheduler_evaluation - time_start) < time_window
         ):
+            elapsed_time = utils.current_tai() - keep_alive_elapsed_time_start
+            if elapsed_time > self._keep_alive_time_interval:
+                self.log.info(
+                    f"Elapsed time ({elapsed_time}s) higher than keep alive time interval "
+                    f"({self._keep_alive_time_interval}s). "
+                    f"Waiting {self._keep_alive_wait_time}s."
+                )
+                keep_alive_elapsed_time_start = utils.current_tai()
+                await asyncio.sleep(self._keep_alive_wait_time)
+
             await loop.run_in_executor(None, self.driver.update_conditions)
 
             await asyncio.sleep(0)
