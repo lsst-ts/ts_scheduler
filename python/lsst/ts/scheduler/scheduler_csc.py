@@ -1329,7 +1329,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     self._remotes[self._current_instrument_name] = salobj.Remote(
                         self.domain,
                         settings.instrument_name,
-                        include=["endSetFilter", "availableFilters"],
+                        include=["endSetFilter", "availableFilters", "summaryState"],
                         readonly=True,
                     )
                     await self.camera.start_task
