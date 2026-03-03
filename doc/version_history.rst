@@ -1,3 +1,13 @@
+v2.8.3 (2026-03-03)
+===================
+
+Bug Fixes
+---------
+
+- Included 'summaryState' topic to the list of topics to subscribe to for the camera remote.
+  This fixes an issue when the user also wants to include the camera in the list of components to monitor. (`OSW-1905 <https://rubinobs.atlassian.net//browse/OSW-1905>`_)
+
+
 v2.8.2 (2026-02-12)
 ===================
 
