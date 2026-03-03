@@ -1,0 +1,2 @@
+Included 'summaryState' topic to the list of topics to subscribe to for the camera remote.
+This fixes an issue when the user also wants to include the camera in the list of components to monitor.
