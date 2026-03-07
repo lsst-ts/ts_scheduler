@@ -669,7 +669,7 @@ class FeatureScheduler(Driver):
         slewtimes[good] = self.models["observatory_model"].get_approximate_slew_delay(
             alt_rad=alts[good],
             az_rad=azs[good],
-            goal_filter=self.models["observatory_state"].filter,
+            goal_filter=self.models["observatory_model"].current_state.filter,
             lax_dome=True,
         )
 
