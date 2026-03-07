@@ -610,7 +610,10 @@ class Model:
             ):
                 self.log.trace(f"{block_uid=}::{sal_index=}::{script_state!r}")
                 # Script in a final state set value of the future.
-                if script_state in FailedStates:
+                if (
+                    script_state in FailedStates
+                    and not self._block_scripts_final_state[block_uid][sal_index].done()
+                ):
                     self._block_scripts_final_state[block_uid][sal_index].set_exception(
                         TargetScriptFailedError(
                             f"Script {sal_index} failed, state is " f"{script_state!r}."
