@@ -2159,7 +2159,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         self._should_compute_predicted_schedule = False
 
-        async with self.current_scheduler_state(publish_lfoa=False):
+        async with self.current_scheduler_state(publish_lfoa=False, keep_state=False):
 
             needed_targets = max(
                 [self.max_predicted_targets - len(self.targets_queue), 0]
