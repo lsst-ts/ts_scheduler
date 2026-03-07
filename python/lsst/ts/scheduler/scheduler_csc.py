@@ -1586,7 +1586,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         task = self._tasks.get(task_name, utils.make_done_future())
 
-        if task.done():
+        if task is None or task.done():
             self._tasks[task_name] = asyncio.create_task(
                 self.lock_target_loop_and_check_targets()
             )
