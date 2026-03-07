@@ -1952,6 +1952,10 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         scheduler for the future, generating a list of observations.
         """
 
+        self.model.synchronize_observatory_model()
+        await self.model.update_telemetry()
+        await self.model.update_conditions()
+
         for n in range(self.parameters.n_targets + 1):
 
             async with self.current_scheduler_state(
@@ -2790,9 +2794,6 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         """
 
         async with self.scheduler_state_lock:
-            self.model.synchronize_observatory_model()
-            await self.model.update_telemetry()
-            await self.model.update_conditions()
             last_scheduler_state_filename = await self.save_scheduler_state(
                 publish_lfoa=publish_lfoa
             )
