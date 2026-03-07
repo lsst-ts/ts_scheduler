@@ -549,6 +549,57 @@ class AdvancedTargetLoopTestCase(
 
             assert observation is not None, "Observation was not published."
 
+    async def test_with_queue_fail(self):
+        """Test the target production loop with queue when the targets fail.
+
+        This test makes sure the scheduler is capable of interacting with the
+        queue, will produce targets when both are enabled and will continue
+        operating normally when scripts fail.
+        """
+
+        async with self.components():
+            await salobj.set_summary_state(
+                self.queue_remote,
+                salobj.State.ENABLED,
+            )
+
+            await salobj.set_summary_state(
+                self.scheduler_remote,
+                salobj.State.ENABLED,
+                override="valid_advance_target_loop_fbs_fail.yaml",
+            )
+
+            self.scheduler_remote.evt_detailedState.flush()
+            self.scheduler_remote.evt_summaryState.flush()
+            await self.scheduler_remote.cmd_resume.start(timeout=STD_TIMEOUT)
+
+            self.log.debug("Waiting for ScriptQueue to pause due to script failure.")
+            self.queue_remote.evt_queue.flush()
+            queue_state = await self.queue_remote.evt_queue.aget(timeout=STD_TIMEOUT)
+            self.log.info(f"{queue_state=}")
+            while queue_state.running:
+                queue_state = await self.queue_remote.evt_queue.next(
+                    flush=False, timeout=STD_TIMEOUT
+                )
+                self.log.info(f"{queue_state=}")
+
+            queue_state = await self.queue_remote.evt_queue.next(
+                flush=False, timeout=STD_TIMEOUT
+            )
+            self.log.info(f"{queue_state=}")
+            assert not queue_state.running
+            assert queue_state.length == 0
+
+            await self.scheduler_remote.evt_heartbeat.next(
+                flush=True, timeout=STD_TIMEOUT
+            )
+
+            scheduler_summary_state = await self.scheduler_remote.evt_summaryState.aget(
+                timeout=STD_TIMEOUT
+            )
+            self.log.info(f"{scheduler_summary_state=}")
+            assert scheduler_summary_state.summaryState == salobj.State.ENABLED
+
     async def test_add_block_inexistent_block(self) -> None:
         async with self.components():
             # enable queue...
