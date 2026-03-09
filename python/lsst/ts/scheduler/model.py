@@ -925,6 +925,8 @@ class Model:
                 - self.models["observatory_state"].time
             )
 
+            target.obs_time = self.models["observatory_model"].dateprofile.mjd
+
             yield self.models["observatory_model"].current_state.time, wait_time, target
 
             self.log.debug(
