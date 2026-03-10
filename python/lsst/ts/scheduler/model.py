@@ -963,7 +963,9 @@ class Model:
             self.models["observatory_state"].time
         )
 
-    async def generate_targets_in_time_window(self, max_targets, time_window):
+    async def generate_targets_in_time_window(
+        self, max_targets, time_window, pre_computed_targets=[]
+    ):
         """Generate targets from the driver in given time window.
 
         Parameters
@@ -972,6 +974,10 @@ class Model:
             Maximum number of targets.
         time_window : `float`
             Length of time in the future to compute targets (in seconds).
+        pre_computed_targets : `list`[`DriverTarget`], optional
+            A list of pre-computed targets. These targets will
+            be played back into the observatory model before
+            generating the targets.
 
         Returns
         -------
@@ -989,6 +995,8 @@ class Model:
         time_scheduler_evaluation = time_start
 
         self.models["observatory_model"].update_state(time_scheduler_evaluation)
+        for target in pre_computed_targets:
+            self.models["observatory_model"].observe(target)
 
         targets = []
         self._number_of_targets_predicted = 0
