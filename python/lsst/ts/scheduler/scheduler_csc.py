@@ -2176,6 +2176,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             ) = await self.model.generate_targets_in_time_window(
                 max_targets=needed_targets,
                 time_window=self.parameters.predicted_scheduler_window * 60.0 * 60.0,
+                pre_computed_targets=self.targets_queue,
             )
 
             targets_info = [
