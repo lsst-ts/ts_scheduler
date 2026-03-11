@@ -255,6 +255,7 @@ class TestModel(unittest.IsolatedAsyncioTestCase):
             "BLOCK-6",
             "BLOCK-7",
             "BLOCK-8",
+            "BLOCK-9",
         }
 
     def get_expected_block_status(self) -> dict[str, BlockStatus]:
