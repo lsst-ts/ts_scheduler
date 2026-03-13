@@ -1,0 +1,1 @@
+Fixed a potential NoneType error in 'check_script_info' related to the target loop lock task.

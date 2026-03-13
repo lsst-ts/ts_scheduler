@@ -1,15 +1,15 @@
 maintel:
-  predicted_scheduler_window: 2.0
   driver_type: feature_scheduler
   mode: ADVANCE
   startup_type: COLD
   feature_scheduler_driver_configuration:
-    scheduler_config: tests/data/config/fbs_config_anytime_targets.py
+    scheduler_config: tests/data/config/fbs_config_anytime_targets_fail.py
   models:
     observatory_model:
       camera:
         filter_max_changes_burst_num: 1
         filter_max_changes_avg_num: 30000
+  predicted_scheduler_window: 0.1
   telemetry:
     efd_name: summit_efd
     streams:

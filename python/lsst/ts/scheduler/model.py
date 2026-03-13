@@ -134,6 +134,9 @@ class Model:
         self.lfa_client: LFAClient | None = None
 
         self.max_scripts = 0
+        self._number_of_targets_predicted = None
+        self._keep_alive_time_interval = 10.0
+        self._keep_alive_wait_time = 1.0
 
         self.startup_types: dict[
             str, typing.Coroutine[typing.Any, typing.Any, SurveyTopology]
@@ -607,7 +610,10 @@ class Model:
             ):
                 self.log.trace(f"{block_uid=}::{sal_index=}::{script_state!r}")
                 # Script in a final state set value of the future.
-                if script_state in FailedStates:
+                if (
+                    script_state in FailedStates
+                    and not self._block_scripts_final_state[block_uid][sal_index].done()
+                ):
                     self._block_scripts_final_state[block_uid][sal_index].set_exception(
                         TargetScriptFailedError(
                             f"Script {sal_index} failed, state is " f"{script_state!r}."
@@ -759,25 +765,33 @@ class Model:
             ]
             try:
 
-                if not script_info or len(script_info) != len(sal_indices):
-                    report += f"No information on all scripts on queue, put it back and continue: {target}.\n"
-                    # No information on all scripts on queue,
-                    # put it back and continue
-                    self.raw_telemetry["scheduled_targets"].append(target)
-                    continue
-
                 scripts_state = [
                     Script.ScriptState(info.scriptState) for info in script_info
                 ]
 
+                if not script_info or len(script_info) != len(sal_indices):
+                    if any([state in FailedStates for state in scripts_state]):
+                        report += (
+                            f"No information on all scripts on queue for {target.note}, "
+                            "but scripts failed. Mark as failed and continue.\n"
+                        )
+                        scheduled_targets_info.failed.append(target)
+                        for index in sal_indices:
+                            self.script_info.pop(index)
+                    else:
+                        report += (
+                            f"No information on all scripts on queue for {target}, "
+                            "put it back and continue.\n"
+                        )
+                        # No information on all scripts on queue,
+                        # put it back and continue
+                        self.raw_telemetry["scheduled_targets"].append(target)
+                    continue
+
                 if all([state == Script.ScriptState.DONE for state in scripts_state]):
                     # All scripts completed successfully
-                    report += (
-                        f"\n\t{target.note} observation completed successfully. "
-                        "Registering observation."
-                    )
+                    report += f"\n\t{target.note} observation completed successfully."
 
-                    self.driver.register_observation(target)
                     scheduled_targets_info.observed.append(target)
                     # Remove related script from the list
                     for index in sal_indices:
@@ -851,6 +865,9 @@ class Model:
         `DriverTarget`
             Next target.
         """
+        if self.driver is None:
+            return None
+
         loop = asyncio.get_event_loop()
 
         return await loop.run_in_executor(None, self.driver.select_next_target)
@@ -884,41 +901,37 @@ class Model:
             target and the target.
         """
 
-        targets = await self.select_next_targets()
+        target = await self.select_next_target()
 
         await asyncio.sleep(0)
 
-        if targets is None:
+        if target is None:
             n_scheduled_targets = self.get_number_of_scheduled_targets()
             self.log.warning(
                 "No target from the scheduler. "
                 f"Number of scheduled targets is {n_scheduled_targets}."
             )
         else:
-            for target in targets:
-                if target is None:
-                    self.log.debug("No target, skipping...")
-                    continue
-                self.log.debug(
-                    f"Temporarily registering selected targets: {target.note}."
-                )
-                self.driver.register_observed_target(target)
+            self.log.debug(f"Registering selected target: {target.note}.")
+            self.driver.register_observed_target(target)
 
-                # The following will playback the observations on the
-                # observatory model but will keep the observatory state
-                # unchanged
-                self.models["observatory_model"].observe(target)
+            # The following will playback the observation on the
+            # observatory model but will keep the observatory state
+            # unchanged
+            self.models["observatory_model"].observe(target)
 
-                wait_time = (
-                    self.models["observatory_model"].current_state.time
-                    - self.models["observatory_state"].time
-                )
+            wait_time = (
+                self.models["observatory_model"].current_state.time
+                - self.models["observatory_state"].time
+            )
 
-                yield self.models[
-                    "observatory_model"
-                ].current_state.time, wait_time, target
+            target.obs_time = self.models["observatory_model"].dateprofile.mjd
 
-        self.log.debug(f"Generated {self.get_number_of_scheduled_targets()} targets.")
+            yield self.models["observatory_model"].current_state.time, wait_time, target
+
+            self.log.debug(
+                f"Generated {self.get_number_of_scheduled_targets()} targets."
+            )
 
     def register_scheduled_targets(self, targets_queue: list[DriverTarget]) -> None:
         """Register scheduled targets.
@@ -950,7 +963,9 @@ class Model:
             self.models["observatory_state"].time
         )
 
-    async def generate_targets_in_time_window(self, max_targets, time_window):
+    async def generate_targets_in_time_window(
+        self, max_targets, time_window, pre_computed_targets=[]
+    ):
         """Generate targets from the driver in given time window.
 
         Parameters
@@ -959,6 +974,10 @@ class Model:
             Maximum number of targets.
         time_window : `float`
             Length of time in the future to compute targets (in seconds).
+        pre_computed_targets : `list`[`DriverTarget`], optional
+            A list of pre-computed targets. These targets will
+            be played back into the observatory model before
+            generating the targets.
 
         Returns
         -------
@@ -976,12 +995,28 @@ class Model:
         time_scheduler_evaluation = time_start
 
         self.models["observatory_model"].update_state(time_scheduler_evaluation)
+        for target in pre_computed_targets:
+            self.models["observatory_model"].observe(target)
 
         targets = []
+        self._number_of_targets_predicted = 0
+
+        keep_alive_elapsed_time_start = utils.current_tai()
+
         while (
             len(targets) < max_targets
             and (time_scheduler_evaluation - time_start) < time_window
         ):
+            elapsed_time = utils.current_tai() - keep_alive_elapsed_time_start
+            if elapsed_time > self._keep_alive_time_interval:
+                self.log.info(
+                    f"Elapsed time ({elapsed_time}s) higher than keep alive time interval "
+                    f"({self._keep_alive_time_interval}s). "
+                    f"Waiting {self._keep_alive_wait_time}s."
+                )
+                keep_alive_elapsed_time_start = utils.current_tai()
+                await asyncio.sleep(self._keep_alive_wait_time)
+
             await loop.run_in_executor(None, self.driver.update_conditions)
 
             await asyncio.sleep(0)
@@ -991,15 +1026,23 @@ class Model:
             await asyncio.sleep(0)
 
             if target is None:
+                self.log.info(
+                    f"No target for {time_scheduler_evaluation}, stepping {self.time_delta_no_target} "
+                    "and continue."
+                )
                 time_scheduler_evaluation += self.time_delta_no_target
                 self.models["observatory_model"].update_state(time_scheduler_evaluation)
             else:
+                self._number_of_targets_predicted += 1
                 target.obs_time = self.models["observatory_model"].dateprofile.mjd
                 self.models["observatory_model"].observe(target)
                 time_scheduler_evaluation = self.models[
                     "observatory_model"
                 ].current_state.time
                 targets.append(target)
+                await self.register_observations([target])
+
+        self._number_of_targets_predicted = None
 
         return time_scheduler_evaluation, time_start, targets
 
@@ -1257,7 +1300,10 @@ class Model:
 
         self.log.debug(f"Loading user-define configuration from {uri} -> {dest}.")
 
-        load = functools.partial(self.driver.load, config=dest)
+        load = functools.partial(
+            self.driver.load,
+            config=urllib.parse.unquote(dest),
+        )
         await loop.run_in_executor(None, load)
 
     async def register_observations(
@@ -1418,3 +1464,15 @@ class Model:
 
         except Exception as exception:
             raise UpdateTelemetryError("Failed to update telemetry.") from exception
+
+    def get_number_of_predicted_targets(self):
+        """Return the number of targets that are currently in the predicted
+        queue.
+
+        If the predicted routine is not running, it will return None.
+
+        Returns
+        -------
+        int or None
+        """
+        return self._number_of_targets_predicted

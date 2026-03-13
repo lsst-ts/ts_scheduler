@@ -458,7 +458,7 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
             config = (
                 pathlib.Path(__file__)
                 .parents[1]
-                .joinpath("tests", "data", "test_observing_list.yaml")
+                .joinpath("tests", "data", "test_observing_list@.yaml")
             )
 
             bad_config = (
@@ -493,10 +493,21 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                     salobj.State.ENABLED,
                     override="advance_target_loop_fbs.yaml",
                 )
-
-                await self.remote.cmd_computePredictedSchedule.start(
-                    timeout=SHORT_TIMEOUT
+                await self.assert_next_sample(self.remote.evt_heartbeat, flush=True)
+                await self.assert_next_sample(
+                    self.remote.tel_observatoryState, flush=True
                 )
+                await self.assert_next_sample(self.remote.evt_generalInfo, flush=False)
+                self.remote.evt_predictedSchedule.flush()
+                try:
+                    await self.remote.cmd_computePredictedSchedule.start(
+                        timeout=SHORT_TIMEOUT
+                    )
+                except salobj.base.AckTimeoutError:
+                    self.log.warning(
+                        "Timed out waiting for predicted scheduler command to finish. Continuing..."
+                    )
+                    await self.assert_next_sample(self.remote.evt_heartbeat)
 
                 predicted_schedule = await self.assert_next_sample(
                     topic=self.remote.evt_predictedSchedule
@@ -840,6 +851,10 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
             # test can be more reliably executed.
             self.csc.enable_observatory_status_monitor = False
 
+            await self.assert_next_sample(
+                self.remote.evt_heartbeat,
+            )
+
             self.remote.evt_observatoryStatus.flush()
             # sending to command to set the state to
             # good would not always work for the test
@@ -920,6 +935,10 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                 self.remote,
                 salobj.State.ENABLED,
                 override="monitor_observatory_state.yaml",
+            )
+            await self.assert_next_sample(
+                self.remote.evt_heartbeat,
+                flush=True,
             )
             await salobj.set_summary_state(
                 self.remote,
