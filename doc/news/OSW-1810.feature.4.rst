@@ -1,1 +1,0 @@
-Revised the scheduler to register targets immediately upon request rather than during prediction cycles.

@@ -4,6 +4,56 @@
 Version History
 ===============
 
+.. towncrier release notes start
+
+v2.9.0 (2026-03-18)
+===================
+
+New Features
+------------
+
+- Updated the feature-based scheduler driver to use the current filter from the observatory model for more accurate slew time calculations. (`OSW-1810 <https://rubinobs.atlassian.net//browse/OSW-1810>`_)
+- Updated 'generate_target_queue' to explicitly set the expected observing time for each generated target. (`OSW-1810 <https://rubinobs.atlassian.net//browse/OSW-1810>`_)
+- Implemented incremental progress tracking and intermediate acknowledgments for the predicted schedule computation process. (`OSW-1810 <https://rubinobs.atlassian.net//browse/OSW-1810>`_)
+- Decoupled observatory state synchronization from 'current_scheduler_state' to allow the state to float between successive calls. (`OSW-1810 <https://rubinobs.atlassian.net//browse/OSW-1810>`_)
+- Optimized the target queue generation to produce a single target at a time using 'select_next_target'. (`OSW-1810 <https://rubinobs.atlassian.net//browse/OSW-1810>`_)
+- Updated the scheduler state management to allow persistence of state files after LFOA publication, enabling state rollbacks. (`OSW-1810 <https://rubinobs.atlassian.net//browse/OSW-1810>`_)
+- Enhanced target tracking by adding a mechanism to link generated targets with specific scheduler states. (`OSW-1810 <https://rubinobs.atlassian.net//browse/OSW-1810>`_)
+- Improved scheduler reliability by implementing a state reset and queue flush mechanism when a target fails. (`OSW-1810 <https://rubinobs.atlassian.net//browse/OSW-1810>`_)
+- Revised the scheduler to register targets immediately upon request rather than during prediction cycles. (`OSW-1810 <https://rubinobs.atlassian.net//browse/OSW-1810>`_)
+- Implemented a cooperative multitasking mechanism in 'generate_targets_in_time_window' to prevent blocking the async event loop during long prediction windows. (`OSW-1810 <https://rubinobs.atlassian.net//browse/OSW-1810>`_)
+- Enhanced 'generate_targets_in_time_window' to support 'pre_computed_targets', allowing the model to play back previously scheduled observations before generating new ones. (`OSW-1810 <https://rubinobs.atlassian.net//browse/OSW-1810>`_)
+
+
+Bug Fixes
+---------
+
+- Fixed 'Model.select_next_target' to return None gracefully if no driver is configured. (`OSW-1810 <https://rubinobs.atlassian.net//browse/OSW-1810>`_)
+- Resolved an import error related to version information from 'ts_dateloc'. (`OSW-1810 <https://rubinobs.atlassian.net//browse/OSW-1810>`_)
+- Corrected a bug in 'handle_load_snapshot' to properly parse destination paths containing special symbols. (`OSW-1810 <https://rubinobs.atlassian.net//browse/OSW-1810>`_)
+- Ensured that when a script fails, the associated future is correctly set to an exception if not already completed. (`OSW-1810 <https://rubinobs.atlassian.net//browse/OSW-1810>`_)
+- Fixed a potential NoneType error in 'check_script_info' related to the target loop lock task. (`OSW-1810 <https://rubinobs.atlassian.net//browse/OSW-1810>`_)
+- Modified 'compute_predicted_scheduler' to ensure scheduler state files are properly cleaned up after use. (`OSW-1810 <https://rubinobs.atlassian.net//browse/OSW-1810>`_)
+- Fixed an issue where failed scripts within a target were not being correctly identified as target-level failures. (`OSW-1810 <https://rubinobs.atlassian.net//browse/OSW-1810>`_)
+
+
+Documentation
+-------------
+
+- Migrated version history to 'doc/version_history.rst' and updated documentation configuration files. (`OSW-1810 <https://rubinobs.atlassian.net//browse/OSW-1810>`_)
+- Added descriptive documentation for all custom exception classes. (`OSW-1810 <https://rubinobs.atlassian.net//browse/OSW-1810>`_)
+- Updated documentation for advance mode and the developer guide. (`OSW-1810 <https://rubinobs.atlassian.net//browse/OSW-1810>`_)
+
+
+Other Changes and Additions
+---------------------------
+
+- Improved unit test reliability by adding heartbeat waits and handling command timeouts in 'test_csc.py'. (`OSW-1810 <https://rubinobs.atlassian.net//browse/OSW-1810>`_)
+- Updated 'get_skybrightness_data' fixture to support Rubin data downloads for specific MJD values. (`OSW-1810 <https://rubinobs.atlassian.net//browse/OSW-1810>`_)
+- Cleaned up imports and updated .gitignore to exclude 'doc/api' and 'pymon'. (`OSW-1810 <https://rubinobs.atlassian.net//browse/OSW-1810>`_)
+- Transitioned CI builds and EUPS to use DevelopPipeline. (`OSW-1810 <https://rubinobs.atlassian.net//browse/OSW-1810>`_)
+
+
 v2.8.3 (2026-03-03)
 ===================
 

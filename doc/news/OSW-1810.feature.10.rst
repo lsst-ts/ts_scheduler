@@ -1,1 +1,0 @@
-Decoupled observatory state synchronization from 'current_scheduler_state' to allow the state to float between successive calls.
