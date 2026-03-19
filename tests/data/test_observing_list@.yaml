@@ -1,0 +1,121 @@
+targets:
+  -
+    ra: 0.
+    dec: -50.
+    name: tile01
+    program: BLOCK-6 
+    instrument_setup:
+      -
+        exptime: 15.
+        filter: r
+      -
+        exptime: 15.
+        filter: r
+  -
+    ra: 3.
+    dec: -50.
+    name: tile02
+    program: BLOCK-6
+    instrument_setup:
+      -
+        exptime: 15.
+        filter: r
+      -
+        exptime: 15.
+        filter: r
+  -
+    ra: 6.
+    dec: -50.
+    name: tile03
+    program: BLOCK-6
+    instrument_setup:
+      -
+        exptime: 15.
+        filter: r
+      -
+        exptime: 15.
+        filter: r
+  -
+    ra: 9.
+    dec: -50.
+    name: tile04
+    program: BLOCK-6
+    instrument_setup:
+      -
+        exptime: 15.
+        filter: r
+      -
+        exptime: 15.
+        filter: r
+  -
+    ra: 12.
+    dec: -50.
+    name: tile05
+    program: BLOCK-6
+    instrument_setup:
+      -
+        exptime: 15.
+        filter: r
+      -
+        exptime: 15.
+        filter: r
+  -
+    ra: 15.
+    dec: -50.
+    name: tile06
+    program: BLOCK-6
+    instrument_setup:
+      -
+        exptime: 15.
+        filter: r
+      -
+        exptime: 15.
+        filter: r
+  -
+    ra: 18.
+    dec: -50.
+    name: tile07
+    program: BLOCK-6
+    instrument_setup:
+      -
+        exptime: 15.
+        filter: r
+      -
+        exptime: 15.
+        filter: r
+  -
+    ra: 21.
+    dec: -50.
+    name: tile08
+    program: BLOCK-6
+    instrument_setup:
+      -
+        exptime: 15.
+        filter: r
+      -
+        exptime: 15.
+        filter: r
+  -
+    ra: 12.
+    dec: -10.
+    name: tile09
+    program: BLOCK-6
+    instrument_setup:
+      -
+        exptime: 15.
+        filter: r
+      -
+        exptime: 15.
+        filter: r
+  -
+    ra: 12
+    dec: -13.5
+    name: tile10
+    program: BLOCK-6
+    instrument_setup:
+      -
+        exptime: 15.
+        filter: r
+      -
+        exptime: 15.
+        filter: r

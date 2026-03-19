@@ -1,0 +1,1 @@
+Ensured that when a script fails, the associated future is correctly set to an exception if not already completed.

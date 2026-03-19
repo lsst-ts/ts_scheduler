@@ -42,7 +42,11 @@ import numpy as np
 import yaml
 from lsst.ts import salobj, utils
 from lsst.ts.astrosky.model import version as astrosky_version
-from lsst.ts.dateloc import version as dateloc_version
+
+try:
+    from lsst.ts.dateloc import version as dateloc_version
+except ImportError:
+    dateloc_version = types.SimpleNamespace(__version__="?")
 
 try:
     from lsst.ts.observatory.model import version as obs_mod_version
@@ -685,6 +689,39 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             self._tasks["compute_predicted_schedule"] = asyncio.create_task(
                 self.compute_predicted_schedule()
             )
+            number_of_predicted_targets = None
+            while number_of_predicted_targets is None:
+                number_of_predicted_targets = (
+                    self.model.get_number_of_predicted_targets()
+                )
+                await asyncio.sleep(self.heartbeat_interval)
+
+            while not self._tasks["compute_predicted_schedule"]:
+                for task in asyncio.as_completed(
+                    [
+                        asyncio.sleep(self.default_command_timeout / 2.0),
+                        self._tasks["compute_predicted_schedule"],
+                    ]
+                ):
+                    n_targets = self.model.get_number_of_predicted_targets()
+                    if (
+                        n_targets is not None
+                        and n_targets <= number_of_predicted_targets
+                    ):
+                        self._tasks["compute_predicted_schedule"].cancel()
+                        raise RuntimeError(
+                            "Predict scheduler loop not making progress. "
+                            f"Got {n_targets}."
+                        )
+                    else:
+                        number_of_predicted_targets = n_targets
+                        break
+                await self.cmd_computePredictedSchedule.ack_in_progress(
+                    data,
+                    timeout=self.default_command_timeout,
+                    result=f"Computing predicted schedule ({number_of_predicted_targets}).",
+                )
+
             await self._tasks["compute_predicted_schedule"]
 
     async def do_addBlock(self, data):
@@ -1547,11 +1584,9 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         task_name = "lock_target_loop_and_check_targets"
 
-        task = self._tasks.get(task_name, None)
-        if task is None:
-            task = utils.make_done_future()
+        task = self._tasks.get(task_name, utils.make_done_future())
 
-        if task.done():
+        if task is None or task.done():
             self._tasks[task_name] = asyncio.create_task(
                 self.lock_target_loop_and_check_targets()
             )
@@ -1581,7 +1616,16 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             await self.register_observation(target)
 
         if len(scheduled_targets_info.failed) > 0:
+            if self.targets_queue:
+                self.log.info(
+                    f"Target queue contains {len(self.targets_queue)}. Clearing it."
+                )
+                while self.targets_queue:
+                    target = self.targets_queue.pop(0)
+                    target.remove_scheduler_state()
+
             await self.remove_from_queue(scheduled_targets_info.failed)
+            need_state_reset = True
             for target in scheduled_targets_info.failed:
                 observing_block = target.get_observing_block()
                 await self._update_block_status(
@@ -1589,6 +1633,17 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     block_status=BlockStatus.ERROR,
                     observing_block=observing_block,
                 )
+                if need_state_reset:
+                    scheduler_state_filename = target.get_scheduler_state_filename()
+                    if scheduler_state_filename:
+                        self.log.info(
+                            f"Reset scheduler state for {target=!s}: {scheduler_state_filename}."
+                        )
+                        self.model.reset_state(scheduler_state_filename)
+                        need_state_reset = False
+                target.remove_scheduler_state()
+            await self._cleanup_queue_targets()
+            await self.reset_handle_no_targets_on_queue()
 
         return (
             len(scheduled_targets_info.failed) == 0
@@ -1897,13 +1952,16 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         scheduler for the future, generating a list of observations.
         """
 
+        self.model.synchronize_observatory_model()
+        await self.model.update_telemetry()
+        await self.model.update_conditions()
+
         for n in range(self.parameters.n_targets + 1):
 
-            async with self.current_scheduler_state(publish_lfoa=True):
-                self.log.debug(
-                    f"Target queue contains {len(self.targets_queue)} targets."
-                )
-                self.model.register_scheduled_targets(self.targets_queue)
+            async with self.current_scheduler_state(
+                publish_lfoa=True,
+                reset_state=False,
+            ) as last_scheduler_state_filename:
 
                 async for (
                     observatory_time,
@@ -1911,6 +1969,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     target,
                 ) in self.model.generate_target_queue():
                     target.set_snapshot_uri(self.evt_largeFileObjectAvailable.data.url)
+                    target.set_scheduler_state_filename(last_scheduler_state_filename)
                     self.targets_queue.append(target)
 
                     await self._publish_time_to_next_target(
@@ -1982,23 +2041,13 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         )
 
         if publish_lfoa:
-            scheduler_state_filename = "last_scheduler_state.p"
             try:
                 await self._handle_lfoa(saved_scheduler_state_filename)
             except Exception:
                 self.log.exception(
                     f"Could not upload file to S3 bucket. Keeping file {saved_scheduler_state_filename}."
                 )
-                return shutil.copy(
-                    saved_scheduler_state_filename, scheduler_state_filename
-                )
-            else:
-                return shutil.move(
-                    saved_scheduler_state_filename, scheduler_state_filename
-                )
-
-        else:
-            return saved_scheduler_state_filename
+        return saved_scheduler_state_filename
 
     async def _handle_lfoa(self, file_name):
         """Handle publishing large file object available (LFOA)."""
@@ -2114,8 +2163,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         self._should_compute_predicted_schedule = False
 
-        async with self.current_scheduler_state(publish_lfoa=False):
-            self.model.register_scheduled_targets(targets_queue=self.targets_queue)
+        async with self.current_scheduler_state(publish_lfoa=False, keep_state=False):
 
             needed_targets = max(
                 [self.max_predicted_targets - len(self.targets_queue), 0]
@@ -2128,6 +2176,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             ) = await self.model.generate_targets_in_time_window(
                 max_targets=needed_targets,
                 time_window=self.parameters.predicted_scheduler_window * 60.0 * 60.0,
+                pre_computed_targets=self.targets_queue,
             )
 
             targets_info = [
@@ -2244,6 +2293,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             observing_block=observing_block,
         )
         await self.model.remove_block_done_scripts(observing_block.id)
+        target.remove_scheduler_state()
 
     async def _publish_settings(self, settings) -> None:
         """Publish settings."""
@@ -2727,7 +2777,9 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 await self.evt_detailedState.set_write(substate=initial_detailed_state)
 
     @contextlib.asynccontextmanager
-    async def current_scheduler_state(self, publish_lfoa):
+    async def current_scheduler_state(
+        self, publish_lfoa, reset_state=True, keep_state=True
+    ):
         """A context manager to handle storing the current scheduler state,
         performing some operations on it and then resetting it to the
         previous state.
@@ -2736,21 +2788,24 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         ----------
         publish_lfoa : bool
             Publish current state to large file annex?
+        reset_state : bool, optional
+            Reset state at the end? Default: True.
+        keep_state : bool, optional
+            Keep state file? Default: True.
         """
 
         async with self.scheduler_state_lock:
-            self.model.synchronize_observatory_model()
-            await self.model.update_telemetry()
-            await self.model.update_conditions()
             last_scheduler_state_filename = await self.save_scheduler_state(
                 publish_lfoa=publish_lfoa
             )
 
             try:
-                yield
+                yield last_scheduler_state_filename
             finally:
-                self.model.reset_state(last_scheduler_state_filename)
-                shutil.os.remove(last_scheduler_state_filename)
+                if reset_state:
+                    self.model.reset_state(last_scheduler_state_filename)
+                if not keep_state:
+                    shutil.os.remove(last_scheduler_state_filename)
 
     @contextlib.asynccontextmanager
     async def idle_to_running(self):
@@ -2963,12 +3018,16 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         Notes
         -----
         The clearing logic follows a specific hierarchy:
+
         1. If the FAULT bit is already 0, no change is made.
+
         2. A list comprehension scans `self._components_summary_state`. If any
            component has a state equal to `salobj.State.FAULT`, the clearing
            process is aborted to ensure safety.
+
         3. If no components are in FAULT, the bitwise XOR (`^`) operator is
            used to flip the `FAULT` bit to 0.
+
         """
         status = self.evt_observatoryStatus.data.status
         status_note = self.generate_status_note()
