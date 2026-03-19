@@ -31,22 +31,38 @@ __all__ = [
 
 
 class UnableToFindTargetError(Exception):
+    """Raised when the Scheduler CSC requests a target and does not receive
+    anything.
+    """
+
     pass
 
 
 class UpdateTelemetryError(Exception):
+    """Raised when the Scheduler CSC fails to update telemetry."""
+
     pass
 
 
 class FailedToQueueTargetsError(Exception):
+    """Raised when the Scheduler CSC fails to add targets to the queue."""
+
     pass
 
 
 class TargetScriptFailedError(Exception):
+    """Raised when the Scheduler CSC is fails to add a script for a block to
+    the queue.
+    """
+
     pass
 
 
 class NonConsecutiveIndexError(Exception):
+    """Raised by the Scheduler CSC when it is adding scripts of a block and
+    their index is not sequential.
+    """
+
     pass
 
 

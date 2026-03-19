@@ -1,0 +1,1 @@
+Updated the feature-based scheduler driver to use the current filter from the observatory model for more accurate slew time calculations.

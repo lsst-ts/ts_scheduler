@@ -1,0 +1,20 @@
+{
+    "name": "StandardVisit",
+    "program": "BLOCK-9",
+    "constraints": [],
+    "scripts": [
+        {
+            "name": "slew_fail.py",
+            "standard": true,
+            "parameters": {
+                "name": "$name",
+                "ra": "$ra",
+                "dec": "$dec",
+                "rot_sky": "$rot_sky",
+                "estimated_slew_time": "$estimated_slew_time",
+                "obs_time": "$obs_time",
+                "note": "Static note will be preserved."
+            }
+        }
+    ]
+}

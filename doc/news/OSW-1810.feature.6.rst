@@ -1,0 +1,1 @@
+Implemented a cooperative multitasking mechanism in 'generate_targets_in_time_window' to prevent blocking the async event loop during long prediction windows.
