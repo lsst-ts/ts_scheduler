@@ -134,9 +134,6 @@ class FeatureScheduler(Driver):
 
         Raises
         ------
-        RuntimeError:
-            If `config` does not have a `scheduler_config` attribute or if it
-            points to a non-existing file.
         NoSchedulerError:
             If scheduler configuration does not define `scheduler` attribute.
         NoNsideError:
@@ -145,58 +142,18 @@ class FeatureScheduler(Driver):
         """
 
         self._desired_obs = None
-
-        if not hasattr(config, "feature_scheduler_driver_configuration"):
-            raise RuntimeError("No driver configuration section defined.")
-        elif "scheduler_config" not in config.feature_scheduler_driver_configuration:
-            raise RuntimeError("No feature scheduler configuration defined.")
-        elif not os.path.exists(
-            scheduler_config := config.feature_scheduler_driver_configuration[
-                "scheduler_config"
-            ]
-        ):
-            raise RuntimeError(
-                f"Feature scheduler configuration file {scheduler_config} not found."
-            )
+        scheduler_config = self._pre_check_config(config=config)
 
         if self.scheduler is None:
             self.log.info(
                 f"Loading feature based scheduler configuration from: {scheduler_config}."
             )
 
-            spec = importlib.util.spec_from_file_location("config", scheduler_config)
-            conf = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(conf)
-
-            if not hasattr(conf, "scheduler"):
-                raise NoSchedulerError("No scheduler defined in configuration file.")
-
-            if not hasattr(conf, "nside"):
-                raise NoNsideError("No nside defined in configuration file.")
-
-            if not hasattr(conf, "seed"):
-                self.log.warning(
-                    "Feature Based Scheduler configuration does not specify a random seed. "
-                    f"Assuming seed={self.seed}."
-                )
-            else:
-                self.seed = conf.seed
-
-            self.nside = conf.nside
-
-            np.random.seed(self.seed)
-            self.scheduler = conf.scheduler
-            self.conditions = Conditions(nside=self.nside)
-            self.conditions.cloud_maps = CloudMap(
-                nside_out=self.nside,
+            scheduler, nside, seed = get_scheduler_configuration(
+                scheduler_config=scheduler_config
             )
 
-            self.conditions.fwhm_eff = dict(
-                [
-                    (key, np.empty(hp.nside2npix(self.nside), dtype=float))
-                    for key in self.models["seeing"].band_list
-                ]
-            )
+            self._set_scheduler(scheduler, nside, seed)
         else:
             self.log.warning(
                 "Scheduler already loaded, skipping. If you are doing a hot or "
@@ -205,36 +162,7 @@ class FeatureScheduler(Driver):
                 "If this is the case, report this condition."
             )
 
-        if "observation_database_name" in config.feature_scheduler_driver_configuration:
-            self.observation_database_name = pathlib.Path(
-                config.feature_scheduler_driver_configuration[
-                    "observation_database_name"
-                ]
-            )
-            self.log.debug(f"Observation database: {self.observation_database_name}")
-        else:
-            self.log.warning(
-                "Observation database name not defined in driver configuration. "
-                f"Using default: {self.observation_database_name}. "
-                "This database is used for warm start the scheduler, you might "
-                "want to define a destination with persistent storage."
-            )
-
-        survey_topology = super().configure_scheduler(config)
-
-        # self.scheduler.survey_lists is a list of lists with different surveys
-        survey_names = [
-            survey.survey_name
-            for survey_list in self.scheduler.survey_lists
-            for survey in survey_list
-        ]
-
-        survey_topology.num_general_props = len(survey_names)
-        survey_topology.general_propos = survey_names
-        survey_topology.num_seq_props = 0
-        survey_topology.sequence_propos = []
-
-        return survey_topology
+        return self._finish_scheduler_configuration(config=config)
 
     def cold_start(self, observations: typing.List[DriverTarget]) -> None:
         """Rebuilds the internal state of the scheduler from a list of
@@ -967,3 +895,134 @@ class FeatureScheduler(Driver):
             rotSkyPos="rotSkyPos",
             nexp="nexp",
         )
+
+    def _pre_check_config(self, config):
+        """Run a pre-check on the input configuration.
+
+        Parameters
+        ----------
+        config : `types.SimpleNamespace`
+            Configuration, as described by ``schema/Scheduler.yaml``
+
+        Returns
+        -------
+        scheduler_config : `str`
+            The path to the scheduler configuration, validated to
+            exist.
+
+        Raises
+        ------
+        RuntimeError:
+            If `config` does not have a `scheduler_config` attribute or if it
+            points to a non-existing file.
+        """
+
+        if not hasattr(config, "feature_scheduler_driver_configuration"):
+            raise RuntimeError("No driver configuration section defined.")
+        elif "scheduler_config" not in config.feature_scheduler_driver_configuration:
+            raise RuntimeError("No feature scheduler configuration defined.")
+        elif not os.path.exists(
+            scheduler_config := config.feature_scheduler_driver_configuration[
+                "scheduler_config"
+            ]
+        ):
+            raise RuntimeError(
+                f"Feature scheduler configuration file {scheduler_config} not found."
+            )
+
+        return scheduler_config
+
+    def _set_scheduler(self, scheduler, nside, seed):
+        """Set the scheduler information.
+
+        Parameters
+        ----------
+        scheduler : `Core_scheduler`
+            The FBS core scheduler object.
+        nside : `int`
+            The nside, map resolotion, used for the FBS.
+        seed : `int`
+            Random seed to use for the FBS.
+        """
+
+        if seed is None:
+            self.log.warning(
+                "Feature Based Scheduler configuration does not specify a random seed. "
+                f"Assuming seed={self.seed}."
+            )
+        else:
+            self.seed = seed
+        np.random.seed(self.seed)
+
+        self.nside = nside
+        self.scheduler = scheduler
+        self.conditions = Conditions(nside=self.nside)
+        self.conditions.cloud_maps = CloudMap(
+            nside_out=self.nside,
+        )
+
+        self.conditions.fwhm_eff = dict(
+            [
+                (key, np.empty(hp.nside2npix(self.nside), dtype=float))
+                for key in self.models["seeing"].band_list
+            ]
+        )
+
+    def _finish_scheduler_configuration(self, config):
+        """Finish the scheduler configuration.
+
+        Parameters
+        ----------
+        config : `types.SimpleNamespace`
+            Configuration, as described by ``schema/Scheduler.yaml``
+
+        Returns
+        -------
+        survey_topology: `lsst.ts.scheduler.kernel.SurveyTopology`
+        """
+
+        if "observation_database_name" in config.feature_scheduler_driver_configuration:
+            self.observation_database_name = pathlib.Path(
+                config.feature_scheduler_driver_configuration[
+                    "observation_database_name"
+                ]
+            )
+            self.log.debug(f"Observation database: {self.observation_database_name}")
+        else:
+            self.log.warning(
+                "Observation database name not defined in driver configuration. "
+                f"Using default: {self.observation_database_name}. "
+                "This database is used for warm start the scheduler, you might "
+                "want to define a destination with persistent storage."
+            )
+
+        survey_topology = super().configure_scheduler(config)
+
+        # self.scheduler.survey_lists is a list of lists with different surveys
+        survey_names = [
+            survey.survey_name
+            for survey_list in self.scheduler.survey_lists
+            for survey in survey_list
+        ]
+
+        survey_topology.num_general_props = len(survey_names)
+        survey_topology.general_propos = survey_names
+        survey_topology.num_seq_props = 0
+        survey_topology.sequence_propos = []
+
+        return survey_topology
+
+
+def get_scheduler_configuration(scheduler_config):
+
+    spec = importlib.util.spec_from_file_location("config", scheduler_config)
+    conf = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(conf)
+
+    if not hasattr(conf, "scheduler"):
+        raise NoSchedulerError("No scheduler defined in configuration file.")
+
+    if not hasattr(conf, "nside"):
+        raise NoNsideError("No nside defined in configuration file.")
+
+    return conf.scheduler, conf.nside, getattr(conf, "seed", None)
