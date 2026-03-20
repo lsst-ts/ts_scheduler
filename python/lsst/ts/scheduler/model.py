@@ -60,6 +60,8 @@ from .utils.csc_utils import (
 from .utils.scheduled_targets_info import ScheduledTargetsInfo
 from .utils.types import ValidationRules
 
+_MAX_OBSERVATIONS_FOR_SYNC_REGISTER = 100
+
 
 class Model:
     """Scheduler model class.
@@ -1313,10 +1315,28 @@ class Model:
         if observations is None:
             self.log.warning("No observations to register")
             return
-        self.log.debug(f"Registering {len(observations)} observations.")
-        for observation in observations:
-            self.driver.register_observed_target(observation)
-        self.log.debug("Finished registering observations.")
+
+        if len(observations) <= _MAX_OBSERVATIONS_FOR_SYNC_REGISTER:
+            self.log.debug(f"Registering {len(observations)} observations.")
+            for observation in observations:
+                self.driver.register_observed_target(observation)
+            self.log.debug("Finished registering observations.")
+        else:
+            self.log.info(f"Registering {len(observations)} observations.")
+
+            def register_observations_sync():
+                for i, observation in enumerate(observations):
+                    if i % _MAX_OBSERVATIONS_FOR_SYNC_REGISTER == 0:
+                        self.log.info(
+                            f"Registered {i+1} observations of {len(observations)}."
+                        )
+                    self.driver.register_observed_target(observation)
+
+            loop = asyncio.get_running_loop()
+            time_start = utils.current_tai()
+            await loop.run_in_executor(None, register_observations_sync)
+            total_time = utils.current_tai() - time_start
+            self.log.info(f"Registering observations took {total_time:.1f}s.")
 
     async def _parse_observation_database(
         self, database_path: str
