@@ -148,6 +148,27 @@ class Driver:
         self.current_sunset = None
         self.current_sunrise = None
 
+    async def load_scheduler_configuration(
+        self, config: types.SimpleNamespace
+    ) -> SurveyTopology:
+        """Asynchronously load the scheduler configuration.
+
+        By default it will only call the ``configure_scheduler``.
+        When suclassing the Driver, you should override this method
+        to handle the async part of the configuration.
+
+        Parameters
+        ----------
+        config : `types.SimpleNamespace`
+            Configuration, as described by ``schema/Scheduler.yaml``
+
+        Returns
+        -------
+        survey_topology : ``SurveyTopology``
+            Survey topology.
+        """
+        return self.configure_scheduler(config=config)
+
     def configure_scheduler(self, config: types.SimpleNamespace) -> SurveyTopology:
         """This method is responsible for running the scheduler configuration
         and returning the survey topology, which specifies the number, name
