@@ -1177,13 +1177,7 @@ class Model:
             Survey topology
         """
 
-        configure_scheduler = functools.partial(
-            self.driver.configure_scheduler, config=config
-        )
-
-        return await asyncio.get_running_loop().run_in_executor(
-            None, configure_scheduler
-        )
+        return await self.driver.load_scheduler_configuration(config=config)
 
     async def _handle_startup_database_snapshot(self, startup_database: str) -> None:
         """Handle startup database snapshot.
