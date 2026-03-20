@@ -19,12 +19,15 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import asyncio
+import functools
 import importlib
 import math
 import os
 import pathlib
 import pickle
 import typing
+from concurrent.futures import ProcessPoolExecutor
 
 import healpy as hp
 import numpy as np
@@ -162,6 +165,60 @@ class FeatureScheduler(Driver):
                 "If this is the case, report this condition."
             )
 
+        return self._finish_scheduler_configuration(config=config)
+
+    async def load_scheduler_configuration(self, config=None):
+        """This method is responsible for running the scheduler configuration
+        and returning the survey topology, which specifies the number, name
+        and type of projects running by the scheduler.
+
+        By default it will just return a test survey topology.
+
+        Parameters
+        ----------
+        config : `types.SimpleNamespace`
+            Configuration, as described by ``schema/Scheduler.yaml``
+
+        Returns
+        -------
+        survey_topology: `lsst.ts.scheduler.kernel.SurveyTopology`
+
+        Raises
+        ------
+        RuntimeError:
+            If `config` does not have a `scheduler_config` attribute or if it
+            points to a non-existing file.
+        NoSchedulerError:
+            If scheduler configuration does not define `scheduler` attribute.
+        NoNsideError:
+            If scheduler configuration does not define `nside` attribute.
+
+        """
+
+        self._desired_obs = None
+        scheduler_config = self._pre_check_config(config=config)
+
+        if self.scheduler is None:
+            self.log.info(
+                f"Loading feature based scheduler configuration from: {scheduler_config}."
+            )
+
+            _get_scheduler_configuration = functools.partial(
+                get_scheduler_configuration, scheduler_config=scheduler_config
+            )
+            loop = asyncio.get_running_loop()
+            with ProcessPoolExecutor() as executor:
+                scheduler, nside, seed = await loop.run_in_executor(
+                    executor, _get_scheduler_configuration
+                )
+            self._set_scheduler(scheduler, nside, seed)
+        else:
+            self.log.warning(
+                "Scheduler already loaded, skipping. If you are doing a hot or "
+                "warm start of the Scheduler CSC this is a normal condition. Nevertheless, "
+                "this is unexpected if you are trying to cold start. "
+                "If this is the case, report this condition."
+            )
         return self._finish_scheduler_configuration(config=config)
 
     def cold_start(self, observations: typing.List[DriverTarget]) -> None:
