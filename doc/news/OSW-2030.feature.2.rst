@@ -1,0 +1,1 @@
+Introduced the ``Driver.load_scheduler_configuration`` coroutine to the base driver class to standardize asynchronous configuration handling.

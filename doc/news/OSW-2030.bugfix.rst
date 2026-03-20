@@ -1,0 +1,1 @@
+Added a check in 'scheduler_csc.py' to prevent concurrent execution of the start command if one is already in progress.
