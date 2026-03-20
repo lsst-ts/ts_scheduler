@@ -27,7 +27,7 @@ from unittest.mock import AsyncMock, Mock, patch
 import yaml
 from lsst.ts.salobj import DefaultingValidator
 from lsst.ts.scheduler.driver.driver_target import DriverTarget
-from lsst.ts.scheduler.model import Model
+from lsst.ts.scheduler.model import _MAX_OBSERVATIONS_FOR_SYNC_REGISTER, Model
 from lsst.ts.scheduler.utils.csc_utils import BlockStatus
 from lsst.ts.scheduler.utils.types import ValidationRules
 from lsst.ts.xml.enums.Script import ScriptState
@@ -244,6 +244,42 @@ class TestModel(unittest.IsolatedAsyncioTestCase):
             scriptState=ScriptState.UNKNOWN,
         )
         await self.model.callback_script_info(script_info)
+
+    async def test_register_observations(self):
+
+        config = self.get_sample_configuration()
+
+        await self.model.configure(config)
+
+        observations = [
+            DriverTarget(observing_block=self.model.observing_blocks["BLOCK-6"]),
+            DriverTarget(observing_block=self.model.observing_blocks["BLOCK-6"]),
+            DriverTarget(observing_block=self.model.observing_blocks["BLOCK-6"]),
+        ]
+
+        self.model.driver.register_observed_target = Mock()
+
+        await self.model.register_observations(observations)
+        assert self.model.driver.register_observed_target.call_count == len(
+            observations
+        )
+
+    async def test_register_observations_large_number(self):
+
+        config = self.get_sample_configuration()
+
+        await self.model.configure(config)
+
+        observations = [
+            DriverTarget(observing_block=self.model.observing_blocks["BLOCK-6"])
+            for _ in range(_MAX_OBSERVATIONS_FOR_SYNC_REGISTER * 2)
+        ]
+
+        self.model.driver.register_observed_target = Mock()
+        await self.model.register_observations(observations)
+        assert self.model.driver.register_observed_target.call_count == len(
+            observations
+        )
 
     def get_expected_observing_blocks(self) -> set[str]:
         return {
