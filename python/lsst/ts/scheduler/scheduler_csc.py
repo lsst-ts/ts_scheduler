@@ -347,6 +347,15 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         self.model.close()
 
     async def begin_start(self, data):
+        if (
+            "ack_in_progress_task" in self._tasks
+            and not self._tasks["ack_in_progress_task"].done()
+        ):
+            raise salobj.ExpectedError(
+                "Scheduler is already executing a start command. "
+                "Sometimes this process can take a while to finish as the "
+                "Scheduler needs to run several tasks."
+            )
         self.log.info("Starting Scheduler CSC...")
 
         self._tasks["ack_in_progress_task"] = asyncio.create_task(
