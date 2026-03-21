@@ -195,10 +195,10 @@ class Model:
             "observatory_model"
         ].current_state.unmountedfilters
 
+        self.log.info("Loading observing blocks.")
         await self.load_observing_blocks(config.path_observing_blocks)
 
-        self.log.debug("Configuring Driver and Scheduler.")
-
+        self.log.info("Configuring Driver and Scheduler.")
         return await self.configure_driver(config)
 
     def init_telemetry(self) -> None:
