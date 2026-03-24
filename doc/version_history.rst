@@ -6,6 +6,30 @@ Version History
 
 .. towncrier release notes start
 
+v2.9.1 (2026-03-23)
+===================
+
+New Features
+------------
+
+- Optimized 'Model.register_observations' to use an executor for batch registrations exceeding a defined threshold, preventing large updates from blocking the main event loop. (`OSW-2030 <https://rubinobs.atlassian.net//browse/OSW-2030>`_)
+- Implemented asynchronous scheduler configuration in 'driver/feature_scheduler.py' to offload CPU-bound workloads to a separate process, preventing the CSC from blocking. (`OSW-2030 <https://rubinobs.atlassian.net//browse/OSW-2030>`_)
+- Introduced the ``Driver.load_scheduler_configuration`` coroutine to the base driver class to standardize asynchronous configuration handling. (`OSW-2030 <https://rubinobs.atlassian.net//browse/OSW-2030>`_)
+- Updated 'Model.configure_scheduler' to utilize the new asynchronous driver configuration workflow. (`OSW-2030 <https://rubinobs.atlassian.net//browse/OSW-2030>`_)
+
+
+Bug Fixes
+---------
+
+- Added a check in 'scheduler_csc.py' to prevent concurrent execution of the start command if one is already in progress. (`OSW-2030 <https://rubinobs.atlassian.net//browse/OSW-2030>`_)
+
+
+Other Changes and Additions
+---------------------------
+
+- Refactored scheduler configuration logic in the feature-based scheduler driver into dedicated helper methods for better maintainability. (`OSW-2030 <https://rubinobs.atlassian.net//browse/OSW-2030>`_)
+
+
 v2.9.0 (2026-03-18)
 ===================
 

@@ -1,1 +1,0 @@
-Optimized 'Model.register_observations' to use an executor for batch registrations exceeding a defined threshold, preventing large updates from blocking the main event loop.
