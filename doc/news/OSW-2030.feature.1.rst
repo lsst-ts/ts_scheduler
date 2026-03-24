@@ -1,1 +1,0 @@
-Updated 'Model.configure_scheduler' to utilize the new asynchronous driver configuration workflow.
