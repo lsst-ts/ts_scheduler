@@ -1,0 +1,1 @@
+Fixed a logic error in 'scheduler_csc.py' to correctly handle cases where no targets are generated and no targets are currently scheduled.
