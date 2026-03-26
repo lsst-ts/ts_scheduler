@@ -1,1 +1,0 @@
-Updated the conda build script to mount the rubin-scheduler data.
