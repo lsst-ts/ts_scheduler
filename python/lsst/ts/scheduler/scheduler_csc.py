@@ -74,7 +74,6 @@ from .utils.csc_utils import (
     BlockStatus,
     DetailedState,
     SchedulerModes,
-    SchedulerObservatoryStatus,
     set_detailed_state,
 )
 from .utils.error_codes import (
@@ -89,6 +88,8 @@ from .utils.error_codes import (
 from .utils.parameters import ObservatoryStatus, SchedulerCscParameters
 from .utils.s3_utils import handle_lfoa
 from .utils.types import ValidationRules
+
+SchedulerObservatoryStatus = Scheduler.ObservatoryStatus
 
 
 class SchedulerCSC(salobj.ConfigurableCsc):
@@ -1965,6 +1966,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         await self.model.update_telemetry()
         await self.model.update_conditions()
 
+        no_targets = True
         for n in range(self.parameters.n_targets + 1):
 
             async with self.current_scheduler_state(
@@ -1988,6 +1990,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                         dec=target.dec,
                         rot_sky_pos=target.ang,
                     )
+                    no_targets = False
 
                 if len(self.targets_queue) > 0:
                     self._should_compute_predicted_schedule = True
@@ -1996,11 +1999,13 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     len(self.targets_queue) == 0
                     and self.model.get_number_of_scheduled_targets() == 0
                 ):
-                    await self.handle_no_targets_on_queue()
+                    self.log.info("No targets generated and no scheduled targets.")
+                    no_targets = True
                 else:
                     self.log.info(
                         "No targets generated, but still have scheduled targets."
                     )
+                    no_targets = False
 
             await self.check_targets_queue_condition()
 
@@ -2010,6 +2015,14 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     f"Current scheduled targets: {self.model.get_number_of_scheduled_targets()}. "
                     "Stop generating targets."
                 )
+                break
+
+            elif no_targets:
+                async with self.current_scheduler_state(
+                    publish_lfoa=False,
+                    reset_state=True,
+                ):
+                    await self.handle_no_targets_on_queue()
                 break
 
             self.log.debug(

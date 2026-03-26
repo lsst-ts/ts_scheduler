@@ -24,7 +24,6 @@ __all__ = [
     "FailedStates",
     "block_regex",
     "SchedulerModes",
-    "SchedulerObservatoryStatus",
     "is_uri",
     "OBSERVATION_NAMED_PARAMETERS",
     "set_detailed_state",
@@ -36,31 +35,6 @@ import re
 from urllib.parse import urlparse
 
 from lsst.ts.xml.enums import Script
-
-
-class SchedulerObservatoryStatus(enum.IntEnum):
-    """Enumeration with the valid observatory status values."""
-
-    # Observatory status is unknown.
-    UNKNOWN = 0
-
-    # Observatory in regular daytime.
-    DAYTIME = 1
-
-    # Observatory in regular night-time scheduler-driven
-    # operations.
-    OPERATIONAL = 2
-
-    # Fault detected on one or more critical component during
-    # night-time operations.
-    FAULT = 4
-
-    # Observatory closed due to weather.
-    WEATHER = 8
-
-    # Observatory closed.
-    DOWNTIME = 16
-
 
 NonFinalStates = frozenset(
     (
