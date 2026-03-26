@@ -6,6 +6,22 @@ Version History
 
 .. towncrier release notes start
 
+v2.9.2 (2026-03-26)
+===================
+
+Bug Fixes
+---------
+
+- Fixed a logic error in 'scheduler_csc.py' to correctly handle cases where no targets are generated and no targets are currently scheduled. (`OSW-2064 <https://rubinobs.atlassian.net//browse/OSW-2064>`_)
+
+
+Other Changes and Additions
+---------------------------
+
+- Removed local ``SchedulerObservatoryStatus``. (`OSW-2030 <https://rubinobs.atlassian.net//browse/OSW-2030>`_)
+- Updated the conda build script to mount the rubin-scheduler data. (`OSW-2030 <https://rubinobs.atlassian.net//browse/OSW-2030>`_)
+
+
 v2.9.1 (2026-03-23)
 ===================
 
