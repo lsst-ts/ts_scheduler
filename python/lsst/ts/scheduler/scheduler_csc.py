@@ -74,7 +74,6 @@ from .utils.csc_utils import (
     BlockStatus,
     DetailedState,
     SchedulerModes,
-    SchedulerObservatoryStatus,
     set_detailed_state,
 )
 from .utils.error_codes import (
@@ -89,6 +88,8 @@ from .utils.error_codes import (
 from .utils.parameters import ObservatoryStatus, SchedulerCscParameters
 from .utils.s3_utils import handle_lfoa
 from .utils.types import ValidationRules
+
+SchedulerObservatoryStatus = Scheduler.ObservatoryStatus
 
 
 class SchedulerCSC(salobj.ConfigurableCsc):
