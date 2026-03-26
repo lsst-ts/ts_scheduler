@@ -19,6 +19,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import logging
 import os
 import pathlib
 import subprocess
@@ -40,6 +41,11 @@ try:
     from lsst.ts.salobj import parse_idl  # noqa: F401
 except ImportError:
     DDS_VERSION = False
+
+
+def pytest_configure(config):
+    logging.getLogger("httpx").setLevel(logging.ERROR)
+    logging.getLogger("DeleteTopics").setLevel(logging.WARNING)
 
 
 def has_required_sky_file(path: pathlib.Path, mjd: float) -> bool:
