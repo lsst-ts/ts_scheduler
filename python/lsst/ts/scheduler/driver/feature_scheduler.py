@@ -818,12 +818,19 @@ class FeatureScheduler(Driver):
         now = Time.now().to_value("isot")
         filename = f"fbs_scheduler_{now}.p"
 
+        observations = ObservationArray(
+            n=len(targets_queue) if targets_queue is not None else 0
+        )
+
+        for i in range(len(observations)):
+            observations[i] = targets_queue[i].observation
+
         with open(filename, "wb") as fp:
             pickle.dump(
                 [
                     self.scheduler,
                     self.conditions,
-                    targets_queue if targets_queue is not None else [],
+                    observations,
                 ],
                 fp,
             )
