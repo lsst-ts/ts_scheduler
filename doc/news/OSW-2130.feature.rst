@@ -1,0 +1,1 @@
+Implemented a standardized 'playback_observations_from_db' method in the base Driver class to coordinate database parsing and target registration.
