@@ -380,6 +380,20 @@ class Driver:
         """
         self.register_observed_target(target=target)
 
+    def playback_observations_from_db(self, filename):
+        """Load observations from a database and playback.
+
+        Parameters
+        ----------
+        filename : `str`
+            Path to the observations database.
+        """
+
+        observations = self.parse_observation_database(filename=filename)
+
+        for target in observations:
+            self.register_observed_target(target)
+
     def get_stop_tracking_target(self) -> DriverTarget:
         stop_tracking_block = observing.ObservingBlock(
             name="StopTracking",
