@@ -1,1 +1,0 @@
-Optimized the feature scheduler driver to use a new fast-path routine that plays back observations in bulk using 'add_observation_array', significantly reducing load times.

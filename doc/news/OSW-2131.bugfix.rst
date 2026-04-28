@@ -1,1 +1,0 @@
-Fixed 'save_state' in the feature scheduler driver to correctly convert observations into an 'ObservationArray' format before writing the pickle file.

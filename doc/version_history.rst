@@ -6,6 +6,23 @@ Version History
 
 .. towncrier release notes start
 
+v2.9.3 (2026-04-28)
+===================
+
+New Features
+------------
+
+- Updated 'Model._handle_load_observations_from_db' to utilize the driver-specific playback routines for more efficient database synchronization. (`OSW-2130 <https://rubinobs.atlassian.net//browse/OSW-2130>`_)
+- Optimized the feature scheduler driver to use a new fast-path routine that plays back observations in bulk using 'add_observation_array', significantly reducing load times. (`OSW-2130 <https://rubinobs.atlassian.net//browse/OSW-2130>`_)
+- Implemented a standardized 'playback_observations_from_db' method in the base Driver class to coordinate database parsing and target registration. (`OSW-2130 <https://rubinobs.atlassian.net//browse/OSW-2130>`_)
+
+
+Bug Fixes
+---------
+
+- Fixed 'save_state' in the feature scheduler driver to correctly convert observations into an 'ObservationArray' format before writing the pickle file. (`OSW-2131 <https://rubinobs.atlassian.net//browse/OSW-2131>`_)
+
+
 v2.9.2 (2026-03-26)
 ===================
 
