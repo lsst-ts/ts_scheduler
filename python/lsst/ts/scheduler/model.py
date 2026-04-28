@@ -1252,9 +1252,13 @@ class Model:
         database_path : `str`
             Path to the local database file.
         """
-        observations = await self._parse_observation_database(database_path)
 
-        await self.register_observations(observations)
+        playback_observations_from_db = functools.partial(
+            self.driver.playback_observations_from_db,
+            filename=database_path,
+        )
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, playback_observations_from_db)
 
     async def _handle_load_observations_from_efd(self, efd_query: str) -> None:
         """Handle loading observations from the EFD and playing them back into

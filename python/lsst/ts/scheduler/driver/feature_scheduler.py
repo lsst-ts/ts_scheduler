@@ -574,6 +574,18 @@ class FeatureScheduler(Driver):
 
         return super().register_observation(target)
 
+    def playback_observations_from_db(self, filename):
+        """Load observations from a database and playback.
+
+        Parameters
+        ----------
+        filename : `str`
+            Path to the observations database.
+        """
+
+        fbs_observations = self.schema_converter.opsim2obs(filename=filename)
+        self.scheduler.add_observations_array(fbs_observations)
+
     def load(self, config):
         """Load a new set of targets."""
 
@@ -818,12 +830,19 @@ class FeatureScheduler(Driver):
         now = Time.now().to_value("isot")
         filename = f"fbs_scheduler_{now}.p"
 
+        observations = ObservationArray(
+            n=len(targets_queue) if targets_queue is not None else 0
+        )
+
+        for i in range(len(observations)):
+            observations[i] = targets_queue[i].observation
+
         with open(filename, "wb") as fp:
             pickle.dump(
                 [
                     self.scheduler,
                     self.conditions,
-                    targets_queue if targets_queue is not None else [],
+                    observations,
                 ],
                 fp,
             )
