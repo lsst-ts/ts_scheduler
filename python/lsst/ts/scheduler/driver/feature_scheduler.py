@@ -574,6 +574,18 @@ class FeatureScheduler(Driver):
 
         return super().register_observation(target)
 
+    def playback_observations_from_db(self, filename):
+        """Load observations from a database and playback.
+
+        Parameters
+        ----------
+        filename : `str`
+            Path to the observations database.
+        """
+
+        fbs_observations = self.schema_converter.opsim2obs(filename=filename)
+        self.scheduler.add_observations_array(fbs_observations)
+
     def load(self, config):
         """Load a new set of targets."""
 
