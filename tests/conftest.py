@@ -245,6 +245,12 @@ def mock_efd_client() -> None:
     efd_utils.__with_lsst_efd_client__ = False
 
 
+@pytest.fixture(scope="session", autouse=True)
+def mock_narrativelog_client():
+    with patch("lsst.ts.scheduler.scheduler_csc.NarrativelogClient") as mock_client:
+        yield mock_client
+
+
 @pytest.fixture(autouse=True)
 def patch_environment(monkeypatch):
     monkeypatch.setenv("IMAGE_SERVER_URL", "mytemp")

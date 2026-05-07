@@ -28,7 +28,7 @@ import unittest
 
 import numpy as np
 import pytest
-from lsst.ts import salobj
+from lsst.ts import salobj, utils
 from lsst.ts.scheduler import SchedulerCSC
 from lsst.ts.scheduler.mock import ObservatoryStateMock
 from lsst.ts.scheduler.utils import SchedulerModes
@@ -1246,6 +1246,88 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                 await self.remote.cmd_start.set_start(
                     configurationOverride="monitor_observatory_state.yaml",
                     timeout=SHORT_TIMEOUT,
+                )
+
+    @pytest.mark.skipif(
+        not supports_observatory_status,
+        reason="CSC interface does not support observatory status feature.",
+    )
+    async def test_observatory_status_sends_narrativelog_message(self):
+        with utils.modify_environ(EXTERNAL_INSTANCE_URL="https://example.com"):
+            async with self.make_csc_cleanup_afterward(), ObservatoryStateMock(), self.make_script_queue(
+                running=True
+            ), salobj.Controller(
+                "MTMount"
+            ) as mtmount:
+                await mtmount.evt_summaryState.set_write(
+                    summaryState=salobj.State.ENABLED
+                )
+                await salobj.set_summary_state(
+                    self.remote,
+                    salobj.State.ENABLED,
+                    override="monitor_observatory_state.yaml",
+                )
+
+                def get_general_info_nighttime():
+                    return dict(isNight=True)
+
+                self.csc.model.get_general_info = get_general_info_nighttime
+
+                await self.assert_next_sample(
+                    self.remote.evt_heartbeat,
+                    flush=True,
+                )
+
+                self.remote.evt_observatoryStatus.flush()
+
+                await self.csc.set_observatory_status(
+                    status=Scheduler.ObservatoryStatus.OPERATIONAL,
+                    note="",
+                )
+                await self.assert_next_sample(
+                    self.remote.evt_observatoryStatus,
+                    status=Scheduler.ObservatoryStatus.OPERATIONAL,
+                    flush=False,
+                )
+
+                self.csc.narrative_log_client.add_message.assert_called_with(
+                    {
+                        "message_text": (
+                            "Observatory status changed to: OPERATIONAL."
+                            "\nNote: No note provided."
+                        ),
+                        "level": 0,
+                        "category": "None",
+                        "time_lost_type": "fault",
+                        "tags": ["observatory_status"],
+                        "date_begin": unittest.mock.ANY,
+                        "date_end": unittest.mock.ANY,
+                    }
+                )
+
+                await mtmount.evt_summaryState.set_write(
+                    summaryState=salobj.State.FAULT
+                )
+
+                await self.assert_next_sample(
+                    self.remote.evt_observatoryStatus,
+                    status=Scheduler.ObservatoryStatus.FAULT,
+                    flush=False,
+                )
+
+                self.csc.narrative_log_client.add_message.assert_called_with(
+                    {
+                        "message_text": (
+                            "Observatory status changed to: FAULT."
+                            "\nNote: The following components are in <State.FAULT: 3> state: ['MTMount']."
+                        ),
+                        "level": 0,
+                        "category": "None",
+                        "time_lost_type": "fault",
+                        "tags": ["observatory_status"],
+                        "date_begin": unittest.mock.ANY,
+                        "date_end": unittest.mock.ANY,
+                    }
                 )
 
     @contextlib.asynccontextmanager

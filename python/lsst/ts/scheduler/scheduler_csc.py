@@ -40,6 +40,7 @@ from concurrent.futures import ProcessPoolExecutor
 
 import numpy as np
 import yaml
+from astropy.time import Time
 from lsst.ts import salobj, utils
 from lsst.ts.astrosky.model import version as astrosky_version
 
@@ -69,6 +70,7 @@ from .exceptions.exceptions import (
     UpdateTelemetryError,
 )
 from .model import Model
+from .narrativelog_client import NarrativelogClient
 from .utils.csc_utils import (
     OBSERVATION_NAMED_PARAMETERS,
     BlockStatus,
@@ -310,6 +312,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         self.enable_observatory_status_monitor = False
 
+        self.narrative_log_client = None
+
     @property
     def queue_remote(self):
         """Access the remote for the script queue."""
@@ -335,6 +339,12 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         """
 
         await super().start()
+
+        if "EXTERNAL_INSTANCE_URL" in os.environ:
+            self.narrative_log_client = NarrativelogClient(
+                host=os.environ["EXTERNAL_INSTANCE_URL"], log=self.log
+            )
+
         await self.set_observatory_status(
             status=SchedulerObservatoryStatus.UNKNOWN,
             note=(
@@ -2881,21 +2891,39 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         if not hasattr(self, "evt_observatoryStatus"):
             return
 
+        status_labels = (
+            " | ".join(
+                [
+                    observatory_status.name
+                    for observatory_status in SchedulerObservatoryStatus
+                    if observatory_status & status > 0
+                ]
+            )
+            if status > 0
+            else SchedulerObservatoryStatus.UNKNOWN.name
+        )
         await self.evt_observatoryStatus.set_write(
             status=status,
-            statusLabels=(
-                " | ".join(
-                    [
-                        observatory_status.name
-                        for observatory_status in SchedulerObservatoryStatus
-                        if observatory_status & status > 0
-                    ]
-                )
-                if status > 0
-                else SchedulerObservatoryStatus.UNKNOWN.name
-            ),
+            statusLabels=status_labels,
             note=note,
         )
+
+        if self.narrative_log_client:
+            time_now = Time.now()
+            self.narrative_log_client.add_message(
+                {
+                    "message_text": (
+                        f"Observatory status changed to: {status_labels}."
+                        f"\nNote: {note if note else 'No note provided.'}"
+                    ),
+                    "level": 0,
+                    "category": "None",
+                    "time_lost_type": "fault",
+                    "tags": ["observatory_status"],
+                    "date_begin": time_now.isot,
+                    "date_end": time_now.isot,
+                }
+            )
 
     async def monitor_observatory_status(self):
         """Monitor and set the observatory status."""
