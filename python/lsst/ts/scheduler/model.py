@@ -393,11 +393,7 @@ class Model:
         `list`[ `str` ]
             List of valid observing blocks.
         """
-        return [
-            block_id
-            for block_id in self.observing_blocks_status
-            if self.observing_blocks_status[block_id].status != BlockStatus.INVALID
-        ]
+        return list(self.valid_observing_blocks)
 
     async def configure_driver(self, config: typing.Any) -> SurveyTopology:
         """Load driver for selected scheduler and configure its basic
