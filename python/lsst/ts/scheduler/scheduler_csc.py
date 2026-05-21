@@ -809,11 +809,16 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         block_status: BlockStatus,
         observing_block: ObservingBlock,
     ) -> None:
-        if block_id not in self.model.observing_blocks_status:
+        if block_id not in self.model.observing_blocks:
             self.log.warning(
                 f"Block {block_id} not in list of observing blocks. Ignoring."
             )
             return
+        if block_id not in self.model.observing_blocks_status:
+            self.model.observing_blocks_status[block_id] = (
+                await self.model.get_block_status(block_id)
+            )
+
         self.model.observing_blocks_status[block_id].status = block_status
         if block_status == BlockStatus.COMPLETED:
             self.model.observing_blocks_status[block_id].executions_completed += 1
@@ -2541,11 +2546,15 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         await self.evt_blockInventory.set_write(
             ids=",".join(self.model.observing_blocks),
-            status=",".join(
-                [
-                    observing_blocks.status.name
-                    for observing_blocks in self.model.observing_blocks_status.values()
-                ]
+            status=(
+                ",".join(
+                    [
+                        observing_blocks.status.name
+                        for observing_blocks in self.model.observing_blocks_status.values()
+                    ]
+                )
+                if self.model.observing_blocks_status
+                else ""
             ),
         )
 
