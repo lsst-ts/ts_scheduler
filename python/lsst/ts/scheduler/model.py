@@ -1387,7 +1387,7 @@ class Model:
 
         return await loop.run_in_executor(None, convert_efd_observations_to_targets)
 
-    async def _get_block_status(self, program: str) -> ObservingBlockStatus:
+    async def get_block_status(self, program: str) -> ObservingBlockStatus:
         """Get block status.
 
         Parameters
