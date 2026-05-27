@@ -1,0 +1,1 @@
+Refactored load observing block feature to stop retrieving block status during configuration phase in model.py.
