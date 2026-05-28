@@ -1216,7 +1216,7 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
             def get_general_info_nighttime():
                 return dict(isNight=True)
 
-            self.csc.model.get_general_info = get_general_info_daytime
+            self.csc.model.get_general_info = get_general_info_nighttime
 
             expected_initial_observatory_status_note = [
                 (Scheduler.ObservatoryStatus.UNKNOWN, "Scheduler CSC started"),
@@ -1225,7 +1225,10 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                     Scheduler.ObservatoryStatus.UNKNOWN,
                     "Observatory status feature enabled",
                 ),
-                (Scheduler.ObservatoryStatus.DAYTIME, "Daytime started"),
+                (
+                    Scheduler.ObservatoryStatus.IDLE,
+                    "Observatory status feature enabled",
+                ),
             ]
 
             for status, note in expected_initial_observatory_status_note:
@@ -1235,6 +1238,15 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                     flush=False,
                 )
                 assert note in observatory_status.note
+
+            self.csc.model.get_general_info = get_general_info_daytime
+
+            observatory_status = await self.assert_next_sample(
+                self.remote.evt_observatoryStatus,
+                status=Scheduler.ObservatoryStatus.DAYTIME,
+                flush=False,
+            )
+            assert "Daytime started" in observatory_status.note
 
             with self.assertRaises(asyncio.TimeoutError):
                 await self.assert_next_sample(
