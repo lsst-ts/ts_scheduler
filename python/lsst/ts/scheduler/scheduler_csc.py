@@ -3197,7 +3197,12 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             return
 
         status = self.evt_observatoryStatus.data.status
-        if status & SchedulerObservatoryStatus.DAYTIME:
+        if not status:
+            status = SchedulerObservatoryStatus.IDLE
+            note = self.evt_observatoryStatus.data.note
+            await self.set_observatory_status(status=status, note=note)
+
+        elif status & SchedulerObservatoryStatus.DAYTIME:
             status = status ^ SchedulerObservatoryStatus.DAYTIME
             if not status:
                 status = SchedulerObservatoryStatus.IDLE
