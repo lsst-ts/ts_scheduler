@@ -1,0 +1,1 @@
+Updated Model.get_valid_observing_blocks to return the list of valid observing blocks straight from the set created at configuration time in model.py.

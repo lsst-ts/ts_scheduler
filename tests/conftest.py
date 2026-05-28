@@ -246,6 +246,20 @@ def mock_efd_client() -> None:
 
 
 @pytest.fixture(autouse=True)
+def setup_ts_config_scheduler_dir(monkeypatch):
+    if "TS_CONFIG_SCHEDULER_DIR" not in os.environ:
+        current_dir = pathlib.Path(__file__).resolve().parent.parent
+        search_dir = current_dir.parent.parent
+        found_path = None
+        for item in search_dir.rglob("ts_config_scheduler"):
+            if item.is_dir() and item.name == "ts_config_scheduler":
+                found_path = str(item)
+                break
+        if found_path is not None:
+            monkeypatch.setenv("TS_CONFIG_SCHEDULER_DIR", found_path)
+
+
+@pytest.fixture(autouse=True)
 def patch_environment(monkeypatch):
     monkeypatch.setenv("IMAGE_SERVER_URL", "mytemp")
 
