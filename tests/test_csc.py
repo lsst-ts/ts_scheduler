@@ -758,6 +758,12 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                     "Test manually setting flag to OPERATIONAL.",
                 ),
                 (
+                    Scheduler.ObservatoryStatus.OPERATIONAL
+                    | Scheduler.ObservatoryStatus.WEATHER,
+                    "Test manually setting flag to OPERATIONAL and WEATHER "
+                    "(e.g. taking calibrations under poor weather).",
+                ),
+                (
                     Scheduler.ObservatoryStatus.UNKNOWN,
                     "Test manually setting flag to UNKNOWN.",
                 ),
