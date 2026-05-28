@@ -1083,10 +1083,13 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                 )
 
                 self.csc.model.get_general_info = get_general_info_nighttime
+                expected_status = status ^ Scheduler.ObservatoryStatus.DAYTIME
+                if not expected_status:
+                    expected_status = Scheduler.ObservatoryStatus.IDLE
 
                 observatory_status = await self.assert_next_sample(
                     self.remote.evt_observatoryStatus,
-                    status=status ^ Scheduler.ObservatoryStatus.DAYTIME,
+                    status=expected_status,
                     flush=False,
                 )
                 assert "Nighttime started" in observatory_status.note
@@ -1175,6 +1178,14 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                 flush=False,
             )
 
+            self.csc.model.get_general_info = get_general_info_nighttime
+
+            observatory_status = await self.assert_next_sample(
+                self.remote.evt_observatoryStatus,
+                status=Scheduler.ObservatoryStatus.IDLE,
+                flush=False,
+            )
+
     @pytest.mark.skipif(
         not supports_observatory_status,
         reason="CSC interface does not support observatory status feature.",
@@ -1235,7 +1246,7 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
 
             observatory_status = await self.assert_next_sample(
                 self.remote.evt_observatoryStatus,
-                status=Scheduler.ObservatoryStatus.UNKNOWN,
+                status=Scheduler.ObservatoryStatus.IDLE,
                 flush=False,
             )
             assert "Nighttime started" in observatory_status.note
