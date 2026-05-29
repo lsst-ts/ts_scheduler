@@ -767,6 +767,10 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                     Scheduler.ObservatoryStatus.UNKNOWN,
                     "Test manually setting flag to UNKNOWN.",
                 ),
+                (
+                    Scheduler.ObservatoryStatus.IDLE,
+                    "Test manually setting flag to IDLE.",
+                ),
             ]
 
             for status, note in good_status_notes:
