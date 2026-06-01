@@ -532,6 +532,23 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         self.assert_enabled()
 
         async with self.target_loop_lock:
+
+            status = self.evt_observatoryStatus.data.status
+
+            if (status & Scheduler.ObservatoryStatus.FAULT) and (
+                components_in_fault := [
+                    component
+                    for component, state in self._components_summary_state.items()
+                    if state == salobj.State.FAULT
+                ]
+            ):
+                raise RuntimeError(
+                    "Cannot resume Scheduler while observatory status is in fault and "
+                    "monitored components are still in fault. "
+                    "The following components cannot be in fault to resume the Scheduler: "
+                    f"{components_in_fault}. "
+                )
+
             if self.run_target_loop.is_set():
                 raise RuntimeError("Target production loop already running.")
 
