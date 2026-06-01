@@ -2875,6 +2875,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 "Error trying to cleanup queue targets while going to FAULT. Ignoring."
             )
 
+        await self.set_observatory_status_fault()
         await super().fault(code=code, report=report, traceback=traceback)
 
     async def set_observatory_status(self, status, note):
@@ -3016,6 +3017,10 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             self.log.debug("Disable operational.")
             status = status ^ SchedulerObservatoryStatus.OPERATIONAL
 
+        if status & SchedulerObservatoryStatus.IDLE:
+            self.log.debug("Disable idle.")
+            status = status ^ SchedulerObservatoryStatus.IDLE
+
         if (
             self.evt_observatoryStatus.data.status & SchedulerObservatoryStatus.FAULT
             > 0
@@ -3120,6 +3125,9 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             for component, state in self._components_summary_state.items()
             if state == salobj.State.FAULT
         ]
+        if self.summary_state == salobj.State.FAULT:
+            components_in_fault.append(self.salinfo.name_index)
+
         if components_in_fault:
             if note and not note[-1].isspace():
                 note += " "
