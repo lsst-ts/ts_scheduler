@@ -574,6 +574,39 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
             self.run_target_loop.set()
 
+        status = self.evt_observatoryStatus.data.status
+        status_labels = self.evt_observatoryStatus.data.statusLabels
+
+        if status & Scheduler.ObservatoryStatus.OPERATIONAL:
+            self.log.info(
+                f"Observatory status: {status_labels}. "
+                "Operational flag already active when resuming the scheduler; "
+                "nothing to do."
+            )
+        elif status & Scheduler.ObservatoryStatus.DAYTIME:
+            self.log.info(
+                f"Observatory status: {status_labels}. "
+                f"Scheduler resumed while DAYTIME flag active; nothing to do."
+            )
+        else:
+            if status & Scheduler.ObservatoryStatus.IDLE:
+                status = status ^ SchedulerObservatoryStatus.IDLE
+            if status & Scheduler.ObservatoryStatus.FAULT:
+                status = status ^ SchedulerObservatoryStatus.FAULT
+
+            status = status ^ SchedulerObservatoryStatus.OPERATIONAL
+            try:
+                self.validate_observatory_status(status)
+            except (InvalidStatusError, UpdateStatusError):
+                self.log.info(
+                    "Cannot update observatory status while resuming. Continuing...",
+                    exc_info=True,
+                )
+            else:
+                await self.set_observatory_status(
+                    status=status, note="Scheduler resumed."
+                )
+
     async def do_stop(self, data):
         """Stop target production loop.
 
