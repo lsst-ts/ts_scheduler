@@ -1268,6 +1268,83 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
             assert "Nighttime started" in observatory_status.note
 
     @pytest.mark.skipif(
+        not supports_observatory_status,
+        reason="CSC interface does not support observatory status feature.",
+    )
+    async def test_observatory_status_csc_goes_to_fault(self):
+        async with self.make_csc_cleanup_afterward(), ObservatoryStateMock(), self.make_script_queue(
+            running=True
+        ):
+
+            # patch the model class to ensure calling get_general_info
+            # returns that it is daytime
+            def get_general_info_nighttime():
+                return dict(isNight=True)
+
+            self.csc.model.get_general_info = get_general_info_nighttime
+
+            await salobj.set_summary_state(
+                self.remote,
+                salobj.State.ENABLED,
+                override="monitor_observatory_state.yaml",
+            )
+
+            expected_initial_observatory_status_note = [
+                (Scheduler.ObservatoryStatus.UNKNOWN, "Scheduler CSC started"),
+                (Scheduler.ObservatoryStatus.UNKNOWN, "Scheduler CSC in STANDBY"),
+                (
+                    Scheduler.ObservatoryStatus.UNKNOWN,
+                    "Observatory status feature enabled",
+                ),
+                (
+                    Scheduler.ObservatoryStatus.IDLE,
+                    "Observatory status feature enabled",
+                ),
+            ]
+
+            for status, note in expected_initial_observatory_status_note:
+                observatory_status = await self.assert_next_sample(
+                    self.remote.evt_observatoryStatus,
+                    status=status,
+                    flush=False,
+                )
+                assert note in observatory_status.note
+
+            with self.assertRaises(asyncio.TimeoutError):
+                observatory_status = await self.assert_next_sample(
+                    self.remote.evt_observatoryStatus,
+                    flush=False,
+                )
+                self.log.error(
+                    f"observatory_status={Scheduler.ObservatoryStatus(observatory_status.status)!r}."
+                )
+
+            self.remote.evt_summaryState.flush()
+
+            await self.csc.fault(
+                code=1,
+                report="Testing CSC going to fault.",
+            )
+
+            await self.assert_next_summary_state(
+                salobj.State.FAULT,
+                flush=False,
+                timeout=SHORT_TIMEOUT,
+            )
+
+            observatory_status = await self.assert_next_sample(
+                self.remote.evt_observatoryStatus,
+                flush=False,
+            )
+
+            assert observatory_status.status == Scheduler.ObservatoryStatus.FAULT, (
+                f"Expected observatory status to be {Scheduler.ObservatoryStatus.FAULT}; "
+                "got {observatory_status.statusLabels}."
+            )
+
+            await self.remote.cmd_standby.start(timeout=SHORT_TIMEOUT)
+
+    @pytest.mark.skipif(
         supports_observatory_status,
         reason="CSC interface supports observatory status feature.",
     )
