@@ -995,7 +995,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         """
         self.assert_enabled()
         self.validate_observatory_status(data.status)
-        note = self.generate_status_note(user_note=data.note)
+        note = self.generate_status_note(user_note=data.note if data.note else None)
         await self.set_observatory_status(
             status=data.status,
             note=note,
@@ -3163,7 +3163,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 note=status_note,
             )
 
-    def generate_status_note(self, user_note=None):
+    def generate_status_note(self, user_note=None, system_note=None):
         """Construct a descriptive string summarizing the current system
         health.
 
@@ -3174,6 +3174,9 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         Parameters
         ----------
         user_note : `str`, optional
+            A custom message to prepend to the status note. If None, only
+            the component fault information is returned.
+        system_note : `str`, optional
             A custom message to prepend to the status note. If None, only
             the component fault information is returned.
 
@@ -3189,10 +3192,22 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         identify components where the state matches `salobj.State.FAULT`.
         The resulting string uses the formal representation (`!r`) of
         the `salobj.State` enumeration for clarity.
+
+        User notes are stored and persisted over if not updated, whereas
+        system notes are cleared if not provided.
         """
         note = ""
         if user_note is not None:
+            self._last_observatory_status_note = user_note
             note += user_note
+        elif self._last_observatory_status_note is not None:
+            note += self._last_observatory_status_note
+
+        if system_note is not None:
+            if note and not note[-1].isspace():
+                note += " "
+            note += system_note
+
         components_in_fault = [
             component
             for component, state in self._components_summary_state.items()
@@ -3287,7 +3302,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             status = status ^ SchedulerObservatoryStatus.DAYTIME
             if not status:
                 status = SchedulerObservatoryStatus.IDLE
-            note = self.generate_status_note(user_note="Nighttime started.")
+            note = self.generate_status_note(system_note="Nighttime started.")
             await self.set_observatory_status(status=status, note=note)
 
     async def handle_observatory_status_daytime(self):
@@ -3303,7 +3318,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             if status & SchedulerObservatoryStatus.IDLE:
                 status = status ^ SchedulerObservatoryStatus.IDLE
 
-            note = self.generate_status_note(user_note="Daytime started.")
+            note = self.generate_status_note(system_note="Daytime started.")
             await self.set_observatory_status(
                 status=status,
                 note=note,
