@@ -653,8 +653,10 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                 status=Scheduler.ObservatoryStatus.FAULT,
                 flush=False,
             )
-            assert "MTMount" in observatory_status.note
-            assert "fault" in observatory_status.note.lower()
+            assert (
+                f"The following components are in {salobj.State.FAULT!r} state: MTMount."
+                == observatory_status.note
+            )
 
             # Another component going to Fault will
             # trigger a new observatory status message.
@@ -665,9 +667,10 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                 status=Scheduler.ObservatoryStatus.FAULT,
                 flush=False,
             )
-            assert "MTMount" in observatory_status.note
-            assert "MTRotator" in observatory_status.note
-            assert "fault" in observatory_status.note.lower()
+            assert (
+                f"The following components are in {salobj.State.FAULT!r} state: MTMount, MTRotator."
+                == observatory_status.note
+            )
 
             # While the components are in Fault
             # we cannot change the status back to good.
@@ -690,9 +693,10 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                 status=Scheduler.ObservatoryStatus.FAULT,
                 flush=False,
             )
-            assert "MTRotator" in observatory_status.note
-            assert "MTMount" not in observatory_status.note
-            assert "fault" in observatory_status.note.lower()
+            assert (
+                f"The following components are in {salobj.State.FAULT!r} state: MTRotator. "
+                f"The following components were in {salobj.State.FAULT!r} state: MTMount."
+            ) == observatory_status.note
 
             # Still cannot clear fault flag since MTRotator is still in Fault
             expected_error_message = (
@@ -715,30 +719,71 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                 status=Scheduler.ObservatoryStatus.FAULT,
                 flush=False,
             )
+            assert (
+                f"The following components were in {salobj.State.FAULT!r} state: MTMount, MTRotator."
+            ) == observatory_status.note
 
-            assert "MTRotator" not in observatory_status.note
-            assert "MTMount" not in observatory_status.note
+            additional_note_before_fault_clear = (
+                f" The following components were in {salobj.State.FAULT!r} state: "
+                "MTMount, MTRotator."
+            )
 
-            good_status_notes = [
+            good_status_notes_before_fault_clear = [
                 (
                     Scheduler.ObservatoryStatus.FAULT,
-                    "Test manually setting flag to FAULT.",
+                    (
+                        "Test manually setting flag to FAULT without clearing fault first."
+                    ),
                 ),
                 (
                     Scheduler.ObservatoryStatus.FAULT
                     | Scheduler.ObservatoryStatus.WEATHER,
-                    "Test manually setting flag to FAULT and WEATHER.",
+                    (
+                        "Test manually setting flag to FAULT and WEATHER without clearing fault first."
+                    ),
                 ),
                 (
                     Scheduler.ObservatoryStatus.FAULT
                     | Scheduler.ObservatoryStatus.DOWNTIME,
-                    "Test manually setting flag to FAULT and DOWNTIME.",
+                    (
+                        "Test manually setting flag to FAULT and DOWNTIME without clearing fault first."
+                    ),
                 ),
                 (
                     Scheduler.ObservatoryStatus.DOWNTIME
                     | Scheduler.ObservatoryStatus.FAULT
                     | Scheduler.ObservatoryStatus.WEATHER,
-                    "Test manually setting flag to DOWNTIME, FAULT and WEATHER.",
+                    (
+                        "Test manually setting flag to DOWNTIME, FAULT and WEATHER "
+                        "without clearing fault first."
+                    ),
+                ),
+            ]
+
+            for status, note in good_status_notes_before_fault_clear:
+
+                await self.remote.cmd_updateObservatoryStatus.set_start(
+                    status=status,
+                    note=note,
+                )
+
+                observatory_status = await self.assert_next_sample(
+                    self.remote.evt_observatoryStatus,
+                    status=status,
+                    flush=False,
+                )
+                assert (
+                    observatory_status.note == note + additional_note_before_fault_clear
+                )
+
+            good_status_notes = [
+                (
+                    Scheduler.ObservatoryStatus.IDLE,
+                    ("Set flag to IDLE should clear the fault flag and message."),
+                ),
+                (
+                    Scheduler.ObservatoryStatus.FAULT,
+                    ("Test manually setting flag to FAULT after clearing fault."),
                 ),
                 (
                     Scheduler.ObservatoryStatus.DOWNTIME,
@@ -916,7 +961,7 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                 flush=False,
             )
             assert "MTRotator" in observatory_status.note
-            assert "MTMount" not in observatory_status.note
+            assert "MTMount" in observatory_status.note
             assert "fault" in observatory_status.note.lower()
 
             await mtrotator.evt_summaryState.set_write(
@@ -929,8 +974,8 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                 flush=False,
             )
 
-            assert "MTRotator" not in observatory_status.note
-            assert "MTMount" not in observatory_status.note
+            assert "MTRotator" in observatory_status.note
+            assert "MTMount" in observatory_status.note
 
     @pytest.mark.skipif(
         not supports_observatory_status,
@@ -1177,7 +1222,7 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                 | Scheduler.ObservatoryStatus.DAYTIME,
                 flush=False,
             )
-            assert "MTMount" not in observatory_status.note
+            assert "MTMount" in observatory_status.note
             assert "MTRotator" in observatory_status.note
 
             await mtrotator.evt_summaryState.set_write(
@@ -1190,8 +1235,8 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                 | Scheduler.ObservatoryStatus.DAYTIME,
                 flush=False,
             )
-            assert "MTMount" not in observatory_status.note
-            assert "MTRotator" not in observatory_status.note
+            assert "MTMount" in observatory_status.note
+            assert "MTRotator" in observatory_status.note
 
             await self.remote.cmd_updateObservatoryStatus.set_start(
                 status=Scheduler.ObservatoryStatus.DAYTIME,
@@ -1202,6 +1247,8 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                 status=Scheduler.ObservatoryStatus.DAYTIME,
                 flush=False,
             )
+
+            assert not observatory_status.note
 
             self.csc.model.get_general_info = get_general_info_nighttime
 
