@@ -1586,6 +1586,28 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
             )
             assert "Testing status preserved." in observatory_status.note
 
+            await self.remote.cmd_updateObservatoryStatus.set_start(
+                status=Scheduler.ObservatoryStatus.IDLE,
+            )
+
+            observatory_status = await self.assert_next_sample(
+                self.remote.evt_observatoryStatus,
+                status=Scheduler.ObservatoryStatus.IDLE,
+                flush=False,
+            )
+            assert "Testing status preserved." in observatory_status.note
+
+            await self.remote.cmd_updateObservatoryStatus.set_start(
+                status=Scheduler.ObservatoryStatus.OPERATIONAL,
+            )
+
+            observatory_status = await self.assert_next_sample(
+                self.remote.evt_observatoryStatus,
+                status=Scheduler.ObservatoryStatus.OPERATIONAL,
+                flush=False,
+            )
+            assert "Testing status preserved." in observatory_status.note
+
             await salobj.set_summary_state(
                 self.remote,
                 salobj.State.STANDBY,
