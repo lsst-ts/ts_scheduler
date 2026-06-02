@@ -303,6 +303,10 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         # Dictionary to store the state of the components
         # being monitored for observatory status.
         self._components_summary_state = dict()
+        # A set with the name of components that were in fault
+        # and transitioned out of fault. It is clearened whenever
+        # the FAULT bit is cleared in the observatory status.
+        self._components_were_in_fault = []
 
         self.max_status = 0
         for observatory_status in SchedulerObservatoryStatus:
@@ -995,6 +999,12 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         """
         self.assert_enabled()
         self.validate_observatory_status(data.status)
+        status = self.evt_observatoryStatus.data.status
+        if (
+            status & SchedulerObservatoryStatus.FAULT
+            and not data.status & SchedulerObservatoryStatus.FAULT
+        ):
+            self._components_were_in_fault = []
         note = self.generate_status_note(user_note=data.note if data.note else None)
         await self.set_observatory_status(
             status=data.status,
@@ -2949,6 +2959,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             )
 
         await self.set_observatory_status_fault()
+        self._components_were_in_fault.append(self.salinfo.name_index)
         await super().fault(code=code, report=report, traceback=traceback)
 
     async def set_observatory_status(self, status, note):
@@ -3053,6 +3064,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         if component_state == salobj.State.FAULT:
             await self.set_observatory_status_fault()
+            if component_name not in self._components_were_in_fault:
+                self._components_were_in_fault.append(component_name)
         else:
             await self.unset_observatory_status_fault()
 
@@ -3219,7 +3232,26 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         if components_in_fault:
             if note and not note[-1].isspace():
                 note += " "
-            note += f"The following components are in {salobj.State.FAULT!r} state: {components_in_fault}."
+            components_in_fault_str = ", ".join(components_in_fault)
+            note += (
+                f"The following components are in {salobj.State.FAULT!r} state: "
+                f"{components_in_fault_str}."
+            )
+
+        components_were_in_fault = [
+            component
+            for component in self._components_were_in_fault
+            if component not in components_in_fault
+        ]
+        if components_were_in_fault:
+            if note and not note[-1].isspace():
+                note += " "
+            components_were_in_fault_str = ", ".join(components_were_in_fault)
+            note += (
+                f"The following components were in {salobj.State.FAULT!r} state: "
+                f"{components_were_in_fault_str}."
+            )
+
         return note
 
     def validate_observatory_status(self, status):
