@@ -244,6 +244,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         # needed to start it.
         self.run_target_loop = asyncio.Event()
         self.telemetry_in_sync = asyncio.Event()
+        self.observatory_status_fault_cleared = asyncio.Event()
 
         # Lock for the event loop. This is used to synchronize actions that
         # will affect the target production loop.
@@ -1893,6 +1894,20 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
             await self.telemetry_in_sync.wait()
             await self.run_target_loop.wait()
+            if (
+                self.evt_observatoryStatus.data.status
+                & Scheduler.ObservatoryStatus.FAULT
+            ):
+                self.log.warning(
+                    f"Current observatory status: {self.evt_observatoryStatus.data.statusLabels}. "
+                    "Fault flag enabled; pausing target production loop. "
+                    "Clear flag to resume."
+                )
+                await self.observatory_status_fault_cleared.wait()
+                self.log.info(
+                    f"Current observatory status: {self.evt_observatoryStatus.data.statusLabels}. "
+                    "Fault cleared; resuming target production loop."
+                )
 
             try:
                 async with self.target_loop_lock:
@@ -2990,6 +3005,11 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             ),
             note=note,
         )
+
+        if status & Scheduler.ObservatoryStatus.FAULT:
+            self.observatory_status_fault_cleared.clear()
+        else:
+            self.observatory_status_fault_cleared.set()
 
     async def monitor_observatory_status(self):
         """Monitor and set the observatory status."""
