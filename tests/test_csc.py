@@ -1526,6 +1526,102 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
             await self.remote.cmd_stop.start(timeout=LONG_TIMEOUT)
 
     @pytest.mark.skipif(
+        not supports_observatory_status,
+        reason="CSC interface does not support observatory status feature.",
+    )
+    async def test_observatory_status_preserve_status(self):
+        async with self.make_csc(
+            config_dir=TEST_CONFIG_DIR,
+            initial_state=salobj.State.STANDBY,
+            simulation_mode=SchedulerModes.SIMULATION,
+        ), ObservatoryStateMock(), self.make_script_queue(running=True):
+
+            def get_general_info_nighttime():
+                return dict(isNight=True)
+
+            self.csc.model.get_general_info = get_general_info_nighttime
+
+            await salobj.set_summary_state(
+                self.remote,
+                salobj.State.ENABLED,
+                override="monitor_observatory_state.yaml",
+            )
+
+            expected_initial_observatory_status_note = [
+                (Scheduler.ObservatoryStatus.UNKNOWN, "Scheduler CSC started"),
+                (Scheduler.ObservatoryStatus.UNKNOWN, "Scheduler CSC in STANDBY"),
+                (
+                    Scheduler.ObservatoryStatus.UNKNOWN,
+                    "Observatory status feature enabled",
+                ),
+                (
+                    Scheduler.ObservatoryStatus.IDLE,
+                    "Observatory status feature enabled",
+                ),
+            ]
+
+            for status, note in expected_initial_observatory_status_note:
+                observatory_status = await self.assert_next_sample(
+                    self.remote.evt_observatoryStatus,
+                    status=status,
+                    flush=False,
+                )
+                assert note in observatory_status.note
+
+            with self.assertRaises(asyncio.TimeoutError):
+                observatory_status = await self.assert_next_sample(
+                    self.remote.evt_observatoryStatus,
+                    flush=False,
+                )
+
+            await self.remote.cmd_updateObservatoryStatus.set_start(
+                status=Scheduler.ObservatoryStatus.OPERATIONAL,
+                note="Testing status preserved.",
+            )
+
+            observatory_status = await self.assert_next_sample(
+                self.remote.evt_observatoryStatus,
+                status=Scheduler.ObservatoryStatus.OPERATIONAL,
+                flush=False,
+            )
+            assert "Testing status preserved." in observatory_status.note
+
+            await salobj.set_summary_state(
+                self.remote,
+                salobj.State.STANDBY,
+            )
+
+            expected_initial_observatory_status_note = [
+                (Scheduler.ObservatoryStatus.UNKNOWN, "Scheduler CSC in STANDBY"),
+            ]
+
+            for status, note in expected_initial_observatory_status_note:
+                observatory_status = await self.assert_next_sample(
+                    self.remote.evt_observatoryStatus,
+                    status=status,
+                    flush=False,
+                )
+                assert note in observatory_status.note
+
+            await salobj.set_summary_state(
+                self.remote,
+                salobj.State.ENABLED,
+                override="monitor_observatory_state.yaml",
+            )
+
+            expected_initial_observatory_status_note = [
+                (Scheduler.ObservatoryStatus.OPERATIONAL, "Testing status preserved."),
+            ]
+
+            for status, note in expected_initial_observatory_status_note:
+                observatory_status = await self.assert_next_sample(
+                    self.remote.evt_observatoryStatus,
+                    status=status,
+                    flush=False,
+                )
+                assert note in observatory_status.note
+
+    @pytest.mark.skipif(
         supports_observatory_status,
         reason="CSC interface supports observatory status feature.",
     )
