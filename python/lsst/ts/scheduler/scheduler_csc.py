@@ -310,6 +310,9 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         self.enable_observatory_status_monitor = False
 
+        self._last_observatory_status = None
+        self._last_observatory_status_note = None
+
     @property
     def queue_remote(self):
         """Access the remote for the script queue."""
@@ -478,6 +481,15 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     self._remotes[
                         component_reference_name
                     ].evt_summaryState.callback = None
+            if (
+                self.evt_observatoryStatus.data.status
+                != SchedulerObservatoryStatus.UNKNOWN
+            ):
+                self._last_observatory_status = self.evt_observatoryStatus.data.status
+                self._last_observatory_status_note = (
+                    self.evt_observatoryStatus.data.note
+                )
+
             await self.set_observatory_status(
                 status=SchedulerObservatoryStatus.UNKNOWN,
                 note=(
@@ -1458,14 +1470,25 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     "CSC interface does not support observatory status. "
                     "Ensure 'observatory_status.enable: false' in the configuration."
                 )
-            await self.set_observatory_status(
-                status=SchedulerObservatoryStatus.UNKNOWN,
-                note=(
-                    "Observatory status feature enabled; "
-                    "observatory status will be monitored and updated while "
-                    "CSC is in DISABLED or ENABLED."
-                ),
-            )
+
+            if self._last_observatory_status is not None:
+                self.log.info("Restoring observatory status.")
+
+                await self.set_observatory_status(
+                    status=self._last_observatory_status,
+                    note=self._last_observatory_status_note,
+                )
+                self._last_observatory_status = None
+            else:
+                await self.set_observatory_status(
+                    status=SchedulerObservatoryStatus.UNKNOWN,
+                    note=(
+                        "Observatory status feature enabled; "
+                        "observatory status will be monitored and updated while "
+                        f"CSC is in {salobj.State.DISABLED!r} or {salobj.State.ENABLED!r}."
+                    ),
+                )
+
             if not self._observatory_status_task.done():
                 self.log.info("Observatory status task still running. Cancelling it.")
                 self._observatory_status_task.cancel()
