@@ -1481,6 +1481,12 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
 
             await self.remote.cmd_stop.start(timeout=LONG_TIMEOUT)
 
+            observatory_status = await self.assert_next_sample(
+                self.remote.evt_observatoryStatus,
+                status=Scheduler.ObservatoryStatus.IDLE,
+                flush=False,
+            )
+
             await mtmount.evt_summaryState.set_write(summaryState=salobj.State.FAULT)
 
             observatory_status = await self.assert_next_sample(
@@ -1517,6 +1523,12 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
             )
 
             await self.remote.cmd_stop.start(timeout=LONG_TIMEOUT)
+
+            await self.assert_next_sample(
+                self.remote.evt_observatoryStatus,
+                status=Scheduler.ObservatoryStatus.IDLE,
+                flush=False,
+            )
 
             # Let's make the observatory status weather.
             # This means the status will not be updated when we resume
@@ -1661,6 +1673,7 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
             )
 
             expected_initial_observatory_status_note = [
+                (Scheduler.ObservatoryStatus.IDLE, "Testing status preserved."),
                 (Scheduler.ObservatoryStatus.UNKNOWN, "Scheduler CSC in STANDBY"),
             ]
 
@@ -1679,7 +1692,56 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
             )
 
             expected_initial_observatory_status_note = [
-                (Scheduler.ObservatoryStatus.OPERATIONAL, "Testing status preserved."),
+                (Scheduler.ObservatoryStatus.IDLE, "Testing status preserved."),
+            ]
+
+            for status, note in expected_initial_observatory_status_note:
+                observatory_status = await self.assert_next_sample(
+                    self.remote.evt_observatoryStatus,
+                    status=status,
+                    flush=False,
+                )
+                assert note in observatory_status.note
+
+            await self.remote.cmd_updateObservatoryStatus.set_start(
+                status=Scheduler.ObservatoryStatus.WEATHER
+                | Scheduler.ObservatoryStatus.OPERATIONAL,
+            )
+
+            observatory_status = await self.assert_next_sample(
+                self.remote.evt_observatoryStatus,
+                status=Scheduler.ObservatoryStatus.WEATHER
+                | Scheduler.ObservatoryStatus.OPERATIONAL,
+                flush=False,
+            )
+            assert "Testing status preserved." in observatory_status.note
+
+            await salobj.set_summary_state(
+                self.remote,
+                salobj.State.STANDBY,
+            )
+
+            expected_initial_observatory_status_note = [
+                (Scheduler.ObservatoryStatus.WEATHER, "Testing status preserved."),
+                (Scheduler.ObservatoryStatus.UNKNOWN, "Scheduler CSC in STANDBY"),
+            ]
+
+            for status, note in expected_initial_observatory_status_note:
+                observatory_status = await self.assert_next_sample(
+                    self.remote.evt_observatoryStatus,
+                    status=status,
+                    flush=False,
+                )
+                assert note in observatory_status.note
+
+            await salobj.set_summary_state(
+                self.remote,
+                salobj.State.ENABLED,
+                override="monitor_observatory_state.yaml",
+            )
+
+            expected_initial_observatory_status_note = [
+                (Scheduler.ObservatoryStatus.WEATHER, "Testing status preserved."),
             ]
 
             for status, note in expected_initial_observatory_status_note:
