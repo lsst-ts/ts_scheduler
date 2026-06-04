@@ -529,6 +529,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             result="Disabling CSC.",
         )
 
+        await self.unset_observatory_status_operational()
+
         await self._stop_all_background_tasks()
 
     async def do_resume(self, data):
@@ -673,6 +675,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             f"Cleaning up targets queue. Discarding {len(self.targets_queue)} targets."
         )
         self.targets_queue = []
+
+        await self.unset_observatory_status_operational()
 
     async def stop_target_loop_execution(self) -> None:
         """Stop target production loop execution."""
@@ -3375,6 +3379,21 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 status=status,
                 note=note,
             )
+
+    async def unset_observatory_status_operational(self):
+        """Remove the OPERATIONAL flag from the observatory status.
+
+        This method is a no-op if OPERATIONAL is not enabled.
+        """
+
+        status = self.evt_observatoryStatus.data.status
+
+        if status & Scheduler.ObservatoryStatus.OPERATIONAL:
+            status = status ^ Scheduler.ObservatoryStatus.OPERATIONAL
+            if status == Scheduler.ObservatoryStatus.UNKNOWN:
+                status = Scheduler.ObservatoryStatus.IDLE
+            note = self.generate_status_note()
+            await self.set_observatory_status(status=status, note=note)
 
 
 def run_scheduler() -> None:
