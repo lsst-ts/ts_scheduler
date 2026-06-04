@@ -1,0 +1,1 @@
+Modified the resume command to reject execution if the status is Fault and monitored components remain in a fault state.

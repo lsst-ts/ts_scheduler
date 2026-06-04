@@ -1,0 +1,1 @@
+Added logic to pause the target production loop whenever the fault bit is active in the observatory status.

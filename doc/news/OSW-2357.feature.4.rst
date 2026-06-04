@@ -1,0 +1,1 @@
+Improved the handling of component fault states in status notes to ensure recovered CSCs remain listed until explicitly cleared.
