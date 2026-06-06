@@ -1,0 +1,1 @@
+Ensured the observatory status transitions directly to Fault whenever the CSC itself enters a Fault state.

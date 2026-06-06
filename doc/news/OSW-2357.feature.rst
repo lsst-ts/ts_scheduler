@@ -1,0 +1,1 @@
+Updated the resume command to automatically switch the status flag to OPERATIONAL on a best-effort basis.

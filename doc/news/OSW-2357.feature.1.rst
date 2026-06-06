@@ -1,0 +1,1 @@
+Configured the Scheduler CSC to transition to IDLE status when the daytime flag is cleared or during nighttime if no other status bits are active.

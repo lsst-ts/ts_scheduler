@@ -1,0 +1,1 @@
+Updated 'generate_status_note' to inject structured system notes while preserving existing user notes.

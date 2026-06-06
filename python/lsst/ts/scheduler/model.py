@@ -129,6 +129,7 @@ class Model:
         # Dictionary to store observing blocks
         self.observing_blocks: dict[str, observing.ObservingBlock] = dict()
         self.observing_blocks_status: dict[str, ObservingBlockStatus] = dict()
+        self.valid_observing_blocks: set[str] = set()
 
         # Scheduler driver instance.
         self.driver: Driver | None = None
@@ -330,9 +331,6 @@ class Model:
                 bad_block_programs.add(observing_block.program)
                 continue
             self.observing_blocks[observing_block.program] = observing_block
-            self.observing_blocks_status[observing_block.program] = (
-                await self._get_block_status(program=observing_block.program)
-            )
 
         if bad_block_programs:
             bad_blocks = ", ".join(bad_block_programs)
@@ -352,6 +350,7 @@ class Model:
         observing_scripts_config_validator : `ValidationRules`
             Dictionary with script configuration validator.
         """
+        self.valid_observing_blocks = set()
 
         for block_id in self.observing_blocks:
             target_validate = DriverTarget(
@@ -372,23 +371,19 @@ class Model:
                         f"Script {script.name} from observing block {block_id} failed validation: "
                         f"{validation_error.message}.\n{script.parameters}"
                     )
-                    self.observing_blocks_status[block_id].status = BlockStatus.INVALID
                     break
                 except Exception:
                     self.log.exception(
                         f"Failed to validate script {script.name} from observing block {block_id} "
                         f"with:\n{script.parameters}"
                     )
-                    self.observing_blocks_status[block_id].status = BlockStatus.INVALID
                     break
                 else:
                     self.log.debug(
                         f"Successfully validated script {script.name} from {block_id} "
                         f"with:\n{script.parameters}"
                     )
-                    self.observing_blocks_status[block_id].status = (
-                        BlockStatus.AVAILABLE
-                    )
+                    self.valid_observing_blocks.add(block_id)
 
     def get_valid_observing_blocks(self) -> list[str]:
         """Get list of valid observing blocks.
@@ -398,11 +393,7 @@ class Model:
         `list`[ `str` ]
             List of valid observing blocks.
         """
-        return [
-            block_id
-            for block_id in self.observing_blocks_status
-            if self.observing_blocks_status[block_id].status != BlockStatus.INVALID
-        ]
+        return list(self.valid_observing_blocks)
 
     async def configure_driver(self, config: typing.Any) -> SurveyTopology:
         """Load driver for selected scheduler and configure its basic
@@ -1396,7 +1387,7 @@ class Model:
 
         return await loop.run_in_executor(None, convert_efd_observations_to_targets)
 
-    async def _get_block_status(self, program: str) -> ObservingBlockStatus:
+    async def get_block_status(self, program: str) -> ObservingBlockStatus:
         """Get block status.
 
         Parameters
