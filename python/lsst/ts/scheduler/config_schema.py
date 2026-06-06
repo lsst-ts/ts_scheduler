@@ -23,8 +23,7 @@ __all__ = ["CONFIG_SCHEMA"]
 
 import yaml
 
-CONFIG_SCHEMA = yaml.safe_load(
-    """$schema: http://json-schema.org/draft-07/schema#
+CONFIG_SCHEMA = yaml.safe_load("""$schema: http://json-schema.org/draft-07/schema#
 $id: https://github.com/lsst-ts/ts_scheduler/blob/master/schema/Scheduler.yaml
 # title must end with one or more spaces followed by the schema version, which must begin with "v"
 title: Scheduler v9
@@ -806,5 +805,4 @@ properties:
     $ref: "#/definitions/instance_specific_config"
   ocs:
     $ref: "#/definitions/instance_specific_config"
-"""
-)
+""")

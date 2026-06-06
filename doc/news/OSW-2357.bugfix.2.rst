@@ -1,0 +1,1 @@
+Unset the OPERATIONAL flag automatically if the Scheduler CSC is disabled or stopped.

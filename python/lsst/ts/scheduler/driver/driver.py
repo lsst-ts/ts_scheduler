@@ -264,7 +264,7 @@ class Driver:
             # Driver was not initialized yet. Need to compute night
             # boundaries
 
-            (self.current_sunset, self.current_sunrise) = self.models[
+            self.current_sunset, self.current_sunrise = self.models[
                 "sky"
             ].get_night_boundaries(self.parameters.night_boundary)
 
@@ -303,7 +303,7 @@ class Driver:
                 f"Assuming sun elevation of {self.parameters.night_boundary}."
             )
             self.night += 1
-            (self.current_sunset, self.current_sunrise) = self.models[
+            self.current_sunset, self.current_sunrise = self.models[
                 "sky"
             ].get_night_boundaries(self.parameters.night_boundary)
 

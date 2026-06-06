@@ -1,0 +1,1 @@
+Added a lifecycle state cache that stores the observatory status when transitioning to Standby and restores it during configuration.

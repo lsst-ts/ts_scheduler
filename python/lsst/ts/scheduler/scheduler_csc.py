@@ -244,6 +244,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         # needed to start it.
         self.run_target_loop = asyncio.Event()
         self.telemetry_in_sync = asyncio.Event()
+        self.observatory_status_fault_cleared = asyncio.Event()
 
         # Lock for the event loop. This is used to synchronize actions that
         # will affect the target production loop.
@@ -303,12 +304,19 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         # Dictionary to store the state of the components
         # being monitored for observatory status.
         self._components_summary_state = dict()
+        # A set with the name of components that were in fault
+        # and transitioned out of fault. It is clearened whenever
+        # the FAULT bit is cleared in the observatory status.
+        self._components_were_in_fault = []
 
         self.max_status = 0
         for observatory_status in SchedulerObservatoryStatus:
             self.max_status = self.max_status ^ observatory_status
 
         self.enable_observatory_status_monitor = False
+
+        self._last_observatory_status = None
+        self._last_observatory_status_note = None
 
     @property
     def queue_remote(self):
@@ -478,6 +486,15 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     self._remotes[
                         component_reference_name
                     ].evt_summaryState.callback = None
+            if (
+                self.evt_observatoryStatus.data.status
+                != SchedulerObservatoryStatus.UNKNOWN
+            ):
+                self._last_observatory_status = self.evt_observatoryStatus.data.status
+                self._last_observatory_status_note = (
+                    self.evt_observatoryStatus.data.note
+                )
+
             await self.set_observatory_status(
                 status=SchedulerObservatoryStatus.UNKNOWN,
                 note=(
@@ -512,6 +529,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             result="Disabling CSC.",
         )
 
+        await self.unset_observatory_status_operational()
+
         await self._stop_all_background_tasks()
 
     async def do_resume(self, data):
@@ -532,6 +551,23 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         self.assert_enabled()
 
         async with self.target_loop_lock:
+
+            status = self.evt_observatoryStatus.data.status
+
+            if (status & Scheduler.ObservatoryStatus.FAULT) and (
+                components_in_fault := [
+                    component
+                    for component, state in self._components_summary_state.items()
+                    if state == salobj.State.FAULT
+                ]
+            ):
+                raise RuntimeError(
+                    "Cannot resume Scheduler while observatory status is in fault and "
+                    "monitored components are still in fault. "
+                    "The following components cannot be in fault to resume the Scheduler: "
+                    f"{components_in_fault}. "
+                )
+
             if self.run_target_loop.is_set():
                 raise RuntimeError("Target production loop already running.")
 
@@ -556,6 +592,39 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             await self._transition_idle_to_running()
 
             self.run_target_loop.set()
+
+        status = self.evt_observatoryStatus.data.status
+        status_labels = self.evt_observatoryStatus.data.statusLabels
+
+        if status & Scheduler.ObservatoryStatus.OPERATIONAL:
+            self.log.info(
+                f"Observatory status: {status_labels}. "
+                "Operational flag already active when resuming the scheduler; "
+                "nothing to do."
+            )
+        elif status & Scheduler.ObservatoryStatus.DAYTIME:
+            self.log.info(
+                f"Observatory status: {status_labels}. "
+                f"Scheduler resumed while DAYTIME flag active; nothing to do."
+            )
+        else:
+            if status & Scheduler.ObservatoryStatus.IDLE:
+                status = status ^ SchedulerObservatoryStatus.IDLE
+            if status & Scheduler.ObservatoryStatus.FAULT:
+                status = status ^ SchedulerObservatoryStatus.FAULT
+
+            status = status ^ SchedulerObservatoryStatus.OPERATIONAL
+            try:
+                self.validate_observatory_status(status)
+            except (InvalidStatusError, UpdateStatusError):
+                self.log.info(
+                    "Cannot update observatory status while resuming. Continuing...",
+                    exc_info=True,
+                )
+            else:
+                await self.set_observatory_status(
+                    status=status, note="Scheduler resumed."
+                )
 
     async def do_stop(self, data):
         """Stop target production loop.
@@ -606,6 +675,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             f"Cleaning up targets queue. Discarding {len(self.targets_queue)} targets."
         )
         self.targets_queue = []
+
+        await self.unset_observatory_status_operational()
 
     async def stop_target_loop_execution(self) -> None:
         """Stop target production loop execution."""
@@ -933,7 +1004,13 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         """
         self.assert_enabled()
         self.validate_observatory_status(data.status)
-        note = self.generate_status_note(user_note=data.note)
+        status = self.evt_observatoryStatus.data.status
+        if (
+            status & SchedulerObservatoryStatus.FAULT
+            and not data.status & SchedulerObservatoryStatus.FAULT
+        ):
+            self._components_were_in_fault = []
+        note = self.generate_status_note(user_note=data.note if data.note else None)
         await self.set_observatory_status(
             status=data.status,
             note=note,
@@ -1408,14 +1485,25 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     "CSC interface does not support observatory status. "
                     "Ensure 'observatory_status.enable: false' in the configuration."
                 )
-            await self.set_observatory_status(
-                status=SchedulerObservatoryStatus.UNKNOWN,
-                note=(
-                    "Observatory status feature enabled; "
-                    "observatory status will be monitored and updated while "
-                    "CSC is in DISABLED or ENABLED."
-                ),
-            )
+
+            if self._last_observatory_status is not None:
+                self.log.info("Restoring observatory status.")
+
+                await self.set_observatory_status(
+                    status=self._last_observatory_status,
+                    note=self._last_observatory_status_note,
+                )
+                self._last_observatory_status = None
+            else:
+                await self.set_observatory_status(
+                    status=SchedulerObservatoryStatus.UNKNOWN,
+                    note=(
+                        "Observatory status feature enabled; "
+                        "observatory status will be monitored and updated while "
+                        f"CSC is in {salobj.State.DISABLED!r} or {salobj.State.ENABLED!r}."
+                    ),
+                )
+
             if not self._observatory_status_task.done():
                 self.log.info("Observatory status task still running. Cancelling it.")
                 self._observatory_status_task.cancel()
@@ -1810,6 +1898,20 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
             await self.telemetry_in_sync.wait()
             await self.run_target_loop.wait()
+            if (
+                self.evt_observatoryStatus.data.status
+                & Scheduler.ObservatoryStatus.FAULT
+            ):
+                self.log.warning(
+                    f"Current observatory status: {self.evt_observatoryStatus.data.statusLabels}. "
+                    "Fault flag enabled; pausing target production loop. "
+                    "Clear flag to resume."
+                )
+                await self.observatory_status_fault_cleared.wait()
+                self.log.info(
+                    f"Current observatory status: {self.evt_observatoryStatus.data.statusLabels}. "
+                    "Fault cleared; resuming target production loop."
+                )
 
             try:
                 async with self.target_loop_lock:
@@ -2875,6 +2977,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 "Error trying to cleanup queue targets while going to FAULT. Ignoring."
             )
 
+        await self.set_observatory_status_fault()
+        self._components_were_in_fault.append(self.salinfo.name_index)
         await super().fault(code=code, report=report, traceback=traceback)
 
     async def set_observatory_status(self, status, note):
@@ -2905,6 +3009,11 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             ),
             note=note,
         )
+
+        if status & Scheduler.ObservatoryStatus.FAULT:
+            self.observatory_status_fault_cleared.clear()
+        else:
+            self.observatory_status_fault_cleared.set()
 
     async def monitor_observatory_status(self):
         """Monitor and set the observatory status."""
@@ -2979,6 +3088,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         if component_state == salobj.State.FAULT:
             await self.set_observatory_status_fault()
+            if component_name not in self._components_were_in_fault:
+                self._components_were_in_fault.append(component_name)
         else:
             await self.unset_observatory_status_fault()
 
@@ -3015,6 +3126,10 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         if status & SchedulerObservatoryStatus.OPERATIONAL:
             self.log.debug("Disable operational.")
             status = status ^ SchedulerObservatoryStatus.OPERATIONAL
+
+        if status & SchedulerObservatoryStatus.IDLE:
+            self.log.debug("Disable idle.")
+            status = status ^ SchedulerObservatoryStatus.IDLE
 
         if (
             self.evt_observatoryStatus.data.status & SchedulerObservatoryStatus.FAULT
@@ -3085,7 +3200,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 note=status_note,
             )
 
-    def generate_status_note(self, user_note=None):
+    def generate_status_note(self, user_note=None, system_note=None):
         """Construct a descriptive string summarizing the current system
         health.
 
@@ -3096,6 +3211,9 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         Parameters
         ----------
         user_note : `str`, optional
+            A custom message to prepend to the status note. If None, only
+            the component fault information is returned.
+        system_note : `str`, optional
             A custom message to prepend to the status note. If None, only
             the component fault information is returned.
 
@@ -3111,19 +3229,53 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         identify components where the state matches `salobj.State.FAULT`.
         The resulting string uses the formal representation (`!r`) of
         the `salobj.State` enumeration for clarity.
+
+        User notes are stored and persisted over if not updated, whereas
+        system notes are cleared if not provided.
         """
         note = ""
         if user_note is not None:
+            self._last_observatory_status_note = user_note
             note += user_note
+        elif self._last_observatory_status_note is not None:
+            note += self._last_observatory_status_note
+
+        if system_note is not None:
+            if note and not note[-1].isspace():
+                note += " "
+            note += system_note
+
         components_in_fault = [
             component
             for component, state in self._components_summary_state.items()
             if state == salobj.State.FAULT
         ]
+        if self.summary_state == salobj.State.FAULT:
+            components_in_fault.append(self.salinfo.name_index)
+
         if components_in_fault:
             if note and not note[-1].isspace():
                 note += " "
-            note += f"The following components are in {salobj.State.FAULT!r} state: {components_in_fault}."
+            components_in_fault_str = ", ".join(components_in_fault)
+            note += (
+                f"The following components are in {salobj.State.FAULT!r} state: "
+                f"{components_in_fault_str}."
+            )
+
+        components_were_in_fault = [
+            component
+            for component in self._components_were_in_fault
+            if component not in components_in_fault
+        ]
+        if components_were_in_fault:
+            if note and not note[-1].isspace():
+                note += " "
+            components_were_in_fault_str = ", ".join(components_were_in_fault)
+            note += (
+                f"The following components were in {salobj.State.FAULT!r} state: "
+                f"{components_were_in_fault_str}."
+            )
+
         return note
 
     def validate_observatory_status(self, status):
@@ -3197,9 +3349,16 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             return
 
         status = self.evt_observatoryStatus.data.status
-        if status & SchedulerObservatoryStatus.DAYTIME:
+        if not status:
+            status = SchedulerObservatoryStatus.IDLE
+            note = self.evt_observatoryStatus.data.note
+            await self.set_observatory_status(status=status, note=note)
+
+        elif status & SchedulerObservatoryStatus.DAYTIME:
             status = status ^ SchedulerObservatoryStatus.DAYTIME
-            note = self.generate_status_note(user_note="Nighttime started.")
+            if not status:
+                status = SchedulerObservatoryStatus.IDLE
+            note = self.generate_status_note(system_note="Nighttime started.")
             await self.set_observatory_status(status=status, note=note)
 
     async def handle_observatory_status_daytime(self):
@@ -3211,11 +3370,30 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             status = status | SchedulerObservatoryStatus.DAYTIME
             if status & SchedulerObservatoryStatus.OPERATIONAL:
                 status = status ^ SchedulerObservatoryStatus.OPERATIONAL
-            note = self.generate_status_note(user_note="Daytime started.")
+
+            if status & SchedulerObservatoryStatus.IDLE:
+                status = status ^ SchedulerObservatoryStatus.IDLE
+
+            note = self.generate_status_note(system_note="Daytime started.")
             await self.set_observatory_status(
                 status=status,
                 note=note,
             )
+
+    async def unset_observatory_status_operational(self):
+        """Remove the OPERATIONAL flag from the observatory status.
+
+        This method is a no-op if OPERATIONAL is not enabled.
+        """
+
+        status = self.evt_observatoryStatus.data.status
+
+        if status & Scheduler.ObservatoryStatus.OPERATIONAL:
+            status = status ^ Scheduler.ObservatoryStatus.OPERATIONAL
+            if status == Scheduler.ObservatoryStatus.UNKNOWN:
+                status = Scheduler.ObservatoryStatus.IDLE
+            note = self.generate_status_note()
+            await self.set_observatory_status(status=status, note=note)
 
 
 def run_scheduler() -> None:
