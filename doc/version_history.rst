@@ -6,6 +6,33 @@ Version History
 
 .. towncrier release notes start
 
+v2.10.0 (2026-06-05)
+====================
+
+New Features
+------------
+
+- Updated Model.get_valid_observing_blocks to return the list of valid observing blocks straight from the set created at configuration time in model.py. (`OSW-2331 <https://rubinobs.atlassian.net//browse/OSW-2331>`_)
+- Renamed Model._get_block_status to Model.get_block_status to mark it as a public method in model.py. (`OSW-2331 <https://rubinobs.atlassian.net//browse/OSW-2331>`_)
+- Updated SchedulerCSC._update_block_status to initialize the status of a block if it is not already present in scheduler_csc.py. (`OSW-2331 <https://rubinobs.atlassian.net//browse/OSW-2331>`_)
+- Refactored load observing block feature to stop retrieving block status during configuration phase in model.py. (`OSW-2331 <https://rubinobs.atlassian.net//browse/OSW-2331>`_)
+- Added a test fixture that will handle setting TS_CONFIG_SCHEDULER_DIR environment variable if it is not set. (`OSW-2331 <https://rubinobs.atlassian.net//browse/OSW-2331>`_)
+- Updated the resume command to automatically switch the status flag to OPERATIONAL on a best-effort basis. (`OSW-2357 <https://rubinobs.atlassian.net//browse/OSW-2357>`_)
+- Improved the handling of component fault states in status notes to ensure recovered CSCs remain listed until explicitly cleared. (`OSW-2357 <https://rubinobs.atlassian.net//browse/OSW-2357>`_)
+- Configured the Scheduler CSC to transition to IDLE status when the daytime flag is cleared or during nighttime if no other status bits are active. (`OSW-2357 <https://rubinobs.atlassian.net//browse/OSW-2357>`_)
+- Added a lifecycle state cache that stores the observatory status when transitioning to Standby and restores it during configuration. (`OSW-2357 <https://rubinobs.atlassian.net//browse/OSW-2357>`_)
+- Updated 'generate_status_note' to inject structured system notes while preserving existing user notes. (`OSW-2357 <https://rubinobs.atlassian.net//browse/OSW-2357>`_)
+
+
+Bug Fixes
+---------
+
+- Modified the resume command to reject execution if the status is Fault and monitored components remain in a fault state. (`OSW-2357 <https://rubinobs.atlassian.net//browse/OSW-2357>`_)
+- Added logic to pause the target production loop whenever the fault bit is active in the observatory status. (`OSW-2357 <https://rubinobs.atlassian.net//browse/OSW-2357>`_)
+- Unset the OPERATIONAL flag automatically if the Scheduler CSC is disabled or stopped. (`OSW-2357 <https://rubinobs.atlassian.net//browse/OSW-2357>`_)
+- Ensured the observatory status transitions directly to Fault whenever the CSC itself enters a Fault state. (`OSW-2357 <https://rubinobs.atlassian.net//browse/OSW-2357>`_)
+
+
 v2.9.3 (2026-04-28)
 ===================
 

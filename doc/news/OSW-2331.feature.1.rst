@@ -1,1 +1,0 @@
-Updated SchedulerCSC._update_block_status to initialize the status of a block if it is not already present in scheduler_csc.py.
