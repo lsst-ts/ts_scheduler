@@ -1,1 +1,0 @@
-Renamed Model._get_block_status to Model.get_block_status to mark it as a public method in model.py.

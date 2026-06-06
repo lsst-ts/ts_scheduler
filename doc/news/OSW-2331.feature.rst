@@ -1,1 +1,0 @@
-Added a test fixture that will handle setting TS_CONFIG_SCHEDULER_DIR environment variable if it is not set.
