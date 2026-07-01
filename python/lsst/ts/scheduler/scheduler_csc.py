@@ -491,9 +491,6 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 != SchedulerObservatoryStatus.UNKNOWN
             ):
                 self._last_observatory_status = self.evt_observatoryStatus.data.status
-                self._last_observatory_status_note = (
-                    self.evt_observatoryStatus.data.note
-                )
 
             await self.set_observatory_status(
                 status=SchedulerObservatoryStatus.UNKNOWN,
@@ -1493,7 +1490,6 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     status=self._last_observatory_status,
                     note=self._last_observatory_status_note,
                 )
-                self._last_observatory_status = None
             else:
                 await self.set_observatory_status(
                     status=SchedulerObservatoryStatus.UNKNOWN,
@@ -3238,8 +3234,6 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         if user_note is not None:
             self._last_observatory_status_note = user_note
             note += user_note
-        elif self._last_observatory_status_note is not None:
-            note += self._last_observatory_status_note
 
         if system_note is not None:
             if note and not note[-1].isspace():
