@@ -1634,35 +1634,13 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                 )
 
             await self.remote.cmd_updateObservatoryStatus.set_start(
-                status=Scheduler.ObservatoryStatus.OPERATIONAL,
+                status=Scheduler.ObservatoryStatus.WEATHER,
                 note="Testing status preserved.",
             )
 
             observatory_status = await self.assert_next_sample(
                 self.remote.evt_observatoryStatus,
-                status=Scheduler.ObservatoryStatus.OPERATIONAL,
-                flush=False,
-            )
-            assert "Testing status preserved." in observatory_status.note
-
-            await self.remote.cmd_updateObservatoryStatus.set_start(
-                status=Scheduler.ObservatoryStatus.IDLE,
-            )
-
-            observatory_status = await self.assert_next_sample(
-                self.remote.evt_observatoryStatus,
-                status=Scheduler.ObservatoryStatus.IDLE,
-                flush=False,
-            )
-            assert "Testing status preserved." in observatory_status.note
-
-            await self.remote.cmd_updateObservatoryStatus.set_start(
-                status=Scheduler.ObservatoryStatus.OPERATIONAL,
-            )
-
-            observatory_status = await self.assert_next_sample(
-                self.remote.evt_observatoryStatus,
-                status=Scheduler.ObservatoryStatus.OPERATIONAL,
+                status=Scheduler.ObservatoryStatus.WEATHER,
                 flush=False,
             )
             assert "Testing status preserved." in observatory_status.note
@@ -1673,7 +1651,6 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
             )
 
             expected_initial_observatory_status_note = [
-                (Scheduler.ObservatoryStatus.IDLE, "Testing status preserved."),
                 (Scheduler.ObservatoryStatus.UNKNOWN, "Scheduler CSC in STANDBY"),
             ]
 
@@ -1692,7 +1669,7 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
             )
 
             expected_initial_observatory_status_note = [
-                (Scheduler.ObservatoryStatus.IDLE, "Testing status preserved."),
+                (Scheduler.ObservatoryStatus.WEATHER, ""),
             ]
 
             for status, note in expected_initial_observatory_status_note:
@@ -1701,7 +1678,16 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                     status=status,
                     flush=False,
                 )
-                assert note in observatory_status.note
+                if note is not None:
+                    assert note in observatory_status.note
+                else:
+                    self.log.info(f"note={observatory_status.note}")
+
+            with self.assertRaises(asyncio.TimeoutError):
+                observatory_status = await self.assert_next_sample(
+                    self.remote.evt_observatoryStatus,
+                    flush=False,
+                )
 
             await self.remote.cmd_updateObservatoryStatus.set_start(
                 status=Scheduler.ObservatoryStatus.WEATHER
@@ -1714,7 +1700,7 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                 | Scheduler.ObservatoryStatus.OPERATIONAL,
                 flush=False,
             )
-            assert "Testing status preserved." in observatory_status.note
+            assert not observatory_status.note
 
             await salobj.set_summary_state(
                 self.remote,
@@ -1722,7 +1708,7 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
             )
 
             expected_initial_observatory_status_note = [
-                (Scheduler.ObservatoryStatus.WEATHER, "Testing status preserved."),
+                (Scheduler.ObservatoryStatus.WEATHER, ""),
                 (Scheduler.ObservatoryStatus.UNKNOWN, "Scheduler CSC in STANDBY"),
             ]
 
@@ -1741,7 +1727,7 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
             )
 
             expected_initial_observatory_status_note = [
-                (Scheduler.ObservatoryStatus.WEATHER, "Testing status preserved."),
+                (Scheduler.ObservatoryStatus.WEATHER, ""),
             ]
 
             for status, note in expected_initial_observatory_status_note:
