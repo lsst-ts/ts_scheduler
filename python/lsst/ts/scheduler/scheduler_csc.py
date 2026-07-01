@@ -2415,6 +2415,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             **dataclasses.asdict(target.get_observation()),
             force_output=True,
         )
+        self.model.driver.register_observation(target)
         observing_block = target.get_observing_block()
         await self._update_block_status(
             block_id=target.observing_block.program,
