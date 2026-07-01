@@ -1,1 +1,0 @@
-Updated test_with_queue in tests/test_advanced_target_loop.py to check for correct observation registration after completion.
