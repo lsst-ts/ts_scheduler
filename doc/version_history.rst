@@ -6,6 +6,16 @@ Version History
 
 .. towncrier release notes start
 
+v2.10.1 (2026-07-01)
+====================
+
+Bug Fixes
+---------
+
+- Updated test_with_queue in tests/test_advanced_target_loop.py to check for correct observation registration after completion. (`OSW-2644 <https://rubinobs.atlassian.net//browse/OSW-2644>`_)
+- Fixed issue in scheduler_csc.py where completed observations were not being registered. (`OSW-2644 <https://rubinobs.atlassian.net//browse/OSW-2644>`_)
+
+
 v2.10.0 (2026-06-05)
 ====================
 
