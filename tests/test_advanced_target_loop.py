@@ -429,6 +429,8 @@ class AdvancedTargetLoopTestCase(
 
             self.scheduler_remote.evt_summaryState.callback = assert_enable
 
+            self.scheduler.model.driver.register_observation = unittest.mock.Mock()
+
             # Need to time this test and timeout if it takes too long
             start_time = time.time()
             while self.received_targets < self.expected_targets:
@@ -549,6 +551,7 @@ class AdvancedTargetLoopTestCase(
                 observation = None
 
             assert observation is not None, "Observation was not published."
+            self.scheduler.model.driver.register_observation.assert_called()
 
     @pytest.mark.xfail(
         "JENKINS_URL" in os.environ, reason="This test usually fails in Jenkins."
