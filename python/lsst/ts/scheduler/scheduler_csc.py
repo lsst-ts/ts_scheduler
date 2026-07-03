@@ -1098,7 +1098,14 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     timeout=self.heartbeat_interval,
                 )
             except asyncio.TimeoutError:
-                self.log.debug("Timeout computing general info.")
+                self.log.warning(
+                    "Timeout computing general info. "
+                    "Sun/Moon position and Observatory status "
+                    "might be outdated. "
+                    f"Current detailed state {DetailedState(self.evt_detailedState.data.substate)!r}. "
+                    f"Detailed state locked? {self._detailed_state_lock.locked()}. "
+                    "You might need to send the CSC to Disabled and back to Enabled to fix this condition."
+                )
             except Exception:
                 self.log.exception("Error computing general info. Ignoring...")
 
