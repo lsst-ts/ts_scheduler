@@ -1,1 +1,0 @@
-Stopped restoring user note on the observatory state in scheduler_csc.py.
