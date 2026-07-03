@@ -6,6 +6,22 @@ Version History
 
 .. towncrier release notes start
 
+v2.10.2 (2026-07-03)
+====================
+
+New Features
+------------
+
+- Stopped restoring user note on the observatory state in scheduler_csc.py. (`OSW-2608 <https://rubinobs.atlassian.net//browse/OSW-2608>`_)
+- Made sure scheduler does not go to fault if the FAULT flag is enabled in the observatory status and it fails to update the observatory state. (`OSW-2608 <https://rubinobs.atlassian.net//browse/OSW-2608>`_)
+
+
+Bug Fixes
+---------
+
+- Updated telemetry_loop in scheduler_csc.py to log a warning message with comprehensive information if it times out publishing general info. (`OSW-2608 <https://rubinobs.atlassian.net//browse/OSW-2608>`_)
+
+
 v2.10.1 (2026-07-01)
 ====================
 

@@ -1,1 +1,0 @@
-Made sure scheduler does not go to fault if the FAULT flag is enabled in the observatory status and it fails to update the observatory state.
