@@ -1738,6 +1738,61 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                 )
                 assert note in observatory_status.note
 
+    async def test_no_observatory_state_ok_in_enabled_running_queue_running_observatory_status_fault(
+        self,
+    ):
+        """Test CSC goes to FAULT if no observatory state."""
+
+        async with self.make_csc(
+            config_dir=TEST_CONFIG_DIR,
+            initial_state=salobj.State.STANDBY,
+            simulation_mode=SchedulerModes.SIMULATION,
+        ), self.make_script_queue(running=False) as queue:
+            await self.assert_next_sample(topic=self.remote.evt_errorCode, errorCode=0)
+
+            def get_general_info_nighttime():
+                return dict(isNight=True)
+
+            self.csc.model.get_general_info = get_general_info_nighttime
+
+            try:
+                self.remote.evt_summaryState.flush()
+
+                await salobj.set_summary_state(
+                    self.remote,
+                    salobj.State.ENABLED,
+                    override="monitor_observatory_state.yaml",
+                )
+
+                await self.remote.cmd_resume.start(timeout=SHORT_TIMEOUT)
+                await self.remote.cmd_updateObservatoryStatus.set_start(
+                    status=Scheduler.ObservatoryStatus.FAULT,
+                )
+
+                await queue.evt_queue.set_write(running=True)
+
+                await self.assert_next_summary_state(salobj.State.DISABLED, flush=False)
+                await self.assert_next_summary_state(salobj.State.ENABLED, flush=False)
+                with self.assertRaises(asyncio.TimeoutError):
+
+                    await self.assert_next_summary_state(
+                        salobj.State.FAULT, flush=False, timeout=SHORT_TIMEOUT
+                    )
+
+                self.log.info("Set observatory status to operational...")
+                await self.remote.cmd_updateObservatoryStatus.set_start(
+                    status=Scheduler.ObservatoryStatus.OPERATIONAL,
+                )
+
+                await self.assert_next_summary_state(salobj.State.FAULT, flush=False)
+
+                # Check error code
+                await self.assert_next_sample(
+                    topic=self.remote.evt_errorCode, errorCode=OBSERVATORY_STATE_UPDATE
+                )
+            finally:
+                await salobj.set_summary_state(self.remote, salobj.State.STANDBY)
+
     @pytest.mark.skipif(
         supports_observatory_status,
         reason="CSC interface supports observatory status feature.",
@@ -1800,7 +1855,7 @@ additionalProperties: true
 
             queue.cmd_showSchema.callback = show_schema
             await queue.evt_queue.set_write(running=running)
-            yield
+            yield queue
 
     @contextlib.asynccontextmanager
     async def make_csc_cleanup_afterward(self):
