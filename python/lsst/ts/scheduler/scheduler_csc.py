@@ -491,9 +491,6 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 != SchedulerObservatoryStatus.UNKNOWN
             ):
                 self._last_observatory_status = self.evt_observatoryStatus.data.status
-                self._last_observatory_status_note = (
-                    self.evt_observatoryStatus.data.note
-                )
 
             await self.set_observatory_status(
                 status=SchedulerObservatoryStatus.UNKNOWN,
@@ -1038,6 +1035,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     self.summary_state == salobj.State.ENABLED
                     and self.run_target_loop.is_set()
                     and queue.running
+                    and self.observatory_status_fault_cleared.is_set()
                 ):
                     self.log.exception("Failed to update observatory state.")
                     await self.fault(
@@ -1059,6 +1057,15 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                         " queue not running"
                         if self.summary_state == salobj.State.ENABLED
                         and not queue.running
+                        else ""
+                    )
+                    additional_messages.append(
+                        (
+                            f" observatory status {self.evt_observatoryStatus.data.statusLabels}; "
+                            "FAULT flag enabled"
+                        )
+                        if self.summary_state == salobj.State.ENABLED
+                        and not self.observatory_status_fault_cleared.is_set()
                         else ""
                     )
 
@@ -1091,7 +1098,14 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     timeout=self.heartbeat_interval,
                 )
             except asyncio.TimeoutError:
-                self.log.debug("Timeout computing general info.")
+                self.log.warning(
+                    "Timeout computing general info. "
+                    "Sun/Moon position and Observatory status "
+                    "might be outdated. "
+                    f"Current detailed state {DetailedState(self.evt_detailedState.data.substate)!r}. "
+                    f"Detailed state locked? {self._detailed_state_lock.locked()}. "
+                    "You might need to send the CSC to Disabled and back to Enabled to fix this condition."
+                )
             except Exception:
                 self.log.exception("Error computing general info. Ignoring...")
 
@@ -1493,7 +1507,6 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     status=self._last_observatory_status,
                     note=self._last_observatory_status_note,
                 )
-                self._last_observatory_status = None
             else:
                 await self.set_observatory_status(
                     status=SchedulerObservatoryStatus.UNKNOWN,
@@ -3238,8 +3251,6 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         if user_note is not None:
             self._last_observatory_status_note = user_note
             note += user_note
-        elif self._last_observatory_status_note is not None:
-            note += self._last_observatory_status_note
 
         if system_note is not None:
             if note and not note[-1].isspace():
