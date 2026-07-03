@@ -1035,6 +1035,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                     self.summary_state == salobj.State.ENABLED
                     and self.run_target_loop.is_set()
                     and queue.running
+                    and self.observatory_status_fault_cleared.is_set()
                 ):
                     self.log.exception("Failed to update observatory state.")
                     await self.fault(
@@ -1056,6 +1057,15 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                         " queue not running"
                         if self.summary_state == salobj.State.ENABLED
                         and not queue.running
+                        else ""
+                    )
+                    additional_messages.append(
+                        (
+                            f" observatory status {self.evt_observatoryStatus.data.statusLabels}; "
+                            "FAULT flag enabled"
+                        )
+                        if self.summary_state == salobj.State.ENABLED
+                        and not self.observatory_status_fault_cleared.is_set()
                         else ""
                     )
 
