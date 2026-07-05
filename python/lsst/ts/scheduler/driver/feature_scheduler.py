@@ -611,8 +611,6 @@ class FeatureScheduler(Driver):
 
         almanac_indx = self.almanac.mjd_indx(self.conditions.mjd)
 
-        self.conditions.night = self.almanac.sunsets["night"][almanac_indx]
-
         # Clouds. Just the raw value
         self.conditions.bulk_cloud = self.raw_telemetry.get("bulk_cloud", np.nan)
 
