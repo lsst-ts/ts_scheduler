@@ -1,0 +1,1 @@
+Updated SchedulerCSC to publish general info regardless of the detailed state.

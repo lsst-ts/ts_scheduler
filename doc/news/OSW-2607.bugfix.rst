@@ -1,0 +1,1 @@
+Removed backwards compatibility with older versions of the CSC interface in scheduler_csc.py.
