@@ -1,0 +1,1 @@
+Stopped setting Conditions.night parameter in driver/feature_scheduler.py as it is now handled internally by the FBS.

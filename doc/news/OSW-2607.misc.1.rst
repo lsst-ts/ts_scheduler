@@ -1,0 +1,1 @@
+Updated tests/test_simple_target_loop.py to use salobj.set_test_topic_subname instead of the deprecated salobj.set_random_lsst_dds_partition_prefix.

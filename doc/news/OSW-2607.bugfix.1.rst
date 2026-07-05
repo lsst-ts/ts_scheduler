@@ -1,0 +1,1 @@
+Ensured remote callbacks are async in tests/test_simple_target_loop.py, removing compatibility with older versions of salobj.
