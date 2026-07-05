@@ -838,7 +838,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 f"Current valid blocks are: {valid_blocks}."
             )
 
-        obs_block = self.model.observing_blocks[data.id].dict()
+        obs_block = self.model.observing_blocks[data.id].model_dump()
         obs_block.pop("id")
         block_target = DriverTarget(
             observing_block=ObservingBlock(
@@ -903,7 +903,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 block_id
             ].executions_total,
             hash=str(observing_block.id),
-            definition=observing_block.json(),
+            definition=observing_block.model_dump_json(),
         )
 
     async def do_getBlockStatus(self, data):
