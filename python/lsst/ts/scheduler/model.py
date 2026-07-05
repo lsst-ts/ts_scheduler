@@ -1248,8 +1248,18 @@ class Model:
             self.driver.playback_observations_from_db,
             filename=database_path,
         )
+        self.log.info(
+            "Updating telemetry (and conditions) before playing back observations."
+        )
+        self.models["observatory_state"].time = utils.astropy_time_from_tai_unix(
+            utils.current_tai()
+        ).unix
+        await self.update_telemetry()
+
+        self.log.info(f"Playing back observations from {database_path}.")
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(None, playback_observations_from_db)
+        self.log.info("Finished playing back observations.")
 
     async def _handle_load_observations_from_efd(self, efd_query: str) -> None:
         """Handle loading observations from the EFD and playing them back into
