@@ -1494,11 +1494,6 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             **settings.observatory_status
         )
         if self.parameters.observatory_status.enable:
-            if not hasattr(self, "evt_observatoryStatus"):
-                raise salobj.ExpectedError(
-                    "CSC interface does not support observatory status. "
-                    "Ensure 'observatory_status.enable: false' in the configuration."
-                )
 
             if self._last_observatory_status is not None:
                 self.log.info("Restoring observatory status.")
@@ -1561,20 +1556,17 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         # Most configurations comes from this single commit hash. I think the
         # other modules could host the version for each one of them
-        if hasattr(self, "evt_dependenciesVersions"):
-            await self.evt_dependenciesVersions.set_write(
-                version="",
-                scheduler=self.parameters.driver_type,
-                observatoryModel=obs_mod_version.__version__,
-                observatoryLocation=dateloc_version.__version__,
-                seeingModel=rubin_scheduler_version,
-                cloudModel=rubin_scheduler_version,
-                skybrightnessModel=astrosky_version.__version__,
-                downtimeModel=rubin_scheduler_version,
-                force_output=True,
-            )
-        else:
-            self.log.warning("No 'dependenciesVersions' event.")
+        await self.evt_dependenciesVersions.set_write(
+            version="",
+            scheduler=self.parameters.driver_type,
+            observatoryModel=obs_mod_version.__version__,
+            observatoryLocation=dateloc_version.__version__,
+            seeingModel=rubin_scheduler_version,
+            cloudModel=rubin_scheduler_version,
+            skybrightnessModel=astrosky_version.__version__,
+            downtimeModel=rubin_scheduler_version,
+            force_output=True,
+        )
 
         await self._publish_settings(settings)
 
@@ -2297,10 +2289,6 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         config.predicted_scheduler_window hours.
         """
 
-        if not hasattr(self, "evt_predictedSchedule"):
-            self.log.debug("No support for predicted scheduler.")
-            return
-
         self.log.info("Computing predicted schedule.")
 
         self._should_compute_predicted_schedule = False
@@ -2627,14 +2615,13 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         """
 
         # TODO: (DM-34905) Remove backward compatibility.
-        if hasattr(self, "evt_timeToNextTarget"):
-            await self.evt_timeToNextTarget.set_write(
-                currentTime=current_time,
-                waitTime=wait_time,
-                ra=ra,
-                decl=dec,
-                rotSkyPos=rot_sky_pos,
-            )
+        await self.evt_timeToNextTarget.set_write(
+            currentTime=current_time,
+            waitTime=wait_time,
+            ra=ra,
+            decl=dec,
+            rotSkyPos=rot_sky_pos,
+        )
 
     async def _publish_general_info(self):
         """Publish general info event."""
@@ -2646,8 +2633,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         general_info = self.model.get_general_info()
 
         # TODO: (DM-34905) Remove backward compatibility.
-        if hasattr(self, "evt_generalInfo"):
-            await self.evt_generalInfo.set_write(**general_info)
+        await self.evt_generalInfo.set_write(**general_info)
 
         if not self.enable_observatory_status_monitor:
             return
@@ -3005,9 +2991,6 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         note : `str`, optional
             Note to add to the status event.
         """
-        if not hasattr(self, "evt_observatoryStatus"):
-            return
-
         await self.evt_observatoryStatus.set_write(
             status=status,
             statusLabels=(
@@ -3357,9 +3340,6 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             )
 
     async def handle_observatory_status_nighttime(self):
-        if not hasattr(self, "evt_observatoryStatus"):
-            return
-
         status = self.evt_observatoryStatus.data.status
         if not status:
             status = SchedulerObservatoryStatus.IDLE
@@ -3374,9 +3354,6 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             await self.set_observatory_status(status=status, note=note)
 
     async def handle_observatory_status_daytime(self):
-        if not hasattr(self, "evt_observatoryStatus"):
-            return
-
         status = self.evt_observatoryStatus.data.status
         if not status & SchedulerObservatoryStatus.DAYTIME:
             status = status | SchedulerObservatoryStatus.DAYTIME
