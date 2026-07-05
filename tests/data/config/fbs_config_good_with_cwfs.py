@@ -96,7 +96,7 @@ def gen_greedy_surveys(
         "smoothing_kernel": None,
         "seed": seed,
         "camera": "LSST",
-        "dither": True,
+        "dither": "night",
         "survey_name": "Greedy",
     }
 
@@ -112,10 +112,10 @@ def gen_greedy_surveys(
 
     for filtername in filters:
         bfs = [
-            (bf.M5DiffBasisFunction(filtername=filtername, nside=nside), m5_weight),
+            (bf.M5DiffBasisFunction(bandname=filtername, nside=nside), m5_weight),
             (
                 bf.FootprintBasisFunction(
-                    filtername=filtername,
+                    bandname=filtername,
                     footprint=footprints,
                     out_of_bounds_val=np.nan,
                     nside=nside,
@@ -123,10 +123,10 @@ def gen_greedy_surveys(
                 footprint_weight,
             ),
             (
-                bf.SlewtimeBasisFunction(filtername=filtername, nside=nside),
+                bf.SlewtimeBasisFunction(bandname=filtername, nside=nside),
                 slewtime_weight,
             ),
-            (bf.StrictFilterBasisFunction(filtername=filtername), stayfilter_weight),
+            (bf.StrictBandBasisFunction(bandname=filtername), stayfilter_weight),
             (bf.NotTwilightBasisFunction(sun_alt_limit=sun_alt_limit), 0),
             # Masks, give these 0 weight
             (
@@ -139,7 +139,7 @@ def gen_greedy_surveys(
                 bf.MoonAvoidanceBasisFunction(nside=nside, moon_distance=moon_distance),
                 0,
             ),
-            (bf.FilterLoadedBasisFunction(filternames=filtername), 0),
+            (bf.BandLoadedBasisFunction(bandnames=filtername), 0),
             (bf.PlanetMaskBasisFunction(nside=nside), 0),
         ]
 
@@ -150,7 +150,7 @@ def gen_greedy_surveys(
                 basis_functions,
                 weights,
                 exptime=exptime,
-                filtername=filtername,
+                bandname=filtername,
                 nside=nside,
                 ignore_obs=ignore_obs,
                 nexp=nexp,
