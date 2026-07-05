@@ -776,7 +776,7 @@ class FeatureScheduler(Driver):
                 dec_rad_center = float(np.mean(self.conditions.dec[too.reward_map]))
                 targets_of_opportunity.append(
                     TargetoO(
-                        tooid=too.tooid,
+                        tooid=too.source,
                         ra_rad_center=ra_rad_center,
                         dec_rad_center=dec_rad_center,
                         footprint=too.reward_map,
