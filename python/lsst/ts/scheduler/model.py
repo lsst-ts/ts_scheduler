@@ -316,8 +316,11 @@ class Model:
         bad_block_programs = set()
         for observing_block_file in path_observing_blocks.glob("**/*.json"):
             try:
-                observing_block = observing.ObservingBlock.parse_file(
-                    observing_block_file
+                with open(observing_block_file) as fp:
+                    observing_block_json_data = fp.read()
+
+                observing_block = observing.ObservingBlock.model_validate_json(
+                    observing_block_json_data
                 )
             except Exception as e:
                 raise RuntimeError(
