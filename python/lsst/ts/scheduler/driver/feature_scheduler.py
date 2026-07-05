@@ -785,7 +785,6 @@ class FeatureScheduler(Driver):
                                 tai_from_utc(too.event_trigger_timestamp, "isot")
                             ).value
                         ),
-                        duration=1.0,
                         too_type=too.alert_type,
                     )
                 )
