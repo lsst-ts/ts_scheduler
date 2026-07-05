@@ -34,16 +34,12 @@ from lsst.ts.scheduler.mock import ObservatoryStateMock
 from lsst.ts.scheduler.utils import SchedulerModes
 from lsst.ts.scheduler.utils.csc_utils import DetailedState
 from lsst.ts.scheduler.utils.error_codes import OBSERVATORY_STATE_UPDATE
-from lsst.ts.xml.component_info import ComponentInfo
 from lsst.ts.xml.enums import Scheduler
 
 SHORT_TIMEOUT = 10.0
 LONG_TIMEOUT = 30.0
 LONG_LONG_TIMEOUT = 120.0
 TEST_CONFIG_DIR = pathlib.Path(__file__).parents[1].joinpath("tests", "data", "config")
-
-scheduler_info = ComponentInfo("Scheduler", "sal")
-supports_observatory_status = "evt_observatoryStatus" in scheduler_info.topics
 
 
 class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase):
@@ -202,16 +198,15 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
             simulation_mode=SchedulerModes.SIMULATION,
         ), ObservatoryStateMock(), self.make_script_queue(running=True):
             self.remote.evt_detailedState.flush()
-            if hasattr(self.remote, "evt_observatoryStatus"):
-                await self.assert_next_sample(
-                    self.remote.evt_observatoryStatus,
-                    status=Scheduler.ObservatoryStatus.UNKNOWN,
-                    statusLabels=Scheduler.ObservatoryStatus.UNKNOWN.name,
-                    note=(
-                        "Scheduler CSC started; "
-                        "need to be in DISABLED or ENABLED to monitor observatory status."
-                    ),
-                )
+            await self.assert_next_sample(
+                self.remote.evt_observatoryStatus,
+                status=Scheduler.ObservatoryStatus.UNKNOWN,
+                statusLabels=Scheduler.ObservatoryStatus.UNKNOWN.name,
+                note=(
+                    "Scheduler CSC started; "
+                    "need to be in DISABLED or ENABLED to monitor observatory status."
+                ),
+            )
 
             await self.check_standard_state_transitions(
                 enabled_commands=[
@@ -599,10 +594,6 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                     salobj.State.STANDBY,
                 )
 
-    @pytest.mark.skipif(
-        not supports_observatory_status,
-        reason="CSC interface does not support observatory status feature.",
-    )
     async def test_observatory_status_fault_monitoring_csc_enabled(self):
         async with self.make_csc_cleanup_afterward(), ObservatoryStateMock(), self.make_script_queue(
             running=True
@@ -882,10 +873,6 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                         note=note,
                     )
 
-    @pytest.mark.skipif(
-        not supports_observatory_status,
-        reason="CSC interface does not support observatory status feature.",
-    )
     async def test_observatory_status_fault_monitoring_csc_disabled(self):
 
         async with self.make_csc_cleanup_afterward(), ObservatoryStateMock(), self.make_script_queue(
@@ -977,47 +964,6 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
             assert "MTRotator" in observatory_status.note
             assert "MTMount" in observatory_status.note
 
-    @pytest.mark.skipif(
-        not supports_observatory_status,
-        reason="CSC interface does not support observatory status feature.",
-    )
-    async def test_observatory_status_fault_monitoring_csc_standby(self):
-
-        async with self.make_csc_cleanup_afterward(), ObservatoryStateMock(), self.make_script_queue(
-            running=True
-        ), salobj.Controller(
-            "MTMount"
-        ) as mtmount:
-            await mtmount.evt_summaryState.set_write(summaryState=salobj.State.ENABLED)
-            await salobj.set_summary_state(
-                self.remote,
-                salobj.State.ENABLED,
-                override="monitor_observatory_state.yaml",
-            )
-            await self.assert_next_sample(
-                self.remote.evt_heartbeat,
-                flush=True,
-            )
-            await salobj.set_summary_state(
-                self.remote,
-                salobj.State.STANDBY,
-                override="monitor_observatory_state.yaml",
-            )
-
-            self.remote.evt_observatoryStatus.flush()
-
-            await mtmount.evt_summaryState.set_write(summaryState=salobj.State.FAULT)
-
-            with self.assertRaises(asyncio.TimeoutError):
-                await self.assert_next_sample(
-                    self.remote.evt_observatoryStatus,
-                    flush=False,
-                )
-
-    @pytest.mark.skipif(
-        not supports_observatory_status,
-        reason="CSC interface does not support observatory status feature.",
-    )
     async def test_observatory_status_daytime_monitoring_csc_enabled(self):
         async with self.make_csc_cleanup_afterward(), ObservatoryStateMock(), self.make_script_queue(
             running=True
@@ -1258,10 +1204,6 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                 flush=False,
             )
 
-    @pytest.mark.skipif(
-        not supports_observatory_status,
-        reason="CSC interface does not support observatory status feature.",
-    )
     async def test_observatory_status_daytime_monitoring_csc_disabled(self):
         async with self.make_csc_cleanup_afterward(), ObservatoryStateMock(), self.make_script_queue(
             running=True
@@ -1335,10 +1277,6 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
             )
             assert "Nighttime started" in observatory_status.note
 
-    @pytest.mark.skipif(
-        not supports_observatory_status,
-        reason="CSC interface does not support observatory status feature.",
-    )
     async def test_observatory_status_csc_goes_to_fault(self):
         async with self.make_csc_cleanup_afterward(), ObservatoryStateMock(), self.make_script_queue(
             running=True
@@ -1412,10 +1350,6 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
 
             await self.remote.cmd_standby.start(timeout=SHORT_TIMEOUT)
 
-    @pytest.mark.skipif(
-        not supports_observatory_status,
-        reason="CSC interface does not support observatory status feature.",
-    )
     async def test_observatory_status_operational_when_resumed(self):
         async with self.make_csc(
             config_dir=TEST_CONFIG_DIR,
@@ -1584,10 +1518,6 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
 
             await self.remote.cmd_stop.start(timeout=LONG_TIMEOUT)
 
-    @pytest.mark.skipif(
-        not supports_observatory_status,
-        reason="CSC interface does not support observatory status feature.",
-    )
     async def test_observatory_status_preserve_status(self):
         async with self.make_csc(
             config_dir=TEST_CONFIG_DIR,
@@ -1792,20 +1722,6 @@ class TestSchedulerCSC(salobj.BaseCscTestCase, unittest.IsolatedAsyncioTestCase)
                 )
             finally:
                 await salobj.set_summary_state(self.remote, salobj.State.STANDBY)
-
-    @pytest.mark.skipif(
-        supports_observatory_status,
-        reason="CSC interface supports observatory status feature.",
-    )
-    async def test_fails_configure_if_observatory_status_not_supported(self):
-        async with self.make_csc_cleanup_afterward():
-            with salobj.testutils.assertRaisesAckError(
-                result_contains="CSC interface does not support observatory status."
-            ):
-                await self.remote.cmd_start.set_start(
-                    configurationOverride="monitor_observatory_state.yaml",
-                    timeout=SHORT_TIMEOUT,
-                )
 
     @contextlib.asynccontextmanager
     async def make_script_queue(self, running: bool) -> None:
