@@ -30,7 +30,7 @@ test:
     - ts-astrosky-model >=1.4
     - ts-dateloc
     - ts-observing >=0.2
-    - rubin-scheduler =3
+    - rubin-scheduler >=4.5
     - rsync
     - lsst-efd-client
   source_files:
@@ -70,5 +70,5 @@ requirements:
     - ts-astrosky-model >=1.4
     - ts-dateloc
     - ts-observing >=0.2
-    - rubin-scheduler =3
+    - rubin-scheduler >=4.5
     - lsst-efd-client
