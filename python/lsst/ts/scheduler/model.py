@@ -357,7 +357,7 @@ class Model:
 
         for block_id in self.observing_blocks:
             target_validate = DriverTarget(
-                observing_block=self.observing_blocks[block_id].copy(deep=True)
+                observing_block=self.observing_blocks[block_id].model_copy(deep=True)
             )
             observing_block = target_validate.get_observing_block()
             for script in observing_block.scripts:
