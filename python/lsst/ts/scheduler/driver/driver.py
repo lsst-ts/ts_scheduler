@@ -506,7 +506,7 @@ class Driver:
 
         self.assert_survey_observing_script(survey_name=survey_name)
 
-        return self.observing_blocks[survey_name].copy(deep=True)
+        return self.observing_blocks[survey_name].model_copy(deep=True)
 
     def convert_efd_observations_to_targets(
         self, efd_observations: pandas.DataFrame
