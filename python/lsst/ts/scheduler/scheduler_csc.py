@@ -344,6 +344,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         """
 
         await super().start()
+        await self.evt_detailedState.set_write(substate=DetailedState.IDLE)
         await self.set_observatory_status(
             status=SchedulerObservatoryStatus.UNKNOWN,
             note=(
