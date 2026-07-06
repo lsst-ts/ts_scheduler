@@ -1024,6 +1024,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         """
 
         failed_observatory_state_logged = False
+        self.log.info(f"Starting telemetry loop; run loop {self.run_loop}.")
         while self.run_loop:
             # Update observatory state and sleep at the same time.
             timer_task = asyncio.create_task(asyncio.sleep(self.heartbeat_interval))
@@ -1131,6 +1132,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             await self._cleanup_script_tasks()
 
             await timer_task
+
+        self.log.info(f"Telemetry loop finishing; run loop {self.run_loop}.")
 
     async def _cleanup_script_tasks(self) -> None:
         """Cleanup completed script tasks."""
