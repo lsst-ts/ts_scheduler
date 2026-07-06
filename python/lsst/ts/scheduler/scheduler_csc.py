@@ -3044,10 +3044,18 @@ class SchedulerCSC(salobj.ConfigurableCsc):
     async def monitor_observatory_status(self):
         """Monitor and set the observatory status."""
 
+        current_remotes = ", ".join(self._remotes.keys())
+        if current_remotes:
+            self.log.info(f"Currently defined remotes: {current_remotes}.")
+        else:
+            self.log.info("No remotes currently defined.")
+
         for component in self.parameters.observatory_status.components_to_monitor:
             component_reference_name = component.lower()
             if component_reference_name not in self._remotes:
-                self.log.info(f"Creating remote to monitor {component} state.")
+                self.log.info(
+                    f"Creating remote to monitor {component} ({component_reference_name}) state."
+                )
                 name, index = salobj.name_to_name_index(component)
                 self._remotes[component_reference_name] = salobj.Remote(
                     domain=self.domain,
