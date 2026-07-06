@@ -2657,9 +2657,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
     async def _publish_general_info(self):
         """Publish general info event."""
 
-        if self.evt_detailedState.data.substate == DetailedState.IDLE:
-            async with self._detailed_state_lock:
-                await self.model.update_telemetry()
+        async with self._detailed_state_lock:
+            await self.model.update_telemetry()
 
         general_info = self.model.get_general_info()
 
