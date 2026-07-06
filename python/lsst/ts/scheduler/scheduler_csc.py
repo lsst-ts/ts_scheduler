@@ -198,7 +198,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         )
 
         self._queue_name = f"scriptqueue:{index}"
-        self._ptg_name = ("mtptg" if index % 2 == 1 else "atpg",)
+        self._ptg_name = "mtptg" if (index % 2 == 1) else "atpg"
 
         self._remotes = dict()
 
