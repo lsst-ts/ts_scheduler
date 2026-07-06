@@ -365,7 +365,7 @@ class Model:
                             script.parameters
                         )
                     else:
-                        self.log.debug(f"Script {script} does not have configuration.")
+                        self.log.trace(f"Script {script} does not have configuration.")
                 except ValidationError as validation_error:
                     self.log.error(
                         f"Script {script.name} from observing block {block_id} failed validation: "
@@ -379,7 +379,7 @@ class Model:
                     )
                     break
                 else:
-                    self.log.debug(
+                    self.log.trace(
                         f"Successfully validated script {script.name} from {block_id} "
                         f"with:\n{script.parameters}"
                     )
