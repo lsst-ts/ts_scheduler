@@ -2311,7 +2311,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         self.log.info("Computing predicted schedule.")
 
         self._should_compute_predicted_schedule = False
-
+        predicted_schedule_start_time = utils.current_tai()
         async with self.current_scheduler_state(publish_lfoa=False, keep_state=False):
 
             needed_targets = max(
@@ -2360,7 +2360,12 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
             await self.evt_predictedSchedule.set_write(**predicted_schedule)
 
-        self.log.debug("Finished computing predicted schedule.")
+        predicted_schedule_duration = (
+            utils.current_tai() - predicted_schedule_start_time
+        )
+        self.log.info(
+            f"Finished computing predicted schedule; took {predicted_schedule_duration:.2f}s."
+        )
 
     async def execute_block(self):
         """Execute an individual block when the Scheduler is not running.
