@@ -2084,10 +2084,14 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         self.model.synchronize_observatory_model()
         await self.model.update_telemetry()
-        await self.model.update_conditions()
+
+        for target in self.targets_queue:
+            self.model.models["observatory_model"].observe(target)
 
         no_targets = True
         for n in range(self.parameters.n_targets + 1):
+
+            await self.model.update_conditions()
 
             async with self.current_scheduler_state(
                 publish_lfoa=True,
