@@ -28,6 +28,7 @@ import asyncio
 import contextlib
 import dataclasses
 import functools
+import logging
 import os
 import shutil
 import subprocess
@@ -1092,22 +1093,39 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 **self.model.get_observatory_state()
             )
 
+            wait_and_log_task = asyncio.create_task(
+                self.wait_and_log(
+                    delay=self.heartbeat_interval,
+                    log_level=logging.INFO,
+                    message=(
+                        "Computing general info taking longer than expected. "
+                        "Current detailed state "
+                        f"{DetailedState(self.evt_detailedState.data.substate)!r}. "
+                        f"Detailed state locked? {self._detailed_state_lock.locked()}."
+                    ),
+                )
+            )
             try:
                 await asyncio.wait_for(
                     self._publish_general_info(),
-                    timeout=self.heartbeat_interval,
+                    timeout=self.loop_die_timeout,
                 )
             except asyncio.TimeoutError:
                 self.log.warning(
                     "Timeout computing general info. "
                     "Sun/Moon position and Observatory status "
-                    "might be outdated. "
-                    f"Current detailed state {DetailedState(self.evt_detailedState.data.substate)!r}. "
-                    f"Detailed state locked? {self._detailed_state_lock.locked()}. "
-                    "You might need to send the CSC to Disabled and back to Enabled to fix this condition."
+                    "might be outdated."
                 )
             except Exception:
                 self.log.exception("Error computing general info. Ignoring...")
+            finally:
+                if not wait_and_log_task.done():
+                    wait_and_log_task.cancel()
+
+                try:
+                    await wait_and_log_task
+                except asyncio.CancelledError:
+                    pass
 
             await self._cleanup_script_tasks()
 
@@ -3115,7 +3133,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         integer into a readable enumeration.
         """
         self.log.debug(
-            f"Processing state for {component_name}: salobj.State(data.summaryState)."
+            f"Processing state for {component_name}: {salobj.State(data.summaryState)}."
         )
         component_state = salobj.State(data.summaryState)
         self._components_summary_state[component_name] = component_state
@@ -3426,6 +3444,22 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 status = Scheduler.ObservatoryStatus.IDLE
             note = self.generate_status_note()
             await self.set_observatory_status(status=status, note=note)
+
+    async def wait_and_log(self, delay, log_level, message):
+        """Wait for a specified duration and then log a message with the
+        specified level.
+
+        Parameters
+        ----------
+        delay : `float`
+            How long to wait before logging, in seconds.
+        log_level : `int`
+            Level of the log message.
+        message : `str`
+            Message to log after the delay.
+        """
+        await asyncio.sleep(delay)
+        self.log.log(log_level, message)
 
 
 def run_scheduler() -> None:
