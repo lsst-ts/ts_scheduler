@@ -47,19 +47,19 @@ class FeatureSchedulerTarget(DriverTarget):
         super().__init__(
             observing_block=observing_block,
             targetid=(
-                observation["target_id"][0]
+                int(observation["target_id"][0])
                 if "target_id" in observation.dtype.names
-                else observation["ID"][0]
+                else int(observation["ID"][0])
             ),
             band_filter=(
-                observation["band"][0]
+                str(observation["band"][0])
                 if "band" in observation.dtype.names
-                else observation["filter"][0]
+                else str(observation["filter"][0])
             ),
-            ra_rad=observation["RA"][0],
-            dec_rad=observation["dec"][0],
-            ang_rad=observation["rotSkyPos"][0],
-            num_exp=observation["nexp"][0],
+            ra_rad=float(observation["RA"][0]),
+            dec_rad=float(observation["dec"][0]),
+            ang_rad=float(observation["rotSkyPos"][0]),
+            num_exp=float(observation["nexp"][0]),
             exp_times=[
                 float(observation["exptime"][0] / observation["nexp"][0])
                 for i in range(observation["nexp"][0])
