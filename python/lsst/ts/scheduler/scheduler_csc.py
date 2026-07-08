@@ -3133,7 +3133,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         integer into a readable enumeration.
         """
         self.log.debug(
-            f"Processing state for {component_name}: {salobj.State(data.summaryState)}."
+            f"Processing state for {component_name}: {salobj.State(data.summaryState)!r}."
         )
         component_state = salobj.State(data.summaryState)
         self._components_summary_state[component_name] = component_state
