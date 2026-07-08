@@ -1,0 +1,1 @@
+Updated ``SchedulerCSC.generate_target_queue`` to also observe scheduled targets on the observatory model before observing the targets in the future queue.
