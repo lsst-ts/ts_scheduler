@@ -2203,8 +2203,10 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             Path to the current scheduler state snapshot.
         """
 
+        targets_queue = self.model.get_scheduled_targets() + self.targets_queue
+
         saved_scheduler_state_filename = self.model.get_state(
-            targets_queue=self.targets_queue
+            targets_queue=targets_queue
         )
 
         if publish_lfoa:
