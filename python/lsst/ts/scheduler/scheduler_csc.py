@@ -28,6 +28,7 @@ import asyncio
 import contextlib
 import dataclasses
 import functools
+import logging
 import os
 import shutil
 import subprocess
@@ -198,7 +199,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         )
 
         self._queue_name = f"scriptqueue:{index}"
-        self._ptg_name = ("mtptg" if index % 2 == 1 else "atpg",)
+        self._ptg_name = "mtptg" if (index % 2 == 1) else "atpg"
 
         self._remotes = dict()
 
@@ -1092,22 +1093,39 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 **self.model.get_observatory_state()
             )
 
+            wait_and_log_task = asyncio.create_task(
+                self.wait_and_log(
+                    delay=self.heartbeat_interval,
+                    log_level=logging.INFO,
+                    message=(
+                        "Computing general info taking longer than expected. "
+                        "Current detailed state "
+                        f"{DetailedState(self.evt_detailedState.data.substate)!r}. "
+                        f"Detailed state locked? {self._detailed_state_lock.locked()}."
+                    ),
+                )
+            )
             try:
                 await asyncio.wait_for(
                     self._publish_general_info(),
-                    timeout=self.heartbeat_interval,
+                    timeout=self.loop_die_timeout,
                 )
             except asyncio.TimeoutError:
                 self.log.warning(
                     "Timeout computing general info. "
                     "Sun/Moon position and Observatory status "
-                    "might be outdated. "
-                    f"Current detailed state {DetailedState(self.evt_detailedState.data.substate)!r}. "
-                    f"Detailed state locked? {self._detailed_state_lock.locked()}. "
-                    "You might need to send the CSC to Disabled and back to Enabled to fix this condition."
+                    "might be outdated."
                 )
             except Exception:
                 self.log.exception("Error computing general info. Ignoring...")
+            finally:
+                if not wait_and_log_task.done():
+                    wait_and_log_task.cancel()
+
+                try:
+                    await wait_and_log_task
+                except asyncio.CancelledError:
+                    pass
 
             await self._cleanup_script_tasks()
 
@@ -2084,10 +2102,17 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         self.model.synchronize_observatory_model()
         await self.model.update_telemetry()
-        await self.model.update_conditions()
+
+        for target in self.model.get_scheduled_targets():
+            self.model.models["observatory_model"].observe(target)
+
+        for target in self.targets_queue:
+            self.model.models["observatory_model"].observe(target)
 
         no_targets = True
         for n in range(self.parameters.n_targets + 1):
+
+            await self.model.update_conditions()
 
             async with self.current_scheduler_state(
                 publish_lfoa=True,
@@ -2178,8 +2203,10 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             Path to the current scheduler state snapshot.
         """
 
+        targets_queue = self.model.get_scheduled_targets() + self.targets_queue
+
         saved_scheduler_state_filename = self.model.get_state(
-            targets_queue=self.targets_queue
+            targets_queue=targets_queue
         )
 
         if publish_lfoa:
@@ -2304,7 +2331,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         self.log.info("Computing predicted schedule.")
 
         self._should_compute_predicted_schedule = False
-
+        predicted_schedule_start_time = utils.current_tai()
         async with self.current_scheduler_state(publish_lfoa=False, keep_state=False):
 
             needed_targets = max(
@@ -2353,7 +2380,12 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
             await self.evt_predictedSchedule.set_write(**predicted_schedule)
 
-        self.log.debug("Finished computing predicted schedule.")
+        predicted_schedule_duration = (
+            utils.current_tai() - predicted_schedule_start_time
+        )
+        self.log.info(
+            f"Finished computing predicted schedule; took {predicted_schedule_duration:.2f}s."
+        )
 
     async def execute_block(self):
         """Execute an individual block when the Scheduler is not running.
@@ -3032,10 +3064,18 @@ class SchedulerCSC(salobj.ConfigurableCsc):
     async def monitor_observatory_status(self):
         """Monitor and set the observatory status."""
 
+        current_remotes = ", ".join(self._remotes.keys())
+        if current_remotes:
+            self.log.info(f"Currently defined remotes: {current_remotes}.")
+        else:
+            self.log.info("No remotes currently defined.")
+
         for component in self.parameters.observatory_status.components_to_monitor:
             component_reference_name = component.lower()
             if component_reference_name not in self._remotes:
-                self.log.info(f"Creating remote to monitor {component} state.")
+                self.log.info(
+                    f"Creating remote to monitor {component} ({component_reference_name}) state."
+                )
                 name, index = salobj.name_to_name_index(component)
                 self._remotes[component_reference_name] = salobj.Remote(
                     domain=self.domain,
@@ -3095,7 +3135,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         integer into a readable enumeration.
         """
         self.log.debug(
-            f"Processing state for {component_name}: salobj.State(data.summaryState)."
+            f"Processing state for {component_name}: {salobj.State(data.summaryState)!r}."
         )
         component_state = salobj.State(data.summaryState)
         self._components_summary_state[component_name] = component_state
@@ -3406,6 +3446,22 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 status = Scheduler.ObservatoryStatus.IDLE
             note = self.generate_status_note()
             await self.set_observatory_status(status=status, note=note)
+
+    async def wait_and_log(self, delay, log_level, message):
+        """Wait for a specified duration and then log a message with the
+        specified level.
+
+        Parameters
+        ----------
+        delay : `float`
+            How long to wait before logging, in seconds.
+        log_level : `int`
+            Level of the log message.
+        message : `str`
+            Message to log after the delay.
+        """
+        await asyncio.sleep(delay)
+        self.log.log(log_level, message)
 
 
 def run_scheduler() -> None:
