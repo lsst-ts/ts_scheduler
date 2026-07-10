@@ -1,1 +1,0 @@
-Added logging for existing remotes in monitor_observatory_status within scheduler_csc.py.
