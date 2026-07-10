@@ -2085,6 +2085,9 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         self.model.synchronize_observatory_model()
         await self.model.update_telemetry()
 
+        for target in self.model.get_scheduled_targets():
+            self.model.models["observatory_model"].observe(target)
+
         for target in self.targets_queue:
             self.model.models["observatory_model"].observe(target)
 
