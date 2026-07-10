@@ -169,6 +169,12 @@ class TooClient:
             efd_data.is_test,
             efd_data.is_update,
         ):
+            if is_test:
+                self.log.debug(
+                    f"Ignoring test ToO alert: {source=}, {alert_type=}, {event_trigger_timestamp=}."
+                )
+                continue
+
             if source in self.too_alerts:
                 self.log.debug(f"ToO {source=} already retrieved, skipping.")
                 continue
