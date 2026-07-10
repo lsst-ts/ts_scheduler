@@ -1,0 +1,1 @@
+Updated generate_target_queue in scheduler_csc.py to playback currently queued observations in the observatory model after updating telemetry and before updating the driver conditions before starting the request target loop.

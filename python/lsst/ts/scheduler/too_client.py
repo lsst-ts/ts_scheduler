@@ -143,13 +143,14 @@ class TooClient:
         time_query_end = Time.now()
         time_query_start = time_query_end - TimeDelta(self.delta_time * units.second)
 
-        efd_data = await self.efd_client.select_time_series(
-            self.topic_name,
-            self.initial_query_parameters,
-            start=time_query_start,
-            end=time_query_end,
-        )
-
+        efd_data = (
+            await self.efd_client.select_time_series(
+                self.topic_name,
+                self.initial_query_parameters,
+                start=time_query_start,
+                end=time_query_end,
+            )
+        )[::-1]
         if efd_data.empty:
             return
 
@@ -168,12 +169,22 @@ class TooClient:
             efd_data.is_test,
             efd_data.is_update,
         ):
+            if is_test:
+                self.log.debug(
+                    f"Ignoring test ToO alert: {source=}, {alert_type=}, {event_trigger_timestamp=}."
+                )
+                continue
+
             if source in self.too_alerts:
-                self.log.debug(f"ToO {source=} already retrieved, skipping.")
+                self.log.debug(
+                    f"ToO alert {source=} {alert_type=}, {event_trigger_timestamp=}, {is_update=} "
+                    "already retrieved, skipping."
+                )
                 continue
 
             self.log.info(
-                f"Retrieving target of opportunity reward map for {source=}, {alert_type=}."
+                "Retrieving target of opportunity reward map for "
+                f"{source=}, {alert_type=}, {event_trigger_timestamp=}, {is_update=}."
             )
 
             reward_map = await self._retrieve_reward_map(
