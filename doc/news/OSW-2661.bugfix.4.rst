@@ -1,1 +1,0 @@
-Updated ``SchedulerCSC.save_scheduler_state`` to include scheduled targets in the list of targets in the queue when retrieving the scheduler state.

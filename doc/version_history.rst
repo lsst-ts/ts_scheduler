@@ -6,6 +6,38 @@ Version History
 
 .. towncrier release notes start
 
+v2.10.3 (2026-07-10)
+====================
+
+New Features
+------------
+
+- Improved publishing of general information in the telemetry loop within scheduler_csc.py. Increased timeout for publishing general information and added a background task to log if the task is taking too long to complete. (`OSW-2661 <https://rubinobs.atlassian.net//browse/OSW-2661>`_)
+- Improved logging around predicted schedule calculation in scheduler_csc.py. Logged end of operation at info level and added a reported duration. (`OSW-2661 <https://rubinobs.atlassian.net//browse/OSW-2661>`_)
+- Added logging for existing remotes in monitor_observatory_status within scheduler_csc.py. (`OSW-2661 <https://rubinobs.atlassian.net//browse/OSW-2661>`_)
+- Updated ``TooClient to ignore test alert. (`OSW-2661 <https://rubinobs.atlassian.net//browse/OSW-2661>`_)
+- Updated observation playback feature to update telemetry before the operation. (`OSW-2661 <https://rubinobs.atlassian.net//browse/OSW-2661>`_)
+- Updated generate_target_queue in scheduler_csc.py to playback currently queued observations in the observatory model after updating telemetry and before updating the driver conditions before starting the request target loop. (`OSW-2661 <https://rubinobs.atlassian.net//browse/OSW-2661>`_)
+- Cast values from the observation array in driver/feature_scheduler_target.py to ensure they are Python types instead of NumPy. (`OSW-2661 <https://rubinobs.atlassian.net//browse/OSW-2661>`_)
+
+
+Bug Fixes
+---------
+
+- Updated debug message in _monitor_component_state within scheduler_csc.py to log the representation of the state instead of just the integer value. (`OSW-2661 <https://rubinobs.atlassian.net//browse/OSW-2661>`_)
+- Fixed how ptg_name is defined in scheduler_csc.py. (`OSW-2661 <https://rubinobs.atlassian.net//browse/OSW-2661>`_)
+- Changed logging information about block/script validation to trace level in model.py. (`OSW-2661 <https://rubinobs.atlassian.net//browse/OSW-2661>`_)
+- Updated ``SchedulerCSC.generate_target_queue`` to also observe scheduled targets on the observatory model before observing the targets in the future queue. (`OSW-2661 <https://rubinobs.atlassian.net//browse/OSW-2661>`_)
+- Updated ``SchedulerCSC.save_scheduler_state`` to include scheduled targets in the list of targets in the queue when retrieving the scheduler state. (`OSW-2661 <https://rubinobs.atlassian.net//browse/OSW-2661>`_)
+- Reversed order of the query for ToO alerts to pick up most recent first. (`OSW-2661 <https://rubinobs.atlassian.net//browse/OSW-2661>`_)
+
+
+Other Changes and Additions
+---------------------------
+
+- Removed tool.setuptools.dynamic session from pyproject.toml. (`OSW-2661 <https://rubinobs.atlassian.net//browse/OSW-2661>`_)
+
+
 v2.10.2 (2026-07-03)
 ====================
 

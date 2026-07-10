@@ -1,1 +1,0 @@
-Fixed how ptg_name is defined in scheduler_csc.py.

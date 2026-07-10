@@ -1,1 +1,0 @@
-Reversed order of the query for ToO alerts to pick up most recent first.

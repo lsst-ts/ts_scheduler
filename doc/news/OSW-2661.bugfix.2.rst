@@ -1,1 +1,0 @@
-Changed logging information about block/script validation to trace level in model.py.

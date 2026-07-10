@@ -1,1 +1,0 @@
-Updated debug message in _monitor_component_state within scheduler_csc.py to log the representation of the state instead of just the integer value.

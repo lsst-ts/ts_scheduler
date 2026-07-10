@@ -1,1 +1,0 @@
-Updated observation playback feature to update telemetry before the operation.

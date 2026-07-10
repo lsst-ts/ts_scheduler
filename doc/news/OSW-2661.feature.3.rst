@@ -1,1 +1,0 @@
-Improved logging around predicted schedule calculation in scheduler_csc.py. Logged end of operation at info level and added a reported duration.
