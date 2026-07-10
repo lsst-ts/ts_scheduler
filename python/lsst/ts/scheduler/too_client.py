@@ -176,11 +176,15 @@ class TooClient:
                 continue
 
             if source in self.too_alerts:
-                self.log.debug(f"ToO {source=} already retrieved, skipping.")
+                self.log.debug(
+                    f"ToO alert {source=} {alert_type=}, {event_trigger_timestamp=}, {is_update=} "
+                    "already retrieved, skipping."
+                )
                 continue
 
             self.log.info(
-                f"Retrieving target of opportunity reward map for {source=}, {alert_type=}."
+                "Retrieving target of opportunity reward map for "
+                f"{source=}, {alert_type=}, {event_trigger_timestamp=}, {is_update=}."
             )
 
             reward_map = await self._retrieve_reward_map(
