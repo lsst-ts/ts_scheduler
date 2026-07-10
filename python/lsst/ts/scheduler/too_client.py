@@ -143,13 +143,14 @@ class TooClient:
         time_query_end = Time.now()
         time_query_start = time_query_end - TimeDelta(self.delta_time * units.second)
 
-        efd_data = await self.efd_client.select_time_series(
-            self.topic_name,
-            self.initial_query_parameters,
-            start=time_query_start,
-            end=time_query_end,
-        )
-
+        efd_data = (
+            await self.efd_client.select_time_series(
+                self.topic_name,
+                self.initial_query_parameters,
+                start=time_query_start,
+                end=time_query_end,
+            )
+        )[::-1]
         if efd_data.empty:
             return
 
