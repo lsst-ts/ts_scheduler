@@ -32,7 +32,7 @@ test:
     - ts-observing >=0.2
     - rubin-scheduler =3
     - rsync
-    - lsst-efd-client
+    - lsst-efd-client =0.12
   source_files:
     - python
     - tests
