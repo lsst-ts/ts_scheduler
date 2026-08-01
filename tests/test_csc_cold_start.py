@@ -317,7 +317,7 @@ maintel:
         ) as override_path:
             self.log.debug(f"startup database: {startup_database}")
 
-            async with self.make_csc(
+            async with asyncio.timeout(LONG_LONG_TIMEOUT), self.make_csc(
                 config_dir=TEST_CONFIG_DIR,
                 initial_state=salobj.State.STANDBY,
                 simulation_mode=SchedulerModes.MOCKS3,
