@@ -311,18 +311,20 @@ maintel:
                 assert expected_error_msg in csc_logs.output
 
     async def test_with_efd_query(self):
+        self.log.info("Starging test with EFD Query.")
         with self.generate_scheduler_efd_database() as startup_database, self.generate_configuration_override(
             startup_database=startup_database,
             scheduler_config_path=self.scheduler_config_path.as_posix(),
         ) as override_path:
-            self.log.debug(f"startup database: {startup_database}")
+            self.log.info(f"Startup database: {startup_database}.")
 
-            async with asyncio.timeout(LONG_LONG_TIMEOUT), self.make_csc(
+            async with self.make_csc(
                 config_dir=TEST_CONFIG_DIR,
                 initial_state=salobj.State.STANDBY,
                 simulation_mode=SchedulerModes.MOCKS3,
             ), self.make_script_queue(running=True):
                 await self.wait_lifeness()
+                self.log.info("CSC started and is alive. Checking output.")
 
                 with self.assertLogs(self.csc.log, level=logging.DEBUG) as csc_logs:
                     try:
@@ -334,19 +336,26 @@ maintel:
                         self.observation_database_name = (
                             self.csc.model.driver.observation_database_name
                         )
-                    finally:
+                        assert (
+                            f"INFO:Scheduler.Model:Loading driver {self.driver_type}"
+                            in csc_logs.output
+                        )
+                        assert (
+                            "INFO:Scheduler.Model:Loading observation history from EFD. "
+                            f"Query: {startup_database} yield {self.expected_number_of_targets} targets."
+                            in csc_logs.output
+                        )
+                    except Exception:
+                        self.log.error(
+                            "Test failed; logging captured output to help debug."
+                        )
                         for record, message in zip(csc_logs.records, csc_logs.output):
                             self.log.log(record.levelno, message)
-
-                assert (
-                    f"INFO:Scheduler.Model:Loading driver {self.driver_type}"
-                    in csc_logs.output
-                )
-                assert (
-                    "INFO:Scheduler.Model:Loading observation history from EFD. "
-                    f"Query: {startup_database} yield {self.expected_number_of_targets} targets."
-                    in csc_logs.output
-                )
+                        raise
+                    else:
+                        self.log.info("Test completed successfully.")
+            self.log.info("Done with CSC.")
+        self.log.info("Test done.")
 
     async def test_load_twice(self):
         with self.generate_configuration_override(
