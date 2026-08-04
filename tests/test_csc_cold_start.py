@@ -326,34 +326,40 @@ maintel:
                 await self.wait_lifeness()
                 self.log.info("CSC started and is alive. Checking output.")
 
-                with self.assertLogs(self.csc.log, level=logging.DEBUG) as csc_logs:
-                    try:
-                        await salobj.set_summary_state(
-                            remote=self.remote,
-                            state=salobj.State.DISABLED,
-                            override=override_path.name,
-                        )
-                        self.observation_database_name = (
-                            self.csc.model.driver.observation_database_name
-                        )
-                        assert (
-                            f"INFO:Scheduler.Model:Loading driver {self.driver_type}"
-                            in csc_logs.output
-                        )
-                        assert (
-                            "INFO:Scheduler.Model:Loading observation history from EFD. "
-                            f"Query: {startup_database} yield {self.expected_number_of_targets} targets."
-                            in csc_logs.output
-                        )
-                    except Exception:
-                        self.log.error(
-                            "Test failed; logging captured output to help debug."
-                        )
-                        for record, message in zip(csc_logs.records, csc_logs.output):
-                            self.log.log(record.levelno, message)
-                        raise
-                    else:
-                        self.log.info("Test completed successfully.")
+                csc_logs = []
+                all_logs = []
+
+                expected_messages = {
+                    f"Loading driver {self.driver_type}",
+                    "Loading observation history from EFD. "
+                    f"Query: {startup_database} yield {self.expected_number_of_targets} targets.",
+                }
+
+                async def store_expected_messages(data):
+                    all_logs.append(data)
+                    for expected_message in expected_messages:
+                        if expected_message in data.message:
+                            csc_logs.append(data)
+
+                self.remote.evt_logMessage.callback = store_expected_messages
+                self.remote.evt_summaryState.flush()
+
+                await salobj.set_summary_state(
+                    remote=self.remote,
+                    state=salobj.State.DISABLED,
+                    override=override_path.name,
+                )
+
+                await self.assert_next_summary_state(salobj.State.DISABLED, flush=False)
+
+                self.observation_database_name = (
+                    self.csc.model.driver.observation_database_name
+                )
+                self.log.info(f"Received total {len(all_logs)} messages.")
+                assert len(csc_logs) == len(expected_messages)
+                for message in csc_logs:
+                    assert message.level == logging.INFO
+
             self.log.info("Done with CSC.")
         self.log.info("Test done.")
 
