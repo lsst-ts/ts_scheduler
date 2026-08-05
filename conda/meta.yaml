@@ -40,7 +40,7 @@ test:
     - pyproject.toml
   commands:
     - scheduler_download_data --update
-    - pytest -vsx --log-cli-level INFO > $HOME/test_output.txt 2>&1
+    - pytest -vsx --log-cli-level DEBUG > $HOME/test_output.txt 2>&1
 
 requirements:
   host:
