@@ -214,10 +214,16 @@ class FeatureScheduler(Driver):
             loop = asyncio.get_running_loop()
             time_start = current_tai()
             with ProcessPoolExecutor() as executor:
+                log_task = asyncio.create_task(self.log_background())
                 async with asyncio.timeout(120):
                     scheduler, nside, seed = await loop.run_in_executor(
                         executor, _get_scheduler_configuration
                     )
+                log_task.cancel()
+                try:
+                    await log_task
+                except asyncio.CancelledError:
+                    pass
             self._set_scheduler(scheduler, nside, seed)
             elapsed_time = current_tai() - time_start
             self.log.info(
@@ -231,6 +237,13 @@ class FeatureScheduler(Driver):
                 "If this is the case, report this condition."
             )
         return self._finish_scheduler_configuration(config=config)
+
+    async def log_background(self):
+        i = 0
+        while True:
+            i += 1
+            self.log.info(f"here {i}...")
+            await asyncio.sleep(5)
 
     def cold_start(self, observations: typing.List[DriverTarget]) -> None:
         """Rebuilds the internal state of the scheduler from a list of
