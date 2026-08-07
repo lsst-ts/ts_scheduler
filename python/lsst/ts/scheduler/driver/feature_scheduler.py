@@ -34,7 +34,12 @@ import numpy as np
 import pandas
 import yaml
 from astropy.time import Time
-from lsst.ts.utils import astropy_time_from_tai_unix, index_generator, tai_from_utc
+from lsst.ts.utils import (
+    astropy_time_from_tai_unix,
+    current_tai,
+    index_generator,
+    tai_from_utc,
+)
 from rubin_scheduler.scheduler.features import Conditions
 from rubin_scheduler.scheduler.utils import ObservationArray, TargetoO
 from rubin_scheduler.site_models import Almanac, CloudMap
@@ -207,11 +212,16 @@ class FeatureScheduler(Driver):
                 get_scheduler_configuration, scheduler_config=scheduler_config
             )
             loop = asyncio.get_running_loop()
+            time_start = current_tai()
             with ProcessPoolExecutor() as executor:
                 scheduler, nside, seed = await loop.run_in_executor(
                     executor, _get_scheduler_configuration
                 )
             self._set_scheduler(scheduler, nside, seed)
+            elapsed_time = current_tai() - time_start
+            self.log.info(
+                f"Finished loading feature scheduler; elapsed time {elapsed_time:.1f}s."
+            )
         else:
             self.log.warning(
                 "Scheduler already loaded, skipping. If you are doing a hot or "
