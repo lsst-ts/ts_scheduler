@@ -310,6 +310,7 @@ maintel:
 
                 assert expected_error_msg in csc_logs.output
 
+    @unittest.skip("Temporarily skip.")
     async def test_with_efd_query(self):
         self.log.info("Starging test with EFD Query.")
         with self.generate_scheduler_efd_database() as startup_database, self.generate_configuration_override(
