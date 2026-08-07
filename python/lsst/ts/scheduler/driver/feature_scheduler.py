@@ -214,9 +214,10 @@ class FeatureScheduler(Driver):
             loop = asyncio.get_running_loop()
             time_start = current_tai()
             with ProcessPoolExecutor() as executor:
-                scheduler, nside, seed = await loop.run_in_executor(
-                    executor, _get_scheduler_configuration
-                )
+                async with asyncio.timeout(120):
+                    scheduler, nside, seed = await loop.run_in_executor(
+                        executor, _get_scheduler_configuration
+                    )
             self._set_scheduler(scheduler, nside, seed)
             elapsed_time = current_tai() - time_start
             self.log.info(
