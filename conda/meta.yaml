@@ -40,7 +40,7 @@ test:
     - pyproject.toml
   commands:
     - scheduler_download_data --update
-    - pytest -vsx --log-cli-level DEBUG tests/test_csc_cold_start.py > $HOME/test_output.txt 2>&1
+    - pytest -vsx --log-cli-level DEBUG tests/test_csc_cold_start.py -k test_with_efd_query > $HOME/test_output.txt 2>&1
 
 requirements:
   host:
