@@ -1,3 +1,5 @@
+import logging
+
 import numpy as np
 import rubin_scheduler.scheduler.basis_functions as bf
 import rubin_scheduler.scheduler.detailers as detailers
@@ -148,6 +150,10 @@ def gen_greedy_surveys(
 
 
 if __name__ == "config":
+
+    log = logging.getLogger("FBSConfig")
+    logging.basicConfig(level=logging.INFO)
+    log.info("Starting FBS Config")
     nside = 32
     per_night = True  # Dither DDF per night
     seed = 42
@@ -155,13 +161,17 @@ if __name__ == "config":
 
     camera_ddf_rot_limit = 75.0
 
+    log.info("SkyAreaGenerator")
     sky = SkyAreaGenerator(nside=nside)
     footprints_hp, labels = sky.return_maps()
 
+    log.info("Footprint")
     footprints = Footprint(MJD_START, sun_ra_start=sun_ra_start, nside=nside)
     for i, key in enumerate(footprints_hp.dtype.names):
         footprints.footprints[i, :] = footprints_hp[key]
 
+    log.info("gen_greedy_surveys")
     greedy = gen_greedy_surveys(nside, nexp=1, footprints=footprints, seed=seed)
     surveys = [greedy]
+    log.info("CoreScheduler")
     scheduler = CoreScheduler(surveys, nside=nside)
