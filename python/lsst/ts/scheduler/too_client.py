@@ -127,6 +127,8 @@ class TooClient:
 
         self._index_generator = index_generator()
 
+        self.latest_update: Time | None = None
+
     async def get_too_alerts(self) -> dict[str, TooAlert]:
         """Retrieve target of opportunity alerts from the EFD.
 
@@ -143,7 +145,11 @@ class TooClient:
         """Update the ToO Alert information."""
 
         time_query_end = Time.now()
-        time_query_start = time_query_end - TimeDelta(self.delta_time * units.second)
+        time_query_start = (
+            (time_query_end - TimeDelta(self.delta_time * units.second))
+            if self.latest_update is None
+            else self.latest_update
+        )
 
         efd_data = (
             await self.efd_client.select_time_series(
@@ -215,6 +221,8 @@ class TooClient:
             )
 
             self.too_alerts[source] = too_alert
+
+        self.latest_update = time_query_end
 
     async def _retrieve_reward_map(
         self, time_query_start: Time, time_query_end: Time, source: str, nside: int
