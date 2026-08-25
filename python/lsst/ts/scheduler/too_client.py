@@ -183,7 +183,7 @@ class TooClient:
                 )
                 continue
 
-            if source in self.too_alerts:
+            if source in self.too_alerts and not is_update:
                 self.log.debug(
                     f"ToO alert {source=} {alert_type=}, {event_trigger_timestamp=}, {is_update=} "
                     "already retrieved, skipping."
