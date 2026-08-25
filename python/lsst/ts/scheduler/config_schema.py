@@ -26,7 +26,7 @@ import yaml
 CONFIG_SCHEMA = yaml.safe_load("""$schema: http://json-schema.org/draft-07/schema#
 $id: https://github.com/lsst-ts/ts_scheduler/blob/master/schema/Scheduler.yaml
 # title must end with one or more spaces followed by the schema version, which must begin with "v"
-title: Scheduler v9
+title: Scheduler v10
 description: Schema for Scheduler configuration files
 definitions:
   instance_specific_config:
@@ -564,6 +564,9 @@ definitions:
               db_name:
                 type: string
                 description: The name of the database where the topics are written.
+              ignore_test_alert:
+                type: boolean
+                description: Ignore alerts that are labeled as test?
           lfa_client:
             type: object
             description: Configuration for the Large File Annex client.
