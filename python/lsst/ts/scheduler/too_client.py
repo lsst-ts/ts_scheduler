@@ -107,6 +107,7 @@ class TooClient:
         efd_name: str,
         db_name: str = "efd",
         log: logging.Logger | None = None,
+        ignore_test_alert: bool = True,
     ) -> None:
 
         self.log = (
@@ -120,6 +121,7 @@ class TooClient:
             efd_name,
             db_name=db_name,
         )
+        self.ignore_test_alert = ignore_test_alert
 
         self.too_alerts: dict[str, TooAlert] = dict()
 
@@ -169,7 +171,7 @@ class TooClient:
             efd_data.is_test,
             efd_data.is_update,
         ):
-            if is_test:
+            if is_test and self.ignore_test_alert:
                 self.log.debug(
                     f"Ignoring test ToO alert: {source=}, {alert_type=}, {event_trigger_timestamp=}."
                 )
