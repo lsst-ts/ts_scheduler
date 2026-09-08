@@ -1,0 +1,1 @@
+Updated all license headerer using the new feature on ts-pre-commit-config.

@@ -1,0 +1,1 @@
+Updated ``TooClient`` to keep track of when ToO alerts were last updated and only retrieve alerts from the last update time. The initial retrieval is still done using the configured time delay.

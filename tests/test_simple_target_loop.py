@@ -1,6 +1,6 @@
-# This file is part of ts_scheduler
+# This file is part of ts-scheduler.
 #
-# Developed for the LSST Telescope and Site Systems.
+# Developed for the Vera C. Rubin Observatory Telescope and Site Systems.
 # This product includes software developed by the LSST Project
 # (https://www.lsst.org).
 # See the COPYRIGHT file at the top-level directory of this distribution
@@ -13,10 +13,11 @@
 #
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import asyncio
 import logging
@@ -59,7 +60,7 @@ class SimpleTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
 
         https://stackoverflow.com/a/11180583
         """
-        salobj.set_random_lsst_dds_partition_prefix()
+        salobj.set_test_topic_subname()
         with utils.modify_environ(LSST_SITE="test"):
             super().run(result)
 
@@ -202,7 +203,7 @@ class SimpleTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
         # ...and try again. This time the scheduler should stay in enable and
         # publish targets to the queue.
 
-        def assert_enable(data):
+        async def assert_enable(data):
             """Callback function to make sure scheduler is enabled"""
             self.assertEqual(
                 data.summaryState,
@@ -211,11 +212,11 @@ class SimpleTargetLoopTestCase(unittest.IsolatedAsyncioTestCase):
                 "ENABLE to %s" % salobj.State(data.summaryState),
             )
 
-        def count_targets(data):
+        async def count_targets(data):
             """Callback to count received targets"""
             self.received_targets += 1
 
-        def count_heartbeats(data):
+        async def count_heartbeats(data):
             """Callback to count heartbeats"""
             self.heartbeats += 1
 

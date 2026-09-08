@@ -1,3 +1,24 @@
+# This file is part of ts-scheduler.
+#
+# Developed for the Vera C. Rubin Observatory Telescope and Site Systems.
+# This product includes software developed by the LSST Project
+# (https://www.lsst.org).
+# See the COPYRIGHT file at the top-level directory of this distribution
+# for details of code ownership.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 import numpy as np
 import rubin_scheduler.scheduler.basis_functions as bf
 import rubin_scheduler.scheduler.detailers as detailers
@@ -67,7 +88,7 @@ def gen_greedy_surveys(
         "smoothing_kernel": None,
         "seed": seed,
         "camera": "LSST",
-        "dither": True,
+        "dither": "night",
         "survey_name": "Greedy",
     }
 
@@ -85,7 +106,7 @@ def gen_greedy_surveys(
         bfs = [
             (
                 bf.FootprintBasisFunction(
-                    filtername=filtername,
+                    bandname=filtername,
                     footprint=footprints,
                     out_of_bounds_val=np.nan,
                     nside=nside,
@@ -93,17 +114,17 @@ def gen_greedy_surveys(
                 footprint_weight,
             ),
             (
-                bf.SlewtimeBasisFunction(filtername=filtername, nside=nside),
+                bf.SlewtimeBasisFunction(bandname=filtername, nside=nside),
                 slewtime_weight,
             ),
-            (bf.StrictFilterBasisFunction(filtername=filtername), stayfilter_weight),
+            (bf.StrictBandBasisFunction(bandname=filtername), stayfilter_weight),
             (
                 bf.AltAzShadowMaskBasisFunction(
                     nside=nside, shadow_minutes=shadow_minutes, max_alt=max_alt
                 ),
                 0,
             ),
-            (bf.FilterLoadedBasisFunction(filternames=filtername), 0),
+            (bf.BandLoadedBasisFunction(bandnames=filtername), 0),
         ]
 
         weights = [val[1] for val in bfs]
@@ -113,7 +134,7 @@ def gen_greedy_surveys(
                 basis_functions,
                 weights,
                 exptime=exptime,
-                filtername=filtername,
+                bandname=filtername,
                 nside=nside,
                 ignore_obs=ignore_obs,
                 nexp=nexp,

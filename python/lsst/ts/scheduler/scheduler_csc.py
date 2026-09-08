@@ -1,6 +1,6 @@
-# This file is part of ts_scheduler.
+# This file is part of ts-scheduler.
 #
-# Developed for the Rubin Observatory Telescope and Site Systems.
+# Developed for the Vera C. Rubin Observatory Telescope and Site Systems.
 # This product includes software developed by the LSST Project
 # (https://www.lsst.org).
 # See the COPYRIGHT file at the top-level directory of this distribution
@@ -13,11 +13,11 @@
 #
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 __all__ = [
     "SchedulerCSC",
@@ -344,6 +344,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         """
 
         await super().start()
+        await self.evt_detailedState.set_write(substate=DetailedState.IDLE)
         await self.set_observatory_status(
             status=SchedulerObservatoryStatus.UNKNOWN,
             note=(
@@ -839,7 +840,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 f"Current valid blocks are: {valid_blocks}."
             )
 
-        obs_block = self.model.observing_blocks[data.id].dict()
+        obs_block = self.model.observing_blocks[data.id].model_dump()
         obs_block.pop("id")
         block_target = DriverTarget(
             observing_block=ObservingBlock(
@@ -904,7 +905,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
                 block_id
             ].executions_total,
             hash=str(observing_block.id),
-            definition=observing_block.json(),
+            definition=observing_block.model_dump_json(),
         )
 
     async def do_getBlockStatus(self, data):
@@ -1023,6 +1024,7 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         """
 
         failed_observatory_state_logged = False
+        self.log.info(f"Starting telemetry loop; run loop {self.run_loop}.")
         while self.run_loop:
             # Update observatory state and sleep at the same time.
             timer_task = asyncio.create_task(asyncio.sleep(self.heartbeat_interval))
@@ -1130,6 +1132,8 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             await self._cleanup_script_tasks()
 
             await timer_task
+
+        self.log.info(f"Telemetry loop finishing; run loop {self.run_loop}.")
 
     async def _cleanup_script_tasks(self) -> None:
         """Cleanup completed script tasks."""
@@ -1512,11 +1516,6 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             **settings.observatory_status
         )
         if self.parameters.observatory_status.enable:
-            if not hasattr(self, "evt_observatoryStatus"):
-                raise salobj.ExpectedError(
-                    "CSC interface does not support observatory status. "
-                    "Ensure 'observatory_status.enable: false' in the configuration."
-                )
 
             if self._last_observatory_status is not None:
                 self.log.info("Restoring observatory status.")
@@ -1579,20 +1578,17 @@ class SchedulerCSC(salobj.ConfigurableCsc):
 
         # Most configurations comes from this single commit hash. I think the
         # other modules could host the version for each one of them
-        if hasattr(self, "evt_dependenciesVersions"):
-            await self.evt_dependenciesVersions.set_write(
-                version="",
-                scheduler=self.parameters.driver_type,
-                observatoryModel=obs_mod_version.__version__,
-                observatoryLocation=dateloc_version.__version__,
-                seeingModel=rubin_scheduler_version,
-                cloudModel=rubin_scheduler_version,
-                skybrightnessModel=astrosky_version.__version__,
-                downtimeModel=rubin_scheduler_version,
-                force_output=True,
-            )
-        else:
-            self.log.warning("No 'dependenciesVersions' event.")
+        await self.evt_dependenciesVersions.set_write(
+            version="",
+            scheduler=self.parameters.driver_type,
+            observatoryModel=obs_mod_version.__version__,
+            observatoryLocation=dateloc_version.__version__,
+            seeingModel=rubin_scheduler_version,
+            cloudModel=rubin_scheduler_version,
+            skybrightnessModel=astrosky_version.__version__,
+            downtimeModel=rubin_scheduler_version,
+            force_output=True,
+        )
 
         await self._publish_settings(settings)
 
@@ -2324,10 +2320,6 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         config.predicted_scheduler_window hours.
         """
 
-        if not hasattr(self, "evt_predictedSchedule"):
-            self.log.debug("No support for predicted scheduler.")
-            return
-
         self.log.info("Computing predicted schedule.")
 
         self._should_compute_predicted_schedule = False
@@ -2658,28 +2650,23 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             Estimated rotation angle (in degrees).
         """
 
-        # TODO: (DM-34905) Remove backward compatibility.
-        if hasattr(self, "evt_timeToNextTarget"):
-            await self.evt_timeToNextTarget.set_write(
-                currentTime=current_time,
-                waitTime=wait_time,
-                ra=ra,
-                decl=dec,
-                rotSkyPos=rot_sky_pos,
-            )
+        await self.evt_timeToNextTarget.set_write(
+            currentTime=current_time,
+            waitTime=wait_time,
+            ra=ra,
+            decl=dec,
+            rotSkyPos=rot_sky_pos,
+        )
 
     async def _publish_general_info(self):
         """Publish general info event."""
 
-        if self.evt_detailedState.data.substate == DetailedState.IDLE:
-            async with self._detailed_state_lock:
-                await self.model.update_telemetry()
+        async with self._detailed_state_lock:
+            await self.model.update_telemetry()
 
         general_info = self.model.get_general_info()
 
-        # TODO: (DM-34905) Remove backward compatibility.
-        if hasattr(self, "evt_generalInfo"):
-            await self.evt_generalInfo.set_write(**general_info)
+        await self.evt_generalInfo.set_write(**general_info)
 
         if not self.enable_observatory_status_monitor:
             return
@@ -3037,9 +3024,6 @@ class SchedulerCSC(salobj.ConfigurableCsc):
         note : `str`, optional
             Note to add to the status event.
         """
-        if not hasattr(self, "evt_observatoryStatus"):
-            return
-
         await self.evt_observatoryStatus.set_write(
             status=status,
             statusLabels=(
@@ -3397,9 +3381,6 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             )
 
     async def handle_observatory_status_nighttime(self):
-        if not hasattr(self, "evt_observatoryStatus"):
-            return
-
         status = self.evt_observatoryStatus.data.status
         if not status:
             status = SchedulerObservatoryStatus.IDLE
@@ -3414,9 +3395,6 @@ class SchedulerCSC(salobj.ConfigurableCsc):
             await self.set_observatory_status(status=status, note=note)
 
     async def handle_observatory_status_daytime(self):
-        if not hasattr(self, "evt_observatoryStatus"):
-            return
-
         status = self.evt_observatoryStatus.data.status
         if not status & SchedulerObservatoryStatus.DAYTIME:
             status = status | SchedulerObservatoryStatus.DAYTIME
