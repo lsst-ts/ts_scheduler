@@ -1,6 +1,6 @@
-# This file is part of ts_scheduler.
+# This file is part of ts-scheduler.
 #
-# Developed for the Rubin Observatory Telescope and Site Systems.
+# Developed for the Vera C. Rubin Observatory Telescope and Site Systems.
 # This product includes software developed by the LSST Project
 # (https://www.lsst.org).
 # See the COPYRIGHT file at the top-level directory of this distribution
@@ -13,11 +13,11 @@
 #
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 __all__ = ["Model"]
 
@@ -316,8 +316,11 @@ class Model:
         bad_block_programs = set()
         for observing_block_file in path_observing_blocks.glob("**/*.json"):
             try:
-                observing_block = observing.ObservingBlock.parse_file(
-                    observing_block_file
+                with open(observing_block_file) as fp:
+                    observing_block_json_data = fp.read()
+
+                observing_block = observing.ObservingBlock.model_validate_json(
+                    observing_block_json_data
                 )
             except Exception as e:
                 raise RuntimeError(
@@ -354,7 +357,7 @@ class Model:
 
         for block_id in self.observing_blocks:
             target_validate = DriverTarget(
-                observing_block=self.observing_blocks[block_id].copy(deep=True)
+                observing_block=self.observing_blocks[block_id].model_copy(deep=True)
             )
             observing_block = target_validate.get_observing_block()
             for script in observing_block.scripts:

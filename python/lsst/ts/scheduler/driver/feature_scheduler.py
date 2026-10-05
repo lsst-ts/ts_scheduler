@@ -1,6 +1,6 @@
-# This file is part of ts_scheduler.
+# This file is part of ts-scheduler.
 #
-# Developed for the Rubin Observatory Telescope and Site Systems.
+# Developed for the Vera C. Rubin Observatory Telescope and Site Systems.
 # This product includes software developed by the LSST Project
 # (https://www.lsst.org).
 # See the COPYRIGHT file at the top-level directory of this distribution
@@ -13,11 +13,11 @@
 #
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import asyncio
 import functools
@@ -611,8 +611,6 @@ class FeatureScheduler(Driver):
 
         almanac_indx = self.almanac.mjd_indx(self.conditions.mjd)
 
-        self.conditions.night = self.almanac.sunsets["night"][almanac_indx]
-
         # Clouds. Just the raw value
         self.conditions.bulk_cloud = self.raw_telemetry.get("bulk_cloud", np.nan)
 
@@ -778,7 +776,7 @@ class FeatureScheduler(Driver):
                 dec_rad_center = float(np.mean(self.conditions.dec[too.reward_map]))
                 targets_of_opportunity.append(
                     TargetoO(
-                        tooid=too.tooid,
+                        tooid=too.source,
                         ra_rad_center=ra_rad_center,
                         dec_rad_center=dec_rad_center,
                         footprint=too.reward_map,
@@ -787,7 +785,6 @@ class FeatureScheduler(Driver):
                                 tai_from_utc(too.event_trigger_timestamp, "isot")
                             ).value
                         ),
-                        duration=1.0,
                         too_type=too.alert_type,
                     )
                 )

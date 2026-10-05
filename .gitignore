@@ -54,3 +54,4 @@ doc/api
 .ruff.toml
 .pymon
 towncrier.toml
+.LICENSE.txt

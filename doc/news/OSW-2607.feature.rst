@@ -1,0 +1,1 @@
+Updated telemetry before playing back observations in model.py.

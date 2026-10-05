@@ -1,0 +1,1 @@
+Replaced deprecated Pydantic methods (copy, parse_file) with model_copy and model_validate_json across model.py, driver/driver.py, and scheduler_csc.py.

@@ -1,6 +1,6 @@
-# This file is part of ts_scheduler.
+# This file is part of ts-scheduler.
 #
-# Developed for the Rubin Observatory Telescope and Site Systems.
+# Developed for the Vera C. Rubin Observatory Telescope and Site Systems.
 # This product includes software developed by the LSST Project
 # (https://www.lsst.org).
 # See the COPYRIGHT file at the top-level directory of this distribution
@@ -13,11 +13,11 @@
 #
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 __all__ = ["TooClient"]
 
@@ -107,6 +107,7 @@ class TooClient:
         efd_name: str,
         db_name: str = "efd",
         log: logging.Logger | None = None,
+        ignore_test_alert: bool = True,
     ) -> None:
 
         self.log = (
@@ -120,10 +121,13 @@ class TooClient:
             efd_name,
             db_name=db_name,
         )
+        self.ignore_test_alert = ignore_test_alert
 
         self.too_alerts: dict[str, TooAlert] = dict()
 
         self._index_generator = index_generator()
+
+        self.latest_update: Time | None = None
 
     async def get_too_alerts(self) -> dict[str, TooAlert]:
         """Retrieve target of opportunity alerts from the EFD.
@@ -141,7 +145,11 @@ class TooClient:
         """Update the ToO Alert information."""
 
         time_query_end = Time.now()
-        time_query_start = time_query_end - TimeDelta(self.delta_time * units.second)
+        time_query_start = (
+            (time_query_end - TimeDelta(self.delta_time * units.second))
+            if self.latest_update is None
+            else self.latest_update
+        )
 
         efd_data = (
             await self.efd_client.select_time_series(
@@ -169,13 +177,13 @@ class TooClient:
             efd_data.is_test,
             efd_data.is_update,
         ):
-            if is_test:
+            if is_test and self.ignore_test_alert:
                 self.log.debug(
                     f"Ignoring test ToO alert: {source=}, {alert_type=}, {event_trigger_timestamp=}."
                 )
                 continue
 
-            if source in self.too_alerts:
+            if source in self.too_alerts and not is_update:
                 self.log.debug(
                     f"ToO alert {source=} {alert_type=}, {event_trigger_timestamp=}, {is_update=} "
                     "already retrieved, skipping."
@@ -213,6 +221,8 @@ class TooClient:
             )
 
             self.too_alerts[source] = too_alert
+
+        self.latest_update = time_query_end
 
     async def _retrieve_reward_map(
         self, time_query_start: Time, time_query_end: Time, source: str, nside: int

@@ -1,0 +1,1 @@
+Updated ``TooClient`` to handle update alerts.

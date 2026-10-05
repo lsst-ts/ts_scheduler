@@ -1,0 +1,1 @@
+Updated feature scheduler driver to stop passing dummy value of duration when creating target of opportunity (TargetoO) objects.

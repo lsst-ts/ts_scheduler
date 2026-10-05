@@ -1,6 +1,6 @@
-# This file is part of ts_scheduler
+# This file is part of ts-scheduler.
 #
-# Developed for the LSST Telescope and Site Systems.
+# Developed for the Vera C. Rubin Observatory Telescope and Site Systems.
 # This product includes software developed by the LSST Project
 # (https://www.lsst.org).
 # See the COPYRIGHT file at the top-level directory of this distribution
@@ -13,10 +13,11 @@
 #
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import logging
 import os
@@ -506,7 +507,7 @@ class Driver:
 
         self.assert_survey_observing_script(survey_name=survey_name)
 
-        return self.observing_blocks[survey_name].copy(deep=True)
+        return self.observing_blocks[survey_name].model_copy(deep=True)
 
     def convert_efd_observations_to_targets(
         self, efd_observations: pandas.DataFrame
