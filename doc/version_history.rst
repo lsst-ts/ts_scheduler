@@ -6,6 +6,38 @@ Version History
 
 .. towncrier release notes start
 
+v2.11.0 (2026-10-05)
+====================
+
+New Features
+------------
+
+- Updated ``TooClient`` to keep track of when ToO alerts were last updated and only retrieve alerts from the last update time. The initial retrieval is still done using the configured time delay. (`OSW-2607 <https://rubinobs.atlassian.net//browse/OSW-2607>`_)
+- Updated ``TooClient`` to handle update alerts. (`OSW-2607 <https://rubinobs.atlassian.net//browse/OSW-2607>`_)
+- Used too.source as the tooid when constructing TargetoO objects in driver/feature_scheduler.py. (`OSW-2607 <https://rubinobs.atlassian.net//browse/OSW-2607>`_)
+- Updated ``TooClient`` to make it optional to ignore test alerts. (`OSW-2607 <https://rubinobs.atlassian.net//browse/OSW-2607>`_)
+- Stopped setting Conditions.night parameter in driver/feature_scheduler.py as it is now handled internally by the FBS. (`OSW-2607 <https://rubinobs.atlassian.net//browse/OSW-2607>`_)
+- Updated telemetry before playing back observations in model.py. (`OSW-2607 <https://rubinobs.atlassian.net//browse/OSW-2607>`_)
+
+
+Bug Fixes
+---------
+
+- Ensured remote callbacks are async in tests/test_simple_target_loop.py, removing compatibility with older versions of salobj. (`OSW-2607 <https://rubinobs.atlassian.net//browse/OSW-2607>`_)
+- Removed backwards compatibility with older versions of the CSC interface in scheduler_csc.py. (`OSW-2607 <https://rubinobs.atlassian.net//browse/OSW-2607>`_)
+
+
+Other Changes and Additions
+---------------------------
+
+- Replaced deprecated Pydantic methods (copy, parse_file) with model_copy and model_validate_json across model.py, driver/driver.py, and scheduler_csc.py. (`OSW-2607 <https://rubinobs.atlassian.net//browse/OSW-2607>`_)
+- Updated SchedulerCSC to publish general info regardless of the detailed state. (`OSW-2607 <https://rubinobs.atlassian.net//browse/OSW-2607>`_)
+- Updated all license headerer using the new feature on ts-pre-commit-config. (`OSW-2607 <https://rubinobs.atlassian.net//browse/OSW-2607>`_)
+- Updated tests/test_simple_target_loop.py to use salobj.set_test_topic_subname instead of the deprecated salobj.set_random_lsst_dds_partition_prefix. (`OSW-2607 <https://rubinobs.atlassian.net//browse/OSW-2607>`_)
+- Updated all FBS test configurations for rubin-scheduler v4 compatibility. (`OSW-2607 <https://rubinobs.atlassian.net//browse/OSW-2607>`_)
+- Updated feature scheduler driver to stop passing dummy value of duration when creating target of opportunity (TargetoO) objects. (`OSW-2607 <https://rubinobs.atlassian.net//browse/OSW-2607>`_)
+
+
 v2.10.3 (2026-07-10)
 ====================
 
